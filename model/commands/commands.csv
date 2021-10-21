@@ -1,0 +1,111 @@
+command ;description ;BE ;EE ;JE ;JE_OP_level ;BE_EE_OP_level ;MP_only ;;;;
+
+/? ;An alias of /help. Provides help for commands. ;Yes ;Yes ;Yes ;0 ;0 ;— ;— ;— ;— ;—
+/ability ;Grants or revokes a player ability. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;;—
+/advancement ;Gives, removes, or checks player advancements. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;;—
+/alwaysday ;An alias of /daylock. Locks and unlocks the day-night cycle. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;— ;
+/attribute ;Queries, adds, removes or sets an entity attribute. ;— ;— ;Yes ;2 ;— ;— ;— ;;;—
+/ban ;Adds player to banlist. ;— ;— ;Yes ;3 ;— ;MP ;— ;— ;;—
+/ban-ip ;Adds IP address to banlist. ;— ;— ;Yes ;3 ;— ;MP ;— ;— ;;—
+/banlist ;Displays banlist. ;— ;— ;Yes ;3 ;— ;MP ;— ;— ;;—
+/bossbar ;Creates and modifies bossbars. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;;
+/camerashake ;Used to enable a camera shaking effect. ;Yes ;— ;— ;— ;1 ;— ;— ;— ;;—
+/changesetting ;Changes a setting on the dedicated server while it's running. ;Yes ;— ;— ;— ;4 ;MP ;— ;— ;— ;—
+/clear ;Clears items from player inventory. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/clearspawnpoint ;Remove spawnpoints in the world. ;Yes ;— ;— ;— ;1 ;— ;— ;— ;— ;
+/clone ;Copies blocks from one place to another. ;Yes ;Yes ;Yes ;2 ;1 ;— ;;— ;— ;—
+/connect ;An alias of /wsserver. Attempts to connect to the websocket server. ;Yes ;Yes ;— ;— ;0‌[EE only]
+/data ;Gets, merges, modifies and removes block entity and entity NBT data. ;— ;— ;Yes ;2 ;— ;— ;;;;—
+/datapack ;Controls loaded data packs. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;— ;
+/daylock ;An alias of /alwaysday. Locks and unlocks the day-night cycle. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;— ;
+/debug ;Starts or stops a debugging session. ;— ;— ;Yes ;3 ;— ;— ;— ;— ;— ;—
+/dedicatedwsserver ;Attempts to connect to the websocket server. ;Yes ;— ;— ;— ;0 ;MP ;— ;— ;— ;—
+/defaultgamemode ;Sets the default game mode. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;— ;
+/deop ;Revokes operator status from a player. ;Yes ;Yes ;Yes ;3 ;2 ;MP‌[Java Edition only] ;— ;— ;;—
+/dialogue ;Opens NPC dialogue for a player. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;;—
+/difficulty ;Sets the difficulty level. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;— ;
+/effect ;Add or remove status effects. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;;;—
+/enchant ;Adds an enchantment to a player's selected item. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/event ;Used to trigger an event on an entity. ;Yes ;— ;— ;— ;1 ;— ;— ;;;—
+/execute ;Executes another command. ;Yes ;Yes ;Yes ;2 ;1 ;— ;;;;
+/experience ;An alias of /xp. Adds or removes player experience. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;;—
+/fill ;Fills a region with a specific block. ;Yes ;Yes ;Yes ;2 ;1 ;— ;;— ;— ;—
+/fog ;Used for managing active fog settings for players. ;Yes ;— ;— ;— ;1 ;— ;— ;— ;;—
+/forceload ;Forces chunks to constantly be loaded or not. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;— ;
+/function ;Runs a function. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;— ;
+/gamemode ;Sets a player's game mode. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/gamerule ;Sets or queries a game rule value. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;— ;
+/gametest ;To test the GameTest features. ;Yes ;— ;— ;— ;1 ;— ;— ;— ;— ;—
+/give ;Gives an item to a player. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/help ;An alias of /?. Provides help for commands. ;Yes ;Yes ;Yes ;0 ;0 ;— ;— ;— ;— ;—
+/immutableworld ;Allows setting immutable state of a world. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;— ;
+/item ;Manipulates items in inventories. ;— ;— ;Yes ;2 ;— ;— ;;;;—
+/kick ;Kicks a player off a server. ;Yes ;Yes ;Yes ;3 ;1 ;— ;— ;— ;;—
+/kill ;Kills entities (players, mobs, items, etc.). ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;;;—
+/list ;Lists players on the server. ;Yes ;Yes ;Yes ;0 ;0 ;— ;— ;— ;;—
+/locate ;Locates closest structure. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;— ;
+/locatebiome ;Locates closest biome. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;— ;
+/loot ;Drops items from an inventory slot onto the ground. ;— ;— ;Yes ;2 ;— ;— ;;;;—
+/me ;Displays a message about the sender. ;Yes ;Yes ;Yes ;0 ;0 ;— ;— ;— ;;—
+/mobevent ;Enables/disables a specified mob event. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;;—
+/msg ;An alias of /tell and /w. Displays a private message to other players. ;Yes ;Yes ;Yes ;0 ;0 ;— ;— ;— ;;—
+/music ;Allows the player to control playing music tracks. ;Yes ;— ;— ;— ;1 ;— ;— ;— ;;—
+/op ;Grants operator status to a player. ;Yes ;Yes ;Yes ;3 ;2 ;MP‌[Java Edition only] ;— ;— ;;—
+/ops ;An alias of /permission. Reloads and applies permissions. ;Yes ;Yes ;— ;— ;4 ;MP ;— ;— ;;—
+/pardon ;Removes entries from the banlist. ;— ;— ;Yes ;3 ;— ;MP ;— ;— ;;—
+/pardon-ip ;Removes entries from the banlist. ;— ;— ;Yes ;3 ;— ;MP ;— ;— ;;—
+/particle ;Creates particles. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/perf ;Captures info and metrics about the game for 10 seconds. ;— ;— ;Yes ;4 ;— ;MP ;— ;— ;— ;
+/permission ;An alias of /ops. Reloads and applies permissions. ;Yes ;Yes ;— ;— ;4 ;MP ;— ;— ;;—
+/playanimation ;Used to run a one-off animation. ;Yes ;— ;— ;— ;1 ;— ;— ;;;—
+/playsound ;Plays a sound. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/publish ;Opens single-player world to local network. ;— ;— ;Yes ;4 ;— ;SP only ;— ;— ;— ;
+/recipe ;Gives or takes player recipes. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;;—
+/reload ;Reloads loot tables, advancements, and functions from disk. ;Yes ;Yes ;Yes ;2 ;2 ;— ;— ;— ;— ;
+/remove ;Removing agent. ;— ;? ;— ;— ;2 ;— ;— ;;— ;—
+/replaceitem ;Replaces items in inventories. ;Yes ;Yes ;Removed ;2 ;1 ;— ;;;;—
+/ride ;Used to make entities ride other entities, stop entities from riding, make rides evict their riders, or summon rides or riders. ;Yes ;— ;— ;— ;1 ;— ;— ;;;—
+/save ;Prepares a backup, queries its status, or resumes. ;Yes ;— ;— ;— ;4 ;MP ;— ;— ;— ;
+/save-all ;Saves the server to disk. ;— ;— ;Yes ;4 ;— ;MP ;— ;— ;— ;
+/save-off ;Disables automatic server saves. ;— ;— ;Yes ;4 ;— ;MP ;— ;— ;— ;
+/save-on ;Enables automatic server saves. ;— ;— ;Yes ;4 ;— ;MP ;— ;— ;— ;
+/say ;Displays a message to multiple players. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/schedule ;Delays the execution of a function. ;Yes ;— ;Yes ;2 ;1 ;— ;— ;— ;— ;—
+/scoreboard ;Manages scoreboard objectives and players. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;;;—
+/seed ;Displays the world seed. ;— ;— ;Yes ;0 in singleplayer, 2 in multiplayer ;— ;— ;— ;— ;— ;
+/setblock ;Changes a block to another block. ;Yes ;Yes ;Yes ;2 ;1 ;— ;;— ;— ;—
+/setidletimeout ;Sets the time before idle players are kicked. ;— ;— ;Yes ;3 ;— ;MP ;— ;— ;;—
+/setmaxplayers ;Sets the maximum number of players allowed to join. ;Yes ;Yes ;— ;— ;3 ;— ;— ;— ;;—
+/setworldspawn ;Sets the world spawn. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;— ;
+/spawnpoint ;Sets the spawn point for a player. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/spectate ;Make one player in spectator mode spectate an entity. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;;—
+/spreadplayers ;Teleports entities to random locations. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;;;—
+/stop ;Stops a server. ;Yes ;— ;Yes ;4 ;4 ;MP ;— ;— ;— ;
+/stopsound ;Stops a sound. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/structure ;Used to save and load structures without having to use structure blocks items in inventories. ;Yes ;— ;— ;— ;1 ;— ;;;— ;
+/summon ;Summons an entity. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;;— ;—
+/tag ;Controls entity tags. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;;;—
+/team ;Controls teams. ;— ;— ;Yes ;2 ;— ;— ;— ;;;—
+/teammsg ;An alias of /tm. Specifies the message to send to team. ;— ;— ;Yes ;0 ;— ;— ;— ;— ;;—
+/teleport ;An alias of /tp. Teleports entities. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;;;—
+/tell ;An alias of /msg and /w. Displays a private message to other players. ;Yes ;Yes ;Yes ;0 ;0 ;— ;— ;— ;;—
+/tellraw ;Displays a JSON message to players. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/testfor ;Counts entities matching specified conditions. ;Yes ;Yes ;Removed ;2 ;1 ;— ;— ;;;—
+/testforblock ;Tests whether a block is in a location. ;Yes ;Yes ;Removed ;2 ;1 ;— ;;— ;— ;—
+/testforblocks ;Tests whether the blocks in two regions match. ;Yes ;Yes ;Removed ;2 ;1 ;— ;;— ;— ;—
+/tickingarea ;Add, remove, or list ticking areas. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;— ;
+/time ;Changes or queries the world's game time. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;— ;
+/title ;Manages screen titles. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
+/titleraw ;Controls screen titles with JSON messages. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;;—
+/tm ;An alias of /teammsg. Specifies the message to send to team. ;— ;— ;Yes ;0 ;— ;— ;— ;— ;;—
+/toggledownfall ;Toggles the weather. ;Yes ;Yes ;Removed ;— ;1 ;— ;— ;— ;— ;
+/tp ;An alias of /teleport. Teleports entities. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;;;—
+/trigger ;Sets a trigger to be activated. ;— ;— ;Yes ;0 ;— ;— ;— ;— ;;—
+/w ;An alias of /tell and /msg. Displays a private message to other players. ;Yes ;Yes ;Yes ;0 ;0 ;— ;— ;— ;;—
+/wb ;An alias of /worldbuilder. Ability to edit restricted blocks. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;— ;
+/weather ;Sets the weather. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;— ;
+/whitelist ;Manages server whitelist. ;Yes ;— ;Yes ;3 ;— ;MP ;— ;— ;;—
+/worldborder ;Manages the world border. ;— ;— ;Yes ;2 ;— ;— ;— ;— ;— ;
+/worldbuilder ;An alias of /wb. Ability to edit restricted blocks. ;Yes ;Yes ;— ;— ;1 ;— ;— ;— ;— ;
+/wsserver ;An alias of /connect. Attempts to connect to the websocket server. ;Yes ;Yes ;— ;— ;0‌[EE only], 2‌[BE only] ;— ;— ;— ;— ;—
+/xp ;An alias of /experience‌[Java Edition only]. Adds or removes player experience. ;Yes ;Yes ;Yes ;2 ;1 ;— ;— ;— ;;—
