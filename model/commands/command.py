@@ -117,7 +117,14 @@ class CommandInfo(CommandNode):
 	opLevel: Union[int, str] = Serialized(default=0)
 	availableInSP: bool = Serialized(default=True)
 	availableInMP: bool = Serialized(default=True)
+
 	removed: bool = Serialized(default=False)
+	removedVersion: str = Serialized(default=None, doc="""the version this command was removed, if it has been removed else""")
+	removedComment: str = Serialized(default='')
+
+	deprecated: bool = Serialized(default=False)
+	deprecatedVersion: str = Serialized(default=None, doc="""the version this command was deprecated, if it has been deprecated""")
+	deprecatedComment: str = Serialized(default='')
 
 	argument: list[CommandNode] = Serialized(default_factory=list[CommandNode])
 	next: Sequence[CommandNode] = Computed(getInitValue=argument)

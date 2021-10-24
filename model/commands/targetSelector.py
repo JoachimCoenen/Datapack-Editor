@@ -4,7 +4,7 @@ from typing import Optional
 from Cat.Serializable import RegisterContainer, Serialized
 from Cat.utils.collections import OrderedMultiDict
 from Cat.utils.profiling import ProfiledFunction
-from model.commands.argumentParsers import argumentParser, makeParsedArgument, getArgumentParser, missingArgumentParser
+from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser, argumentHandler, ArgumentHandler
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import TargetSelector
 from model.commands.command import ArgumentInfo
@@ -153,53 +153,50 @@ FALLBACK_TS_ARGUMENT_INFO = TSArgumentInfo.create(
 )
 
 
-@argumentParser(DPE_TARGET_SELECTOR_SCORES.name)
-def parseTargetSelectorScores(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-	if not sr.tryConsumeChar('{'):
-		return None
+@argumentHandler(DPE_TARGET_SELECTOR_SCORES.name)
+class TargetSelectorScoresArgumentHandler(ArgumentHandler):
+	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+		if not sr.tryConsumeChar('{'):
+			return None
 
-	scores: OrderedMultiDict[str, ParsedArgument] = OrderedMultiDict[str, ParsedArgument]()
-	sr.tryConsumeWhitespace()
-	sr.save()
-	while not sr.tryConsumeChar('}'):
-		sr.mergeLastSave()
-
-		parser = getArgumentParser(MINECRAFT_OBJECTIVE)
-		objective = parser(sr, None, errorsIO=errorsIO)
-		if objective is None:
-			errorsIO.append(CommandSyntaxError(f"Expected an objective.", Span(sr.currentPos), style='error'))
-			objective = ''
-		else:
-			objective = objective.value
-
+		scores: OrderedMultiDict[str, ParsedArgument] = OrderedMultiDict[str, ParsedArgument]()
 		sr.tryConsumeWhitespace()
-		if not sr.tryConsumeChar('='):
-			errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", Span(sr.currentPos), style='error'))
-		sr.tryConsumeWhitespace()
+		sr.save()
+		while not sr.tryConsumeChar('}'):
+			sr.mergeLastSave()
 
-		parser = getArgumentParser(MINECRAFT_INT_RANGE)
-		if parser is None:
-			value = missingArgumentParser(sr, None, errorsIO=errorsIO)
-		# return firstArg, errors
-		else:
-			value = parser(sr, None, errorsIO=errorsIO)
-		if value is None:
-			remainig = sr.readUntilEndOrRegex(re.compile(r'[],]'))
-			value = makeParsedArgument(sr, None, value=remainig)
-			errorsIO.append(CommandSyntaxError(f"Expected {MINECRAFT_INT_RANGE.name}.", sr.currentSpan, style='error'))
-		sr.mergeLastSave()
-		scores.add(objective, value)
+			handler = getArgumentHandler(MINECRAFT_OBJECTIVE)
+			objective = handler.parse(sr, None, errorsIO=errorsIO)
+			if objective is None:
+				errorsIO.append(CommandSyntaxError(f"Expected an objective.", Span(sr.currentPos), style='error'))
+				objective = ''
+			else:
+				objective = objective.value
 
-		sr.tryConsumeWhitespace()
-		if sr.tryConsumeChar('}'):
-			break
-		if sr.tryConsumeChar(','):
 			sr.tryConsumeWhitespace()
-			continue
-		if sr.hasReachedEnd:
-			errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format("`}`", 'end of str'), sr.currentSpan, style='error'))
-			break
-	return makeParsedArgument(sr, ai, value=scores)
+			if not sr.tryConsumeChar('='):
+				errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", Span(sr.currentPos), style='error'))
+			sr.tryConsumeWhitespace()
+
+			handler = getArgumentHandler(MINECRAFT_INT_RANGE)
+			value = handler.parse(sr, None, errorsIO=errorsIO)
+			if value is None:
+				remainig = sr.readUntilEndOrRegex(re.compile(r'[],]'))
+				value = makeParsedArgument(sr, None, value=remainig)
+				errorsIO.append(CommandSyntaxError(f"Expected {MINECRAFT_INT_RANGE.name}.", sr.currentSpan, style='error'))
+			sr.mergeLastSave()
+			scores.add(objective, value)
+
+			sr.tryConsumeWhitespace()
+			if sr.tryConsumeChar('}'):
+				break
+			if sr.tryConsumeChar(','):
+				sr.tryConsumeWhitespace()
+				continue
+			if sr.hasReachedEnd:
+				errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format("`}`", 'end of str'), sr.currentSpan, style='error'))
+				break
+		return makeParsedArgument(sr, ai, value=scores)
 
 
 def _parseTargetSelectorArgs(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[OrderedMultiDict[str, ParsedArgument]]:
@@ -232,12 +229,12 @@ def _parseTargetSelectorArgs(sr: StringReader, ai: ArgumentInfo, *, errorsIO: li
 			if isNegated and not tsai.isNegatable:
 				errorsIO.append(CommandSyntaxError(f"Target selector argument '`{prop}`' cannot be negated.", sr.currentSpan, style='error'))
 
-			parser = getArgumentParser(tsai.type)
-			if parser is None:
+			handler = getArgumentHandler(tsai.type)
+			if handler is None:
 				value = missingArgumentParser(sr, tsai, errorsIO=errorsIO)
 			# return firstArg, errors
 			else:
-				value = parser(sr, tsai, errorsIO=errorsIO)
+				value = handler.parse(sr, tsai, errorsIO=errorsIO)
 			if value is None:
 				remainig = sr.readUntilEndOrRegex(re.compile(r'[],]'))
 				value = makeParsedArgument(sr, None, value=remainig)

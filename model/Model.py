@@ -309,6 +309,8 @@ class World(SerializableContainer):
 
 	path: str = Serialized(default='', decorators=[pd.FolderPath()])
 
+	selectedMinecraftExec: str = Serialized(default='', decorators=[pd.FilePath([('jar', '.jar')])])
+
 	@Computed()
 	def isValid(self) -> bool:
 		return len(self.path) > 0 and os.path.isdir(self.path)
@@ -318,7 +320,7 @@ class World(SerializableContainer):
 		return fileNameFromFilePath(self.path)
 
 	@pd.List()
-	@ComputedCached(dependencies_=[path, FilesChangedDependency(path, 'datapacks/*')])
+	@ComputedCached(dependencies_=[path, FilesChangedDependency(path, 'datapacks/*'), selectedMinecraftExec])
 	def datapackPaths(self) -> list[str]:
 		datapacksPath = os.path.join(self.path, 'datapacks/')
 		try:
@@ -326,6 +328,8 @@ class World(SerializableContainer):
 		except (JSONDecodeError, FileNotFoundError, AttributeError, TypeError) as e:
 			logError(f'Unable to find datapacks: \n{traceback.format_exc()}')
 			return []
+		if self.selectedMinecraftExec:
+			datapackFiles.append(self.selectedMinecraftExec)
 		return datapackFiles
 
 	_oldDatapacks: list[Datapack] = Serialized(default_factory=list, shouldSerialize=False, shouldPrint=False, decorators=[pd.NoUI()])

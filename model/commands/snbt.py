@@ -1,8 +1,8 @@
 import functools as ft
 from typing import Optional
 
-from nbtlib import Parser, tokenize, InvalidLiteral, Base, Byte, Short, Int, Long, Float, Double, String, List, Compound, ByteArray, IntArray, LongArray, Path, \
-	InvalidPath, ListIndex, CompoundMatch
+from nbtlib import Parser, tokenize, Base, Byte, Short, Int, Long, Float, Double, String, List, Compound, ByteArray, IntArray, LongArray, Path, \
+	ListIndex, CompoundMatch, InvalidLiteral
 from nbtlib.path import can_be_converted_to_int, NamedKey, extend_accessors
 
 from Cat.utils import escapeForXml
@@ -84,12 +84,19 @@ def parseNBTTag2(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Opt
 parseNBTTag = parseNBTTag2
 
 
+class InvalidPath(ValueError):
+	"""Raised when creating an invalid nbt path."""
+
+	def __str__(self):
+		return f"{self.args[1]} at position {self.args[0][0]}"
+
+
 def parse_accessors(parser: Parser, literal: str):
 	while True:
 		try:
 			tag = parser.parse()
 		except InvalidLiteral as exc:
-			raise InvalidPath(f"Invalid path at position {exc.args[0][0]}") from exc
+			raise InvalidPath(exc.args[0], f"Invalid path. ({exc.args[1]})") from exc
 
 		if isinstance(tag, String):
 			if parser.current_token.type == "QUOTED_STRING":
@@ -101,7 +108,7 @@ def parse_accessors(parser: Parser, literal: str):
 			if not tag:
 				yield ListIndex(index=None)
 			elif len(tag) != 1:
-				raise InvalidPath("Brackets should only contain one element")
+				raise InvalidPath(None, "Brackets should only contain one element")
 			elif issubclass(tag.subtype, Compound):
 				yield ListIndex(index=None)
 				yield CompoundMatch(tag[0])
@@ -109,7 +116,7 @@ def parse_accessors(parser: Parser, literal: str):
 				yield ListIndex(int(tag[0]))
 			else:
 				raise InvalidPath(
-					"Brackets should only contain an integer or a compound"
+					None, "Brackets should only contain an integer or a compound"
 				)
 
 		elif isinstance(tag, Compound):
@@ -121,7 +128,7 @@ def parse_accessors(parser: Parser, literal: str):
 			)
 
 		else:
-			raise InvalidPath(f"Invalid path element {tag}")
+			raise InvalidPath(None, f"Invalid path element {tag}")
 
 		try:
 			nextCharPos = parser.token_span[1] - 1
@@ -134,16 +141,17 @@ def parse_accessors(parser: Parser, literal: str):
 
 def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
 	sr.save()
-	try:
-		literal = sr.source[sr.cursor:]
 
-		parser = None
-		try:
-			parser = Parser(tokenize(literal))
-		except InvalidLiteral:
-			accessorsIter = ()
-		else:
-			accessorsIter = parse_accessors(parser, literal)
+	literal = sr.source[sr.cursor:]
+	parser = None
+	try:
+		parser = Parser(tokenize(literal))
+	except InvalidLiteral:
+		accessorsIter = ()
+	else:
+		accessorsIter = parse_accessors(parser, literal)
+
+	try:
 		accessors = ()
 		for accessor in accessorsIter:
 			accessors = extend_accessors(accessors, accessor)
@@ -154,12 +162,15 @@ def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -
 			if cursor != len(literal):
 				cursor -= 1
 			sr.cursor += cursor
-	except InvalidLiteral as ex:
+	except (InvalidLiteral, InvalidPath) as ex:
 		message = ex.args[1]
-		start = ex.args[0][0] + sr.cursor
-		stop = ex.args[0][1] + sr.cursor
-		begin = sr.posFromColumn(start)
-		end = sr.posFromColumn(stop)
+		if ex.args[0] is None:
+			begin, end = sr.currentSpan.asTuple
+		else:
+			start = ex.args[0][0] + sr.cursor
+			stop = ex.args[0][1] + sr.cursor
+			begin = sr.posFromColumn(start)
+			end = sr.posFromColumn(stop)
 		errorsIO.append(CommandSyntaxError(escapeForXml(message), Span(begin, end), style='error'))
 		sr.rollback()
 		return None

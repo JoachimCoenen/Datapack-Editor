@@ -8,8 +8,8 @@ __all__ = [
 	'DatapackFilesEditor'
 ]
 
-class DatapackFilesEditor(EditorBase[World]):
 
+class DatapackFilesEditor(EditorBase[World]):
 	def __init__(self, model: World):
 		super(DatapackFilesEditor, self).__init__(model)
 
@@ -19,11 +19,12 @@ class DatapackFilesEditor(EditorBase[World]):
 			[
 				LocalFilesPropInfo(Datapack.files, 'data/', 'data'),
 			],
-
 			self.window()._tryOpenOrSelectDocument,
 			roundedCorners=self.roundedCorners(),
 			overlap=self.overlap()
 		)
+
+		gui.propertyField(self.model(), self.model().selectedMinecraftExecProp)
 
 
 

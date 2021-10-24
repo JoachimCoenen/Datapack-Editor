@@ -4,7 +4,7 @@ from Cat.Serializable import SerializableContainer, Serialized
 from Cat.utils.collections import ChainedList
 from model.commands.argumentTypes import *
 from model.commands.command import CommandInfo, Keyword, ArgumentInfo, TERMINAL, COMMANDS_ROOT, Switch
-from model.commands.gamerules import GAMERULES
+from model.data.gamerules import GAMERULES
 
 
 class AllCommands(SerializableContainer):
@@ -245,6 +245,8 @@ _BASIC_COMMAND_INFO_LIST = [
 		command='replaceitem',
 		description='Replaces items in inventories.',
 		removed=True,
+		removedVersion='1.17',
+		removedComment='Replaced with `/item replace`',
 		opLevel=2,
 	),
 	CommandInfo.create(
@@ -366,18 +368,24 @@ _BASIC_COMMAND_INFO_LIST = [
 		command='testfor',
 		description='Counts entities matching specified conditions.',
 		removed=True,
+		removedVersion='1.13',
+		removedComment='',  # TODO: removedComment for '/testfor' command
 		opLevel=2,
 	),
 	CommandInfo.create(
 		command='testforblock',
 		description='Tests whether a block is in a location.',
 		removed=True,
+		removedVersion='1.13',
+		removedComment='Use `/execute if` instead',
 		opLevel=2,
 	),
 	CommandInfo.create(
 		command='testforblocks',
 		description='Tests whether the blocks in two regions match.',
 		removed=True,
+		removedVersion='1.13',
+		removedComment='Use `/execute if` instead',
 		opLevel=2,
 	),
 	CommandInfo.create(
@@ -399,6 +407,8 @@ _BASIC_COMMAND_INFO_LIST = [
 		command='toggledownfall',
 		description='Toggles the weather.',
 		removed=True,
+		removedVersion='1.13',
+		removedComment='Use `/weather ...` instead',
 		opLevel=1,
 	),
 	CommandInfo.create(

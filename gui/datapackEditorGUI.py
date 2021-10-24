@@ -20,10 +20,10 @@ from Cat.CatPythonGUI.GUI.Widgets import CatTextField
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin
 from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, Error
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData, PythonGUIWidget
-from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataHeaderBuilder, DataTreeBuilder
+from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
 from Cat.Serializable import SerializedPropertyABC, SerializableContainer
 from Cat.icons import icons
-from Cat.utils import Deprecated, findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, Maybe, format_full_exc
+from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, Maybe, format_full_exc
 from Cat.utils.abc import abstractmethod
 from Cat.utils.collections import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from Cat.utils.profiling import logError

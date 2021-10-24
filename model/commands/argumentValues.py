@@ -21,6 +21,17 @@ class BlockState(SerializableContainer):
 
 
 @RegisterContainer
+class ItemStack(SerializableContainer):
+	__slots__ = ()
+	itemId: ResourceLocation = Serialized(default=ResourceLocation(None, 'INVALID', False))
+	nbt: Optional[CompoundTag] = Serialized(default=None)
+
+	@classmethod
+	def create(cls, *, itemId: ResourceLocation, nbt: Optional[CompoundTag]):
+		return super(ItemStack, cls).create(itemId=itemId, nbt=nbt)
+
+
+@RegisterContainer
 class TargetSelector(SerializableContainer):
 	__slots__ = ()
 	variable: str = Serialized(default='')

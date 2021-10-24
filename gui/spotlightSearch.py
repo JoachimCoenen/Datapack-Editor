@@ -3,10 +3,11 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-from PyQt5.QtCore import QPoint, Qt
+from PyQt5.QtCore import QPoint, Qt, QTimer, QSize
 from PyQt5.QtGui import QFocusEvent, QFont, QKeyEvent, QMoveEvent, QResizeEvent
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QLayout
 
+from Cat.CatPythonGUI.GUI import SizePolicy
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CORNERS, NO_MARGINS, NO_OVERLAP, Overlap, RoundedCorners
 from Cat.CatPythonGUI.GUI.pythonGUI import PythonGUIDialog, PythonGUI
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, fitToScreen
@@ -350,6 +351,8 @@ class SpotlightSearchGui(CatTextField):
 			self._resultsPopup.accept()
 
 	def _updatePopupGeometry(self):
+		self._resultsPopup.recalculateGeometry()
+		return
 		if self.parent() is not None:
 			center = self.geometry().left() + self.geometry().width() / 2
 			left = center - self._resultsPopup.width() / 2
@@ -383,6 +386,8 @@ class SpotlightSearchGui(CatTextField):
 class FileSearchPopup(PythonGUIDialog):
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=PythonGUI, parent=parent, flags=Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
+		self._titlebarVisible = False
+		self.disableContentMargins = True
 		self.setSuppressRedrawLogging(True)
 		#self.setAttribute(Qt.WA_ShowWithoutActivating)
 		self.setAttribute(Qt.WA_TranslucentBackground)
@@ -392,6 +397,14 @@ class FileSearchPopup(PythonGUIDialog):
 		self._searchResults: SearchResults = SearchResults('', [])
 		self._shownResults: list[SearchResult] = []
 		self.selectedItem: Optional[SearchResult] = None
+
+		#self._topCenter: QPoint = QPoint()
+
+		self.layout().setSizeConstraint(QLayout.SetFixedSize)
+		# sp = self.sizePolicy()
+		# sp.setVerticalPolicy(SizePolicy.Fixed.value)
+		# sp.setHorizontalPolicy(SizePolicy.Fixed.value)
+		# self.setSizePolicy(sp)
 
 	def setSearchResults(self, searchResults: SearchResults):
 		self._searchResults = searchResults
@@ -409,7 +422,7 @@ class FileSearchPopup(PythonGUIDialog):
 
 	def OnGUI(self, gui: PythonGUI):
 		self.layout().setContentsMargins(*NO_MARGINS)
-		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
+		with gui.vLayout(preventVStretch=False, verticalSpacing=0):
 			if not self._shownResults:
 				pass  # gui.addToolbarSpacer(SizePolicy.Ignored, overlap=NO_OVERLAP, roundedCorners=CORNERS.ALL)
 			else:
@@ -427,7 +440,6 @@ class FileSearchPopup(PythonGUIDialog):
 					else:
 						self.listElementGUI(gui, self._shownResults[-1], overlap=(0, 1), roundedCorners=CORNERS.NONE)
 						self.remainingElementsGUI(gui, remainingElementsCount, overlap=(0, 1), roundedCorners=(False, False, True, True))
-
 
 	def listElementGUI(self, gui: PythonGUI, sr: SearchResult, overlap: Overlap, roundedCorners: RoundedCorners):
 
@@ -472,7 +484,13 @@ class FileSearchPopup(PythonGUIDialog):
 			pathStyle = f'color: #808080'
 			font = self.font()
 
-		with gui.vPanel(overlap=overlap, roundedCorners=roundedCorners, default=isSelected, onCustomContextMenuRequested=lambda pos, fe=fe: onContextMenu(fe)):
+		with gui.vPanel(
+			overlap=overlap,
+			roundedCorners=roundedCorners,
+			default=isSelected,
+			onCustomContextMenuRequested=lambda pos, fe=fe: onContextMenu(fe),
+			vSizePolicy=SizePolicy.Fixed.value
+		):
 			with gui.hLayout():
 				if gui.doubleClickLabel(labelMaker1(fe.fileName, sr.match_, fileNameStyle), font=font):
 					self.selectedItem = sr
@@ -546,10 +564,41 @@ class FileSearchPopup(PythonGUIDialog):
 		super(FileSearchPopup, self).focusOutEvent(event)
 		self.hide()
 
+	def recalculateGeometry(self):
+		textField = self._textField
+		if textField is not None:
+			# center = textField.geometry().left() + textField.geometry().width() / 2
+			center = QPoint(textField.width() // 2, textField.height())
+			center = textField.mapToGlobal(center)
+
+			width = self.width()  # max(textField.width(), int(200 * self._gui._scale))
+			height = self.height()
+
+			top = center.y() - int(9 * self._gui._scale)
+			left = center.x() - width // 2
+
+			#self.setGeometry(left, top, width, height)
+			self.move(left, top)
+
+			# topLeft = QPoint(left, top)
+			# self.move(topLeft)
+
+	@CrashReportWrapped
+	def sizeHint(self) -> QSize:
+		textField = self._textField
+		if textField is not None:
+			return QSize(
+				max(textField.width(), int(200 * self._gui._scale)),
+				self.minimumSizeHint().height(),
+			)
+		else:
+			return self.minimumSizeHint()
+
 	@CrashReportWrapped
 	def resizeEvent(self, event: QResizeEvent) -> None:
-		oldY = self.y()
-		geometry = fitToScreen(self.x(), self.y(), self.width(), self.height())
-		geometry.setY(oldY)
-		self.setGeometry(geometry)
+		# oldY = self.y()
+		# geometry = fitToScreen(self.x(), self.y(), self.width(), self.height())
+		# geometry.setY(oldY)
+		# self.setGeometry(geometry)
 		super(FileSearchPopup, self).resizeEvent(event)
+		self.recalculateGeometry()

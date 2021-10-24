@@ -1,9 +1,9 @@
 from __future__ import annotations
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, TYPE_CHECKING
 
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, Computed, ComputedCached
 from Cat.utils import Maybe
-from model.commands.command import CommandInfo, CommandNode
+from model.commands.command import CommandInfo, CommandNode, ArgumentInfo
 from model.parsingUtils import Position, Span
 
 

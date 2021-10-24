@@ -9,16 +9,15 @@ from Cat.CatPythonGUI.GUI import PythonGUI
 from Cat.CatPythonGUI.GUI.codeEditor import MyQsciAPIs, AutoCompletionTree, Position, CodeEditorLexer
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override
+from model.commands.argumentHandlers import getArgumentHandler, defaultDocumentationProvider
 from model.commands.argumentTypes import LiteralsArgumentType, ArgumentType, MINECRAFT_FUNCTION
 from model.commands.command import ArgumentInfo, Keyword, Switch, CommandNode, TERMINAL, COMMANDS_ROOT
 from model.commands.commands import BASIC_COMMAND_INFO
-from model.commands.documentationProviders import getDocumentationProvider, defaultDocumentationProvider
-from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedComment
+from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedComment, ParsedArgument
 from model.commands.parser import parseMCFunction
-from model.commands.suggestionProviders import getSuggestionProvider
 from model.commands.tokenizer import TokenType, tokenizeCommand, tokenizeComment, Token2
 from model.commands.validator import checkMCFunction
-from model.parsingUtils import GeneralParsingError
+from model.parsingUtils import GeneralParsingError, Span
 
 TT = TypeVar('TT')
 
@@ -149,9 +148,11 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 			info = match.info
 			if info is not None:
 				type_ = getattr(info, 'type', None)
-				documentationProvider = getDocumentationProvider(type_)
-				if documentationProvider is None:
+				handler = getArgumentHandler(type_) if type_ is not None else None
+				if handler is None:
 					documentationProvider = defaultDocumentationProvider
+				else:
+					documentationProvider = handler.getDocumentation
 				tip = documentationProvider(match)
 			else:
 				errors += checkMCFunction(function)
@@ -171,12 +172,9 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 					result += self._getNextKeywords(nx.next)
 			elif isinstance(nx, ArgumentInfo):
 				type_: ArgumentType = nx.type
-				if isinstance(type_, LiteralsArgumentType):
-					result += type_.options
-				else:
-					provider = getSuggestionProvider(type_)
-					if provider is not None:
-						result += provider(None)
+				handler = getArgumentHandler(type_)
+				if handler is not None:
+					result += handler.getSuggestions(nx)
 			elif nx is COMMANDS_ROOT:
 				result += list(BASIC_COMMAND_INFO.keys())
 		return result
@@ -227,10 +225,14 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		for command in function.commands:
 			part: ParsedCommandPart = command.next
 			while part is not None:
-				info = part.info
-				if isinstance(info, ArgumentInfo):
-					if info.type is MINECRAFT_FUNCTION:
-						ranges.append(part.span.asTuple)
+				if isinstance(part, ParsedArgument):
+					info = part.info
+					if isinstance(info, ArgumentInfo):
+						handler = getArgumentHandler(info.type)
+						if handler is not None:
+							partRanges = handler.getClickableRanges(part)
+							if partRanges:
+								ranges.extend(map(Span.asTuple.get, partRanges))
 				part = part.next
 		return ranges
 
@@ -252,14 +254,13 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		if match is None:
 			return None
 		else:
-			info = match.info
-			if info is not None:
-				type_ = getattr(info, 'type', None)
-				if type_ is MINECRAFT_FUNCTION:
-					for dp in getSession().world.datapacks:
-						if (func := dp.contents.functions.get(match.value)) is not None:
-							fp = func.filePath
-							editor.window()._tryOpenOrSelectDocument(fp)
+			if isinstance(match, ParsedArgument):
+				info = match.info
+				if isinstance(info, ArgumentInfo):
+					handler = getArgumentHandler(info.type)
+					if handler is not None:
+						window = editor.window()
+						handler.onIndicatorClicked(match, position, window)
 
 
 @CodeEditorLexer('MCFunction')

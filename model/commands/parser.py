@@ -3,7 +3,6 @@ from typing import Optional, Sequence
 from Cat.utils import escapeForXml
 from Cat.utils.collections import Stack
 from Cat.utils.profiling import ProfiledFunction
-from model.commands.argumentParsers import getArgumentParser, missingArgumentParser, makeCommandSyntaxError, makeParsedArgument
 from model.commands.command import CommandInfo, Keyword, ArgumentInfo, CommandNode, TERMINAL, COMMANDS_ROOT, Switch
 from model.commands.commands import getCommandInfo
 from model.commands.utils import CommandSyntaxError, EXPECTED_ARGUMENT_SEPARATOR_MSG
@@ -12,6 +11,8 @@ from model.commands.stringReader import StringReader
 from model.parsingUtils import Position, Span
 
 from . import argumentParsersImpl
+from .argumentHandlers import getArgumentHandler, makeCommandSyntaxError, makeParsedArgument, missingArgumentParser
+
 argumentParsersImpl._init()  # do not remove!
 
 
@@ -92,6 +93,7 @@ def parseKeyword(sr: StringReader, ai: Keyword, *, errorsIO: list[CommandSyntaxE
 		sr.rollback()
 		return None
 
+
 def parseKeywords(sr: StringReader, possibilities: Sequence[CommandNode], *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 	keywords = {kw.name: kw for kw in possibilities if isinstance(kw, Keyword)}
 	if not keywords:
@@ -111,7 +113,7 @@ def parseKeywords(sr: StringReader, possibilities: Sequence[CommandNode], *, err
 def parseArguments(sr: StringReader, lineStart: int, lineNo: int, source: str, commandInfo: CommandInfo) -> tuple[Optional[ParsedArgument], list[CommandSyntaxError]]:
 	errors: list[CommandSyntaxError] = []
 
-	possibilities: list[CommandNode] = commandInfo.argument
+	possibilities: Sequence[CommandNode] = commandInfo.argument
 	firstArg: Optional[ParsedArgument] = None
 	lastArg: Optional[ParsedArgument] = None
 
@@ -126,12 +128,12 @@ def parseArguments(sr: StringReader, lineStart: int, lineNo: int, source: str, c
 					continue
 				elif isinstance(possibility, ArgumentInfo):
 					possibility: ArgumentInfo  # make the type inference of pycharm happy :(
-					parser = getArgumentParser(possibility.type)
-					if parser is None:
+					handler = getArgumentHandler(possibility.type)
+					if handler is None:
 						argument = missingArgumentParser(sr, possibility, errorsIO=errors)
 						# return firstArg, errors
 					else:
-						argument = parser(sr, possibility, errorsIO=errors)
+						argument = handler.parse(sr, possibility, errorsIO=errors)
 					if argument is not None:
 						break
 					pass  # TODO isinstance(possibility, ArgumentInfo):
