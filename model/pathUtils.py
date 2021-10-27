@@ -13,6 +13,8 @@ FilePath = Union[str, FilePathTpl]
 
 
 _normalizeDirSeparatorsTrans: dict = str.maketrans({'\\': '/'})
+
+
 def normalizeDirSeparators(path: FilePath) -> FilePath:
 	if isinstance(path, tuple):
 		return path[0].translate(_normalizeDirSeparatorsTrans), path[1].translate(_normalizeDirSeparatorsTrans)
@@ -28,6 +30,12 @@ def fileNameFromFilePath(path: FilePath) -> str:
 
 	filename = pathPart.removesuffix('/').rpartition('/')[2]
 	return filename
+
+
+def extensionFromFilePath(path: FilePath) -> str:
+	pathPart = path if isinstance(path, str) else path[1]
+	_, ext = os.path.splitext(pathPart)
+	return ext
 
 
 def getAllFilesFromSearchPath(rootFolders: Union[str, list[str]], folderFilter: str, zipPathFilter: str, extensions: Union[str, tuple[str, ...]], excludes: Union[str, tuple[str, ...]] = None) -> list[FilePath]:

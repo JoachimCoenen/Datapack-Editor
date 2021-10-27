@@ -18,7 +18,7 @@ from Cat.utils.collections import OrderedMultiDict
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
 from model.Model import Datapack
 from model.pathUtils import FilePath, getAllFilesFromSearchPath, ZipFilePool, loadTextFile
-from session import getSession
+from session.session import getSession
 
 
 @dataclass(unsafe_hash=True)

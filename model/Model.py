@@ -81,6 +81,7 @@ class Datapack(SerializableContainer):
 		self.contents: DatapackContents = DatapackContents()
 
 	path: str = Serialized(default='')
+	isZipped: bool = ComputedCached(getInitValue=lambda s: os.path.isfile(s.path), ependencies_=[path])
 
 	@ComputedCached(dependencies_=[path])
 	def name(self) -> str:

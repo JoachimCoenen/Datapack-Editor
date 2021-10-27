@@ -20,7 +20,7 @@ from Cat import utils
 from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries
 from model.Model import Datapack
 from model.pathUtils import FilePath
-from session import getSession
+from session.session import getSession
 
 from settings import applicationSettings
 
@@ -386,8 +386,8 @@ class SpotlightSearchGui(CatTextField):
 class FileSearchPopup(PythonGUIDialog):
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=PythonGUI, parent=parent, flags=Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
-		self._titlebarVisible = False
-		self.disableContentMargins = True
+		self._isTitlebarVisible = False
+		self._disableContentMargins = True
 		self.setSuppressRedrawLogging(True)
 		#self.setAttribute(Qt.WA_ShowWithoutActivating)
 		self.setAttribute(Qt.WA_TranslucentBackground)

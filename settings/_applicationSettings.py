@@ -34,7 +34,16 @@ class AppearanceSettings(SerializableContainer):
 	applicationStyle: str = Serialized(
 		default='Fusion',
 		label='Application Style',
-		decorators=[pd.ComboBox(choices=QStyleFactory.keys())]
+		decorators=[
+			pd.ComboBox(choices=QStyleFactory.keys()),
+			pd.NoUI()
+		]
+	)
+
+	useCompactLayout: bool = Serialized(
+		default=False,
+		label='Compact layout',
+		decorators=[pd.ToggleSwitch()]
 	)
 
 	fontSize: float = Serialized(

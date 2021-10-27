@@ -238,7 +238,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 
 	@override
 	def indicatorClicked(self, position: Position, state: Qt.KeyboardModifiers) -> None:
-		from session import getSession
+		from session.session import getSession
 		lexer: LexerMCFunction = self.lexer()
 		editor: QsciScintilla = lexer.editor()
 		text: str = editor.text()

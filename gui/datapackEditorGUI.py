@@ -6,14 +6,13 @@ import functools as ft
 import os
 import re
 from dataclasses import dataclass
-from operator import attrgetter
 from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Union, Pattern, NamedTuple, Protocol, Type, Generic
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
 
-import documents
+from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP, NO_MARGINS
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField
@@ -27,10 +26,14 @@ from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, Mayb
 from Cat.utils.abc import abstractmethod
 from Cat.utils.collections import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from Cat.utils.profiling import logError
-from documents import Document, ErrorCounts
-from gui.mcFunctionLexer import LexerMCFunction
+from gui import mcFunctionLexer
+from session.documents import Document, ErrorCounts
 from model.Model import Datapack
 from model.pathUtils import FilePath
+
+
+mcFunctionLexer.init()  # don't delete!
+
 
 inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})
 resultBoxStyle = Style({'CatBox': Style({'background': '#DAE8FC'})})
@@ -44,6 +47,26 @@ class DocumentGUIFunc(Protocol):
 TT = TypeVar('TT')
 TR = TypeVar('TR')
 T2 = TypeVar('T2')
+
+
+def createNewFile(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
+	name, ok = gui.askUserInput('New File', 'untitled.mcFunction')
+	if not ok or not name:
+		return
+
+	if isinstance(folderPath, tuple):
+		filePath = folderPath[0], os.path.join(folderPath[1], name)
+		joinedFilePath = os.path.join(*filePath)
+	else:
+		filePath = os.path.join(folderPath, name)
+		joinedFilePath = filePath
+
+	try:
+		with open(joinedFilePath, 'a'):
+			pass  # creates the File
+		openFunc(filePath)
+	except OSError as e:
+		gui.showAndLogError(e, "Cannot create file")
 
 
 class ContextMenuEntries:
@@ -74,6 +97,15 @@ class ContextMenuEntries:
 	def fileItems(cls, filePath: FilePath, openFunc: Callable[[str], None], *, showSeparator: bool = True) -> list[MenuItemData]:
 		entries: list[MenuItemData] = []
 		entries.append(('open', lambda p=filePath: openFunc(p), {'enabled': filePath is not None}))
+		if showSeparator:
+			entries.append(cls.separator())
+		entries.extend(cls.pathItems(filePath))
+		return entries
+
+	@classmethod
+	def folderItems(cls, filePath: FilePath, isMutable: bool, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None], *, showSeparator: bool = True) -> list[MenuItemData]:
+		entries: list[MenuItemData] = []
+		entries.append(('new File', lambda p=filePath: createNewFile(p, gui, openFunc), {'enabled': filePath is not None and isMutable}))
 		if showSeparator:
 			entries.append(cls.separator())
 		entries.extend(cls.pathItems(filePath))
@@ -408,14 +440,31 @@ class FileEntry:
 
 class FileEntry2(NamedTuple):
 	fullPath: FilePath
-	virtualPath: str = dataclasses.field(compare=False)
+	virtualPath: str  # = dataclasses.field(compare=False)
+
 
 
 @dataclass
 class FilesTreeItem:
+	# __slots__ = ('label', 'commonDepth', 'filePaths', 'isImmutable')
 	label: str
 	commonDepth: int = dataclasses.field(compare=False)
 	filePaths: list[FileEntry2] = dataclasses.field(compare=False)
+
+	isImmutable: bool = dataclasses.field(compare=False)
+
+	@property
+	def folderPath(self) -> Optional[FilePath]:
+		if not self.filePaths:
+			return None
+		fe = self.filePaths[0]
+		if fe.virtualPath.endswith(fe.fullPath[1]):
+			lenDiff = len(fe.virtualPath) - len(fe.fullPath[1])
+			cd = self.commonDepth - lenDiff
+			folderPath = fe.fullPath[0], fe.fullPath[1][:cd]
+			return folderPath
+		else:
+			return None
 
 	@property
 	def isFile(self) -> bool:
@@ -650,8 +699,21 @@ class DatapackEditorGUI(AutoGUI):
 			self,
 			allIncludedProjects: list[SerializableContainer],
 			localLayoutFilesProps: list[LocalFilesPropInfo],
-			openFunc: Callable[[FilePath], None],
-			includeDependencies: bool = True,
+			isImmutable: Callable[[SerializableContainer], bool],
+
+			labelMaker    : Callable[[FilesTreeItem, int], str] = lambda x, c: x.label,
+			iconMaker     : Optional[Callable[[FilesTreeItem, int], Optional[QIcon]]] = lambda x, c: icons.file_code if x.isFile else icons.folderInTree,
+			toolTipMaker  : Optional[Callable[[FilesTreeItem, int], Optional[str]]] = lambda x, c: (x.filePaths[0].virtualPath[:x.commonDepth] if x.filePaths and not isinstance(x.filePaths[0], FilesTreeItem) else x.label),
+			columnCount   : int = 1,
+			onDoubleClick : Optional[Callable[[FilesTreeItem], None]] =  None,
+			onContextMenu : Optional[Callable[[FilesTreeItem, int], None]] = None,
+			onCopy        : Optional[Callable[[FilesTreeItem], Optional[str]]] = None,
+			onCut         : Optional[Callable[[FilesTreeItem], Optional[str]]] = None,
+			onPaste       : Optional[Callable[[FilesTreeItem, str], None]] = None,
+			onDelete      : Optional[Callable[[FilesTreeItem], None]] = None,
+			isSelected    : Optional[Callable[[FilesTreeItem], bool]] = None,
+
+			*,
 			roundedCorners: RoundedCorners = CORNERS.NONE,
 			overlap: Overlap = NO_OVERLAP
 	):
@@ -660,7 +722,6 @@ class DatapackEditorGUI(AutoGUI):
 		:param allIncludedProjects:
 		:param localLayoutFilesProps:
 		:param openFunc:
-		:param includeDependencies:
 		:return:
 		"""
 
@@ -675,6 +736,7 @@ class DatapackEditorGUI(AutoGUI):
 			children: OrderedDict[str, FilesTreeItem] = OrderedDict()
 
 			commonDepth = data.commonDepth
+			isImmutable = data.isImmutable
 			for entry in data.filePaths:
 				index2 = entry.virtualPath.find('/', commonDepth)
 				index2 = len(entry.virtualPath) if index2 == -1 else index2
@@ -682,50 +744,31 @@ class DatapackEditorGUI(AutoGUI):
 
 				child = children.get(folder, None)
 				if child is None:
-					child = FilesTreeItem(folder, index2 + 1, [])
+					child = FilesTreeItem(folder, index2 + 1, [], isImmutable)
 					children[folder] = child
 				child.filePaths.append(entry)
 			return list(children.values())
 
-		def labelMaker(data: FilesTreeItem, column: int) -> str:
+		def _labelMaker(data: FilesTreeItem, column: int) -> str:
 			return data.label
 
-		def toolTipMaker(data: FilesTreeItem, column: int) -> str:
+		def _toolTipMaker(data: FilesTreeItem, column: int) -> str:
 			if data.isFile:
 				return data.filePaths[0].virtualPath[:data.commonDepth]
 			else:
 				return data.label
 
-		def iconMaker(data: FilesTreeItem, column: int) -> QIcon:
+		def _iconMaker(data: FilesTreeItem, column: int) -> QIcon:
 			return icons.file_code if data.isFile else icons.folderInTree
 
-		def onDoubleClick(data: FilesTreeItem):
+		def _onDoubleClick(data: FilesTreeItem):
 			if data.isFile:
 				openFunc(data.filePaths[0].fullPath)
 
-		def onContextMenu(data: FilesTreeItem, column: int):
+		def _onContextMenu(data: FilesTreeItem, column: int):
 			if data.isFile:
 				with self.popupMenu(atMousePosition=True) as menu:
 					menu.addItems(ContextMenuEntries.fileItems(data.filePaths[0].fullPath, openFunc=openFunc))
-
-		# if includeDependencies:
-		# 	allIncludedProjects.extend(sorted(project.deepDependencies, key=attrgetter('name')))
-
-		# if isinstance(firstSplitter, str):
-		# 	def getRight(fullPath: FilePath) -> str:
-		# 		if not isinstance(fullPath, str):
-		# 			splittingPath = fullPath[1]
-		# 		else:
-		# 			splittingPath = fullPath
-		# 		return splittingPath.split(firstSplitter, 1)[-1]
-		# else:
-		# 	firstSplitterPattern = re.compile(firstSplitter)
-		# 	def getRight(fullPath: FilePath) -> str:
-		# 		if not isinstance(fullPath, str):
-		# 			splittingPath = fullPath[1]
-		# 		else:
-		# 			splittingPath = fullPath
-		# 		return firstSplitterPattern.split(splittingPath, 1)[-1]
 
 		def getRight(fullPath: FilePath, firstSplitter: str) -> str:
 			if not isinstance(fullPath, str):
@@ -733,28 +776,23 @@ class DatapackEditorGUI(AutoGUI):
 			else:
 				splittingPath = fullPath
 			return splittingPath.split(firstSplitter, 1)[-1]
-
-		FilesByVirtualFolder = OrderedDict[str, list[tuple[FilePath, str]]]
-
-		# if not isinstance(localLayoutFilesProps, list):
-		# 	localLayoutFilesProps = [localLayoutFilesProps]
-
 		# autocomplete strings:
 		allAutocompleteStrings: list[str] = []
 		allFilePaths: list[FileEntry2] = []
-		rootItem: FilesTreeItem = FilesTreeItem('<ROOT>', 0, allFilePaths)
+		rootItem: FilesTreeItem = FilesTreeItem('<ROOT>', 0, allFilePaths, False)
 		for proj in allIncludedProjects:
 			projPrefix = proj.name + '/'
 			projPrefixLen = len(projPrefix)
 			#filesForProj: list[FileEntry2] = []
-			projItem: FilesTreeItem = FilesTreeItem(proj.name, projPrefixLen, [])
+			projIsImmutable: bool = isImmutable(proj)
+			projItem: FilesTreeItem = FilesTreeItem(proj.name, projPrefixLen, [], projIsImmutable)
 			for filesPropInfo in localLayoutFilesProps:
 				fullPathsInProj = filesPropInfo.prop.get(proj)
 				firstSplitter = filesPropInfo.firstSplitter
 				virtualFolderPrefix = filesPropInfo.folderName + '/' if filesPropInfo.folderName else ''
 				virtualFolderPrefix = projPrefix + virtualFolderPrefix
 				filesForFolder: list[FileEntry2] = []
-				folderItem: FilesTreeItem = FilesTreeItem(filesPropInfo.folderName, len(virtualFolderPrefix), filesForFolder)
+				folderItem: FilesTreeItem = FilesTreeItem(filesPropInfo.folderName, len(virtualFolderPrefix), filesForFolder, projIsImmutable)
 				for fullPath in fullPathsInProj:
 					right = getRight(fullPath, firstSplitter)
 					virtualPath = virtualFolderPrefix + right
@@ -776,37 +814,6 @@ class DatapackEditorGUI(AutoGUI):
 		with self.vLayout(verticalSpacing=0):
 			with self.hLayout(horizontalSpacing=0):
 				filterStr = self.filterTextField(None, allAutocompleteStrings, overlap=adjustOverlap(overlap, (None, None, 0, 1)), roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_LEFT), shortcut=QKeySequence.Find).lower()
-
-				# totalFilesCount = 0
-				# filteredFilesCount = 0
-				# result = FileEntry('...', '', 0, [])
-				# for proj, filesInProj in allFilesByProj:
-				# 	projPrefix = proj.simpleName + '/'
-				# 	#filesInProj = localLayoutFilesProp.get(proj)  # proj.layouts.localLayoutFiles
-				# 	virtFolderFileEntries: list[FileEntry] = []
-				# 	for virtFolder, filesInVirtFolder in filesInProj.items():
-				# 		virtFolderPrefix = virtFolder + '/' if virtFolder else ''
-				# 		rightList = []
-				# 		for fullPathRight in filesInVirtFolder:
-				# 			if filterStr and filterStr not in (projPrefix + virtFolderPrefix + fullPathRight[1]).lower():
-				# 				continue
-				#
-				# 			fullPath = fullPathRight[0]
-				# 			rightSplitted = tuple(fullPathRight[1].split('/'))
-				#
-				# 			rightList.append((fullPath, rightSplitted,))
-				#
-				# 		totalFilesCount += len(filesInVirtFolder)
-				# 		filteredFilesCount += len(rightList)
-				#
-				# 		if rightList:
-				# 			projFileEntry = FileEntry(virtFolder, proj.path, 0, rightList)
-				# 			# rightEntryDict = resultDict.add(proj, projFileEntry)
-				# 			virtFolderFileEntries.append(projFileEntry)
-				#
-				# 	if virtFolderFileEntries:
-				# 		projFileEntry = FileEntry(proj.simpleName, proj.path, 0, virtFolderFileEntries)
-				# 		result.right.append(projFileEntry)
 
 				totalFilesCount = len(allAutocompleteStrings)
 				filteredFilesCount = 0
@@ -854,12 +861,17 @@ class DatapackEditorGUI(AutoGUI):
 					labelMaker,
 					iconMaker,
 					toolTipMaker,
-					1,
+					columnCount,
 					suppressUpdate=False,
 					showRoot=False,
 					onDoubleClick=onDoubleClick,
+					onContextMenu=onContextMenu,
+					onCopy=onCopy,
+					onCut=onCut,
+					onPaste=onPaste,
+					onDelete=onDelete,
+					isSelected=isSelected,
 					getId=lambda x: x.label,
-					onContextMenu=onContextMenu
 				),
 				loadDeferred=True,
 				roundedCorners=maskCorners(roundedCorners, CORNERS.BOTTOM),
@@ -965,9 +977,10 @@ class DatapackEditorGUI(AutoGUI):
 		else:
 			self.helpBox(f'All is OK!', style='info')
 
-	def editor(self, editor: Type[EditorBase[TT]], model: TT, **kwargs) -> None:
+	def editor(self, editor: Type[TEditor], model: TT, **kwargs) -> TEditor:
 		editor = self.customWidget(editor, initArgs=(model,), model=model, **kwargs)
 		editor.redraw()
+		return editor
 
 
 TPythonGUI = TypeVar('TPythonGUI', bound=DatapackEditorGUI)
@@ -985,6 +998,10 @@ class EditorBase(PythonGUIWidget, CatFramedWidgetMixin, Generic[TT]):
 		super(EditorBase, self).__init__(self.OnGUI, GuiCls, parent, flags)
 		self._model: TT = model
 		self.layout().setContentsMargins(0, 0, 0, 0)
+		self.postInit()
+
+	def postInit(self):
+		pass
 
 	@abstractmethod
 	def OnGUI(self, gui: TPythonGUI) -> None:
@@ -997,6 +1014,9 @@ class EditorBase(PythonGUIWidget, CatFramedWidgetMixin, Generic[TT]):
 		if model is not self._model:
 			self._model = model
 			self.redraw()
+
+
+TEditor = TypeVar('TEditor', bound=EditorBase)
 
 
 def drawCodeField(
@@ -1088,9 +1108,9 @@ def drawSimpleCodeDocument(gui: DatapackEditorGUI, v: Document, language: str, *
 	return v
 
 
-DocumentDrawer(documents.TextDocument)(      ft.partial(drawTextDocument, language=None))
-DocumentDrawer(documents.JsonDocument)(      ft.partial(drawTextDocument, language='Json'))
-DocumentDrawer(documents.MCFunctionDocument)(ft.partial(drawTextDocument, language='MCFunction'))
-
+# DocumentDrawer(documents.TextDocument)(      ft.partial(drawTextDocument, language=None))
+# DocumentDrawer(documents.JsonDocument)(      ft.partial(drawTextDocument, language='Json'))
+# DocumentDrawer(documents.MCFunctionDocument)(ft.partial(drawTextDocument, language='MCFunction'))
+#
 
 

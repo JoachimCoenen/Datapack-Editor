@@ -190,7 +190,6 @@ class Document(SerializableContainer):
 		self.highlightErrors: bool = True
 		self.errors: Sequence[Error] = []
 
-
 	def __init__(self):
 		super().__init__()
 		self.undoRedoStack: Optional[UndoRedoStack2] = None  # must be set with _initUndoRedoStack(...) in constructor of subclasses
@@ -384,8 +383,9 @@ class Document(SerializableContainer):
 @RegisterDocument('text', ext=['.txt'])
 @RegisterContainer
 class TextDocument(Document):
-	__slots__ = ()
 	"""docstring for Document"""
+	__slots__ = ()
+
 	def __typeCheckerInfo___(self):
 		# giving the type checker a helping hand...
 		super(TextDocument, self).__typeCheckerInfo___()

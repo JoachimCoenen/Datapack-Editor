@@ -21,8 +21,8 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 		self._settingsCopy: ApplicationSettings = applicationSettings
 		self._selectedPage: SerializableContainer = None
 		self.setWindowTitle('Settings')
-		self.disableContentMargins = True
-		self.disableSidebarMargins = True
+		self._disableContentMargins = True
+		self._disableSidebarMargins = True
 
 	#
 	# def OnSidebarGUI(self, gui: PythonGUI):
@@ -48,13 +48,13 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 				with mainSplitter.addArea(stretchFactor=1):
 					self.settingsPageGUI(gui, self._selectedPage)
 
-			# margin = self.margin
+			# margin = gui.margin
 			# with gui.vPanel(
 			# 	overlap=(0, 1),
 			# 	roundedCorners=CORNERS.BOTTOM,
 			# 	cornerRadius=self.windowCornerRadius,
 			# 	windowPanel=False,
-			# 	contentsMargins=(margin, self.smallSpacing, margin, margin)
+			# 	contentsMargins=(margin, gui.smallSpacing, margin, margin)
 			# ):
 
 	def settingsPageSelectionGUI(self, gui: PythonGUI) -> Optional[SerializableContainer]:
@@ -111,7 +111,7 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 					if isinstance(prop.decorator, pd.NoUI):
 						continue
 					gui.propertyField(settingsPage, prop, True, enabled=True)
-					gui.addVSpacer(self.margin, SizePolicy.Fixed)  # just a spacer
+					gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer
 
 		if settingsPage is None:
 			outerGui.helpBox('Please select a category.')

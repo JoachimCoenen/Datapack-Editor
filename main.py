@@ -18,7 +18,7 @@ from Cat.utils import getExePath, profiling
 from Cat.utils.formatters import FW
 from mainWindow import MainWindow
 from Cat.utils.profiling import Timer
-from session import WindowId, getSession, loadSessionFromFile
+from session.session import WindowId, getSession, loadSessionFromFile
 from settings import applicationSettings, saveApplicationSettings, loadApplicationSettings
 
 
@@ -110,13 +110,16 @@ def start(argv):
 		from model.commands import argumentHandlersImpl
 		argumentHandlersImpl._init()  # do not remove!
 
-		if not getSession().selectedDocumentIds:
-			getSession().selectedDocumentIds[WindowId('0')] = None
-		# getSession().project.getAllTypedConfigFiles()
-		for id in getSession().selectedDocumentIds.keys():
-			window = MainWindow(id)
-			window.show()
-			window._gui.redrawGUI()
+		# if not getSession().selectedDocumentIds:
+		# 	getSession().selectedDocumentIds[WindowId('0')] = None
+		# for id in getSession().selectedDocumentIds.keys():
+		# 	window = MainWindow(id)
+		# 	window.show()
+		# 	window._gui.redrawGUI()
+
+		window = MainWindow(WindowId('0'))
+		window.show()
+		window._gui.redrawGUI()
 
 	print(" << << it took {:.3}, seconds to start the Application".format(timer.elapsed)
 	)

@@ -17,10 +17,10 @@ from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
 from Cat.utils.profiling import TimedMethod, logError
 from model.commands.parser import parseMCFunction
 from model.commands.validator import checkMCFunction
-from documents import ErrorCounts, getErrorCounts
+from session.documents import ErrorCounts, getErrorCounts
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
 from model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool, loadTextFile
-from session import getSession
+from session.session import getSession
 
 
 @RegisterContainer

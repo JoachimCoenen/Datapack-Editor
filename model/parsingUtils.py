@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import builtins
-from typing import overload, Optional, final
+from typing import overload, Optional, final, Iterator
 
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, Computed
 from Cat.utils import HTMLifyMarkDownSubSet
@@ -95,6 +95,10 @@ class Span(SerializableContainer):
 			self.start: Position = start
 		if end is not None:
 			self.end: Position = end
+
+	def __iter__(self) -> Iterator[Position]:
+		yield self.start
+		yield self.end
 
 	def __repr__(self):
 		return f' Span({self.start!r}, {self.end!r})'
