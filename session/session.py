@@ -11,7 +11,7 @@ from Cat.Serializable import SerializableContainer, RegisterContainer, Serialize
 from Cat.utils import getExePath
 from Cat.utils.profiling import logError
 from model.Model import World
-from session.documentHandling import Documents
+from session.documentHandling import DocumentsManager
 
 WindowId = NewType('WindowId', str)
 
@@ -27,7 +27,7 @@ class Session(SerializableContainer):
 	world: World = Serialized(default_factory=World)
 	hasOpenedWorld: bool = Computed(getInitValue=lambda s: bool(s.world.isValid))
 
-	documents: Documents = Serialized(default_factory=Documents, decorators=[pd.NoUI()])
+	documents: DocumentsManager = Serialized(default_factory=DocumentsManager, decorators=[pd.NoUI()])
 
 	def closeWorld(self) -> None:
 		world = self.world

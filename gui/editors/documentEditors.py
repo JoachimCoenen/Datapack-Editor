@@ -1,10 +1,8 @@
-from typing import TypeVar, Generic, final
+from typing import TypeVar, Generic, final, Optional
 
-from PyQt5.QtCore import Qt, QEvent, QObject, pyqtSignal
+from PyQt5.QtCore import Qt, QEvent, pyqtSignal
 
 from Cat.CatPythonGUI.GUI import NO_MARGINS, SizePolicy, getStyles
-from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFocusableMixin
-from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import format_full_exc, override
 from Cat.utils.abc import abstractmethod
 from Cat.utils.formatters import indentMultilineStr
@@ -18,6 +16,13 @@ TDoc = TypeVar('TDoc', bound=Document)
 
 class DocumentEditorBase(EditorBase[TDoc], Generic[TDoc]):
 	editorFocusReceived = pyqtSignal(Qt.FocusReason)
+
+	def onSetModel(self, new: TDoc, old: Optional[TDoc]) -> None:
+		super(DocumentEditorBase, self).onSetModel(new, old)
+		if old is not None:
+			old.onErrorsChanged.disconnect('editorRedraw')
+		new.onErrorsChanged.disconnect('editorRedraw')
+		new.onErrorsChanged.connect('editorRedraw', lambda d: self.redraw())
 
 	@final
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
@@ -131,36 +136,39 @@ _qEventMap = {
 	QEvent.MaxUser: 'MaxUser',
 }
 
+
 class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 
 	@override
 	def postInit(self):
-		self.model().onErrorsChanged.connect('mainGUIRedraw', lambda d: self.redraw())
+		self.redraw()  # force a second redraw!
 
 	@override
 	def documentGUI(self, gui: DatapackEditorGUI) -> None:
 		document = self.model()
 		try:
 			if document.highlightErrors:
-				errorRanges = [(error.position.line, error.position.column, error.end.line, error.end.column, error.style) for error in document.errors if error.position is not None and error.end is not None]
+				errors = [error for error in document.errors if error.position is not None and error.end is not None]
 			else:
-				errorRanges = []
+				errors = []
 
 			document.content, document.highlightErrors, document.cursorPosition, document.forceLocate = drawCodeField(
 				gui,
 				document.content,
 				language=document.language,
-				errorRanges=errorRanges,
+				errors=errors,
 				forceLocateElement=True,
 				currentCursorPos=document.cursorPosition,
 				selectionTo=document.selection[2:] if document.selection[0] != -1 else None,
 				highlightErrors=document.highlightErrors,
 				onCursorPositionChanged=lambda a, b, d=document: type(d).cursorPosition.set(d, (a, b)),
 				onSelectionChanged2=lambda a1, b1, a2, b2, d=document: type(d).selection.set(d, (a1, b1, a2, b2)),
-				onFocusReceived=lambda fr: self.editorFocusReceived.emit(fr)
+				onFocusReceived=lambda fr: self.editorFocusReceived.emit(fr),
+				focusPolicy=Qt.StrongFocus,
 				#autoCompletionTree=getSession().project.models.allTypesAutoCompletionTree
 
 			)
+			# document.content = gui.codeField(document.content)
 			self.setFocusProxy(gui._lastTabWidget)
 		except Exception as e:
 			logError(f'{e}:\n{indentMultilineStr(format_full_exc(), indent="  ")} ')

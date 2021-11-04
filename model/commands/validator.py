@@ -10,7 +10,7 @@ from model.commands.parsedCommands import ParsedMCFunction, ParsedArgument, Pars
 from model.parsingUtils import Span
 
 if TYPE_CHECKING:
-	from session import Session
+	from session.session import Session
 
 	def getSession() -> Session:
 		pass

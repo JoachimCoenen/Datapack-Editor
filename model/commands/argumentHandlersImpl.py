@@ -1,4 +1,3 @@
-import copy
 import re
 from dataclasses import replace
 from itertools import chain
@@ -18,10 +17,10 @@ from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart
 from model.commands.snbt import parseNBTPath, parseNBTTag
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
-from model.data.dataValues import BLOCKS, DIMENSIONS, ITEMS
+from model.data.dataValues import BLOCKS, DIMENSIONS, ITEMS, SLOTS, ENTITIES, EFFECTS, ENCHANTMENTS, BIOMES, PARTICLES
 from model.datapackContents import ResourceLocation
 from model.parsingUtils import Span, Position
-from session import getSession
+from session.session import getSession
 
 
 def _init():
@@ -268,12 +267,21 @@ class EntityHandler(ArgumentHandler):
 
 
 @argumentHandler(MINECRAFT_ENTITY_SUMMON.name)
-class ResourceLocationHandler(ArgumentHandler):
+class EntitySummonHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
 
+	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+		entity: ResourceLocation = argument.value
+		if not isinstance(entity, ResourceLocation):
+			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{entity}'.", argument.span)
+
+		if not _containsResourceLocation(entity, ENTITIES):
+			return CommandSemanticsError(f"Unknown entity id '{entity.asString}'.", argument.span, style='warning')
+
 	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
-		return ['minecraft:']
+		result = [b.asString for b in ENTITIES]
+		return result
 
 
 @argumentHandler(MINECRAFT_FLOAT_RANGE.name)
@@ -365,9 +373,21 @@ class IntRangeHandler(ArgumentHandler):
 
 
 @argumentHandler(MINECRAFT_ITEM_ENCHANTMENT.name)
-class ResourceLocationHandler(ArgumentHandler):
+class ItemEnchantmentHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+
+	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+		enchantment: ResourceLocation = argument.value
+		if not isinstance(enchantment, ResourceLocation):
+			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{enchantment}'.", argument.span)
+
+		if not _containsResourceLocation(enchantment, ENCHANTMENTS):
+			return CommandSemanticsError(f"Unknown enchantment '{enchantment.asString}'.", argument.span, style='warning')
+
+	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+		result = [b.asString for b in ENCHANTMENTS]
+		return result
 
 
 @argumentHandler(MINECRAFT_ITEM_SLOT.name)
@@ -377,6 +397,14 @@ class ItemSlotHandler(ArgumentHandler):
 		if slot is None:
 			return None
 		return makeParsedArgument(sr, ai, value=slot)
+
+	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+		slot: str = argument.value
+		if slot not in SLOTS:
+			return CommandSemanticsError(f"Unknown item slot '{slot}'.", argument.span, style='error')
+
+	def getSuggestions(self, ai: ArgumentInfo) -> list[str]:
+		return list(SLOTS.keys())
 
 
 @argumentHandler(MINECRAFT_ITEM_STACK.name)
@@ -468,9 +496,21 @@ class MessageHandler(ArgumentHandler):
 
 
 @argumentHandler(MINECRAFT_MOB_EFFECT.name)
-class ResourceLocationHandler(ArgumentHandler):
+class MobEffectHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+
+	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+		effect: ResourceLocation = argument.value
+		if not isinstance(effect, ResourceLocation):
+			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{effect}'.", argument.span)
+
+		if not _containsResourceLocation(effect, EFFECTS):
+			return CommandSemanticsError(f"Unknown mob effect '{effect.asString}'.", argument.span, style='warning')
+
+	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+		result = [b.asString for b in EFFECTS]
+		return result
 
 
 @argumentHandler(MINECRAFT_NBT_COMPOUND_TAG.name)
@@ -517,9 +557,21 @@ class ObjectiveCriteriaHandler(ArgumentHandler):
 
 
 @argumentHandler(MINECRAFT_PARTICLE.name)
-class ResourceLocationHandler(ArgumentHandler):
+class ParticleHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+
+	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+		particle: ResourceLocation = argument.value
+		if not isinstance(particle, ResourceLocation):
+			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{particle}'.", argument.span)
+
+		if not _containsResourceLocation(particle, PARTICLES):
+			return CommandSemanticsError(f"Unknown biome '{particle.asString}'.", argument.span, style='warning')
+
+	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+		result = [b.asString for b in PARTICLES]
+		return result
 
 
 @argumentHandler(MINECRAFT_RESOURCE_LOCATION.name)
@@ -639,6 +691,23 @@ class Vec3Handler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse3dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
 
+
+@argumentHandler(DPE_BIOME_ID.name)
+class BiomeIdHandler(ArgumentHandler):
+	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+
+	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+		biome: ResourceLocation = argument.value
+		if not isinstance(biome, ResourceLocation):
+			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{biome}'.", argument.span)
+
+		if not _containsResourceLocation(biome, BIOMES):
+			return CommandSemanticsError(f"Unknown biome '{biome.asString}'.", argument.span, style='warning')
+
+	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+		result = [b.asString for b in BIOMES]
+		return result
 
 @argumentHandler(ST_DPE_COMMAND.name)
 class ST_DPE_COMMANDHandler(ArgumentHandler):

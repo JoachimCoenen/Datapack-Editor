@@ -4,6 +4,7 @@ from Cat.Serializable import SerializableContainer, Serialized
 from Cat.utils.collections import ChainedList
 from model.commands.argumentTypes import *
 from model.commands.command import CommandInfo, Keyword, ArgumentInfo, TERMINAL, COMMANDS_ROOT, Switch
+from model.data.dataValues import STRUCTURES
 from model.data.gamerules import GAMERULES
 
 
@@ -2014,14 +2015,14 @@ BASIC_COMMAND_INFO['list'].argument = [
 BASIC_COMMAND_INFO['locate'].argument = [
 	ArgumentInfo.create(
 		name='StructureType',
-		type=LiteralsArgumentType(['bastion_remnant', 'buried_treasure', 'endcity', 'fortress', 'mansion', 'mineshaft', 'monument', 'nether_fossil', 'ocean_ruin', 'pillager_outpost', 'ruined_portal', 'shipwreck', 'stronghold', 'desert_pyramid', 'igloo', 'jungle_pyramid', 'swamp_hut', 'village']),
+		type=LiteralsArgumentType(list(STRUCTURES)),
 	),
 ]
 
 BASIC_COMMAND_INFO['locatebiome'].argument = [
 	ArgumentInfo.create(
 		name='biome',
-		type=MINECRAFT_RESOURCE_LOCATION,
+		type=DPE_BIOME_ID,
 	),
 ]
 

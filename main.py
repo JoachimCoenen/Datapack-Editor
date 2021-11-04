@@ -26,9 +26,6 @@ class ModelMakerStyles(Styles):
 	@_StyleProperty
 	def hostWidgetStyle(self) -> Style:
 		return Style({
-			#'font-family': 'Segoe UI',
-			#'font-family': 'Liberation Sans',
-			#'font-family': 'Microsoft Sans Serif',
 			'font-family': applicationSettings.appearance.fontFamily,
 			'font-size': f'{applicationSettings.appearance.fontSize}pt',
 		})  # + self.layoutingBorder
@@ -69,11 +66,13 @@ def showSetupDialogIfNecessary():
 	if applicationSettings.isUserSetupFinished:
 		return
 	else:
-		setupResult = SetupDialog(GUICls=AutoGUI).exec()
-		if setupResult != 1:
-			return exit(0)
+		# no setup dialog for now...
+		# setupResult = SetupDialog(GUICls=AutoGUI).exec()
+		# if setupResult != 1:
+		# 	return exit(0)
 		applicationSettings.isUserSetupFinished = True
 		saveApplicationSettings()
+
 
 def run():
 	with open(os.path.join(os.path.dirname(getExePath()), 'logfile.log'), 'w', encoding='utf-8') as logFile:

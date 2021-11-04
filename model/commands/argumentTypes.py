@@ -728,6 +728,16 @@ DPE_COMPARE_OPERATION = LiteralsArgumentType.create(
 	jsonProperties="""""",
 )
 
+
+DPE_BIOME_ID = ArgumentType.create(
+	name='dpe:biome_id',
+	description="resource location of a biome",
+	description2="""""",
+	examples="""""",
+	jsonProperties="""""",
+)
+
+
 ###################################################
 # SubTypes:
 ###################################################
@@ -837,6 +847,7 @@ __all__ = [
 	'MINECRAFT_VEC2',
 	'MINECRAFT_VEC3',
 	'DPE_COMPARE_OPERATION',
+	'DPE_BIOME_ID',
 	'ST_DPE_COMMAND',
 	'ST_DPE_DATAPACK',
 	'ST_DPE_GAME_RULE',

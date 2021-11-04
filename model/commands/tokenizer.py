@@ -2,12 +2,12 @@ import re
 from enum import Enum
 
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized
-from model.commands.argumentTypes import LiteralsArgumentType
+from model.commands.argumentTypes import *
 from model.commands.command import Keyword, ArgumentInfo
 from model.commands.commands import BASIC_COMMAND_INFO
 from model.commands.parsedCommands import ParsedComment, ParsedCommand
 from model.commands.parser import parseMCFunction
-from model.parsingUtils import Position, Span
+from model.parsingUtils import Span
 
 
 class TokenType(Enum):
@@ -110,51 +110,52 @@ def tokenizeMCFunction2(text: str, start: int, end: int) -> list[Token2]:
 	return tokens
 
 _allArgumentTypeStyles: dict[str, TokenType] = {
-	'brigadier:bool': TokenType.Constant,
-	'brigadier:double': TokenType.Number,
-	'brigadier:float': TokenType.Number,
-	'brigadier:integer': TokenType.Number,
-	'brigadier:long': TokenType.Number,
-	'brigadier:string': TokenType.String,
-	'minecraft:angle': TokenType.Number,
-	'minecraft:block_pos': TokenType.Number,
-	'minecraft:block_predicate': TokenType.Complex,
-	'minecraft:block_state': TokenType.Complex,
-	'minecraft:color': TokenType.Constant,
-	'minecraft:column_pos': TokenType.Number,
-	'minecraft:component': TokenType.Complex,
-	'minecraft:dimension': TokenType.String,
-	'minecraft:entity': TokenType.TargetSelector,
-	'minecraft:entity_anchor': TokenType.Constant,
-	'minecraft:entity_summon': TokenType.String,
-	'minecraft:float_range': TokenType.Number,
-	'minecraft:function': TokenType.String,
-	'minecraft:game_profile': TokenType.TargetSelector,
-	'minecraft:int_range': TokenType.Number,
-	'minecraft:item_enchantment': TokenType.String,
-	'minecraft:item_predicate': TokenType.Complex,
-	'minecraft:item_slot': TokenType.Constant,
-	'minecraft:item_stack': TokenType.Complex,
-	'minecraft:message': TokenType.String,
-	'minecraft:mob_effect': TokenType.String,
-	'minecraft:nbt_compound_tag': TokenType.Complex,
-	'minecraft:nbt_path': TokenType.Complex,
-	'minecraft:nbt_tag': TokenType.Complex,
-	'minecraft:objective': TokenType.String,
-	'minecraft:objective_criteria': TokenType.String,
-	'minecraft:operation': TokenType.Operator,
-	'minecraft:particle': TokenType.Complex,
-	'minecraft:resource_location': TokenType.String,
-	'minecraft:rotation': TokenType.Number,
-	'minecraft:score_holder': TokenType.TargetSelector,
-	'minecraft:scoreboard_slot': TokenType.Constant,
-	'minecraft:swizzle': TokenType.Constant,
-	'minecraft:team': TokenType.Constant,
-	'minecraft:time': TokenType.Number,
-	'minecraft:uuid': TokenType.String,
-	'minecraft:vec2': TokenType.Number,
-	'minecraft:vec3': TokenType.Number,
-	'dpe:compare_operation': TokenType.Operator,
+	BRIGADIER_BOOL.name:               TokenType.Constant,
+	BRIGADIER_DOUBLE.name:             TokenType.Number,
+	BRIGADIER_FLOAT.name:              TokenType.Number,
+	BRIGADIER_INTEGER.name:            TokenType.Number,
+	BRIGADIER_LONG.name:               TokenType.Number,
+	BRIGADIER_STRING.name:             TokenType.String,
+	MINECRAFT_ANGLE.name:              TokenType.Number,
+	MINECRAFT_BLOCK_POS.name:          TokenType.Number,
+	MINECRAFT_BLOCK_PREDICATE.name:    TokenType.Complex,
+	MINECRAFT_BLOCK_STATE.name:        TokenType.Complex,
+	MINECRAFT_COLOR.name:              TokenType.Constant,
+	MINECRAFT_COLUMN_POS.name:         TokenType.Number,
+	MINECRAFT_COMPONENT.name:          TokenType.Complex,
+	MINECRAFT_DIMENSION.name:          TokenType.String,
+	MINECRAFT_ENTITY.name:             TokenType.TargetSelector,
+	MINECRAFT_ENTITY_ANCHOR.name:      TokenType.Constant,
+	MINECRAFT_ENTITY_SUMMON.name:      TokenType.String,
+	MINECRAFT_FLOAT_RANGE.name:        TokenType.Number,
+	MINECRAFT_FUNCTION.name:           TokenType.String,
+	MINECRAFT_GAME_PROFILE.name:       TokenType.TargetSelector,
+	MINECRAFT_INT_RANGE.name:          TokenType.Number,
+	MINECRAFT_ITEM_ENCHANTMENT.name:   TokenType.String,
+	MINECRAFT_ITEM_PREDICATE.name:     TokenType.Complex,
+	MINECRAFT_ITEM_SLOT.name:          TokenType.Constant,
+	MINECRAFT_ITEM_STACK.name:         TokenType.Complex,
+	MINECRAFT_MESSAGE.name:            TokenType.String,
+	MINECRAFT_MOB_EFFECT.name:         TokenType.String,
+	MINECRAFT_NBT_COMPOUND_TAG.name:   TokenType.Complex,
+	MINECRAFT_NBT_PATH.name:           TokenType.Complex,
+	MINECRAFT_NBT_TAG.name:            TokenType.Complex,
+	MINECRAFT_OBJECTIVE.name:          TokenType.String,
+	MINECRAFT_OBJECTIVE_CRITERIA.name: TokenType.String,
+	MINECRAFT_OPERATION.name:          TokenType.Operator,
+	MINECRAFT_PARTICLE.name:           TokenType.Complex,
+	MINECRAFT_RESOURCE_LOCATION.name:  TokenType.String,
+	MINECRAFT_ROTATION.name:           TokenType.Number,
+	MINECRAFT_SCORE_HOLDER.name:       TokenType.TargetSelector,
+	MINECRAFT_SCOREBOARD_SLOT.name:    TokenType.Constant,
+	MINECRAFT_SWIZZLE.name:            TokenType.Constant,
+	MINECRAFT_TEAM.name:               TokenType.Constant,
+	MINECRAFT_TIME.name:               TokenType.Number,
+	MINECRAFT_UUID.name:               TokenType.String,
+	MINECRAFT_VEC2.name:               TokenType.Number,
+	MINECRAFT_VEC3.name:               TokenType.Number,
+	DPE_COMPARE_OPERATION.name:        TokenType.Operator,
+	DPE_BIOME_ID.name:                 TokenType.String,
 }
 
 

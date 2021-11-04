@@ -19,7 +19,7 @@ from Cat.utils import openOrCreate, Maybe, format_full_exc
 from Cat.utils.collections import OrderedMultiDict, OrderedDict
 from Cat.utils.formatters import formatVal, FW
 from Cat.utils.profiling import logError, logInfo
-from gui.editors import TextDocumentEditor, DatapackFilesEditor, DocumentsViewEditor
+from gui.editors import TextDocumentEditor, DatapackFilesEditor, DocumentsViewEditor, DocumentsViewsContainerEditor
 from keySequences import KEY_SEQUENCES
 from model.commands.commands import AllCommands, BASIC_COMMAND_INFO
 from model.commands.parser import parseMCFunction
@@ -146,10 +146,12 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		with gui.vSplitter(handleWidth=self.windowSpacing) as splitter:
 			# main Panel:
 			with splitter.addArea(stretchFactor=2, id_='mainPanel', verticalSpacing=0):
-				with gui.hSplitter(handleWidth=gui.smallSpacing) as docSplitter:
-					for view in getSession().documents.views:
-						with docSplitter.addArea(verticalSpacing=0):
-							gui.editor(DocumentsViewEditor, view)
+				gui.editor(DocumentsViewsContainerEditor, getSession().documents.viewsC, roundedCorners=CORNERS.LEFT).redraw()
+				# with gui.hSplitter(handleWidth=gui.smallSpacing) as docSplitter:
+				# 	getSession().documents.onViewsChanged.connect('mainWindowRedraw', self.redraw)
+				# 	for view in getSession().documents.views:
+				# 		with docSplitter.addArea(verticalSpacing=0):
+				# 			gui.editor(DocumentsViewEditor, view)
 
 				# with gui.hPanel(contentsMargins=NO_MARGINS, horizontalSpacing=0, overlap=tabBarOverlap, roundedCorners=CORNERS.TOP_LEFT, windowPanel=True):
 				# 	self.documentsTabBarGUI(gui, position=TabPosition.North, overlap=tabBarOverlap, roundedCorners=CORNERS.TOP_LEFT)
@@ -166,6 +168,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 					document.onErrorsChanged.connect('bottomPanelGUI', lambda d, bottomPanel=bottomPanel: bottomPanel.redrawGUI())
 
 				bottomPanel.redrawGUI()
+		getSession().documents.onSelectedDocumentChanged.connect('mainWindowGUI', self.redraw)
 		self._saveSession()
 
 	def OnToolbarGUI(self, gui: DatapackEditorGUI):
@@ -174,7 +177,8 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	def OnStatusbarGUI(self, gui: DatapackEditorGUI):
 		mg = self._gui.margin if self.disableStatusbarMargins else 0
 		with gui.hLayout(contentsMargins=(mg, 0, mg, 0)):
-			self.sessionToolBarGUI(gui)
+			pass
+			# self.sessionToolBarGUI(gui)
 			# gui.hSeparator()
 			# gui.propertyField(applicationSettings, applicationSettings.appearanceProp.useCompactLayout)
 
@@ -199,22 +203,22 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				self._loadWorldDialog(gui)
 
 			document = self.selectedDocument
-			if button(icon=icons.file, tip='New File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, shortcut=KEY_SEQUENCES.NEW):
+			if button(icon=icons.file, tip='New File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, windowShortcut=KEY_SEQUENCES.NEW):
 				self._createNewDocument(gui)
 
-			if button(icon=icons.open, tip='Open File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, shortcut=QKeySequence.Open):
+			if button(icon=icons.open, tip='Open File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, windowShortcut=QKeySequence.Open):
 				filePath = gui.showFileDialog(self._lastOpenPath, [('model', '.xml'), ('java', '.java'), ('All files', '*')], style='open')
 				if filePath:
 					self._tryOpenOrSelectDocument(filePath)
 
 			isEnabled = True  # bool(document) and os.path.exists(document.filePathForDisplay)
-			if button(icon=icons.save, tip='Save File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=isEnabled, shortcut=QKeySequence.Save):
+			if button(icon=icons.save, tip='Save File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=isEnabled, windowShortcut=QKeySequence.Save):
 				self._saveOrSaveAs(gui, document)
 
-			if button(icon=icons.saveAs, tip='Save As', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=bool(document), shortcut=KEY_SEQUENCES.SAVE_AS):
+			if button(icon=icons.saveAs, tip='Save As', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=bool(document), windowShortcut=KEY_SEQUENCES.SAVE_AS):
 				self._saveAs(gui, document)
 
-			if button(icon=icons.refresh, tip='Reload File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=bool(document), shortcut=QKeySequence.Refresh):
+			if button(icon=icons.refresh, tip='Reload File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=bool(document), windowShortcut=QKeySequence.Refresh):
 				filePath = document.filePath
 				if filePath:
 					try:
@@ -223,10 +227,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 						gui.showAndLogError(e)
 
 			with gui.hLayout(horizontalSpacing=0):
-				if button(icon=icons.undo, tip='Undo', roundedCorners=maskCorners(btnCorners, CORNERS.LEFT), overlap=btnOverlap, margins=btnMargins, enabled=bool(document), shortcut=QKeySequence.Undo):
+				if button(icon=icons.undo, tip='Undo', roundedCorners=maskCorners(btnCorners, CORNERS.LEFT), overlap=btnOverlap, margins=btnMargins, enabled=bool(document), windowShortcut=QKeySequence.Undo):
 					document.undoRedoStack.undoOnce()
 
-				if button(icon=icons.redo, tip='Redo', roundedCorners=maskCorners(btnCorners, CORNERS.RIGHT), overlap=adjustOverlap(btnOverlap, (1, None, None, None)), margins=btnMargins, enabled=bool(document), shortcut=QKeySequence.Redo):
+				if button(icon=icons.redo, tip='Redo', roundedCorners=maskCorners(btnCorners, CORNERS.RIGHT), overlap=adjustOverlap(btnOverlap, (1, None, None, None)), margins=btnMargins, enabled=bool(document), windowShortcut=QKeySequence.Redo):
 					document.undoRedoStack.redoOnce()
 
 			gui.addHSpacer(0, SizePolicy.Expanding)
@@ -236,13 +240,13 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		with gui.hLayout(horizontalSpacing=hSpacing):
 			gui.addHSpacer(0, SizePolicy.Expanding)
 
-			if button(icon=icons.search, tip='Search all', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, shortcut=KEY_SEQUENCES.FIND_ALL):
+			if button(icon=icons.search, tip='Search all', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, windowShortcut=KEY_SEQUENCES.FIND_ALL):
 				self.searchAllDialog.show()
 
 			if button(icon=icons.spellCheck, tip='Check all Files', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=True):
 				self.checkAllDialog.show()
 
-			if button(icon=icons.settings, tip='Settings', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, shortcut=QKeySequence.Preferences):
+			if button(icon=icons.settings, tip='Settings', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, windowShortcut=QKeySequence.Preferences):
 				self._showSettingsDialog(gui)
 
 			# if button(icon=icons.windowRestore, tip='New Window', roundedCorners=btnCorners, margins=btnMargins):
@@ -499,7 +503,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			return
 		# create document:
 		doc = getSession().documents.createNewDocument(docType, None)
-		# self.selectedDocument = doc
+		getSession().documents.selectDocument(doc)
 		self.redraw()
 
 	def _saveAs(self, gui: DatapackEditorGUI, document: Document) -> bool:

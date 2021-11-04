@@ -22,7 +22,7 @@ from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData, PythonGUIWidget
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
 from Cat.Serializable import SerializedPropertyABC, SerializableContainer
 from Cat.icons import icons
-from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, Maybe, format_full_exc
+from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, Maybe, format_full_exc, openOrCreate
 from Cat.utils.abc import abstractmethod
 from Cat.utils.collections import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from Cat.utils.profiling import logError
@@ -67,6 +67,25 @@ def createNewFile(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callab
 		openFunc(filePath)
 	except OSError as e:
 		gui.showAndLogError(e, "Cannot create file")
+
+
+def createNewFolder(folderPath: FilePath, gui: DatapackEditorGUI):
+	name, ok = gui.askUserInput('New Folder', 'New folder')
+	if not ok or not name:
+		return
+
+	if isinstance(folderPath, tuple):
+		filePath = folderPath[0], os.path.join(folderPath[1], name)
+		joinedFilePath = os.path.join(*filePath, '_ignoreMe.txt')
+	else:
+		filePath = os.path.join(folderPath, name)
+		joinedFilePath = os.path.join(filePath, '_ignoreMe.txt')
+
+	try:
+		with openOrCreate(joinedFilePath, 'w'):
+			pass  # creates the File
+	except OSError as e:
+		gui.showAndLogError(e, "Cannot create folder")
 
 
 class ContextMenuEntries:
@@ -443,7 +462,6 @@ class FileEntry2(NamedTuple):
 	virtualPath: str  # = dataclasses.field(compare=False)
 
 
-
 @dataclass
 class FilesTreeItem:
 	# __slots__ = ('label', 'commonDepth', 'filePaths', 'isImmutable')
@@ -452,6 +470,7 @@ class FilesTreeItem:
 	filePaths: list[FileEntry2] = dataclasses.field(compare=False)
 
 	isImmutable: bool = dataclasses.field(compare=False)
+	isArchive: bool = dataclasses.field(default=False, compare=False)
 
 	@property
 	def folderPath(self) -> Optional[FilePath]:
@@ -747,28 +766,9 @@ class DatapackEditorGUI(AutoGUI):
 					child = FilesTreeItem(folder, index2 + 1, [], isImmutable)
 					children[folder] = child
 				child.filePaths.append(entry)
-			return list(children.values())
 
-		def _labelMaker(data: FilesTreeItem, column: int) -> str:
-			return data.label
-
-		def _toolTipMaker(data: FilesTreeItem, column: int) -> str:
-			if data.isFile:
-				return data.filePaths[0].virtualPath[:data.commonDepth]
-			else:
-				return data.label
-
-		def _iconMaker(data: FilesTreeItem, column: int) -> QIcon:
-			return icons.file_code if data.isFile else icons.folderInTree
-
-		def _onDoubleClick(data: FilesTreeItem):
-			if data.isFile:
-				openFunc(data.filePaths[0].fullPath)
-
-		def _onContextMenu(data: FilesTreeItem, column: int):
-			if data.isFile:
-				with self.popupMenu(atMousePosition=True) as menu:
-					menu.addItems(ContextMenuEntries.fileItems(data.filePaths[0].fullPath, openFunc=openFunc))
+			return sorted(children.values(), key=lambda x: (x.isFile, x.label.lower()))
+			# return list(children.values())
 
 		def getRight(fullPath: FilePath, firstSplitter: str) -> str:
 			if not isinstance(fullPath, str):
@@ -785,7 +785,7 @@ class DatapackEditorGUI(AutoGUI):
 			projPrefixLen = len(projPrefix)
 			#filesForProj: list[FileEntry2] = []
 			projIsImmutable: bool = isImmutable(proj)
-			projItem: FilesTreeItem = FilesTreeItem(proj.name, projPrefixLen, [], projIsImmutable)
+			projItem: FilesTreeItem = FilesTreeItem(proj.name, projPrefixLen, [], projIsImmutable, projIsImmutable)
 			for filesPropInfo in localLayoutFilesProps:
 				fullPathsInProj = filesPropInfo.prop.get(proj)
 				firstSplitter = filesPropInfo.firstSplitter
@@ -883,8 +883,8 @@ class DatapackEditorGUI(AutoGUI):
 			with gui.vLayout(verticalSpacing=0):
 				with gui.hLayout(horizontalSpacing=0):
 					#with gui.hLayout(horizontalSpacing=0):
-					gui.customData['prevPressed'] = gui.toolButton(icon=icons.prev, tip='previous', overlap=(0, 0, 1, 1), roundedCorners=(False, False, False, False), shortcut=QKeySequence.FindPrevious)
-					gui.customData['nextPressed'] = gui.toolButton(icon=icons.next, tip='next', overlap=(1, 0, 1, 1), shortcut=QKeySequence.FindNext)
+					gui.customData['prevPressed'] = gui.toolButton(icon=icons.prev, tip='previous', overlap=(0, 0, 1, 1), parentShortcut=QKeySequence.FindPrevious)
+					gui.customData['nextPressed'] = gui.toolButton(icon=icons.next, tip='next', overlap=(1, 0, 1, 1), parentShortcut=QKeySequence.FindNext)
 					gui.customData['searchExpr'] = searchExpr if searchExpr is not None else gui.customData.get('searchExpr', '')
 					gui.customData['searchExpr'] = gui.textField(gui.customData['searchExpr'], placeholderText='find... [Ctrl+F]', isMultiline=False, overlap=(1, 0, 1, 1), parentShortcut=QKeySequence.Find)
 
@@ -979,7 +979,7 @@ class DatapackEditorGUI(AutoGUI):
 
 	def editor(self, editor: Type[TEditor], model: TT, **kwargs) -> TEditor:
 		editor = self.customWidget(editor, initArgs=(model,), model=model, **kwargs)
-		editor.redraw()
+		# editor.redraw()
 		return editor
 
 
@@ -997,10 +997,13 @@ class EditorBase(PythonGUIWidget, CatFramedWidgetMixin, Generic[TT]):
 	):
 		super(EditorBase, self).__init__(self.OnGUI, GuiCls, parent, flags)
 		self._model: TT = model
+		self.onSetModel(model, None)
 		self.layout().setContentsMargins(0, 0, 0, 0)
 		self.postInit()
 
-	def postInit(self):
+		self.redrawLater()
+
+	def postInit(self) -> None:
 		pass
 
 	@abstractmethod
@@ -1012,8 +1015,13 @@ class EditorBase(PythonGUIWidget, CatFramedWidgetMixin, Generic[TT]):
 
 	def setModel(self, model: TT):
 		if model is not self._model:
+			old = self._model
 			self._model = model
+			self.onSetModel(model, old)
 			self.redraw()
+
+	def onSetModel(self, new: TT, old: Optional[TT]) -> None:
+		return None
 
 
 TEditor = TypeVar('TEditor', bound=EditorBase)
@@ -1023,7 +1031,7 @@ def drawCodeField(
 		gui: DatapackEditorGUI,
 		code: str,
 		language: str,
-		errorRanges: list[tuple[int, int, int, int, str]],
+		errors: list[Error],
 		forceLocateElement: bool,
 		highlightErrors: bool,
 		currentCursorPos: tuple[int, int] = None,
@@ -1045,7 +1053,6 @@ def drawCodeField(
 			if nextPressed or prevPressed:
 				forceLocate = True
 
-
 		code, cursorPos = gui.advancedCodeField(
 			code,
 			language=language,
@@ -1056,7 +1063,7 @@ def drawCodeField(
 			searchOptions=searchOptions,
 			returnCursorPos=True,
 			#onCursorPositionChanged=lambda a, b, g=gui: g.customData.__setitem__('currentCursorPos', (a, b)) ,
-			errorRanges=errorRanges,
+			errors=errors,
 			**codeFieldKwargs,
 			**kwargs
 		)
@@ -1070,42 +1077,6 @@ def drawCodeField(
 __documentDrawers: dict[Type[Document], DocumentGUIFunc] = {}
 DocumentDrawer = AddToDictDecorator(__documentDrawers)
 getDocumentDrawer = ft.partial(getIfKeyIssubclassOrEqual, __documentDrawers)
-
-
-def drawTextDocument(gui: DatapackEditorGUI, document: documents.TextDocument, language: Optional[str], **kwargs) -> documents.TextDocument:
-	if document is None:
-		return document
-	if document.highlightErrors:
-		errorRanges = [(error.position.line, error.position.column, error.end.line, error.end.column, error.style) for error in document.errors if error.position is not None and error.end is not None]
-	else:
-		errorRanges = []
-	with gui.vLayout(contentsMargins=NO_MARGINS, verticalSpacing=0):
-		document.content, document.highlightErrors, document.cursorPosition, document.forceLocate = drawCodeField(
-			gui,
-			document.content,
-			language=document.language,
-			errorRanges=errorRanges,
-			forceLocateElement=True,
-			currentCursorPos=document.cursorPosition,
-			selectionTo=document.selection[2:] if document.selection[0] != -1 else None,
-			highlightErrors=document.highlightErrors,
-			onCursorPositionChanged=lambda a, b, d=document: type(d).cursorPosition.set(d, (a, b)),
-			onSelectionChanged2=lambda a1, b1, a2, b2, d=document: type(d).selection.set(d, (a1, b1, a2, b2)),
-			#autoCompletionTree=getSession().project.models.allTypesAutoCompletionTree
-			**kwargs
-		)
-
-	document.onErrorsChanged.connect('mainGUIRedraw', lambda d, g=gui: g.redrawGUI())
-	return document
-
-
-def drawSimpleCodeDocument(gui: DatapackEditorGUI, v: Document, language: str, **kwargs) -> Document:
-	content = v.content
-	with gui.vLayout(verticalSpacing=0):
-		searchOptions = gui.searchBar(content, searchExpr=None)[1:]
-		content = gui.advancedCodeField(content, None, language, True, *searchOptions, **kwargs)
-	v.content = content
-	return v
 
 
 # DocumentDrawer(documents.TextDocument)(      ft.partial(drawTextDocument, language=None))

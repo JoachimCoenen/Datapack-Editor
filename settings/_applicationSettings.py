@@ -3,10 +3,8 @@ from __future__ import annotations
 import copy
 import os
 import traceback
-from dataclasses import dataclass
 from enum import Enum
 from json import JSONDecodeError
-from typing import Optional
 
 from PyQt5.QtGui import QFont, QFontDatabase
 
@@ -18,16 +16,9 @@ from Cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory
 
 
-
-@dataclass
-class JavaLoadParams:
-	divider: int
-	dependenciesDivider: int
-	threadCount: Optional[int] = None
-
-#ProfilingSettings = Dict[str, bool]
-
 QFont.__deepcopy__ = lambda x, m: QFont(x)
+
+
 @RegisterContainer
 class AppearanceSettings(SerializableContainer):
 	__slots__ = ()
@@ -112,23 +103,6 @@ class DebugSettings(SerializableContainer):
 		# self.repository: Repository = Repository()
 		pass
 
-	@pd.Title('Multiprocessing')
-	@pd.ToggleSwitch()
-	@Serialized()
-	def useMultiProcessingForJavaParsing(self) -> bool :
-		return True
-
-	@pd.Title('Profiling')
-	@pd.ToggleSwitch()
-	@Serialized()
-	def shouldProfile_Javas_allSymbols(self) -> bool :
-		return False
-
-	@pd.Framed()
-	@Serialized()
-	def profiling_Startup_Settings(self) -> ProfilingSettings :
-		return ProfilingSettings()
-
 	@pd.Title('Developer Mode')
 	@pd.ToggleSwitch()
 	@Serialized()
@@ -137,22 +111,9 @@ class DebugSettings(SerializableContainer):
 
 	@pd.ToggleSwitch()
 	@Serialized()
-	def preventJavaSymbolsLoading(self) -> bool :
-		return False
-
-	@pd.ToggleSwitch()
-	@Serialized()
 	def showUndoRedoPane(self) -> bool :
 		return False
 
-
-	@pd.Title('Project Panel')
-
-	@pd.ToggleSwitch()
-	@Serialized()
-	def showProjectPanel(self) -> bool :
-		return True
-	#
 	# @Serialized()
 	# def showLayoutsPanel(self) -> bool :
 	# 	return True
@@ -267,7 +228,6 @@ def loadApplicationSettings():
 
 
 __all__ = (
-	'JavaLoadParams',
 	'ProfilingSettings',
 	'AppearanceSettings',
 	'DebugSettings',

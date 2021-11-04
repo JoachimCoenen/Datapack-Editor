@@ -116,7 +116,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 			with gui.vLayout(preventVStretch=False):
 				with gui.hLayout(horizontalSpacing=0):
 					searchExpr = gui.codeField(None, isMultiline=False, roundedCorners=CORNERS.NONE)
-					searchPressed = gui.toolButton(icon=icons.search, overlap=(1, 0), roundedCorners=(False, True, False, True), default=True, shortcut=QKeySequence("Return"))
+					searchPressed = gui.toolButton(icon=icons.search, overlap=(1, 0), roundedCorners=(False, True, False, True), default=True, windowShortcut=QKeySequence("Return"))
 				if self.searchOptions.searchMode == SearchMode.RegEx:
 					try:
 						re.compile(searchExpr)

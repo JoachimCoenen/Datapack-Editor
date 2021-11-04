@@ -1645,27 +1645,63 @@ DIMENSIONS: set[ResourceLocation] = {
 }
 
 
-Structures: set[ResourceLocation] = {
-	ResourceLocation.fromString('jungle_pyramid'),
-	ResourceLocation.fromString('village'),
-	ResourceLocation.fromString('endcity'),
-	ResourceLocation.fromString('ruined_portal'),
-	ResourceLocation.fromString('igloo'),
-	ResourceLocation.fromString('stronghold'),
-	ResourceLocation.fromString('bastion_remnant'),
-	ResourceLocation.fromString('desert_pyramid'),
-	ResourceLocation.fromString('nether_fossil'),
-	ResourceLocation.fromString('buried_treasure'),
-	ResourceLocation.fromString('mansion'),
-	ResourceLocation.fromString('shipwreck'),
-	ResourceLocation.fromString('monument'),
-	ResourceLocation.fromString('swamp_hut'),
-	ResourceLocation.fromString('fortress'),
-	ResourceLocation.fromString('pillager_outpost'),
-	ResourceLocation.fromString('ocean_ruin'),
-	ResourceLocation.fromString('mineshaft'),
+STRUCTURES: set[str] = {
+	'jungle_pyramid',
+	'village',
+	'endcity',
+	'ruined_portal',
+	'igloo',
+	'stronghold',
+	'bastion_remnant',
+	'desert_pyramid',
+	'nether_fossil',
+	'buried_treasure',
+	'mansion',
+	'shipwreck',
+	'monument',
+	'swamp_hut',
+	'fortress',
+	'pillager_outpost',
+	'ocean_ruin',
+	'mineshaft',
+}
+
+
+SLOTS: dict[str, int] = {
+	'armor.chest':     102,
+	'armor.feet':      100,
+	'armor.head':      103,
+	'armor.legs':      101,
+	'weapon':           98,
+	'weapon.mainhand':  98,
+	'weapon.offhand':   99,
+	**{f'container.{sn}':    0 + sn for sn in range(0, 53 + 1)},  # 0-53 	0-53
+	**{f'enderchest.{sn}': 200 + sn for sn in range(0, 26 + 1)},  # 0-26 	200-226
+	**{f'hotbar.{sn}':       0 + sn for sn in range(0, 8 + 1)},   # 0-8 	0-8
+	**{f'inventory.{sn}':    9 + sn for sn in range(0, 26 + 1)},  # 0-26 	9-35
+	'horse.saddle':    400,
+	'horse.chest':     499,
+	'horse.armor':     401,
+	**{f'horse.{sn}':      500 + sn for sn in range(0, 14 + 1)},  # 0-14 	500-514
+	**{f'villager.{sn}':   300 + sn for sn in range(0, 7 + 1)},   # 0-7 	300-307
 }
 
 __all__ = [
 	'BLOCKS',
+	'FLUIDS',
+	'ITEMS',
+	'ENTITIES_MOBS',
+	'ENTITIES_MISC',
+	'ENTITIES_PROJECTILES',
+	'ENTITIES_VEHICLES',
+	'ENTITIES_BLOCKS',
+	'ENTITIES_ITEMS',
+	'ENTITIES',
+	'EFFECTS',
+	'ENCHANTMENTS',
+	'BIOMES',
+	'PARTICLES',
+	'DIMENSIONS',
+	'STRUCTURES',
+	'SLOTS',
 ]

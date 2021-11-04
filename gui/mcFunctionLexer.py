@@ -155,7 +155,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 					documentationProvider = handler.getDocumentation
 				tip = documentationProvider(match)
 			else:
-				errors += checkMCFunction(function)
+				errors = errors + checkMCFunction(function)
 				matchedErrors = [e for e in errors if e.position <= position <= e.end]
 				tip = '<br/>'.join(f'<div style="{PythonGUI.helpBoxStyles.get(e.style, "")}">{e.message}</div>' for e in matchedErrors)
 			return f"{tip}"
@@ -367,7 +367,7 @@ class LexerMCFunction(QsciLexerCustom):
 			self.setPaper(background, tokenType.value)
 			self.setFont(font, tokenType.value)
 
-	def setDefaultFont(self, font: QFont): #, style: int = -1):
+	def setDefaultFont(self, font: QFont):
 		super().setDefaultFont(font)
 		self.initStyles(self.defaultStyles)
 
@@ -434,3 +434,7 @@ class LexerMCFunction(QsciLexerCustom):
 			tokenLength = len(bytearray(token.text, "utf-8"))
 			lastPos = index + len(token.text)
 			self.setStyling(tokenLength, token.style.value)
+
+
+def init():
+	pass  # Don't delete!
