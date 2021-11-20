@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
 
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP, NO_MARGINS
+from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin
 from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, Error
@@ -925,6 +925,7 @@ class DatapackEditorGUI(AutoGUI):
 			suppressRedrawLogging=True
 			# onInit=lambda w, document=document: onInit(w, document)
 		)
+		searchGUI._name = 'searchBar'
 		searchGUI.customData['text'] = text
 		searchGUI.redrawGUI()
 		return \
@@ -977,54 +978,8 @@ class DatapackEditorGUI(AutoGUI):
 		else:
 			self.helpBox(f'All is OK!', style='info')
 
-	def editor(self, editor: Type[TEditor], model: TT, **kwargs) -> TEditor:
-		editor = self.customWidget(editor, initArgs=(model,), model=model, **kwargs)
-		# editor.redraw()
-		return editor
-
 
 TPythonGUI = TypeVar('TPythonGUI', bound=DatapackEditorGUI)
-
-
-class EditorBase(PythonGUIWidget, CatFramedWidgetMixin, Generic[TT]):
-
-	def __init__(
-			self,
-			model: TT,
-			GuiCls: Type[TPythonGUI] = DatapackEditorGUI,
-			parent: Optional[QWidget] = None,
-			flags: Union[Qt.WindowFlags, Qt.WindowType] = Qt.WindowFlags()
-	):
-		super(EditorBase, self).__init__(self.OnGUI, GuiCls, parent, flags)
-		self._model: TT = model
-		self.onSetModel(model, None)
-		self.layout().setContentsMargins(0, 0, 0, 0)
-		self.postInit()
-
-		self.redrawLater()
-
-	def postInit(self) -> None:
-		pass
-
-	@abstractmethod
-	def OnGUI(self, gui: TPythonGUI) -> None:
-		raise NotImplementedError()
-
-	def model(self) -> TT:
-		return self._model
-
-	def setModel(self, model: TT):
-		if model is not self._model:
-			old = self._model
-			self._model = model
-			self.onSetModel(model, old)
-			self.redraw()
-
-	def onSetModel(self, new: TT, old: Optional[TT]) -> None:
-		return None
-
-
-TEditor = TypeVar('TEditor', bound=EditorBase)
 
 
 def drawCodeField(

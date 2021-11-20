@@ -3,9 +3,10 @@ from typing import Optional
 
 from PyQt5.QtGui import QIcon
 
+from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
 from Cat.icons import icons
 from Cat.utils import DeferredCallOnceMethod
-from gui.datapackEditorGUI import EditorBase, DatapackEditorGUI, LocalFilesPropInfo, ContextMenuEntries, FilesTreeItem, createNewFile, createNewFolder
+from gui.datapackEditorGUI import DatapackEditorGUI, LocalFilesPropInfo, ContextMenuEntries, FilesTreeItem, createNewFile, createNewFolder
 from model.Model import World, Datapack
 
 from model.parsingUtils import Position
@@ -14,8 +15,6 @@ from session.session import getSession
 
 
 class DatapackFilesEditor(EditorBase[World]):
-	def __init__(self, model: World):
-		super(DatapackFilesEditor, self).__init__(model)
 
 	def _openFunc(self, filePath: FilePath, selectedPosition: Optional[Position] = None):
 		self.window()._tryOpenOrSelectDocument(filePath, selectedPosition)
@@ -63,7 +62,7 @@ class DatapackFilesEditor(EditorBase[World]):
 						view = getSession().documents._getViewForDocument(doc)
 						if view is not None:
 							view.onDocumentsChanged.emit()
-			self.redraw()
+			self.redraw('DatapackFilesEditor._renameFileOrFolder(...)')
 
 	def _deleteFileFunc(self, path: FilePath):
 		_, __, name = path[1].rstrip('/').rpartition('/')
@@ -72,7 +71,7 @@ class DatapackFilesEditor(EditorBase[World]):
 				os.unlink(os.path.join(*path))
 			except OSError as e:
 				self._gui.showAndLogError(e)
-			self.redraw()
+			self.redraw('DatapackFilesEditor._deleteFileFunc(...)')
 			# TODO: maybe close opened file?
 
 	def _onContextMenu(self, data: FilesTreeItem, column: int):
@@ -81,11 +80,13 @@ class DatapackFilesEditor(EditorBase[World]):
 		if isinstance(data.filePaths[0], FilesTreeItem):
 			return
 
+		isMutable = not data.isImmutable
+
 		if data.isFile:
 			filePath = data.filePaths[0].fullPath
 			with self._gui.popupMenu(atMousePosition=True) as menu:
-				menu.addItem('rename File', lambda: self._renameFileOrFolder(data))
-				menu.addItem('delete File', lambda: self._deleteFileFunc(filePath))
+				menu.addItem('rename File', lambda: self._renameFileOrFolder(data), enabled=isMutable)
+				menu.addItem('delete File', lambda: self._deleteFileFunc(filePath), enabled=isMutable)
 				menu.addSeparator()
 				menu.addItems(ContextMenuEntries.fileItems(filePath, openFunc=self._openFunc))
 		else:
@@ -93,10 +94,10 @@ class DatapackFilesEditor(EditorBase[World]):
 			if folderPath is None:
 				return
 			with self._gui.popupMenu(atMousePosition=True) as menu:
-				menu.addItem('new File', lambda p=folderPath: createNewFile(p, self._gui, self._openFunc), enabled=not data.isImmutable)
-				menu.addItem('new Folder', lambda p=folderPath: createNewFolder(p, self._gui), enabled=not data.isImmutable)
-				menu.addItem('rename Folder', lambda: self._renameFileOrFolder(data))
-				menu.addItem('delete Folder', lambda: self._deleteFileFunc(folderPath))
+				menu.addItem('new File', lambda p=folderPath: createNewFile(p, self._gui, self._openFunc), enabled=isMutable)
+				menu.addItem('new Folder', lambda p=folderPath: createNewFolder(p, self._gui), enabled=isMutable)
+				menu.addItem('rename Folder', lambda: self._renameFileOrFolder(data), enabled=isMutable)
+				menu.addItem('delete Folder', lambda: self._deleteFileFunc(folderPath), enabled=isMutable)
 				menu.addSeparator()
 				menu.addItems(ContextMenuEntries.pathItems(folderPath))
 
@@ -121,7 +122,7 @@ class DatapackFilesEditor(EditorBase[World]):
 			overlap=self.overlap()
 		)
 
-		gui.propertyField(self.model(), self.model().selectedMinecraftExecProp)
+		# gui.propertyField(self.model(), self.model().selectedMinecraftExecProp)
 
 
 __all__ = [

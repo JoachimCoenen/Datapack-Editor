@@ -42,17 +42,6 @@ def frange(a: float, b: float, jump: float, *, includeLAst: bool = False):
 		yield a + jump * i
 
 
-# def newMainWindow() -> MainWindow:
-# 	# find first id that is not used:
-# 	existingIds = set()  # set(getSession().selectedDocumentIds.keys())
-# 	newId = next(it.filterfalse(lambda x: existingIds.__contains__(str(x)), it.count(0)))
-# 	newId = WindowId(str(newId))
-# 	window = MainWindow(newId)
-# 	window._gui.redrawGUI()
-# 	window.show()
-# 	return window
-
-
 class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	TIP_dataDir = 'Directory containing the raw data.'
 
@@ -146,29 +135,12 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		with gui.vSplitter(handleWidth=self.windowSpacing) as splitter:
 			# main Panel:
 			with splitter.addArea(stretchFactor=2, id_='mainPanel', verticalSpacing=0):
-				gui.editor(DocumentsViewsContainerEditor, getSession().documents.viewsC, roundedCorners=CORNERS.LEFT).redraw()
-				# with gui.hSplitter(handleWidth=gui.smallSpacing) as docSplitter:
-				# 	getSession().documents.onViewsChanged.connect('mainWindowRedraw', self.redraw)
-				# 	for view in getSession().documents.views:
-				# 		with docSplitter.addArea(verticalSpacing=0):
-				# 			gui.editor(DocumentsViewEditor, view)
-
-				# with gui.hPanel(contentsMargins=NO_MARGINS, horizontalSpacing=0, overlap=tabBarOverlap, roundedCorners=CORNERS.TOP_LEFT, windowPanel=True):
-				# 	self.documentsTabBarGUI(gui, position=TabPosition.North, overlap=tabBarOverlap, roundedCorners=CORNERS.TOP_LEFT)
-				# panelOverlap = NO_OVERLAP if getSession().documents else (0, 1, 0, 0)
-				# with gui.vPanel(contentsMargins=NO_MARGINS, overlap=panelOverlap, roundedCorners=CORNERS.BOTTOM_LEFT, windowPanel=True):
-				# 	self.documentsGUI(gui)
+				gui.editor(DocumentsViewsContainerEditor, getSession().documents.viewsC, roundedCorners=CORNERS.LEFT).redrawLater('MainWindow.OnGUI(...)')
 			# bottom Panel:
 			with splitter.addArea(stretchFactor=0, id_='bottomPanel', verticalSpacing=0):
 				bottomPanel = gui.subGUI(type(gui), lambda gui: self.bottomPanelGUI(gui, roundedCorners=(True,  False,  True, False), cornerRadius=self.windowCornerRadius))
-				# connect to errorChanged Signal:
-				Document.onErrorsChanged.disconnectFromAllInstances(key='bottomPanelGUI')
-				document = self.selectedDocument
-				if document is not None:
-					document.onErrorsChanged.connect('bottomPanelGUI', lambda d, bottomPanel=bottomPanel: bottomPanel.redrawGUI())
-
 				bottomPanel.redrawGUI()
-		getSession().documents.onSelectedDocumentChanged.connect('mainWindowGUI', self.redraw)
+		# getSession().documents.onSelectedDocumentChanged.connect('mainWindowGUI', self.redraw)
 		self._saveSession()
 
 	def OnToolbarGUI(self, gui: DatapackEditorGUI):
@@ -183,7 +155,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			# gui.propertyField(applicationSettings, applicationSettings.appearanceProp.useCompactLayout)
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		gui.editor(DatapackFilesEditor, getSession().world)
+		gui.editor(DatapackFilesEditor, getSession().world).redrawLater()
 
 	def toolBarGUI2(self, gui: DatapackEditorGUI):
 		# TODO: INVESTIGATE calculation of hSpacing:
