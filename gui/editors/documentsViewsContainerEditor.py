@@ -1,7 +1,8 @@
 from typing import Optional
 
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin, CORNERS, maskCorners
-from gui.datapackEditorGUI import EditorBase, DatapackEditorGUI
+from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
+from gui.datapackEditorGUI import DatapackEditorGUI
 from gui.editors import DocumentsViewEditor
 from session.documentHandling import ViewContainer
 
@@ -13,7 +14,7 @@ class DocumentsViewsContainerEditor(EditorBase[ViewContainer], CatFramedWidgetMi
 		if old is not None:
 			old.onViewsChanged.disconnect('editorRedraw')
 		new.onViewsChanged.disconnect('editorRedraw')
-		new.onViewsChanged.connect('editorRedraw', self.redraw)
+		new.onViewsChanged.connect('editorRedraw', lambda: self.redraw('onViewsChanged'))
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		viewContainer = self.model()
@@ -32,9 +33,9 @@ class DocumentsViewsContainerEditor(EditorBase[ViewContainer], CatFramedWidgetMi
 			for view, cf in zip(viewContainer.views, cornerFilters):
 				with splitter.addArea(verticalSpacing=0):
 					if isinstance(view, ViewContainer):
-						gui.editor(DocumentsViewsContainerEditor, view, roundedCorners=maskCorners(self.roundedCorners(), cf)).redraw()
+						gui.editor(DocumentsViewsContainerEditor, view, roundedCorners=maskCorners(self.roundedCorners(), cf)).redrawLater('DocumentsViewsContainerEditor.OnGUI(...)')
 					else:
-						gui.editor(DocumentsViewEditor, view, roundedCorners=maskCorners(self.roundedCorners(), cf)).redraw()
+						gui.editor(DocumentsViewEditor, view, roundedCorners=maskCorners(self.roundedCorners(), cf)).redrawLater('DocumentsViewsContainerEditor.OnGUI(...)')
 
 
 __all__ = ['DocumentsViewsContainerEditor']

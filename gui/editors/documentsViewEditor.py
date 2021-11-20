@@ -1,14 +1,15 @@
-from typing import Iterator, Iterable, Optional
+from typing import Optional
 
 from PyQt5.QtCore import Qt
 
 from Cat.CatPythonGUI.GUI import NO_MARGINS, CORNERS, NO_OVERLAP, Overlap, RoundedCorners, adjustOverlap, maskCorners
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin
 from Cat.CatPythonGUI.GUI.enums import TabPosition, SizePolicy
+from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
 from Cat.icons import icons
 from Cat.utils.collections_ import OrderedMultiDict
-from gui.datapackEditorGUI import EditorBase, DatapackEditorGUI, ContextMenuEntries
-from gui.editors import TextDocumentEditor
+from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
+from gui.editors.documentEditors import getDocumentEditor
 from keySequences import KEY_SEQUENCES
 from session.documentHandling import View
 from session.documents import Document
@@ -25,12 +26,13 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			old.onDocumentsChanged.disconnect('editorRedraw')
 			old.onMadeCurrent.disconnect('editor')
 		new.onDocumentsChanged.disconnect('editorRedraw')
-		new.onDocumentsChanged.connect('editorRedraw', self.redraw)
+		new.onDocumentsChanged.connect('editorRedraw', lambda: self.redraw('onDocumentsChanged'))
 		new.onMadeCurrent.disconnect('editor')
 		new.onMadeCurrent.connect('editor', self._forceFocus)
 		new.onSelectedDocumentChanged.disconnect('editor')
 		new.onSelectedDocumentChanged.connect('editor', self._forceFocus)
 		self._shouldForceFocus = self.model().isCurrent
+
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		view = self.model()
@@ -39,8 +41,9 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			with gui.hPanel(contentsMargins=NO_MARGINS, horizontalSpacing=0, overlap=tabBarOverlap, roundedCorners=maskCorners(self.roundedCorners(), CORNERS.TOP), windowPanel=True):
 				self.documentsTabBarGUI(gui, position=TabPosition.North, overlap=tabBarOverlap, roundedCorners=maskCorners(self.roundedCorners(), CORNERS.TOP))
 			panelOverlap = NO_OVERLAP if view.documents else (0, 1, 0, 0)
-			with gui.vPanel(contentsMargins=NO_MARGINS, overlap=panelOverlap, roundedCorners=maskCorners(self.roundedCorners(), CORNERS.BOTTOM), windowPanel=True):
-				self.documentsGUI(gui)
+			panelCorners = maskCorners(self.roundedCorners(), CORNERS.BOTTOM)
+			with gui.vPanel(contentsMargins=NO_MARGINS, overlap=panelOverlap, roundedCorners=panelCorners, windowPanel=True):
+				self.documentsGUI(gui, overlap=panelOverlap, roundedCorners=panelCorners)
 
 	def documentsTabBarGUI(self, gui: DatapackEditorGUI, position: TabPosition = TabPosition.North, overlap: Overlap = (0, 0), roundedCorners: RoundedCorners = CORNERS.ALL):
 		view = self.model()
@@ -54,38 +57,6 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		except ValueError:
 			selectedTab = None
 
-		def tabCloseRequested(index: int):
-			if index in range(len(view.documents)):
-				doc = view.documents[index]
-				getSession().documents.safelyCloseDocument(doc)
-
-		def tabMoved(from_: int, to: int):
-			print(f"tab {from_} moved to {to}.")
-
-			indexRange = range(len(view.documents))
-			if from_ in indexRange and to in indexRange:
-				doc = view.documents[from_]
-				view.moveDocument(doc, to)
-
-		def fileContextMenu(index):
-			if index not in range(len(view.documents)):
-				return
-			doc = view.documents[index]
-
-			documents = getSession().documents
-
-			with gui.popupMenu(True) as menu:
-				# menu.addItem("move to new View", lambda: documents.moveDocument(doc, documents.addView()))
-				menu.addItem(
-					"&move to View...",
-					[
-						(f"#&{i + 1}", lambda i=i: documents.moveDocument(doc, documents.views[i]))
-						for i in range(len(documents.views))
-					]
-				)
-				menu.addSeparator()
-				menu.addItems(ContextMenuEntries.pathItems(doc.filePath))
-
 		index = gui.tabBar(
 			list(tabs.values()),
 			selectedTab=selectedTab,
@@ -98,9 +69,9 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			movable=True,
 			tabsClosable=True,
 			closeIcon=icons.closeTab,
-			onTabMoved=tabMoved,
-			onTabCloseRequested=tabCloseRequested,
-			onContextMenuRequested=fileContextMenu,
+			onTabMoved=self._tabMoved,
+			onTabCloseRequested=self._tabCloseRequested,
+			onContextMenuRequested=self._showFileContextMenu,
 		)
 
 		if index in range(len(tabs)):
@@ -114,13 +85,54 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 				self._showOpenedDocumentsPopup(gui)
 
 		if gui.toolButton(icon=icons.bars, overlap=adjustOverlap(overlap, (1 if view.documents else 0, None, None, None if view.documents else 0)), roundedCorners=CORNERS.NONE):
-			with gui.popupMenu(True) as menu:
-				menu.addItem("split horizontally", lambda: view.splitView(False))
-				menu.addItem("split vertically", lambda: view.splitView(True))
-				menu.addSeparator()
-				menu.addItem("close view", lambda: view.manager.safelyCloseView(view), enabled=len(view.documents)==0)
+			self._showViewsContextMenu()
 
-	def documentsGUI(self, gui: DatapackEditorGUI) -> None:
+	def _tabCloseRequested(self, index: int) -> None:
+		view = self.model()
+		if index in range(len(view.documents)):
+			doc = view.documents[index]
+			getSession().documents.safelyCloseDocument(doc)
+
+	def _tabMoved(self, from_: int, to: int) -> None:
+		view = self.model()
+		print(f"tab {from_} moved to {to}.")
+
+		indexRange = range(len(view.documents))
+		if from_ in indexRange and to in indexRange:
+			doc = view.documents[from_]
+			view.moveDocument(doc, to)
+
+	def _showFileContextMenu(self, index: int) -> None:
+		view = self.model()
+		gui = self._gui
+		if index not in range(len(view.documents)):
+			return
+		doc = view.documents[index]
+
+		documents = getSession().documents
+
+		with gui.popupMenu(True) as menu:
+			# menu.addItem("move to new View", lambda: documents.moveDocument(doc, documents.addView()))
+			menu.addItem(
+				"&move to View...",
+				[
+					(f"#&{i + 1}", lambda i=i: documents.moveDocument(doc, documents.views[i]))
+					for i in range(len(documents.views))
+				]
+			)
+			menu.addSeparator()
+			menu.addItems(ContextMenuEntries.pathItems(doc.filePath))
+
+	def _showViewsContextMenu(self) -> None:
+		view = self.model()
+		gui = self._gui
+		with gui.popupMenu(True) as menu:
+			menu.addItem("split horizontally", lambda: view.splitView(False))
+			menu.addItem("split vertically", lambda: view.splitView(True))
+			menu.addSeparator()
+			menu.addItem("close view", lambda: view.manager.safelyCloseView(view), enabled=len(view.documents) == 0)
+
+	def documentsGUI(self, gui: DatapackEditorGUI, overlap: Overlap, roundedCorners: RoundedCorners) -> None:
 		view = self.model()
 
 		currentDocEditor = None
@@ -130,68 +142,73 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			with gui.stackedWidget(selectedView=selectedDocumentId) as stacked:
 				for document in view.documents:
 					with stacked.addView(id_=document.filePathForDisplay):
-						docEditor = gui.editor(TextDocumentEditor, document, onEditorFocusReceived=lambda fr: view.makeCurrent())
+						DocumentEditor = getDocumentEditor(type(document))
+						docEditor = gui.editor(
+							DocumentEditor,
+							document,
+							onEditorFocusReceived=lambda fr: view.makeCurrent(),
+							overlap=overlap,
+							roundedCorners=roundedCorners,
+							cornerRadius=self.cornerRadius(),
+						)
 						if document.filePathForDisplay == selectedDocumentId:
 							currentDocEditor = docEditor
 		else:  # no documents are opened:
-			self._noDocumentOpenedGUI(gui)
+			self._noDocumentOrProjectOpenedGUI(gui)
 
 		if view.selectedDocument is None:
 			currentDocEditor = None
 		if currentDocEditor is not None:
-			currentDocEditor.redraw()
+			currentDocEditor.redrawLater('DocumentsViewEditor.documentsGUI(...)')
 			if self._shouldForceFocus:
 				currentDocEditor.setFocus()
 		self._shouldForceFocus = False
 
-	def _noDocumentOpenedGUI(self, gui: DatapackEditorGUI) -> None:
+	def _noDocumentOrProjectOpenedGUI(self, gui: DatapackEditorGUI) -> None:
 		mg = gui.margin
 		with gui.vLayout(contentsMargins=(mg, mg, mg, mg)):
-			gui.addVSpacer(int(50 * gui._scale), SizePolicy.Expanding)
-			gui.label('No Document Opened.', wordWrap=False, alignment=Qt.AlignCenter)
-			gui.addVSpacer(mg, SizePolicy.Fixed)
-			gui.label(f"Press '<font style=\"font-weight: 500\">{KEY_SEQUENCES.GO_TO_FILE.toString()}</font>' to search for a file.", wordWrap=False, alignment=Qt.AlignCenter)
-			gui.label(f"Press '<font style=\"font-weight: 500\">{KEY_SEQUENCES.NEW.toString()}</font>' to create a new file.", wordWrap=False, alignment=Qt.AlignCenter)
-			gui.addVSpacer(int(50 * gui._scale), SizePolicy.Fixed)
-			with gui.hLayout():
-				gui.addHSpacer(int(20 * gui._scale), SizePolicy.Expanding)
-				if gui.button("close View", icon=icons.close2, hSizePolicy=SizePolicy.Fixed.value):
-					self.model().manager.safelyCloseView(self.model())
-				gui.addHSpacer(int(20 * gui._scale), SizePolicy.Expanding)
-			gui.addVSpacer(int(50 * gui._scale), SizePolicy.Expanding)
+			gui.addVSpacer(int(50 * gui.scale), SizePolicy.Expanding)
+			if not getSession().hasOpenedWorld:
+				self._noWorldLoadedGUI(gui)
+			else:
+				self._noDocumentOpenedGUI(gui)
+			gui.addVSpacer(int(50 * gui.scale), SizePolicy.Expanding)
+
+	def _noDocumentOpenedGUI(self, gui: DatapackEditorGUI) -> None:
+		gui.label('No Document Opened.', wordWrap=False, alignment=Qt.AlignCenter)
+		gui.addVSpacer(gui.margin, SizePolicy.Fixed)
+		gui.label(f"Press '<font style=\"font-weight: 500\">{KEY_SEQUENCES.GO_TO_FILE.toString()}</font>' to search for a file.", wordWrap=False, alignment=Qt.AlignCenter)
+		gui.label(f"Press '<font style=\"font-weight: 500\">{KEY_SEQUENCES.NEW.toString()}</font>' to create a new file.", wordWrap=False, alignment=Qt.AlignCenter)
+		gui.addVSpacer(int(50 * gui.scale), SizePolicy.Fixed)
+		with gui.hLayout():
+			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
+			if gui.button("close View", icon=icons.close2, hSizePolicy=SizePolicy.Fixed.value):
+				self.model().manager.safelyCloseView(self.model())
+			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
 
 	@staticmethod
 	def _noWorldLoadedGUI(gui: DatapackEditorGUI) -> None:
-		mg = gui.margin
-		with gui.vLayout(contentsMargins=(mg, mg, mg, mg)):
-			gui.addVSpacer(int(50 * gui._scale), SizePolicy.Expanding)
-			gui.label('No world loaded.', wordWrap=False, alignment=Qt.AlignCenter)
-			gui.addVSpacer(mg, SizePolicy.Fixed)
-			gui.label(f"Please open a Minecraft world.", wordWrap=False, alignment=Qt.AlignCenter)
-			gui.addVSpacer(int(50 * gui._scale), SizePolicy.Expanding)
+		gui.label('No world loaded.', wordWrap=False, alignment=Qt.AlignCenter)
+		gui.addVSpacer(gui.margin, SizePolicy.Fixed)
+		gui.label(f"Please open a Minecraft world.", wordWrap=False, alignment=Qt.AlignCenter)
 
 	def _showOpenedDocumentsPopup(self, gui: DatapackEditorGUI) -> None:
 		view = self.model()
-
-		class Documents:
-			def __iter__(self) -> Iterator[Document]:
-				yield from view.documents
-
 		selectedDocument = view.selectedDocument
 
-		def onContextMenu(d: Document, column: int):
-			print(f"showning ContextMenu for Document '{d.fileName}'")
+		def onContextMenu(d: Document, _: int):
+			print(f"showing ContextMenu for Document '{d.fileName}'")
 			with gui.popupMenu(atMousePosition=True) as menu:
-				menu.addItem('close', lambda d=d: getSession().documents.safelyCloseDocument(d), tip=f'close {d.filePath}')
+				menu.addItem('close', lambda: getSession().documents.safelyCloseDocument(d), tip=f'close {d.filePath}')
 				menu.addItems(ContextMenuEntries.pathItems(d.filePath))
 
 		# calculate dimensions:
-		width, height = self.__sizeForOpenedDocumentsPopup(gui, Documents())
+		width, height = self.__sizeForOpenedDocumentsPopup(gui, view.documents)
 
 		selectedDocument = gui.searchableChoicePopup(
 			selectedDocument,
 			'Opened Files',
-			Documents(),
+			view.documents,
 			getSearchStr=lambda x: x.fileName,
 			labelMaker=lambda x, i: (x.fileName, x.filePathForDisplay)[i],
 			iconMaker=lambda x, i: None,
@@ -203,13 +220,15 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			height=height,
 		)
 
-		if selectedDocument in Documents():
+		if selectedDocument in view.documents:
 			view.selectDocument(selectedDocument)
+			view.makeCurrent()
 
 	@staticmethod
-	def __sizeForOpenedDocumentsPopup(gui: DatapackEditorGUI, documents: Iterable[Document]) -> tuple[int, int]:
-		fm = gui._lastTabWidget.fontMetrics()
-		scale = gui._scale
+	def __sizeForOpenedDocumentsPopup(gui: DatapackEditorGUI, documents: list[Document]) -> tuple[int, int]:
+		# fm = gui.lastWidget.fontMetrics()
+		fm = gui.host.fontMetrics()
+		scale = gui.scale
 		width: int = int(10 * scale)
 		height: int = int(25 * scale)
 		for d in documents:
@@ -231,9 +250,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 
 	def _forceFocus(self) -> None:
 		self._shouldForceFocus = self.model().isCurrent
-		self.redraw()
+		self.redraw('DocumentsViewEditor._forceFocus(...)')
 
 
-__all__ = [
-	'DocumentsViewEditor',
-]
+__all__ = ['DocumentsViewEditor',]
