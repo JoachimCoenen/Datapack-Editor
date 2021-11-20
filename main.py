@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QDialog
 from qtpy import QtCore
 
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, getStyles, catWidgetMixins
+from Cat.CatPythonGUI.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, getStyles
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.extensions.fileSystemChangedDependency import startObserver
 from Cat.icons import icons
@@ -18,8 +18,9 @@ from Cat.utils import getExePath, profiling
 from Cat.utils.formatters import FW
 from mainWindow import MainWindow
 from Cat.utils.profiling import Timer
-from session.session import WindowId, getSession, loadSessionFromFile
-from settings import applicationSettings, saveApplicationSettings, loadApplicationSettings
+from session.session import WindowId, loadSessionFromFile
+from settings import applicationSettings, saveApplicationSettings, loadApplicationSettings, AppearanceSettings
+from settings._applicationSettings import MinecraftSettings
 
 
 class ModelMakerStyles(Styles):
@@ -42,6 +43,8 @@ setStyles(ModelMakerStyles())  #.hostWidgetStyle._func, 'hostWidgetStyle'))
 
 class SetupDialog(CatFramelessWindowMixin, QDialog):
 	def OnGUI(self, gui: AutoGUI):
+		appearanceSettings = applicationSettings.appearance
+		minecraftSettings = applicationSettings.minecraft
 		with gui.vLayout1C(preventVStretch=True):
 			with gui.groupBox('Welcome!'):
 				gui.label("We'll have to set up a few things before we can start. This shouldn't take long.")
@@ -49,12 +52,24 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 					gui.label("You can always change these later under Settings ")
 					gui.label("("); gui.label(icons.settings); gui.label(").")
 				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-			with gui.groupBox('Basic Settings'):
-				gui.helpBox('Nothing.')
+
+			with gui.groupBox('Appearance'):
+				# gui.propertyField(appearanceSettings, AppearanceSettings.useCompactLayout)
+				# gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+				gui.propertyField(appearanceSettings, AppearanceSettings.fontSize)
 				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-			with gui.groupBox('Optional Settings'):
-				gui.helpBox('Nothing.')
+
+			with gui.groupBox('Minecraft'):
+				gui.propertyField(minecraftSettings, MinecraftSettings.version)
 				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+				gui.propertyField(minecraftSettings, MinecraftSettings.executable)
+				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+				gui.propertyField(minecraftSettings, MinecraftSettings.savesLocation)
+				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+			#
+			# with gui.groupBox('Optional Settings'):
+			# 	gui.helpBox('Nothing.')
+			# 	gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
 
 		gui.dialogButtons({
 			MessageBoxButton.Ok    : lambda b: self.accept(),
@@ -66,10 +81,9 @@ def showSetupDialogIfNecessary():
 	if applicationSettings.isUserSetupFinished:
 		return
 	else:
-		# no setup dialog for now...
-		# setupResult = SetupDialog(GUICls=AutoGUI).exec()
-		# if setupResult != 1:
-		# 	return exit(0)
+		setupResult = SetupDialog(GUICls=AutoGUI).exec()
+		if setupResult != 1:
+			return exit(0)
 		applicationSettings.isUserSetupFinished = True
 		saveApplicationSettings()
 
@@ -118,28 +132,9 @@ def start(argv):
 
 		window = MainWindow(WindowId('0'))
 		window.show()
-		window._gui.redrawGUI()
+		window.redraw()
 
-	print(" << << it took {:.3}, seconds to start the Application".format(timer.elapsed)
-	)
-	return app
-
-	timer = Timer()
-	with timer:
-		QtWidgets.QApplication.setStyle('Fusion')
-		app = QtWidgets.QApplication(argv)
-		app.setApplicationName("Minecraft Datapack Editor")
-		window = MainWindow(WindowId('1'))
-		try:
-			pass  # getSession().openDocument(xmlPath)
-		except FileNotFoundError as e:
-			print(e)
-
-		#window._gui.redrawGUI()
-		window.show()
-		app.exec()
-
-	print("it took {:.3}, seconds to start the Application".format(timer.elapsed))
+	print(f" << << it took {timer.elapsed:.3}, seconds to start the Application")
 	return app
 
 

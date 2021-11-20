@@ -122,8 +122,6 @@ class DatapackFilesEditor(EditorBase[World]):
 			overlap=self.overlap()
 		)
 
-		# gui.propertyField(self.model(), self.model().selectedMinecraftExecProp)
-
 
 __all__ = [
 	'DatapackFilesEditor'

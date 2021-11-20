@@ -3,8 +3,9 @@ from __future__ import annotations
 import copy
 import os
 import traceback
-from enum import Enum
 from json import JSONDecodeError
+from typing import Optional
+from zipfile import ZipFile
 
 from PyQt5.QtGui import QFont, QFontDatabase
 
@@ -12,7 +13,7 @@ from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.Serializable import Computed, RegisterContainer, SerializableContainer, Serialized
 from Cat.Serializable.serializedProperty import ComputedCached
 from Cat.utils import getExePath
-from Cat.utils.profiling import logError
+from Cat.utils.profiling import logError, logWarning
 from PyQt5.QtWidgets import QStyleFactory
 
 
@@ -70,29 +71,70 @@ class AppearanceSettings(SerializableContainer):
 		return font
 
 
+def folderPathValidator(path: str) -> tuple[Optional[str], str]:
+	if not os.path.lexists(path):
+		return 'Folder not found', 'error'
 
-class ProfilingNodeColoringScheme(Enum):
-	ColourNodesByTotalTime = 0
-	ColourNodesBySelfTime = 1
+	if not os.path.isdir(path):
+		return 'Not a directory', 'error'
+
+	return None, 'info'
+
+
+def jarPathValidator(path: str) -> tuple[Optional[str], str]:
+	if not os.path.lexists(path):
+		return 'File not found', 'error'
+
+	if not os.path.isfile(path) or os.path.splitext(path)[1].lower() != '.jar':
+		return 'Not a .jar File', 'error'
+
+	return None, 'info'
+
+
+def minecraftJarValidator(path: str) -> tuple[Optional[str], str]:
+	msg, style = jarPathValidator(path)
+
+	try:
+		library = ZipFile(path, 'r')
+	except (FileNotFoundError, PermissionError) as e:
+		logWarning(e)
+	else:
+		logWarning(path)
+		# msg, style = 'Not a .jar File', 'error'
+
+
+	return msg, style
 
 
 @RegisterContainer
-class ProfilingSettings(SerializableContainer):
+class MinecraftSettings(SerializableContainer):
 	__slots__ = ()
-	enabled: bool = Serialized(
-		default=False,
-		decorators=[pd.ToggleSwitch()]
+	version: str = Serialized(
+		label='Minecraft Version',
+		default='1.17',
+		decorators=[
+			pd.ComboBox(choices=['1.17']),
+		],
+		shouldSerialize=False
 	)
 
-	nodeColoringScheme: ProfilingNodeColoringScheme = Serialized(
-		default=ProfilingNodeColoringScheme.ColourNodesByTotalTime,
-		label='Node Coloring Scheme',
+	executable: str = Serialized(
+		label='Minecraft Executable',
+		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/versions/1.17.1/1.17.1.jar').replace('\\', '/'),
+		decorators=[
+			pd.FilePath([('jar', '.jar')]),
+			pd.Validator(minecraftJarValidator)
+		]
 	)
 
-	@pd.NoUI()
-	@Computed()
-	def colourNodesBySelftime(self) -> bool:
-		return self.nodeColoringScheme == ProfilingNodeColoringScheme.ColourNodesBySelfTime
+	savesLocation: str = Serialized(
+		label="Minecraft Saves Directory",
+		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/saves').replace('\\', '/'),
+		decorators=[
+			pd.FolderPath(),
+			pd.Validator(folderPathValidator)
+		]
+	)
 
 
 @RegisterContainer
@@ -174,6 +216,7 @@ class ApplicationSettings(SerializableContainer):
 		# giving the type checker a helping hand...
 		self.applicationName: str = ''
 		self.appearance: AppearanceSettings = AppearanceSettings()
+		self.minecraft: MinecraftSettings = MinecraftSettings()
 		self.debugging: DebugSettings = DebugSettings()
 		self.copyright: CopyrightSettings = CopyrightSettings()
 		self.isUserSetupFinished: bool = False
@@ -186,6 +229,10 @@ class ApplicationSettings(SerializableContainer):
 	@Serialized(label='Appearance')
 	def appearance(self) -> AppearanceSettings:
 		return AppearanceSettings()
+
+	@Serialized(label='Minecraft')
+	def minecraft(self) -> MinecraftSettings:
+		return MinecraftSettings()
 
 	@Serialized(label='Debugging')
 	def debugging(self) -> DebugSettings :
@@ -228,7 +275,6 @@ def loadApplicationSettings():
 
 
 __all__ = (
-	'ProfilingSettings',
 	'AppearanceSettings',
 	'DebugSettings',
 	'CopyrightSettings',

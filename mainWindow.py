@@ -446,7 +446,9 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	@staticmethod
 	def _loadWorldDialog(gui: DatapackEditorGUI) -> None:
 		session = getSession()
-		newPath = gui.showFolderDialog(session.world.path)
+		oldPath = session.world.path
+		oldPath = applicationSettings.minecraft.savesLocation
+		newPath = gui.showFolderDialog(oldPath)
 		if newPath is not None:
 			session.openWorld(newPath)
 

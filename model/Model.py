@@ -11,7 +11,7 @@ from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
 from model.datapackContents import ResourceLocation, FunctionMeta, buildFunctionMeta, MetaInfo, EntryHandlerInfo, buildMetaInfo, collectAllEntries
 from model.pathUtils import getAllFilesFromSearchPath, fileNameFromFilePath, FilePathTpl
-
+from settings import applicationSettings
 
 _TT = TypeVar('_TT')
 
@@ -310,7 +310,6 @@ class World(SerializableContainer):
 
 	path: str = Serialized(default='', decorators=[pd.FolderPath()])
 
-	selectedMinecraftExec: str = Serialized(default='', decorators=[pd.FilePath([('jar', '.jar')])])
 
 	@Computed()
 	def isValid(self) -> bool:
@@ -321,7 +320,7 @@ class World(SerializableContainer):
 		return fileNameFromFilePath(self.path)
 
 	@pd.List()
-	@ComputedCached(dependencies_=[path, FilesChangedDependency(path, 'datapacks/*'), selectedMinecraftExec])
+	@ComputedCached(dependencies_=[path, FilesChangedDependency(path, 'datapacks/*'), Computed(default_factory=lambda: applicationSettings.minecraft.executable)])
 	def datapackPaths(self) -> list[str]:
 		datapacksPath = os.path.join(self.path, 'datapacks/')
 		try:
@@ -329,8 +328,9 @@ class World(SerializableContainer):
 		except (JSONDecodeError, FileNotFoundError, AttributeError, TypeError) as e:
 			logError(f'Unable to find datapacks: \n{traceback.format_exc()}')
 			return []
-		if self.selectedMinecraftExec:
-			datapackFiles.append(self.selectedMinecraftExec)
+		minecraftExec = applicationSettings.minecraft.executable
+		if minecraftExec and os.path.isfile(minecraftExec):
+			datapackFiles.append(minecraftExec)
 		return datapackFiles
 
 	_oldDatapacks: list[Datapack] = Serialized(default_factory=list, shouldSerialize=False, shouldPrint=False, decorators=[pd.NoUI()])
