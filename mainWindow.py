@@ -328,85 +328,6 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			gui.drawErrors(errors, onDoubleClicked=lambda e, d=document, s=self: d.locatePosition(e.position, e.end) or s._gui.redrawGUI())
 			#gui.addVSpacer(0, SizePolicy.Expanding)
 
-	# def documentsGUI(self, gui: DatapackEditorGUI):
-	# 	def onGUI(gui: DatapackEditorGUI, document: Document):
-	# 		gui.editor(TextDocumentEditor, document)
-	#
-	# 	def onInit(widget: PythonGUIWidget, document: Document):
-	# 		widget.redraw()  # redraw a second time!
-	#
-	# 	if getSession().documents:
-	# 		selectedDocumentId = self.selectedDocumentId
-	# 		with gui.stackedWidget(selectedView=selectedDocumentId) as stacked:
-	# 			for document in getSession().documents:
-	# 				with stacked.addView(id_=document.filePathForDisplay):
-	# 					subGUI = gui.subGUI(
-	# 						DatapackEditorGUI,
-	# 						guiFunc=lambda gui, document=document: onGUI(gui, document),
-	# 						onInit=lambda w, document=document: onInit(w, document) or True
-	# 					)
-	# 					if document.filePathForDisplay == selectedDocumentId:
-	# 						self.currentDocumenSubGUI = subGUI
-	# 	else:  # no documents are opened:
-	# 		mg = gui.margin
-	# 		with gui.vLayout(contentsMargins=(mg, mg, mg, mg)):
-	# 			gui.addVSpacer(int(50 * gui._scale), SizePolicy.Expanding)
-	# 			gui.label('No Document Opened.', wordWrap=False, alignment=Qt.AlignCenter)
-	# 			gui.addVSpacer(mg, SizePolicy.Fixed)
-	# 			gui.label(f"Press '<font style=\"font-weight: 500\">{KEY_SEQUENCES.GO_TO_FILE.toString()}</font>' to search for a file.", wordWrap=False, alignment=Qt.AlignCenter)
-	# 			gui.label(f"Press '<font style=\"font-weight: 500\">{KEY_SEQUENCES.NEW.toString()}</font>' to create a new file.", wordWrap=False, alignment=Qt.AlignCenter)
-	# 			gui.addVSpacer(int(50 * gui._scale), SizePolicy.Expanding)
-	#
-	# 	if self.selectedDocument is None:
-	# 		self.currentDocumenSubGUI = None
-	# 	if self.currentDocumenSubGUI is not None:
-	# 		self.currentDocumenSubGUI.redrawGUI()
-
-	# def documentsTabBarGUI(self, gui: DatapackEditorGUI, position: TabPosition = TabPosition.North, overlap: Overlap = (0, 0), roundedCorners: RoundedCorners = CORNERS.ALL):
-	# 	tabs = OrderedMultiDict((
-	# 		(document.filePathForDisplay, (document.fileName + (' *' if document.documentChanged else '   '), ))
-	# 		for document in getSession().documents
-	# 	))
-	#
-	# 	try:
-	# 		selectedTab = list(tabs.keys()).index(self.selectedDocumentId)
-	# 	except ValueError:
-	# 		selectedTab = None
-	#
-	# 	def tabCloseRequested(index: int):
-	# 		if index in range(len(getSession().documents)):
-	# 			self._safelyCloseDocument(gui, getSession().documents[index])
-	#
-	# 	def tabMoved(from_: int, to: int):
-	# 		print(f"tab {from_} moved to {to}.")
-	# 		indexRange = range(len(getSession().documents))
-	# 		if from_ in indexRange and to in indexRange:
-	# 			self._safelyMoveDocumentPosition(gui, getSession().documents[from_], to)
-	#
-	# 	index = gui.tabBar(
-	# 		list(tabs.values()),
-	# 		selectedTab=selectedTab,
-	# 		drawBase=False,
-	# 		documentMode=True,
-	# 		expanding=False,
-	# 		position=position,
-	# 		overlap=adjustOverlap(overlap, (None, None, 0, None)),
-	# 		roundedCorners=roundedCorners,
-	# 		movable=True,
-	# 		tabsClosable=True,
-	# 		closeIcon=icons.closeTab,
-	# 		onTabMoved=tabMoved,
-	# 		onTabCloseRequested=tabCloseRequested,
-	# 	)
-	#
-	# 	if index in range(len(tabs)):
-	# 		self.selectedDocumentId = list(tabs.keys())[index]
-	# 	else:
-	# 		self.selectedDocumentId = None
-	#
-	# 	if gui.toolButton(icon=icons.chevronDown, overlap=adjustOverlap(overlap, (0, None, None, None)), roundedCorners=CORNERS.NONE):
-	# 		self._showOpenedDocumentsPopup(gui)
-
 	# Dialogs:
 
 	def _showSettingsDialog(self, gui: DatapackEditorGUI) -> None:
@@ -535,37 +456,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			else:  # Cancel
 				return False
 
-	# @staticmethod
-	# def _safelyMoveDocumentPosition(gui: DatapackEditorGUI, document: Document, newPosition: int):
-	# 	documents = getSession().documents
-	# 	if newPosition not in range(len(documents)):
-	# 		raise ValueError(f"newPosition is out of range (newPosition={newPosition}, len(documents)={len(documents)}")
-	#
-	# 	oldPosition = documents.index(document)
-	# 	if oldPosition == newPosition:
-	# 		return
-	#
-	# 	del documents[oldPosition]
-	# 	documents.insert(newPosition, document)
-
 	@property
 	def selectedDocument(self) -> Optional[Document]:
 		return getSession().documents.currentView.selectedDocument
 
-	# @selectedDocument.setter
-	# def selectedDocument(self, document: Optional[Document]) -> None:
-	# 	getSession().selectedDocuments[self.id] = document
-
-	# @property
-	# def selectedDocumentId(self) -> Optional[str]:
-	# 	return Maybe(self.selectedDocument).getattr('filePathForDisplay').get()
-	#
-	# @selectedDocumentId.setter
-	# def selectedDocumentId(self, document: Optional[str]) -> None:
-	# 	getSession().selectedDocumentIds[self.id] = document
-	#
-	#
-	#
 					
 					
 					
