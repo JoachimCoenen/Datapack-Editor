@@ -4,10 +4,9 @@ from typing import Protocol, Optional, Iterable, MutableSequence, Type, Any
 from PyQt5.QtWidgets import QWidget
 
 from Cat.CatPythonGUI.GUI import PythonGUI
-from Cat.utils import Decorator
+from Cat.utils import Decorator, HTMLStr, escapeForXml, HTMLifyMarkDownSubSet
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.profiling import logError
-from Cat.utils.utils import HTMLStr, escapeForXml, HTMLifyMarkDownSubSet
 from model.commands.argumentTypes import ArgumentType, LiteralsArgumentType
 from model.commands.command import ArgumentInfo, CommandNode
 from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart

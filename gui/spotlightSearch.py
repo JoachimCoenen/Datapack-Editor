@@ -356,7 +356,7 @@ class SpotlightSearchGui(CatTextField):
 		if self.parent() is not None:
 			center = self.geometry().left() + self.geometry().width() / 2
 			left = center - self._resultsPopup.width() / 2
-			bottomLeft = self.parent().mapToGlobal(QPoint(int(left), int(self.geometry().bottom() + 9)))# * gui._scale))
+			bottomLeft = self.parent().mapToGlobal(QPoint(int(left), int(self.geometry().bottom() + 9)))# * gui.scale))
 			self._resultsPopup.move(bottomLeft)
 
 		width = max(self.width(), int( 200 * self._scale))
@@ -567,28 +567,22 @@ class FileSearchPopup(PythonGUIDialog):
 	def recalculateGeometry(self):
 		textField = self._textField
 		if textField is not None:
-			# center = textField.geometry().left() + textField.geometry().width() / 2
 			center = QPoint(textField.width() // 2, textField.height())
 			center = textField.mapToGlobal(center)
 
-			width = self.width()  # max(textField.width(), int(200 * self._gui._scale))
+			width = self.width()
 			height = self.height()
 
-			top = center.y() - int(9 * self._gui._scale)
+			top = center.y() - int(9 * self._gui.scale)
 			left = center.x() - width // 2
-
-			#self.setGeometry(left, top, width, height)
 			self.move(left, top)
-
-			# topLeft = QPoint(left, top)
-			# self.move(topLeft)
 
 	@CrashReportWrapped
 	def sizeHint(self) -> QSize:
 		textField = self._textField
 		if textField is not None:
 			return QSize(
-				max(textField.width(), int(200 * self._gui._scale)),
+				max(textField.width(), int(200 * self._gui.scale)),
 				self.minimumSizeHint().height(),
 			)
 		else:
@@ -596,9 +590,5 @@ class FileSearchPopup(PythonGUIDialog):
 
 	@CrashReportWrapped
 	def resizeEvent(self, event: QResizeEvent) -> None:
-		# oldY = self.y()
-		# geometry = fitToScreen(self.x(), self.y(), self.width(), self.height())
-		# geometry.setY(oldY)
-		# self.setGeometry(geometry)
 		super(FileSearchPopup, self).resizeEvent(event)
 		self.recalculateGeometry()
