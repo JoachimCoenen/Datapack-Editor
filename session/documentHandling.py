@@ -4,9 +4,8 @@ open document, close document, select document, move to view, etc. ...
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import NewType, Optional, TYPE_CHECKING, Callable, Iterable, Iterator, cast
+from typing import NewType, Optional, Callable, Iterator, cast, Sequence
 
-from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, Computed
 from Cat.utils import abstract, override
 from Cat.utils.abc_ import abstractmethod
@@ -16,9 +15,6 @@ from Cat.utils.signals import CatSignal, CatBoundSignal
 from model.parsingUtils import Span
 from model.pathUtils import FilePath
 from session.documents import Document, DocumentTypeDescription, getDocumentTypeForFilePath, getDocTypeByName, getFilePathForDisplay
-
-if TYPE_CHECKING:
-	pass
 
 
 WindowId = NewType('WindowId', str)
@@ -33,8 +29,8 @@ class ViewId:
 @abstract
 class ViewBase(SerializableContainer):
 	__slots__ = ()
-	parent: Optional[ViewContainer] = Serialized(default=None, decorators=[pd.NoUI()])
-	manager: DocumentsManager = Serialized(default=None, decorators=[pd.NoUI()])
+	parent: Optional[ViewContainer] = Serialized(default=None)
+	manager: DocumentsManager = Serialized(default=None)
 
 	# def __init__(self, parent: Optional[ViewContainer] = None):
 	# 	super(ViewBase, self).__init__()
@@ -50,6 +46,7 @@ class ViewBase(SerializableContainer):
 	@abstractmethod
 	def getViewForDocument(self, doc: Document) -> Optional[View]:
 		...
+
 
 @RegisterContainer
 class ViewContainer(ViewBase):
@@ -97,6 +94,7 @@ class ViewContainer(ViewBase):
 	def insertNewView(self, pos: int) -> View:
 		view = View(self.manager)
 		self.insertView(view, pos)
+		view.makeCurrent()
 		return view
 
 	def splitView(self, view: ViewBase, isVertical: bool) -> View:
@@ -142,6 +140,7 @@ class ViewContainer(ViewBase):
 
 	def flattenDown(self) -> None:
 		newViews: list[ViewBase] = []
+		oldViews: list[ViewBase] = self.views.copy()
 		for view in self.views:
 			if isinstance(view, ViewContainer):
 				if view.isVertical == self.isVertical or len(view.views) == 1:
@@ -154,16 +153,17 @@ class ViewContainer(ViewBase):
 
 		if len(newViews) == 1:
 			if isinstance(newViews[0], ViewContainer):
-				self.isVertical = newViews[0].isVertical
-				newViews = newViews[0].views.copy()
-				newViews[0].views.clear()
+				newViews0 = newViews[0]
+				self.isVertical = newViews0.isVertical
+				newViews = newViews0.views.copy()
+				newViews0.views.clear()
 
 		for view in newViews:
 			self._setParentFor(view, self)
 		self.views = newViews
-		if self.parent is not None and len(newViews) <= 1:
+		if self.parent is not None:
 			self.parent.flattenDown()
-		else:
+		if newViews != oldViews:
 			self.onViewsChanged.emit()
 
 	@override
@@ -178,8 +178,8 @@ class ViewContainer(ViewBase):
 @RegisterContainer
 class View(ViewBase):
 	__slots__ = ()
-	documents: list[Document] = Serialized(default_factory=list, decorators=[pd.NoUI()])
-	selectedDocument: Optional[Document] = Serialized(default=None, decorators=[pd.NoUI()])
+	documents: list[Document] = Serialized(default_factory=list)
+	selectedDocument: Optional[Document] = Serialized(default=None)
 
 	onDocumentsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onDocumentsChanged')
 	onMadeCurrent: CatBoundSignal[Callable[[], None]] = CatSignal('onMadeCurrent')
@@ -246,7 +246,6 @@ class View(ViewBase):
 				self.manager.onSelectedDocumentChanged.emit()
 			self.onSelectedDocumentChanged.emit()
 
-
 	# view related:
 	def makeCurrent(self) -> None:
 		self._ensureManagerIsSet()
@@ -279,10 +278,9 @@ class DocumentsManager(SerializableContainer):
 		pass
 
 	viewsC: ViewContainer = Serialized(getInitValue=ViewContainer)
-	#views: list[View] = Serialized(default_factory=list)
 
 	@property
-	def views(self) -> list[View]:
+	def views(self) -> Sequence[View]:
 		stack: Stack[Iterator[ViewBase]] = Stack()
 		stack.push(iter(self.viewsC.views))
 		views: list[View] = []
@@ -296,7 +294,13 @@ class DocumentsManager(SerializableContainer):
 				views.append(cast(View, v))
 		return views
 
-	currentView: View = Serialized(getInitValue=lambda s: s._getFirstView())
+	def _getFirstView(self) -> View:
+		if not self.views:
+			view = self.viewsC.insertNewView(-1)
+		else:
+			view = self.views[0]
+		return view
+	currentView: View = Serialized(getInitValue=_getFirstView)
 
 	# callbacks (must be set externally, for prompting the user, etc...):
 	onCanCloseModifiedDocument: Callable[[Document], bool] = Serialized(default=lambda d: True, shouldSerialize=False)
@@ -304,23 +308,12 @@ class DocumentsManager(SerializableContainer):
 	onSelectedDocumentChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onSelectedDocumentChanged')
 
 	# views:
-	def _getFirstView(self) -> View:
-		if not self.viewsC.views:
-			view = self.viewsC.insertNewView(-1)
-		else:
-			view = self.views[0]
-		return view
 
-	def addView(self) -> View:
-		view = View(self)
-		self.views.append(view)
-		self.onViewsChanged.emit()
-		return view
-
-	@staticmethod
-	def forceCloseView(view: View) -> None:
+	def forceCloseView(self, view: View) -> None:
 		if view.parent is not None:
 			view.parent.forceRemove(view)
+		if self.currentView is view:
+			self.selectView(self._getFirstView())
 
 	def safelyCloseView(self, view: View) -> None:
 		for doc in view.documents:
@@ -342,19 +335,24 @@ class DocumentsManager(SerializableContainer):
 			self.onCurrentViewChanged.emit()
 			self.onSelectedDocumentChanged.emit()
 
-	def selectDocument(self, doc: Document, cursor: Span = None) -> None:
-		self.showDocument(doc, cursor)
+	# utility:
 
 	def _getViewForDocument(self, doc: Document) -> Optional[View]:
 		return self.viewsC.getViewForDocument(doc)
-
-	# utility:
 
 	@staticmethod
 	def _insertDocument(doc: Document, view: View, pos: Optional[int]):
 		view.insertDocument(doc, pos)
 
-	# open / close / select / ...
+	# documents: (open / close / select / ...)
+
+	@property
+	def currentDocument(self) -> Optional[Document]:
+		return self.currentView.selectedDocument
+
+	@property
+	def selectedDocument(self) -> Optional[Document]:
+		return self.currentDocument
 
 	def showDocument(self, doc: Document, cursor: Span = None) -> None:
 		view = self._getViewForDocument(doc)
@@ -363,6 +361,9 @@ class DocumentsManager(SerializableContainer):
 				doc.locatePosition(*cursor)
 			view.selectDocument(doc)
 			self.selectView(view)
+
+	def selectDocument(self, doc: Document, cursor: Span = None) -> None:
+		self.showDocument(doc, cursor)
 
 	def openOrShowDocument(self, filePath: FilePath, cursor: Span = None) -> None:  # throws OSError
 		doc = self.getDocument(filePath)
