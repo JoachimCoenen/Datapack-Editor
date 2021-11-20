@@ -7,7 +7,7 @@ from typing import TypeVar
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, Computed, ComputedCached
 from Cat.extensions import FilesChangedDependency, SingleFileChangedDependency
-from Cat.utils.collections import OrderedDict
+from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
 from model.datapackContents import ResourceLocation, FunctionMeta, buildFunctionMeta, MetaInfo, EntryHandlerInfo, buildMetaInfo, collectAllEntries
 from model.pathUtils import getAllFilesFromSearchPath, fileNameFromFilePath, FilePathTpl

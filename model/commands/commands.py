@@ -1,7 +1,7 @@
 from typing import Optional
 
 from Cat.Serializable import SerializableContainer, Serialized
-from Cat.utils.collections import ChainedList
+from Cat.utils.collections_ import ChainedList
 from model.commands.argumentTypes import *
 from model.commands.command import CommandInfo, Keyword, ArgumentInfo, TERMINAL, COMMANDS_ROOT, Switch
 from model.data.dataValues import STRUCTURES

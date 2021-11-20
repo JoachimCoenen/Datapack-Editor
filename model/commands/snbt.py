@@ -6,7 +6,7 @@ from nbtlib import Parser, tokenize, Base, Byte, Short, Int, Long, Float, Double
 from nbtlib.path import can_be_converted_to_int, NamedKey, extend_accessors
 
 from Cat.utils import escapeForXml
-from Cat.utils.collections import AddToDictDecorator, getIfKeyIssubclass, OrderedDict
+from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclass, OrderedDict
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import SNBTParser, SNBTError

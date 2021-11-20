@@ -16,7 +16,7 @@ from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFram
 from Cat.CatPythonGUI.GUI.pythonGUI import PythonGUIWidget
 from Cat.icons import icons
 from Cat.utils import openOrCreate, Maybe, format_full_exc
-from Cat.utils.collections import OrderedMultiDict, OrderedDict
+from Cat.utils.collections_ import OrderedMultiDict, OrderedDict
 from Cat.utils.formatters import formatVal, FW
 from Cat.utils.profiling import logError, logInfo
 from gui.editors import TextDocumentEditor, DatapackFilesEditor, DocumentsViewEditor, DocumentsViewsContainerEditor

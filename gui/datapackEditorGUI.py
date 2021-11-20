@@ -23,8 +23,8 @@ from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
 from Cat.Serializable import SerializedPropertyABC, SerializableContainer
 from Cat.icons import icons
 from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, Maybe, format_full_exc, openOrCreate
-from Cat.utils.abc import abstractmethod
-from Cat.utils.collections import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
+from Cat.utils.abc_ import abstractmethod
+from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from Cat.utils.profiling import logError
 from gui import mcFunctionLexer
 from session.documents import Document, ErrorCounts

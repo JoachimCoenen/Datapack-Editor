@@ -1,7 +1,7 @@
 from typing import TypeVar, Generic, Type, overload
 
 from Cat.Serializable import RegisterContainer, Serialized, SerializableContainer, Computed
-from Cat.utils.collections import OrderedDict
+from Cat.utils.collections_ import OrderedDict
 from model.parsingUtils import Position, Span
 
 TS = TypeVar('TS')

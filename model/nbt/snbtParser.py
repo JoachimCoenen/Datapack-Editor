@@ -1,7 +1,7 @@
 from typing import Optional, Type, Union, Callable
 
 from Cat.Serializable import RegisterContainer
-from Cat.utils.collections import OrderedDict
+from Cat.utils.collections_ import OrderedDict
 from model.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
 from model.nbt.tags import *
 from model.parsingUtils import Position, GeneralParsingError, Span

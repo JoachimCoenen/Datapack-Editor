@@ -1,6 +1,6 @@
 from typing import Optional, Union
 
-from Cat.utils.collections import OrderedDict
+from Cat.utils.collections_ import OrderedDict
 from model.commands.argumentHandlers import makeParsedArgument
 from model.commands.argumentValues import TargetSelector
 from model.commands.command import ArgumentInfo

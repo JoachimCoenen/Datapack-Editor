@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import NamedTuple, Optional, Any
 
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized
-from Cat.utils.collections import OrderedDict, OrderedMultiDict
+from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from model.commands.parsedCommands import ParsedArgument
 from model.datapackContents import ResourceLocation
 from model.nbt.tags import CompoundTag

@@ -9,8 +9,8 @@ from typing import NewType, Optional, TYPE_CHECKING, Callable, Iterable, Iterato
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, Computed
 from Cat.utils import abstract, override
-from Cat.utils.abc import abstractmethod
-from Cat.utils.collections import Stack
+from Cat.utils.abc_ import abstractmethod
+from Cat.utils.collections_ import Stack
 from Cat.utils.profiling import logInfo
 from Cat.utils.signals import CatSignal, CatBoundSignal
 from model.parsingUtils import Span

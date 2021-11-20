@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget
 
 from Cat.CatPythonGUI.GUI import PythonGUI
 from Cat.utils import Decorator
-from Cat.utils.collections import AddToDictDecorator
+from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.profiling import logError
 from Cat.utils.utils import HTMLStr, escapeForXml, HTMLifyMarkDownSubSet
 from model.commands.argumentTypes import ArgumentType, LiteralsArgumentType

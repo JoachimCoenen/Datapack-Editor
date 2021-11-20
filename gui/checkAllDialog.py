@@ -12,7 +12,7 @@ from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFram
 from Cat.CatPythonGUI.utilities import connect
 from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, Computed
 from Cat.utils import format_full_exc
-from Cat.utils.collections import OrderedDict, OrderedMultiDict
+from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
 from Cat.utils.profiling import TimedMethod, logError
 from model.commands.parser import parseMCFunction

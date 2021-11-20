@@ -1,7 +1,7 @@
 from typing import Optional, Sequence
 
 from Cat.utils import escapeForXml
-from Cat.utils.collections import Stack
+from Cat.utils.collections_ import Stack
 from Cat.utils.profiling import ProfiledFunction
 from model.commands.command import CommandInfo, Keyword, ArgumentInfo, CommandNode, TERMINAL, COMMANDS_ROOT, Switch
 from model.commands.commands import getCommandInfo

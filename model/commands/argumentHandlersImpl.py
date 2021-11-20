@@ -6,8 +6,8 @@ from typing import Optional, Iterable
 
 from PyQt5.QtWidgets import QWidget
 
-from Cat.utils.collections import OrderedDict
-from Cat.utils.utils import HTMLStr
+from Cat.utils import HTMLStr
+from Cat.utils.collections_ import OrderedDict
 from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider
 from model.commands.argumentParsersImpl import _parse3dPos, _parseBlockStates, tryReadNBTCompoundTag, _parseResourceLocation, _parseEntityLocator, _parse2dPos
 from model.commands.argumentTypes import *

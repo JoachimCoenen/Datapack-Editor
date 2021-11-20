@@ -3,7 +3,7 @@ from typing import Optional, TypeVar, Type, Callable, NamedTuple
 
 from Cat.Serializable import RegisterContainer, Serialized, SerializableContainer, ComputedCached
 from Cat.utils.profiling import logError
-from Cat.utils.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute
+from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute
 from model.pathUtils import FilePathTpl, loadTextFile, ZipFilePool
 
 

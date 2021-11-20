@@ -6,7 +6,7 @@ from Cat.CatPythonGUI.GUI import NO_MARGINS, CORNERS, NO_OVERLAP, Overlap, Round
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin
 from Cat.CatPythonGUI.GUI.enums import TabPosition, SizePolicy
 from Cat.icons import icons
-from Cat.utils.collections import OrderedMultiDict
+from Cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import EditorBase, DatapackEditorGUI, ContextMenuEntries
 from gui.editors import TextDocumentEditor
 from keySequences import KEY_SEQUENCES

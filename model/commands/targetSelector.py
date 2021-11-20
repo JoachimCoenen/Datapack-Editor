@@ -2,7 +2,7 @@ import re
 from typing import Optional
 
 from Cat.Serializable import RegisterContainer, Serialized
-from Cat.utils.collections import OrderedMultiDict
+from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import ProfiledFunction
 from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser, argumentHandler, ArgumentHandler
 from model.commands.argumentTypes import *

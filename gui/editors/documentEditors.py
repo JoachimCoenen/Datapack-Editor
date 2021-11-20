@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, QEvent, pyqtSignal
 
 from Cat.CatPythonGUI.GUI import NO_MARGINS, SizePolicy, getStyles
 from Cat.utils import format_full_exc, override
-from Cat.utils.abc import abstractmethod
+from Cat.utils.abc_ import abstractmethod
 from Cat.utils.formatters import indentMultilineStr
 from Cat.utils.profiling import logError
 from session.documents import TextDocument, Document

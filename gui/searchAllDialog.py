@@ -14,7 +14,7 @@ from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFram
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 from Cat.icons import icons
 from Cat.utils import escapeForXml
-from Cat.utils.collections import OrderedMultiDict
+from Cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
 from model.Model import Datapack
 from model.pathUtils import FilePath, getAllFilesFromSearchPath, ZipFilePool, loadTextFile
