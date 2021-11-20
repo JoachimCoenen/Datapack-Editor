@@ -140,6 +140,10 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		function, errors = lexer._function, lexer._errors
 		if function is None:
 			return None
+		errors = errors + checkMCFunction(function)
+
+		matchedErrors = [e for e in errors if e.position <= position <= e.end]
+		tips = [f'<div style="{PythonGUI.helpBoxStyles.get(e.style, "")}">{e.message}</div>' for e in matchedErrors]
 
 		match = self.getBestMatch(function, position)
 		if match is None:
@@ -153,11 +157,11 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 					documentationProvider = defaultDocumentationProvider
 				else:
 					documentationProvider = handler.getDocumentation
-				tip = documentationProvider(match)
+				tips.append(documentationProvider(match))
 			else:
-				errors = errors + checkMCFunction(function)
-				matchedErrors = [e for e in errors if e.position <= position <= e.end]
-				tip = '<br/>'.join(f'<div style="{PythonGUI.helpBoxStyles.get(e.style, "")}">{e.message}</div>' for e in matchedErrors)
+				pass
+
+			tip = '<br/>'.join(tips)
 			return f"{tip}"
 
 	def _getNextKeywords(self, nexts: Iterable[CommandNode]) -> list[str]:

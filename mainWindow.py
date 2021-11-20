@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 from math import floor
 from operator import attrgetter
-from typing import Optional, Sequence, Iterable, Iterator
+from typing import Optional, Sequence
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCloseEvent, QKeySequence
@@ -13,24 +13,23 @@ from Cat.CatPythonGUI.GUI import CORNERS, NO_OVERLAP, NO_MARGINS, SizePolicy, Ov
 from Cat.CatPythonGUI.GUI.codeEditor import Position, Error
 from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.CatPythonGUI.GUI.pythonGUI import PythonGUIWidget
 from Cat.icons import icons
-from Cat.utils import openOrCreate, Maybe, format_full_exc
-from Cat.utils.collections_ import OrderedMultiDict, OrderedDict
+from Cat.utils import openOrCreate, format_full_exc
+from Cat.utils.collections_ import OrderedDict
 from Cat.utils.formatters import formatVal, FW
-from Cat.utils.profiling import logError, logInfo
-from gui.editors import TextDocumentEditor, DatapackFilesEditor, DocumentsViewEditor, DocumentsViewsContainerEditor
+from Cat.utils.profiling import logError
+from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
 from keySequences import KEY_SEQUENCES
 from model.commands.commands import AllCommands, BASIC_COMMAND_INFO
 from model.commands.parser import parseMCFunction
 from model.parsingUtils import Span
-from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getFilePathForDisplay, getErrorCounts
+from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
 from gui.checkAllDialog import CheckAllDialog
 from gui.searchAllDialog import SearchAllDialog
 from gui.spotlightSearch import SpotlightSearchGui
 from model.pathUtils import FilePath
-from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
-from session.session import getSession, WindowId, getSessionFilePath, saveSessionToFile, loadSessionFromFile
+from gui.datapackEditorGUI import DatapackEditorGUI
+from session.session import getSession, WindowId, saveSessionToFile
 from settings import applicationSettings
 from settings.settingsDialog import SettingsDialog
 
@@ -150,47 +149,31 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		mg = self._gui.margin if self.disableStatusbarMargins else 0
 		with gui.hLayout(contentsMargins=(mg, 0, mg, 0)):
 			pass
-			# self.sessionToolBarGUI(gui)
-			# gui.hSeparator()
-			# gui.propertyField(applicationSettings, applicationSettings.appearanceProp.useCompactLayout)
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
 		gui.editor(DatapackFilesEditor, getSession().world).redrawLater()
 
-	def toolBarGUI2(self, gui: DatapackEditorGUI):
-		# TODO: INVESTIGATE calculation of hSpacing:
-		sdm = gui.smallDefaultMargins
-		dm = gui.defaultMargins
-		avgMarginsDiff = ((dm[0] - sdm[0]) + (dm[1] - sdm[1])) / 2
-		hSpacing = gui.smallSpacing  # + int(avgMarginsDiff * gui._scale)
-
+	def documentToolBarGUI(self, gui: DatapackEditorGUI, button, btnCorners, btnOverlap, btnMargins):
 		button = gui.framelessButton
-		btnCorners = CORNERS.ALL
-		btnMargins = gui.smallDefaultMargins
-		btnOverlap = (0, 0, 0, 1) if self.isToolbarInTitleBar else NO_OVERLAP
-
-		with gui.hLayout(horizontalSpacing=hSpacing):
-			hasOpenedWorld = getSession().hasOpenedWorld
-			if button(icon=icons.globeAlt, tip='Switch World' if hasOpenedWorld else 'Load World', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, default=not hasOpenedWorld):
-				self._loadWorldDialog(gui)
-
-			document = self.selectedDocument
-			if button(icon=icons.file, tip='New File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, windowShortcut=KEY_SEQUENCES.NEW):
+		document = self.selectedDocument
+		btnKwArgs = dict(roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value)
+		with gui.hLayout():
+			if button(icon=icons.file, tip='New File', **btnKwArgs, windowShortcut=KEY_SEQUENCES.NEW):
 				self._createNewDocument(gui)
 
-			if button(icon=icons.open, tip='Open File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, windowShortcut=QKeySequence.Open):
+			if button(icon=icons.open, tip='Open File', **btnKwArgs, windowShortcut=QKeySequence.Open):
 				filePath = gui.showFileDialog(self._lastOpenPath, [('model', '.xml'), ('java', '.java'), ('All files', '*')], style='open')
 				if filePath:
 					self._tryOpenOrSelectDocument(filePath)
 
 			isEnabled = True  # bool(document) and os.path.exists(document.filePathForDisplay)
-			if button(icon=icons.save, tip='Save File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=isEnabled, windowShortcut=QKeySequence.Save):
+			if button(icon=icons.save, tip='Save File', **btnKwArgs, enabled=isEnabled, windowShortcut=QKeySequence.Save):
 				self._saveOrSaveAs(gui, document)
 
-			if button(icon=icons.saveAs, tip='Save As', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=bool(document), windowShortcut=KEY_SEQUENCES.SAVE_AS):
+			if button(icon=icons.saveAs, tip='Save As', **btnKwArgs, enabled=bool(document), windowShortcut=KEY_SEQUENCES.SAVE_AS):
 				self._saveAs(gui, document)
 
-			if button(icon=icons.refresh, tip='Reload File', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=bool(document), windowShortcut=QKeySequence.Refresh):
+			if button(icon=icons.refresh, tip='Reload File', **btnKwArgs, enabled=bool(document), windowShortcut=QKeySequence.Refresh):
 				filePath = document.filePath
 				if filePath:
 					try:
@@ -199,39 +182,13 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 						gui.showAndLogError(e)
 
 			with gui.hLayout(horizontalSpacing=0):
-				if button(icon=icons.undo, tip='Undo', roundedCorners=maskCorners(btnCorners, CORNERS.LEFT), overlap=btnOverlap, margins=btnMargins, enabled=bool(document), windowShortcut=QKeySequence.Undo):
+				if button(icon=icons.undo, tip='Undo', roundedCorners=maskCorners(btnCorners, CORNERS.LEFT), overlap=btnOverlap, margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Undo):
 					document.undoRedoStack.undoOnce()
 
-				if button(icon=icons.redo, tip='Redo', roundedCorners=maskCorners(btnCorners, CORNERS.RIGHT), overlap=adjustOverlap(btnOverlap, (1, None, None, None)), margins=btnMargins, enabled=bool(document), windowShortcut=QKeySequence.Redo):
+				if button(icon=icons.redo, tip='Redo', roundedCorners=maskCorners(btnCorners, CORNERS.RIGHT), overlap=adjustOverlap(btnOverlap, (1, None, None, None)), margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Redo):
 					document.undoRedoStack.redoOnce()
 
-			gui.addHSpacer(0, SizePolicy.Expanding)
-
-		self.fileSearchFieldGUI(gui, roundedCorners=btnCorners, overlap=btnOverlap)
-
-		with gui.hLayout(horizontalSpacing=hSpacing):
-			gui.addHSpacer(0, SizePolicy.Expanding)
-
-			if button(icon=icons.search, tip='Search all', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, windowShortcut=KEY_SEQUENCES.FIND_ALL):
-				self.searchAllDialog.show()
-
-			if button(icon=icons.spellCheck, tip='Check all Files', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=True):
-				self.checkAllDialog.show()
-
-			if button(icon=icons.settings, tip='Settings', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, windowShortcut=QKeySequence.Preferences):
-				self._showSettingsDialog(gui)
-
-			# if button(icon=icons.windowRestore, tip='New Window', roundedCorners=btnCorners, margins=btnMargins):
-			# 	newMainWindow()
-
-			gui.hSeparator()
-			if button(icon=icons.camera_ban, tip='Ban Cameras', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins):
-				if gui.askUser(title='Really?', message='You want to ban all cameras?!'):
-					gui.showErrorDialog(title='Error', message='You cannot ban all cameras!')
-				else:
-					gui.showInformationDialog(title='phew...', message='Thank goodness!')
-
-			if button(icon=icons.camera, tip='parse MCFunction', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, enabled=document is not None):
+			if button(icon=icons.camera, tip='parse MCFunction', **btnKwArgs, enabled=document is not None):
 				if self.selectedDocument is not None:
 					text = self.selectedDocument.content
 					func, errors = parseMCFunction(text)
@@ -240,9 +197,56 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 						formatVal((func, errors), s=FW(outFfile))
 					self._tryOpenOrSelectDocument(filePath)
 
+	def toolBarGUI2(self, gui: DatapackEditorGUI):
+		# TODO: INVESTIGATE calculation of hSpacing:
+		sdm = gui.smallDefaultMargins
+		dm = gui.defaultMargins
+		avgMarginsDiff = ((dm[0] - sdm[0]) + (dm[1] - sdm[1])) / 2
+		hSpacing = gui.smallSpacing  # + int(avgMarginsDiff * gui.scale)
+
+		button = gui.framelessButton
+		btnCorners = CORNERS.ALL
+		btnMargins = gui.smallDefaultMargins
+		btnOverlap = (0, 0, 0, 1) if self.isToolbarInTitleBar else NO_OVERLAP
+		btnKwArgs = dict(roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value)
+
+		with gui.hLayout(horizontalSpacing=hSpacing):
+			hasOpenedWorld = getSession().hasOpenedWorld
+			if button(icon=icons.globeAlt, tip='Switch World' if hasOpenedWorld else 'Load World', **btnKwArgs, default=not hasOpenedWorld):
+				self._loadWorldDialog(gui)
+
+			docToolBarGUI = gui.subGUI(type(gui), lambda g: self.documentToolBarGUI(g, button=button, btnCorners=btnCorners, btnOverlap=btnOverlap, btnMargins=btnMargins), hSizePolicy=SizePolicy.Fixed.value)
+			getSession().documents.onSelectedDocumentChanged.disconnect('documentToolBarGUI')
+			getSession().documents.onSelectedDocumentChanged.connect('documentToolBarGUI', docToolBarGUI.host.redraw)
+			docToolBarGUI.redrawGUI()
+			docToolBarGUI._name = 'docToolBarGUI'
+
+			gui.addHSpacer(0, SizePolicy.Expanding)
+
+		self.fileSearchFieldGUI(gui, roundedCorners=btnCorners, overlap=btnOverlap)
+
+		with gui.hLayout(horizontalSpacing=hSpacing):
+			gui.addHSpacer(0, SizePolicy.Expanding)
+
+			if button(icon=icons.search, tip='Search all', **btnKwArgs, windowShortcut=KEY_SEQUENCES.FIND_ALL):
+				self.searchAllDialog.show()
+
+			if button(icon=icons.spellCheck, tip='Check all Files', **btnKwArgs, enabled=True):
+				self.checkAllDialog.show()
+
+			if button(icon=icons.settings, tip='Settings', **btnKwArgs, windowShortcut=QKeySequence.Preferences):
+				self._showSettingsDialog(gui)
+
+			# gui.hSeparator()
+			# if button(icon=icons.camera_ban, tip='Ban Cameras', **btnKwArgs):
+			# 	if gui.askUser(title='Really?', message='You want to ban all cameras?!'):
+			# 		gui.showErrorDialog(title='Error', message='You cannot ban all cameras!')
+			# 	else:
+			# 		gui.showInformationDialog(title='phew...', message='Thank goodness!')
+
 			if applicationSettings.debugging.isDeveloperMode:
 				gui.hSeparator()
-				if button(icon=icons.camera, tip='showCommandInfo', roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins):
+				if button(icon=icons.camera, tip='showCommandInfo', **btnKwArgs):
 					try:
 						ac = AllCommands.create(BASIC_COMMAND_INFO=BASIC_COMMAND_INFO)
 						filePath = "D:/Programming/Python/MinecraftDataPackEditor/sessions/commands.ast"
@@ -264,18 +268,14 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			if self.isToolbarInTitleBar:
 				gui.hSeparator()
 
-	def sessionToolBarGUI(self, gui: DatapackEditorGUI):
-		gui.filePathField(getSessionFilePath(), filters=[("JSON", ".json")], style='save', enabled=True)
-		with gui.hLayout():
-			if gui.button('Reset'):
-				getSession().reset()
-			if gui.button('Save'):
-				saveSessionToFile()
-			if gui.button('Load'):
-				loadSessionFromFile()
-
 	def bottomPanelGUI(self, gui: DatapackEditorGUI, roundedCorners: RoundedCorners, cornerRadius: float):
 		document = self.selectedDocument
+
+		# connect to errorChanged Signal:
+		Document.onErrorsChanged.disconnectFromAllInstances(key='bottomPanelGUI')
+		if document is not None:
+			document.onErrorsChanged.connect('bottomPanelGUI', lambda d: gui.host.redrawLater('onErrorsChanged'))
+		getSession().documents.onSelectedDocumentChanged.connect('bottomPanelGUI', lambda: gui.host.redrawLater('onSelectedDocumentChanged'))
 
 		tabs = OrderedDict([
 			((icons.error, 'Errors',),     (
