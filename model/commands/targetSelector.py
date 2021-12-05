@@ -153,6 +153,8 @@ FALLBACK_TS_ARGUMENT_INFO = TSArgumentInfo.create(
 )
 
 
+_GOTO_NEXT_ARG_PATTERN = re.compile(r'[,}=]')
+
 @argumentHandler(DPE_TARGET_SELECTOR_SCORES.name)
 class TargetSelectorScoresArgumentHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
@@ -168,34 +170,43 @@ class TargetSelectorScoresArgumentHandler(ArgumentHandler):
 			handler = getArgumentHandler(MINECRAFT_OBJECTIVE)
 			objective = handler.parse(sr, None, errorsIO=errorsIO)
 			if objective is None:
-				errorsIO.append(CommandSyntaxError(f"Expected an objective.", Span(sr.currentPos), style='error'))
-				objective = ''
+				objective = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
+				errorsIO.append(CommandSyntaxError(f"Expected an objective.", sr.currentSpan, style='error'))
 			else:
 				objective = objective.value
 
 			sr.tryConsumeWhitespace()
 			if not sr.tryConsumeChar('='):
-				errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", Span(sr.currentPos), style='error'))
-			sr.tryConsumeWhitespace()
+				sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
+				errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", sr.currentSpan, style='error'))
+				sr.mergeLastSave()
+			else:
+				sr.tryConsumeWhitespace()
 
-			handler = getArgumentHandler(MINECRAFT_INT_RANGE)
-			value = handler.parse(sr, None, errorsIO=errorsIO)
-			if value is None:
-				remainig = sr.readUntilEndOrRegex(re.compile(r'[],]'))
-				value = makeParsedArgument(sr, None, value=remainig)
-				errorsIO.append(CommandSyntaxError(f"Expected {MINECRAFT_INT_RANGE.name}.", sr.currentSpan, style='error'))
-			sr.mergeLastSave()
-			scores.add(objective, value)
+				handler = getArgumentHandler(MINECRAFT_INT_RANGE)
+				value = handler.parse(sr, None, errorsIO=errorsIO)
+				if value is None:
+					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
+					value = makeParsedArgument(sr, None, value=remainig)
+					errorsIO.append(CommandSyntaxError(f"Expected {MINECRAFT_INT_RANGE.name}.", sr.currentSpan, style='error'))
+				sr.mergeLastSave()
+				scores.add(objective, value)
 
 			sr.tryConsumeWhitespace()
 			if sr.tryConsumeChar('}'):
 				break
-			if sr.tryConsumeChar(','):
+			elif sr.tryConsumeChar(','):
 				sr.tryConsumeWhitespace()
 				continue
-			if sr.hasReachedEnd:
-				errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format("`}`", 'end of str'), sr.currentSpan, style='error'))
-				break
+			else:
+				if sr.hasReachedEnd:
+					errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format("`}`", 'end of str'), sr.currentSpan, style='error'))
+					break
+				else:
+					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
+					errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format("`}` or `,`", f"'{remainig}'"), sr.currentSpan, style='error'))
+					if sr.tryConsumeChar('}'):
+						break
 		return makeParsedArgument(sr, ai, value=scores)
 
 

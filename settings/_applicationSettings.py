@@ -226,7 +226,6 @@ def setApplicationSettings(newSettings: ApplicationSettings):
 	applicationSettings.copyFrom(copy.deepcopy(newSettings))
 
 
-
 def saveApplicationSettings():
 	with open(_getSettingsPath(), 'w', encoding='utf-8') as settingsFile:
 		applicationSettings.toJSON(settingsFile)
