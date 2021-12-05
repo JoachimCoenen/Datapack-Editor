@@ -54,7 +54,7 @@ def setSession(session: Session):
 
 
 def getSessionFilePath() -> str:
-	return os.path.join(os.path.dirname(getExePath()), 'sessions', 'session2.json')
+	return os.path.join(os.path.dirname(getExePath()), 'sessions', 'session.json')
 
 
 def _logError(e, s):
