@@ -1,10 +1,10 @@
 import copy
 from typing import Any, List, NamedTuple, Optional, Type, Union
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QAbstractScrollArea, QDialog, QWidget
+from PyQt5.QtWidgets import QDialog, QWidget
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.CatPythonGUI.GUI import CORNERS, Overlap, RoundedCorners
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 from Cat.Serializable import SerializableContainer
@@ -22,13 +22,11 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 		self.setWindowTitle('Settings')
 		self._disableContentMargins = True
 		self._disableSidebarMargins = True
+		self._drawTitleToolbarBorder = False
+		self.resize(750, 500)
 
-	#
-	# def OnSidebarGUI(self, gui: PythonGUI):
-	# 	self._selectedPage = self.settingsPageSelectionGUI(gui)
-
-	# def OnSidebarGUI(self, gui: PythonGUI):
-	# 	self._selectedPage = self.settingsPageSelectionGUI(gui)
+	def OnSidebarGUI(self, gui: PythonGUI):
+		self._selectedPage = self.settingsPageSelectionGUI(gui)
 
 	def OnStatusbarGUI(self, gui: PythonGUI):
 		gui.dialogButtons({
@@ -38,23 +36,13 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 			MessageBoxButton.RestoreDefaults: lambda b: self._settingsCopy.reset() or gui.redrawGUI(),
 		})
 
-	def OnGUI(self, gui: PythonGUI):
-		#self.settingsPageGUI(gui, self._selectedPage)
-		with gui.vLayout(verticalSpacing=0):
-			with gui.hSplitter(handleWidth=0, childrenCollapsible=False) as mainSplitter:
-				with mainSplitter.addArea(stretchFactor=0):
-					self._selectedPage = self.settingsPageSelectionGUI(gui)
-				with mainSplitter.addArea(stretchFactor=1):
-					self.settingsPageGUI(gui, self._selectedPage)
+	def _mainAreaGUI(self, gui: PythonGUI, overlap: Overlap, roundedCorners: RoundedCorners):
+		contentsMargins = self._mainAreaMargins
+		with gui.vLayout(contentsMargins=contentsMargins):
+			self.OnGUI(gui)
 
-			# margin = gui.margin
-			# with gui.vPanel(
-			# 	overlap=(0, 1),
-			# 	roundedCorners=CORNERS.BOTTOM,
-			# 	cornerRadius=self.windowCornerRadius,
-			# 	windowPanel=False,
-			# 	contentsMargins=(margin, gui.smallSpacing, margin, margin)
-			# ):
+	def OnGUI(self, gui: PythonGUI):
+		self.settingsPageGUI(gui, self._selectedPage)
 
 	def settingsPageSelectionGUI(self, gui: PythonGUI) -> Optional[SerializableContainer]:
 		DataValue = Union[SerializableContainer, Any, None]
@@ -98,26 +86,26 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 			DataTreeBuilder(root, childrenMaker, labelMaker, None, toolTipMaker, 1, showRoot=False, getId=lambda x: x.label),
 			headerVisible=True,
 			loadDeferred=True,
-			overlap=(0, 1, 1, 1)
+			roundedCorners=CORNERS.RIGHT
 		).selectedItem
 		return settings.value if settings is not None else None
 
 	def settingsPageGUI(self, outerGui: PythonGUI, settingsPage: Optional[SerializableContainer]):
 		def drawGUI(gui: AutoGUI):
-			with gui.scrollBox(preventVStretch=True, horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff, sizeAdjustPolicy=QAbstractScrollArea.AdjustToContents):
-			#with gui.vLayout(preventVStretch=True):
+			with gui.vLayout(preventVStretch=True):
 				for prop in settingsPage.getSerializedProperties():
 					if isinstance(prop.decorator, pd.NoUI):
 						continue
 					gui.propertyField(settingsPage, prop, True, enabled=True)
 					gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer
 
-		if settingsPage is None:
-			outerGui.helpBox('Please select a category.')
-		else:
-			subGui = outerGui.subGUI(AutoGUI, drawGUI)
-			subGui.OnGUI = drawGUI
-			subGui.redrawGUI()
+		with outerGui.vPanel(roundedCorners=CORNERS.LEFT, windowPanel=True):
+			if settingsPage is None:
+				outerGui.helpBox('Please select a category.')
+			else:
+				subGui = outerGui.subGUI(AutoGUI, drawGUI)
+				subGui.OnGUI = drawGUI
+				subGui.redrawGUI()
 
 	def exec(self):
 		self._settingsCopy: ApplicationSettings = copy.deepcopy(applicationSettings)

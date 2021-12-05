@@ -7,6 +7,7 @@ from json import JSONDecodeError
 from typing import Optional
 from zipfile import ZipFile
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontDatabase
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
@@ -100,8 +101,6 @@ def minecraftJarValidator(path: str) -> tuple[Optional[str], str]:
 		logWarning(e)
 	else:
 		logWarning(path)
-		# msg, style = 'Not a .jar File', 'error'
-
 
 	return msg, style
 
@@ -140,10 +139,6 @@ class MinecraftSettings(SerializableContainer):
 @RegisterContainer
 class DebugSettings(SerializableContainer):
 	__slots__ = ()
-	def __typeCheckerInfo___(self):
-		# giving the type checker a helping hand...
-		# self.repository: Repository = Repository()
-		pass
 
 	@pd.Title('Developer Mode')
 	@pd.ToggleSwitch()
@@ -155,30 +150,6 @@ class DebugSettings(SerializableContainer):
 	@Serialized()
 	def showUndoRedoPane(self) -> bool :
 		return False
-
-	# @Serialized()
-	# def showLayoutsPanel(self) -> bool :
-	# 	return True
-	#
-	# @Serialized()
-	# def showApplicationConfigPanel(self) -> bool :
-	# 	return True
-	#
-	# @Serialized()
-	# def showInternationalizationPanel(self) -> bool :
-	# 	return True
-	#
-	# @Serialized()
-	# def showJavaPanel(self) -> bool :
-	# 	return True
-	#
-	# @Serialized()
-	# def showDataModelPanel(self) -> bool :
-	# 	return True
-	#
-	# @Serialized()
-	# def showGitPanel(self) -> bool :
-	# 	return True
 
 	test: str = Serialized(
 		default='Test',
@@ -194,14 +165,14 @@ class AboutSettings(SerializableContainer):
 	@pd.ReadOnlyLabel()
 	@Serialized(shouldSerialize=False, wordWrap=True, label='Copyright ©')
 	def copyright(self) -> str:
-		return """<font>Copyright (c) 2021 Joachim Coenen. All Rights Reserved</font>"""
+		return """<font>Copyright © 2021 Joachim Coenen. All Rights Reserved</font>"""
 
 	@pd.ReadOnlyLabel()
-	@Serialized(shouldSerialize=False, wordWrap=True, label='')
+	@Serialized(shouldSerialize=False, wordWrap=True, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True)
 	def about(self) -> str:
 		return """<font>Written and maintained by Joachim Coenen. 
-		<br/>If you have any questions, bugs or improvements, share them on GitHub.
-		<br/><a href="www.github.com/JoachimCoenen/Datapack-Editor">github.com/JoachimCoenen/Datapack-Editor</a>
+		<br/>If you have any questions, bugs or improvements, please share them on GitHub.
+		<br/><a href="https://www.github.com/JoachimCoenen/Datapack-Editor">github.com/JoachimCoenen/Datapack-Editor</a>
 		</font>"""
 
 
