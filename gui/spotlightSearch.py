@@ -1,22 +1,18 @@
-#  Copyright (c) 2021 ASCon Systems GmbH. All Rights Reserved
 import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-from PyQt5.QtCore import QPoint, Qt, QTimer, QSize
+from PyQt5.QtCore import QPoint, Qt, QSize
 from PyQt5.QtGui import QFocusEvent, QFont, QKeyEvent, QMoveEvent, QResizeEvent
 from PyQt5.QtWidgets import QWidget, QLayout
 
 from Cat.CatPythonGUI.GUI import SizePolicy
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CORNERS, NO_MARGINS, NO_OVERLAP, Overlap, RoundedCorners
 from Cat.CatPythonGUI.GUI.pythonGUI import PythonGUIDialog, PythonGUI
-from Cat.CatPythonGUI.GUI.Widgets import CatTextField, fitToScreen
+from Cat.CatPythonGUI.GUI.Widgets import CatTextField
 from Cat.CatPythonGUI.utilities import connect, CrashReportWrapped
 from Cat.utils.profiling import ProfiledFunction, TimedMethod
 from Cat import utils
-# from modelMaker.modelMakerGUI import autocompleteFromList, ContextMenuEntries, ModelMakerGUI
-# from modelMaker.Session.session import FilePath, getSession, Project
-# from modelMaker.Session.sessionUtils import FilterByRoleOptions
 from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries
 from model.Model import Datapack
 from model.pathUtils import FilePath
@@ -186,7 +182,7 @@ def getFuzzyMatch2(allSearchTerms: SearchTerms, splitStrs: list[tuple[int, str]]
 
 class SpotlightSearchGui(CatTextField):
 	def __init__(self):
-		super().__init__()#self.OnGUI, GuiCls=ModelMakerGUI)
+		super().__init__()
 
 		self._searchResults: SearchResults = SearchResults('', [])
 		self._resultsPopup: FileSearchPopup = FileSearchPopup(self)

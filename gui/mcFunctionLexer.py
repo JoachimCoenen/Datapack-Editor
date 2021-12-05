@@ -284,53 +284,9 @@ class LexerMCFunction(QsciLexerCustom):
 		# Initialize all style colors
 		self.initStyles(self.defaultStyles)
 
-
-		autocompletions = [
-			'get(partLiteral) obj.get(partLiteral)',
-			'referers(partLiteral) obj.referers(partLiteral)',
-			'set(partLiteral, value) obj.set(partLiteral, value)',
-			'all(typeLiteral)',
-			'filter(predicate) set.filter(predicate)',
-			'foreach(fun) set.foreach(fun)',
-			'intersection(set, set)',
-			'union(set, set)',
-			'recursion(start, fun)',
-			'recursion(start, fun, minDepth, maxDepth)',
-
-			'containsAll(set) set.containsAll(set)',
-			'containsElement(value) set.containsElement(value)',
-			'containsSome(set) set.containsSome(set)',
-
-			'isEmpty() val.isEmpty()',
-			'none()',
-			'singleton() value.singleton()',
-			'singleElement() set.singleElement()',
-			'flatten() setOfSets.flatten()',
-
-			'if(cond, then, else)',
-			'ifElse(then, else) bool.ifElse(then, else)',
-			'apply(args...) fun.apply(args...)',
-			'instanceOf(typeLiteral) obj.instanceOf(typeLiteral)',
-			'associationNavigation(fromEndLiteral, toEndLiteral) obj.associationNavigation(fromEndLiteral, toEndLiteral)',
-
-			'isEqual(value) value.isEqual(value)',
-			'isGreater(value) value.isGreater(value)',
-			'isDateEqual(date) date.isDateEqual(date)',
-			'isDateGreater(date) date.isDateGreater(date)',
-			'isFloatEqual(num, digits) num.isFloatEqual(num, digits)',
-			'isFloatGreater(num, digits) num.isFloatGreater(num, digits)',
-			'isStringEqual(str, caseSensitive) str.isStringEqual(str, caseSensitive)',
-			'isStringGreater(str, caseSensitive) str.isStringGreater(str, caseSensitive)',
-			'stringStartsWith(str, caseSensitive) str.stringStartsWith(str, caseSensitive)',
-			'stringContains(str, caseSensitive) str.stringContains(str, caseSensitive)',
-			'stringEndsWith(str, caseSensitive) str.stringEndsWith(str, caseSensitive)',
-		]
 		self._api = McFunctionQsciAPIs(self)
-		for ac in autocompletions:
-			self._api.add(ac)
 		self._api.prepare()
 		self.setAPIs(self._api)
-
 
 	def autoCompletionTree(self) -> AutoCompletionTree:
 		return self._api.autoCompletionTree

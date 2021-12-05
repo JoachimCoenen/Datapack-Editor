@@ -73,7 +73,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 			gui.progressBar(self.progressSignal, min=0, max=self._filesCount, value=self._filesChecked, format='', textVisible=True)
 			if gui.button('check all', default=True):
 				self.resetUserInterface()
-				QTimer.singleShot(1, self.checkAllXmls)
+				QTimer.singleShot(1, self.checkAllFiles)
 
 		self.totalErrorsSummaryGUI(gui)
 
@@ -94,7 +94,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 				else:
 					label = f"{os.path.basename(file[1])} ('{file[1]}') in '{file[0]}'"
 				label = f'errors: {errorCounts.parserErrors + errorCounts.configErrors:2} | warnings: {errorCounts.configWarnings:2} | hints: {errorCounts.configHints:2} | {label}'
-				#with gui.hLayout():
+
 				opened = gui.spoiler(
 					label=label,
 					isOpen=None,
@@ -102,8 +102,8 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 					onDoubleClicked=lambda _, file=file, s=self: s.parent()._tryOpenOrSelectDocument(file),
 					contextMenuPolicy=Qt.CustomContextMenu,
 					onCustomContextMenuRequested=lambda pos, file=file: onContextMenu(file),
-				)  # , style=styles.title)
-				#gui.errorsSummarySimpleGUI(getErrorCounts(errors.parserErrors, errors.configErrors))
+				)
+
 				with gui.indentation():
 					if opened:
 						gui.drawErrors(errors, onDoubleClicked=lambda e, file=file, s=self: s.parent()._tryOpenOrSelectDocument(file, e.position))
@@ -130,7 +130,6 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 	progressSignal = pyqtSignal(int)
 	errorCountsUpdateSignal = pyqtSignal()
 
-	#@ProfiledFunction()
 	def resetUserInterface(self):
 		self.errorsByFile.clear()
 		self.totalErrorCounts = ErrorCounts()
@@ -150,8 +149,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self._filesChecked = -1
 
 	@TimedMethod()
-	# @ProfiledFunction(colourNodesBySelftime=False, enabled=True)
-	def checkAllXmls(self):
+	def checkAllFiles(self):
 		gui = self._gui
 
 		gui.redrawGUI()
@@ -170,21 +168,13 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 				for i, filePath in enumerate(self._allFiles):
 					self._filesChecked = i+1
 					self.progressSignal.emit(i+1)
-					# logInfo(      formatStr.format(i=i, file=formatVal(filePath)), indentLvl=1)
-					# printIndented(formatStr.format(i=i, file=f'"{filePath}"'), indentLvl=1, stream=PW())
 
 					errors = checkMcFunctionFile(filePath, archiveFilePool)
-
 
 					self.totalErrorCounts += getErrorCounts([], errors)
 					self.errorsByFile[filePath] = errors
 
 					errorCounter = 0
-					# for e in errors:
-					# 	if getattr(e, 'style', 'error') == 'error':
-					# 		errorCounter += 1
-					# 		print(f"    {e.message}")
-					# 		#print(f'    {e.message} at line {e.position.line + 1 if e.position is not None else "<>"}, pos {e.position.column if e.position is not None else "<>"}')
 
 					if errorCounter > 0:
 						allErrorCounts1.add(filePath, errorCounter)
@@ -211,40 +201,3 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 			self.errorCountsUpdateSignal.emit()
 			self.setCursor(Qt.ArrowCursor)
 			gui.redrawGUI()
-
-		#
-		# printIndented(formatStr.format(i=i, file=f'"{filePath}"'), indentLvl=1, stream=PW())
-		# allErrorCounts1 = OrderedMultiDict()
-		# allErrorCounts2 = {}
-		#
-		# for i, filePath in enumerate(self._allFiles):
-		# 	errors = self.checkTypedConfigFile(filePath, zipFilePool)
-		#
-		# 	for e in syntaxErrors:
-		# 		errorCounter += 1
-		# 		print(f"    {e}")
-		#
-		# 	errorCounter = 0
-		# 	for e in errors:
-		# 		if getattr(e, 'style', 'error') == 'error':
-		# 			errorCounter += 1
-		# 			print(f"    {e.message}")
-		#
-		# 	if errorCounter > 0:
-		# 		allErrorCounts1.add(filePath, errorCounter)
-		# 	allErrorCounts2[errorCounter] = allErrorCounts2.get(errorCounter, 0) + 1
-		#
-		# print("   ========\n" * 5)
-		#
-		# errors1Str = SW()
-		# errors2Str = SW()
-		# allErrorCounts1 = sorted(allErrorCounts1.items(), key=itemgetter(1), reverse=True)
-		# allErrorCounts2 = sorted(allErrorCounts2.items(), key=itemgetter(0), reverse=False)
-		# formatListLike2(iter(allErrorCounts1), tab=1, localFormatters={}, singleIndent=INDENT, separator=',', newLine='\n', s=errors1Str,
-		# 				parenthesies='{}', formatListItem=formatDictItem)
-		# formatListLike2(iter(allErrorCounts2), tab=1, localFormatters={}, singleIndent=INDENT, separator=',', newLine='\n', s=errors2Str,
-		# 				parenthesies='{}', formatListItem=formatDictItem)
-		# print(f"Errors1 = {errors1Str}")
-		# print(f"Errors2 = {errors2Str}")
-		# print(f"Total Errors = {sum(k*v for k, v in allErrorCounts2)}")
-

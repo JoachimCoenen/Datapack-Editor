@@ -1,4 +1,3 @@
-#  Copyright (c) 2020 ASCon Systems GmbH. All Rights Reserved
 import copy
 from typing import Any, List, NamedTuple, Optional, Type, Union
 

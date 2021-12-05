@@ -1,4 +1,3 @@
-#  Copyright (c) 2020 ASCon Systems GmbH. All Rights Reserved
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -17,7 +16,7 @@ from Cat.utils import escapeForXml
 from Cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
 from model.Model import Datapack
-from model.pathUtils import FilePath, getAllFilesFromSearchPath, ZipFilePool, loadTextFile
+from model.pathUtils import FilePath, ZipFilePool, loadTextFile
 from session.session import getSession
 
 
@@ -52,8 +51,6 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=PythonGUI, parent=parent)
 
-		self.filterBy = FilterBy.Role
-		self.filterByFilterOptions = FilterByFilterOptions()
 		self.selectedDatapacks: list[Datapack] = []
 		self.searchOptions: SearchOptions = SearchOptions(
 			searchMode=SearchMode.Normal,
@@ -78,15 +75,15 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 		datapacks = getSession().world.datapacks
 		# skip this gui for now:
 		return datapacks
-		searchAllProjs = gui.toggleLeft(None, label='search in all projects')
+		searchAllProjs = gui.toggleLeft(None, label='search in all datapacks')
 
 		with gui.vLayout(verticalSpacing=0):
 			filterStr, allFilteredProjects = gui.advancedFilterTextField(
 				None,
 				allProjsList,
 				getStrChoices=lambda x: (pr.name for pr in x),
-				filterFunc=filterComputedChoices(Project.name.get),
-				valuesName='dependencies',
+				filterFunc=filterComputedChoices(Datapack.name.get),
+				valuesName='data packs',
 				enabled=not searchAllProjs,
 			)
 
@@ -127,7 +124,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 			self._searchOptionsGUI(gui)
 			# ============ Search Results: ============
 			if searchPressed:
-				searchFiles = self.getFilePathsToSearch(selectedProjs, self.filterBy, self.filterByFilterOptions)
+				searchFiles = self.getFilePathsToSearch(selectedProjs)
 				if searchFiles is not None:
 					self._searchResult = self.search(searchExpr, self.searchOptions, searchFiles)
 					self._searchResult.filesSearched = len(searchFiles)
@@ -138,41 +135,14 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	def _searchOptionsGUI(self, gui: PythonGUI):
 		so = self.searchOptions
 		# ============ Search Options: ============
-		with gui.hLayout(preventHStretch=False):
-			with gui.tableLayout() as tbl:
-				# Search Mode:
-				#with gui.tableLayout() as tbl:
-				so.searchMode = SearchMode.Normal if gui.radioButton(so.searchMode == SearchMode.Normal, 'Normal', group='searchMode', id=0) else so.searchMode
-				so.searchMode = SearchMode.RegEx  if gui.radioButton(so.searchMode == SearchMode.RegEx,  'RegEx',  group='searchMode', id=2) else so.searchMode
-				# if so.searchMode == SearchMode.UnicodeEscaped:
-				# 	so.searchMode = SearchMode.Normal  # isExtended is not yet supported.
+		with gui.hLayout(preventHStretch=True):
+			# Search Mode:
+			so.searchMode = SearchMode.Normal if gui.radioButton(so.searchMode == SearchMode.Normal, 'Normal', group='searchMode', id=0) else so.searchMode
+			so.searchMode = SearchMode.RegEx  if gui.radioButton(so.searchMode == SearchMode.RegEx,  'RegEx',  group='searchMode', id=2) else so.searchMode
 
-				tbl.advanceRow()
-
-				# Search Options:
-				so.isCaseSensitive = gui.toggleLeft(so.isCaseSensitive, 'Case sensitive')
-				so.isMultiLine = gui.toggleLeft(so.isMultiLine, 'Multiline', enabled=so.searchMode == SearchMode.RegEx)
-
-			gui.hSeparator()
-
-			# Search Locations:
-			with gui.vLayout():
-
-				filterByRole = gui.radioButton(self.filterBy == FilterBy.Role, 'By role', isPrefix=True)
-				if filterByRole:
-					self.filterBy = FilterBy.Role
-				with gui.hLayout(preventHStretch=True):
-					pass
-				filterByFilter = gui.radioButton(self.filterBy == FilterBy.Filter, 'By filter', isPrefix=True)
-				if filterByFilter:
-					self.filterBy = FilterBy.Filter
-				with gui.hLayout():
-					filterByFilterOptions = self.filterByFilterOptions
-					filterByFilterOptions.filterStrFolder = gui.codeField(filterByFilterOptions.filterStrFolder, isMultiline=False, enabled=filterByFilter)
-					filterByFilterOptions.filterStrZip = gui.codeField(filterByFilterOptions.filterStrZip, isMultiline=False, enabled=filterByFilter)
-					gui.hSeparator()
-					filterByFilterOptions.extensionRegEx = gui.codeField(filterByFilterOptions.extensionRegEx, isMultiline=False, enabled=filterByFilter)
-
+			# Search Options:
+			so.isCaseSensitive = gui.toggleLeft(so.isCaseSensitive, 'Case sensitive')
+			so.isMultiLine = gui.toggleLeft(so.isMultiLine, 'Multiline', enabled=so.searchMode == SearchMode.RegEx)
 
 	def _resultsGUI(self, gui: PythonGUI) -> None:
 		if self._searchResult.error is not None:
@@ -242,31 +212,11 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	def getFilePathsToSearch(
 			self,
 			allDatapacks: list[Datapack],
-			filterBy: FilterBy,
-			filterByFilter: FilterByFilterOptions
 	) -> Optional[list[FilePath]]:
 
 		filePathsToSearch: list[FilePath] = []
-
-		if filterBy == FilterBy.Role:
-			searchFileProps = [Datapack.files]
-			for datapack in allDatapacks:
-				for searchFileProp in searchFileProps:
-					filePathsToSearch.extend(searchFileProp.get(datapack))
-
-		if filterBy == FilterBy.Filter:
-			try:
-				for datapack in allDatapacks:
-					path = datapack.path
-					filePathsToSearch.extend(getAllFilesFromSearchPath(
-						path,
-						filterByFilter.filterStrFolder,
-						filterByFilter.filterStrZip,
-						extensions=filterByFilter.extensionRegEx
-					))
-			except Exception as e:
-				self._searchResult = SearchResult(OrderedMultiDict(), 0, e)
-				return None
+		for datapack in allDatapacks:
+			filePathsToSearch.extend(datapack.files)
 
 		return filePathsToSearch
 

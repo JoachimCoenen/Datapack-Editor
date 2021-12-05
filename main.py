@@ -23,7 +23,7 @@ from settings import applicationSettings, saveApplicationSettings, loadApplicati
 from settings._applicationSettings import MinecraftSettings
 
 
-class ModelMakerStyles(Styles):
+class ResizableStyles(Styles):
 	@_StyleProperty
 	def hostWidgetStyle(self) -> Style:
 		return Style({
@@ -38,7 +38,7 @@ class ModelMakerStyles(Styles):
 			'font-size': f'{applicationSettings.appearance.fontSize}pt',
 		})
 
-setStyles(ModelMakerStyles())  #.hostWidgetStyle._func, 'hostWidgetStyle'))
+setStyles(ResizableStyles())  #.hostWidgetStyle._func, 'hostWidgetStyle'))
 
 
 class SetupDialog(CatFramelessWindowMixin, QDialog):

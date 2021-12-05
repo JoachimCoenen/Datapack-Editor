@@ -85,7 +85,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		self.roundedCorners = CORNERS.ALL
 
 		# TODO: change initial _lastOpenPath:
-		self._lastOpenPath = 'D:/Development/svn/CODIM_0_9_6/de.ascon_systems.sms/webapp/WEB-INF/model'
+		self._lastOpenPath = ''
 
 		#GUI
 		self.checkAllDialog = CheckAllDialog(self)
@@ -162,7 +162,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				self._createNewDocument(gui)
 
 			if button(icon=icons.open, tip='Open File', **btnKwArgs, windowShortcut=QKeySequence.Open):
-				filePath = gui.showFileDialog(self._lastOpenPath, [('model', '.xml'), ('java', '.java'), ('All files', '*')], style='open')
+				filePath = gui.showFileDialog(self._lastOpenPath, [('All files', '*')], style='open')
 				if filePath:
 					self._tryOpenOrSelectDocument(filePath)
 
@@ -342,7 +342,8 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			QApplication.setStyle(newStyle)
 
 	def _saveAsDialog(self, gui: DatapackEditorGUI, document: Document) -> str:
-		filePath = gui.showFileDialog(document.filePathForDisplay, [('model', '.xml'), ('java', '.java'), ('All files', '*')], style='save')
+		# TODO: better save dialog (with proper filters)
+		filePath = gui.showFileDialog(document.filePathForDisplay, [('All files', '*')], style='save')
 		if filePath:
 			self._lastOpenPath = os.path.dirname(filePath)
 		return filePath
