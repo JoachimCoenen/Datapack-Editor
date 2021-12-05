@@ -49,11 +49,19 @@ TR = TypeVar('TR')
 T2 = TypeVar('T2')
 
 
-def createNewFile(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
+def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
 	name, ok = gui.askUserInput('New File', 'untitled.mcFunction')
 	if not ok or not name:
 		return
 
+	try:
+		filePath = createNewFile(folderPath, name)
+		openFunc(filePath)
+	except OSError as e:
+		gui.showAndLogError(e, "Cannot create file")
+
+
+def createNewFile(folderPath: FilePath, name: str) -> FilePath:
 	if isinstance(folderPath, tuple):
 		filePath = folderPath[0], os.path.join(folderPath[1], name)
 		joinedFilePath = os.path.join(*filePath)
@@ -61,19 +69,23 @@ def createNewFile(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callab
 		filePath = os.path.join(folderPath, name)
 		joinedFilePath = filePath
 
-	try:
-		with open(joinedFilePath, 'a'):
-			pass  # creates the File
-		openFunc(filePath)
-	except OSError as e:
-		gui.showAndLogError(e, "Cannot create file")
+	with openOrCreate(joinedFilePath, 'a'):
+		pass  # creates the File
+	return joinedFilePath
 
 
-def createNewFolder(folderPath: FilePath, gui: DatapackEditorGUI):
+def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
 	name, ok = gui.askUserInput('New Folder', 'New folder')
 	if not ok or not name:
 		return
 
+	try:
+		createNewFolder(folderPath, name)
+	except OSError as e:
+		gui.showAndLogError(e, "Cannot create folder")
+
+
+def createNewFolder(folderPath: FilePath, name: str):
 	if isinstance(folderPath, tuple):
 		filePath = folderPath[0], os.path.join(folderPath[1], name)
 		joinedFilePath = os.path.join(*filePath, '_ignoreMe.txt')
@@ -81,11 +93,8 @@ def createNewFolder(folderPath: FilePath, gui: DatapackEditorGUI):
 		filePath = os.path.join(folderPath, name)
 		joinedFilePath = os.path.join(filePath, '_ignoreMe.txt')
 
-	try:
-		with openOrCreate(joinedFilePath, 'w'):
-			pass  # creates the File
-	except OSError as e:
-		gui.showAndLogError(e, "Cannot create folder")
+	with openOrCreate(joinedFilePath, 'w'):
+		pass  # creates the File
 
 
 class ContextMenuEntries:
@@ -124,7 +133,7 @@ class ContextMenuEntries:
 	@classmethod
 	def folderItems(cls, filePath: FilePath, isMutable: bool, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None], *, showSeparator: bool = True) -> list[MenuItemData]:
 		entries: list[MenuItemData] = []
-		entries.append(('new File', lambda p=filePath: createNewFile(p, gui, openFunc), {'enabled': filePath is not None and isMutable}))
+		entries.append(('new File', lambda p=filePath: createNewFileGUI(p, gui, openFunc), {'enabled': filePath is not None and isMutable}))
 		if showSeparator:
 			entries.append(cls.separator())
 		entries.extend(cls.pathItems(filePath))
@@ -472,8 +481,13 @@ class FilesTreeItem:
 	isImmutable: bool = dataclasses.field(compare=False)
 	isArchive: bool = dataclasses.field(default=False, compare=False)
 
+	_folderPath: Optional[str] = dataclasses.field(default=None, compare=False)
+
 	@property
 	def folderPath(self) -> Optional[FilePath]:
+		if self._folderPath is not None:
+			return self._folderPath
+
 		if not self.filePaths:
 			return None
 		fe = self.filePaths[0]
@@ -785,7 +799,7 @@ class DatapackEditorGUI(AutoGUI):
 			projPrefixLen = len(projPrefix)
 			#filesForProj: list[FileEntry2] = []
 			projIsImmutable: bool = isImmutable(proj)
-			projItem: FilesTreeItem = FilesTreeItem(proj.name, projPrefixLen, [], projIsImmutable, projIsImmutable)
+			projItem: FilesTreeItem = FilesTreeItem(proj.name, projPrefixLen, [], projIsImmutable, projIsImmutable, _folderPath=proj.path)
 			for filesPropInfo in localLayoutFilesProps:
 				fullPathsInProj = filesPropInfo.prop.get(proj)
 				firstSplitter = filesPropInfo.firstSplitter
@@ -839,7 +853,7 @@ class DatapackEditorGUI(AutoGUI):
 				self.toolButton(
 					f'{filteredFilesCount:,} of {totalFilesCount:,}',
 					overlap=adjustOverlap(overlap, (1, None, None, 1)),
-					roundedCorners = maskCorners(roundedCorners, CORNERS.TOP_RIGHT)
+					roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_RIGHT)
 				)  # files shown', alignment=Qt.AlignLeft)
 
 				# self.toolButton(
@@ -976,7 +990,7 @@ class DatapackEditorGUI(AutoGUI):
 				self.drawError(error, onDoubleClicked=lambda ev, error=error, gui=self: onDoubleClicked(error) or gui.redrawGUI())
 				self.vSeparator()
 		else:
-			self.helpBox(f'All is OK!', style='info')
+			self.helpBox(f"Everything's fine!", style='info')
 
 
 TPythonGUI = TypeVar('TPythonGUI', bound=DatapackEditorGUI)

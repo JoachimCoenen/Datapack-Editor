@@ -151,7 +151,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			pass
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		gui.editor(DatapackFilesEditor, getSession().world).redrawLater()
+		gui.editor(DatapackFilesEditor, getSession().world, roundedCorners=CORNERS.RIGHT).redrawLater()
 
 	def documentToolBarGUI(self, gui: DatapackEditorGUI, button, btnCorners, btnOverlap, btnMargins):
 		button = gui.framelessButton

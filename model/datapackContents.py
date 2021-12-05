@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional, TypeVar, Type, Callable, NamedTuple
+from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable
 
+from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from Cat.Serializable import RegisterContainer, Serialized, SerializableContainer, ComputedCached
 from Cat.utils.profiling import logError
 from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute
@@ -146,3 +147,13 @@ def collectAllEntries(files: list[FilePathTpl], handlers: list[EntryHandlerInfo]
 			resourceLocation = ResourceLocation(namespace, rest, handler.isTag)
 			handler.buildMetaInfo(fullPath, resourceLocation)
 
+
+def autoCompletionTreeForResourceLocations(locations: Iterable[ResourceLocation]) -> AutoCompletionTree:
+	locationStrs = [l.asString for l in locations]
+	tree = buildSimpleAutoCompletionTree(locationStrs, (':', '/'))
+	return tree
+
+
+def choicesFromResourceLocations(text: str, locations: Iterable[ResourceLocation]) -> list[str]:
+	tree = autoCompletionTreeForResourceLocations(locations)
+	return choicesFromAutoCompletionTree(tree, text)

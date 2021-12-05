@@ -6,8 +6,11 @@ from typing import Optional, Iterable
 
 from PyQt5.QtWidgets import QWidget
 
+from Cat.CatPythonGUI.GUI.codeEditor import choicesFromAutoCompletionTree
+from Cat.Serializable import SerializedPropertyBase, SerializedPropertyABC
 from Cat.utils import HTMLStr
 from Cat.utils.collections_ import OrderedDict
+from model.Model import World, Datapack
 from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider
 from model.commands.argumentParsersImpl import _parse3dPos, _parseBlockStates, tryReadNBTCompoundTag, _parseResourceLocation, _parseEntityLocator, _parse2dPos
 from model.commands.argumentTypes import *
@@ -18,7 +21,7 @@ from model.commands.snbt import parseNBTPath, parseNBTTag
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.data.dataValues import BLOCKS, DIMENSIONS, ITEMS, SLOTS, ENTITIES, EFFECTS, ENCHANTMENTS, BIOMES, PARTICLES
-from model.datapackContents import ResourceLocation
+from model.datapackContents import ResourceLocation, MetaInfo, autoCompletionTreeForResourceLocations, choicesFromResourceLocations
 from model.parsingUtils import Span, Position
 from session.session import getSession
 
@@ -33,6 +36,11 @@ def _containsResourceLocation(rl: ResourceLocation, container: set[ResourceLocat
 	return rl in container
 
 
+def _choicesForDatapackContents(text: str, prop: SerializedPropertyABC[Datapack, OrderedDict[ResourceLocation, MetaInfo]]) -> list[str]:
+	locations = [b for dp in getSession().world.datapacks for b in prop.get(dp)]
+	return choicesFromResourceLocations(text, locations)
+
+
 @argumentHandler(BRIGADIER_BOOL.name)
 class BoolHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
@@ -41,7 +49,7 @@ class BoolHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=string)
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
 		return ['true', 'false']
 
 
@@ -107,7 +115,7 @@ class BlockPosHandler(ArgumentHandler):
 		useFloat = ai.args is not None and ai.args.get('type', None) is float
 		return _parse3dPos(sr, ai, useFloat=useFloat, errorsIO=errorsIO)
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
 		return ['^ ^ ^', '~ ~ ~']
 
 
@@ -156,10 +164,11 @@ class BlockStateHandler(ArgumentHandler):
 				return CommandSemanticsError(f"Unknown block id '{blockId.asString}'.", argument.span, style='warning')
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo) -> list[str]:
-		result = [b.asString for b in BLOCKS]
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		result = choicesFromResourceLocations(contextStr, BLOCKS)
 		if self._allowTag:
-			result.extend(b.asString for dp in getSession().world.datapacks for b in dp.contents.tags.blocks)
+			tags = _choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks)
+			result.extend(tags)
 		return result
 
 	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
@@ -215,7 +224,7 @@ class ColumnPosHandler(ArgumentHandler):
 		blockPos = f'{columnPos1} {columnPos2}'
 		return makeParsedArgument(sr, ai, value=blockPos)
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
 		return ['~ ~']
 
 
@@ -249,8 +258,8 @@ class DimensionHandler(ArgumentHandler):
 		else:
 			return None
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
-		return [d.asString for d in DIMENSIONS]
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		return choicesFromResourceLocations(contextStr, DIMENSIONS)
 
 
 @argumentHandler(MINECRAFT_ENTITY.name)
@@ -262,7 +271,7 @@ class EntityHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
 		return ['@a', '@e', '@s', '@p', '@r', ]
 
 
@@ -279,9 +288,8 @@ class EntitySummonHandler(ArgumentHandler):
 		if not _containsResourceLocation(entity, ENTITIES):
 			return CommandSemanticsError(f"Unknown entity id '{entity.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
-		result = [b.asString for b in ENTITIES]
-		return result
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		return choicesFromResourceLocations(contextStr, ENTITIES)
 
 
 @argumentHandler(MINECRAFT_FLOAT_RANGE.name)
@@ -296,7 +304,7 @@ class FloatRangeHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=range_)
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
 		return ['0...']
 
 
@@ -319,8 +327,10 @@ class FunctionHandler(ArgumentHandler):
 			else:
 				return CommandSemanticsError(f"Unknown function '{value.asString}'.", argument.span)
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
-		result = [f.asString for dp in getSession().world.datapacks for f in chain(dp.contents.functions, dp.contents.tags.functions)]
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		result = []
+		result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.functions))
+		result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.functions))
 		return result
 
 	def getDocumentation(self, argument: ParsedCommandPart) -> HTMLStr:
@@ -368,7 +378,7 @@ class IntRangeHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=range_)
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
 		return ['0...']
 
 
@@ -385,9 +395,8 @@ class ItemEnchantmentHandler(ArgumentHandler):
 		if not _containsResourceLocation(enchantment, ENCHANTMENTS):
 			return CommandSemanticsError(f"Unknown enchantment '{enchantment.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
-		result = [b.asString for b in ENCHANTMENTS]
-		return result
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		return choicesFromResourceLocations(contextStr, ENCHANTMENTS)
 
 
 @argumentHandler(MINECRAFT_ITEM_SLOT.name)
@@ -403,7 +412,7 @@ class ItemSlotHandler(ArgumentHandler):
 		if slot not in SLOTS:
 			return CommandSemanticsError(f"Unknown item slot '{slot}'.", argument.span, style='error')
 
-	def getSuggestions(self, ai: ArgumentInfo) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
 		return list(SLOTS.keys())
 
 
@@ -448,11 +457,11 @@ class ItemStackHandler(ArgumentHandler):
 				return CommandSemanticsError(f"Unknown item id '{itemId.asString}'.", argument.span, style='warning')
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo) -> list[str]:
-		result = [b.asString for b in chain(ITEMS, BLOCKS)]
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		result = choicesFromResourceLocations(chain(ITEMS, BLOCKS))
 		if self._allowTag:
-			result.extend(b.asString for dp in getSession().world.datapacks for b in dp.contents.tags.items)
-			result.extend(b.asString for dp in getSession().world.datapacks for b in dp.contents.tags.blocks)
+			result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.items))
+			result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks))
 		return result
 
 	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
@@ -508,9 +517,8 @@ class MobEffectHandler(ArgumentHandler):
 		if not _containsResourceLocation(effect, EFFECTS):
 			return CommandSemanticsError(f"Unknown mob effect '{effect.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
-		result = [b.asString for b in EFFECTS]
-		return result
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		return choicesFromResourceLocations(contextStr, EFFECTS)
 
 
 @argumentHandler(MINECRAFT_NBT_COMPOUND_TAG.name)
@@ -569,9 +577,8 @@ class ParticleHandler(ArgumentHandler):
 		if not _containsResourceLocation(particle, PARTICLES):
 			return CommandSemanticsError(f"Unknown biome '{particle.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
-		result = [b.asString for b in PARTICLES]
-		return result
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		return choicesFromResourceLocations(contextStr, PARTICLES)
 
 
 @argumentHandler(MINECRAFT_RESOURCE_LOCATION.name)
@@ -705,9 +712,8 @@ class BiomeIdHandler(ArgumentHandler):
 		if not _containsResourceLocation(biome, BIOMES):
 			return CommandSemanticsError(f"Unknown biome '{biome.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, argument: ParsedCommandPart) -> list[str]:
-		result = [b.asString for b in BIOMES]
-		return result
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+		return choicesFromResourceLocations(contextStr, BIOMES)
 
 @argumentHandler(ST_DPE_COMMAND.name)
 class ST_DPE_COMMANDHandler(ArgumentHandler):

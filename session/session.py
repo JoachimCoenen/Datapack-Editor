@@ -8,7 +8,7 @@ from typing import NewType
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, Computed
-from Cat.utils import getExePath
+from Cat.utils import getExePath, openOrCreate
 from Cat.utils.profiling import logError
 from model.Model import World
 from session.documentHandling import DocumentsManager
@@ -54,7 +54,7 @@ def setSession(session: Session):
 
 
 def getSessionFilePath() -> str:
-	return os.path.join(os.path.dirname(getExePath()), 'sessions', 'session1.json')
+	return os.path.join(os.path.dirname(getExePath()), 'sessions', 'session2.json')
 
 
 def _logError(e, s):
@@ -77,7 +77,7 @@ def loadSessionFromFile(filePath: str = None) -> None:
 def saveSessionToFile(filePath: str = None) -> None:
 	if filePath is None:
 		filePath = getSessionFilePath()
-	with open(filePath, "w") as outFile:
+	with openOrCreate(filePath, "w") as outFile:
 		getSession().toJSON(outFile)
 
 

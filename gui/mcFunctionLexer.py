@@ -126,7 +126,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		bestMatch: Optional[ParsedCommandPart] = None
 		children = tuple(tree.children)
 		for child in children:
-			if child.span.start < pos < child.span.end:
+			if child.span.start < pos <= child.span.end:
 				if isinstance(child, ParsedComment):
 					continue
 				bestMatch = self._getBestMatch(child, bestMatch, pos)
@@ -164,27 +164,27 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 			tip = '<br/>'.join(tips)
 			return f"{tip}"
 
-	def _getNextKeywords(self, nexts: Iterable[CommandNode]) -> list[str]:
+	def _getNextKeywords(self, nexts: Iterable[CommandNode], contextStr: str) -> list[str]:
 		result = []
 		for nx in nexts:
 			if isinstance(nx, Keyword):
 				result.append(nx.name)
 			elif isinstance(nx, Switch):
-				result += self._getNextKeywords(nx.options)
+				result += self._getNextKeywords(nx.options, contextStr)
 				hasTerminal = TERMINAL in nx.options
 				if hasTerminal:
-					result += self._getNextKeywords(nx.next)
+					result += self._getNextKeywords(nx.next, contextStr)
 			elif isinstance(nx, ArgumentInfo):
 				type_: ArgumentType = nx.type
 				handler = getArgumentHandler(type_)
 				if handler is not None:
-					result += handler.getSuggestions(nx)
+					result += handler.getSuggestions(nx, contextStr)
 			elif nx is COMMANDS_ROOT:
 				result += list(BASIC_COMMAND_INFO.keys())
 		return result
 
 	@CrashReportWrapped
-	def updateAutoCompletionList(self, context: Iterable[str], aList: Iterable[str]) -> list[str]:
+	def updateAutoCompletionList(self, context: list[str], aList: list[str]) -> list[str]:
 		"""
 		Update the list \a list with API entries derived from \a context.  \a
 		context is the list of words in the text preceding the cursor position.
@@ -207,12 +207,14 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 
 		argument = match.prev
 		if argument is None:
-			return super().updateAutoCompletionList(context, aList)
+			argument = match
+			# return super().updateAutoCompletionList(context, aList)
 
 		info = argument.info
 		if info is None:
 			return super().updateAutoCompletionList(context, aList)
-		result = self._getNextKeywords(info.next)
+		contextStr = context[-1] if context else ''
+		result = self._getNextKeywords(info.next, contextStr)
 		return result
 
 	@override

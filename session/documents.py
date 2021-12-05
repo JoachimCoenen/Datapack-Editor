@@ -326,7 +326,7 @@ class Document(SerializableContainer):
 				with ZipFilePool() as zfp:
 					txt = loadTextFile(self.filePath, zfp, encoding=self.encoding)
 				return self.toRepr() != txt
-			except FileNotFoundError:
+			except OSError:
 				return False
 		else:
 			return False
@@ -421,7 +421,7 @@ class TextDocument(Document):
 		self.content = string
 
 
-@RegisterDocument('JSON', ext=['.json'], defaultLanguage='JSON')
+@RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='JSON')
 @RegisterContainer
 class JsonDocument(TextDocument):
 	"""docstring for Document"""

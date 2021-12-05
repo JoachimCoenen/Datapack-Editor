@@ -186,11 +186,17 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 				self.model().manager.safelyCloseView(self.model())
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
 
-	@staticmethod
-	def _noWorldLoadedGUI(gui: DatapackEditorGUI) -> None:
+	def _noWorldLoadedGUI(self, gui: DatapackEditorGUI) -> None:
 		gui.label('No world loaded.', wordWrap=False, alignment=Qt.AlignCenter)
 		gui.addVSpacer(gui.margin, SizePolicy.Fixed)
-		gui.label(f"Please open a Minecraft world.", wordWrap=False, alignment=Qt.AlignCenter)
+		gui.label(f"Please open a Minecraft world. You can always switch it later", wordWrap=False, alignment=Qt.AlignCenter)
+		gui.addVSpacer(gui.margin, SizePolicy.Fixed)
+		with gui.hLayout():
+			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
+			if gui.framelessButton("Load World", icon=icons.globeAlt, tip="Load World", default=True):
+				self.window()._loadWorldDialog(gui)
+			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
+
 
 	def _showOpenedDocumentsPopup(self, gui: DatapackEditorGUI) -> None:
 		view = self.model()
