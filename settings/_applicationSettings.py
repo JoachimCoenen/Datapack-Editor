@@ -188,25 +188,21 @@ class DebugSettings(SerializableContainer):
 
 
 @RegisterContainer
-class CopyrightSettings(SerializableContainer):
+class AboutSettings(SerializableContainer):
 	__slots__ = ()
-	def __typeCheckerInfo___(self):
-		# giving the type checker a helping hand...
-		pass
 
 	@pd.ReadOnlyLabel()
 	@Serialized(shouldSerialize=False, wordWrap=True, label='Copyright ©')
-	def copyright(self) -> str :
-		return """<font>Copyright (c) 2021 Joachim Coenen. All Rights Reserved
-		<br/>Written and maintained by Joachim Coenen. 
-		<br/>If you have any questions, bugs or improvements, share them on GitHub.
-		<br/><br/><i>Intended for INTERNAL use only!<i/>
-		</font>"""
+	def copyright(self) -> str:
+		return """<font>Copyright (c) 2021 Joachim Coenen. All Rights Reserved</font>"""
 
 	@pd.ReadOnlyLabel()
-	@Serialized(shouldSerialize=False, label='License')
-	def license(self) -> str :
-		return ' --- '
+	@Serialized(shouldSerialize=False, wordWrap=True, label='')
+	def about(self) -> str:
+		return """<font>Written and maintained by Joachim Coenen. 
+		<br/>If you have any questions, bugs or improvements, share them on GitHub.
+		<br/><a href="www.github.com/JoachimCoenen/Datapack-Editor">github.com/JoachimCoenen/Datapack-Editor</a>
+		</font>"""
 
 
 @RegisterContainer
@@ -218,7 +214,7 @@ class ApplicationSettings(SerializableContainer):
 		self.appearance: AppearanceSettings = AppearanceSettings()
 		self.minecraft: MinecraftSettings = MinecraftSettings()
 		self.debugging: DebugSettings = DebugSettings()
-		self.copyright: CopyrightSettings = CopyrightSettings()
+		self.copyright: AboutSettings = AboutSettings()
 		self.isUserSetupFinished: bool = False
 
 	@pd.NoUI()
@@ -235,12 +231,12 @@ class ApplicationSettings(SerializableContainer):
 		return MinecraftSettings()
 
 	@Serialized(label='Debugging')
-	def debugging(self) -> DebugSettings :
+	def debugging(self) -> DebugSettings:
 		return DebugSettings()
 
-	@Serialized(label='Copyright & License')
-	def copyright(self) -> CopyrightSettings :
-		return CopyrightSettings()
+	@Serialized(label='About')
+	def copyright(self) -> AboutSettings:
+		return AboutSettings()
 
 	@pd.NoUI()
 	@Serialized()
@@ -277,7 +273,7 @@ def loadApplicationSettings():
 __all__ = (
 	'AppearanceSettings',
 	'DebugSettings',
-	'CopyrightSettings',
+	'AboutSettings',
 	'ApplicationSettings',
 	'applicationSettings',
 
