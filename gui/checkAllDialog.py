@@ -68,6 +68,8 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 
 		self._spoilerSizePolicy = QSizePolicy(SizePolicy.Expanding.value, SizePolicy.Fixed.value)
 
+		self.setWindowTitle('Validate all files')
+
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.hLayout():
 			gui.progressBar(self.progressSignal, min=0, max=self._filesCount, value=self._filesChecked, format='', textVisible=True)
