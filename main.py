@@ -108,8 +108,11 @@ def start(argv):
 		QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseStyleSheetPropagationInWidgetStyles, True)
 		QtWidgets.QApplication.setStyle(applicationSettings.appearance.applicationStyle)
 		app = QtWidgets.QApplication(argv)
+
 		app.setApplicationName(applicationSettings.applicationName)
 		app.setApplicationDisplayName(applicationSettings.applicationName)
+		app.setApplicationVersion(applicationSettings.version)
+		app.setOrganizationName(applicationSettings.organization)
 
 		applyStyle(app, Style({'QWidget': getStyles().hostWidgetStyle}))  # + styles.layoutingBorder))
 		palette = app.palette()

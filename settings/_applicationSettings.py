@@ -142,16 +142,15 @@ class MinecraftSettings(SerializableContainer):
 class DebugSettings(SerializableContainer):
 	__slots__ = ()
 
-	@pd.Title('Developer Mode')
-	@pd.ToggleSwitch()
-	@Serialized()
-	def isDeveloperMode(self) -> bool :
-		return False
+	isDeveloperMode: bool = Serialized(
+		default=False,
+		decorators=[
+			pd.ToggleSwitch(),
+			pd.Title('Developer Mode')
+		]
+	)
 
-	@pd.ToggleSwitch()
-	@Serialized()
-	def showUndoRedoPane(self) -> bool :
-		return False
+	showUndoRedoPane: bool = Serialized(default=False, decorators=[pd.ToggleSwitch()])
 
 	test: str = Serialized(
 		default='Test',
@@ -165,14 +164,16 @@ class AboutSettings(SerializableContainer):
 	__slots__ = ()
 
 	@pd.ReadOnlyLabel()
-	@Serialized(shouldSerialize=False, wordWrap=False, label=' ', style=getStyles().title)
+	@Computed(shouldSerialize=False, wordWrap=False, label=' ', style=getStyles().title)
 	def title(self) -> str:
 		return "Datapack Editor"
 
 	@pd.ReadOnlyLabel()
 	@Serialized(shouldSerialize=False, wordWrap=False, label='Version')
 	def version(self) -> str:
-		return """0.1.0"""
+		return """0.1.0-alpha"""
+
+	organization: str = Computed(default="""Joachim Coenen""", decorators=[pd.NoUI()])
 
 	@pd.ReadOnlyLabel()
 	@Serialized(shouldSerialize=False, wordWrap=True, label='Copyright')
@@ -214,31 +215,16 @@ class ApplicationSettings(SerializableContainer):
 		self.about: AboutSettings = AboutSettings()
 		self.isUserSetupFinished: bool = False
 
-	@pd.NoUI()
-	@Computed()
-	def applicationName(self) -> str:
-		return 'Minecraft Datapack Editor'
+	appearance: AppearanceSettings = Serialized(default_factory=AppearanceSettings, label='Appearance')
+	minecraft: MinecraftSettings = Serialized(default_factory=MinecraftSettings, label='Minecraft')
+	debugging: DebugSettings = Serialized(default_factory=DebugSettings, label='Debugging')
+	about: AboutSettings = Serialized(default_factory=AboutSettings, label='About')
 
-	@Serialized(label='Appearance')
-	def appearance(self) -> AppearanceSettings:
-		return AppearanceSettings()
+	applicationName: str = Computed(default='Minecraft Datapack Editor', decorators=[pd.NoUI()])
+	version: str = about.version
+	organization: str = about.organization
 
-	@Serialized(label='Minecraft')
-	def minecraft(self) -> MinecraftSettings:
-		return MinecraftSettings()
-
-	@Serialized(label='Debugging')
-	def debugging(self) -> DebugSettings:
-		return DebugSettings()
-
-	@Serialized(label='About')
-	def about(self) -> AboutSettings:
-		return AboutSettings()
-
-	@pd.NoUI()
-	@Serialized()
-	def isUserSetupFinished(self) -> bool:
-		return False
+	isUserSetupFinished: bool = Serialized(default=False, decorators=[pd.NoUI()])
 
 applicationSettings = ApplicationSettings()
 
