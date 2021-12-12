@@ -6,11 +6,10 @@ from typing import Optional, Iterable
 
 from PyQt5.QtWidgets import QWidget
 
-from Cat.CatPythonGUI.GUI.codeEditor import choicesFromAutoCompletionTree
-from Cat.Serializable import SerializedPropertyBase, SerializedPropertyABC
+from Cat.Serializable import SerializedPropertyABC
 from Cat.utils import HTMLStr
 from Cat.utils.collections_ import OrderedDict
-from model.Model import World, Datapack
+from model.Model import Datapack
 from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider
 from model.commands.argumentParsersImpl import _parse3dPos, _parseBlockStates, tryReadNBTCompoundTag, _parseResourceLocation, _parseEntityLocator, _parse2dPos
 from model.commands.argumentTypes import *
@@ -21,7 +20,7 @@ from model.commands.snbt import parseNBTPath, parseNBTTag
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.data.dataValues import BLOCKS, DIMENSIONS, ITEMS, SLOTS, ENTITIES, EFFECTS, ENCHANTMENTS, BIOMES, PARTICLES
-from model.datapackContents import ResourceLocation, MetaInfo, autoCompletionTreeForResourceLocations, choicesFromResourceLocations
+from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations
 from model.parsingUtils import Span, Position
 from session.session import getSession
 

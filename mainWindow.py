@@ -13,9 +13,9 @@ from Cat.CatPythonGUI.GUI import CORNERS, NO_OVERLAP, NO_MARGINS, SizePolicy, Ov
 from Cat.CatPythonGUI.GUI.codeEditor import Position, Error
 from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.icons import icons
 from Cat.utils import openOrCreate, format_full_exc
-from Cat.utils.collections_ import OrderedDict
 from Cat.utils.formatters import formatVal, FW
 from Cat.utils.profiling import logError
 from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
@@ -277,20 +277,20 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			document.onErrorsChanged.connect('bottomPanelGUI', lambda d: gui.host.redrawLater('onErrorsChanged'))
 		getSession().documents.onSelectedDocumentChanged.connect('bottomPanelGUI', lambda: gui.host.redrawLater('onSelectedDocumentChanged'))
 
-		tabs = OrderedDict([
-			((icons.error, 'Errors',),     (
+		tabs = [
+			(('Errors', TabOptions(icon=icons.error)),     (
 				lambda *args, **kwargs: self._gitConsoleRefreshTimer.stop() or self.documentErrorsGUI(*args, **kwargs),
 				None
 			)),
-			((icons.terminal, 'Console',), (
-				lambda *args, **kwargs: None, # self.commandsConsoleGUI,
-				lambda *args, **kwargs: None, # self.commandsConsoleTollButtonsGUI
+			(('Console', TabOptions(icon=icons.terminal),), (
+				lambda *args, **kwargs: None,
+				lambda *args, **kwargs: None,
 			)),
-		])
+		]
 		with gui.vLayout(verticalSpacing=0, contentsMargins=NO_MARGINS):
 			with gui.hPanel(contentsMargins=(0, 0, gui.margin, 0), overlap=(0, -1), roundedCorners=maskCorners(roundedCorners, CORNERS.TOP), windowPanel=True):
 				index = gui.tabBar(
-					list(tabs.keys()),
+					[tab[0] for tab in tabs],
 					drawBase=False,
 					documentMode=True,
 					expanding=False,
@@ -300,7 +300,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 					# cornerRadius=cornerRadius,
 					hSizePolicy=SizePolicy.Expanding.value
 				)
-				guiFunc, toolBtnFunc = list(tabs.values())[index]
+				guiFunc, toolBtnFunc = tabs[index][1]
 
 				if toolBtnFunc is not None:
 					toolBtnFunc(gui, overlap=(0, -1))
