@@ -7,10 +7,11 @@ from json import JSONDecodeError
 from typing import Optional
 from zipfile import ZipFile
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QFontDatabase
+from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtGui import QFont, QFontDatabase, QDesktopServices
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.CatPythonGUI.GUI import getStyles
 from Cat.Serializable import Computed, RegisterContainer, SerializableContainer, Serialized
 from Cat.Serializable.serializedProperty import ComputedCached
 from Cat.utils import getExePath
@@ -36,6 +37,7 @@ class AppearanceSettings(SerializableContainer):
 	useCompactLayout: bool = Serialized(
 		default=False,
 		label='Compact layout',
+		tip="Merges title bar & toolbar.",
 		decorators=[pd.ToggleSwitch()]
 	)
 
@@ -163,17 +165,41 @@ class AboutSettings(SerializableContainer):
 	__slots__ = ()
 
 	@pd.ReadOnlyLabel()
-	@Serialized(shouldSerialize=False, wordWrap=True, label='Copyright ©')
+	@Serialized(shouldSerialize=False, wordWrap=False, label=' ', style=getStyles().title)
+	def title(self) -> str:
+		return "Datapack Editor"
+
+	@pd.ReadOnlyLabel()
+	@Serialized(shouldSerialize=False, wordWrap=False, label='Version')
+	def version(self) -> str:
+		return """0.1.0"""
+
+	@pd.ReadOnlyLabel()
+	@Serialized(shouldSerialize=False, wordWrap=True, label='Copyright')
 	def copyright(self) -> str:
-		return """<font>Copyright © 2021 Joachim Coenen. All Rights Reserved</font>"""
+		return """<font>© 2021 Joachim Coenen. All Rights Reserved</font>"""
 
 	@pd.ReadOnlyLabel()
 	@Serialized(shouldSerialize=False, wordWrap=True, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True)
 	def about(self) -> str:
-		return """<font>Written and maintained by Joachim Coenen. 
+		return """<font>Written and maintained by <a href="https://www.github.com/JoachimCoenen">Joachim Coenen</a>. 
 		<br/>If you have any questions, bugs or improvements, please share them on GitHub.
-		<br/><a href="https://www.github.com/JoachimCoenen/Datapack-Editor">github.com/JoachimCoenen/Datapack-Editor</a>
 		</font>"""
+
+	@pd.ReadOnlyLabel()
+	@Serialized(shouldSerialize=False, wordWrap=False, label='Homepage', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True)
+	def homepage(self) -> str:
+		return """<font><a href="https://www.github.com/JoachimCoenen/Datapack-Editor">github.com/JoachimCoenen/Datapack-Editor</a></font>"""
+
+	@pd.ReadOnlyLabel()
+	@Serialized(shouldSerialize=False, wordWrap=False, label='Disclaimer', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True)
+	def disclaimer(self) -> str:
+		return """<font>Some contents are from the Minecraft Wiki (see <a href="https://minecraft.gamepedia.com/Minecraft_Wiki:General_disclaimer">Minecraft Wiki:General disclaimer</a>).</font>"""
+
+	@pd.ReadOnlyLabel()
+	@Serialized(shouldSerialize=False, wordWrap=False, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True)
+	def affiliation(self) -> str:
+		return """<font>This program is <em>not</em> affiliated with Mojang Studios.</font>"""
 
 
 @RegisterContainer
@@ -185,7 +211,7 @@ class ApplicationSettings(SerializableContainer):
 		self.appearance: AppearanceSettings = AppearanceSettings()
 		self.minecraft: MinecraftSettings = MinecraftSettings()
 		self.debugging: DebugSettings = DebugSettings()
-		self.copyright: AboutSettings = AboutSettings()
+		self.about: AboutSettings = AboutSettings()
 		self.isUserSetupFinished: bool = False
 
 	@pd.NoUI()
@@ -206,7 +232,7 @@ class ApplicationSettings(SerializableContainer):
 		return DebugSettings()
 
 	@Serialized(label='About')
-	def copyright(self) -> AboutSettings:
+	def about(self) -> AboutSettings:
 		return AboutSettings()
 
 	@pd.NoUI()
