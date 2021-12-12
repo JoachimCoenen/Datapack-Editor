@@ -10,8 +10,8 @@ An editor for Minecraft datapacks for Minecraft 1.17+.
 
 ![MainWindow1_IMG][MainWindow1_IMG]
 
-This program can be used for creating and editing datapacks easily and conveniently.
-Its main focus are `.mcFunction` files.
+This program can be used for creating and editing datapacks easily and conveniently.  
+Its main focus is editing `.mcFunction` files.
 
 ## Features
 - Open or create a new datapack
