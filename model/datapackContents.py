@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable
 
@@ -6,6 +7,11 @@ from Cat.Serializable import RegisterContainer, Serialized, SerializableContaine
 from Cat.utils.profiling import logError
 from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute
 from model.pathUtils import FilePathTpl, loadTextFile, ZipFilePool
+
+
+def isNamespaceValid(namespace: str) -> bool:
+	pattern = r'[0-9a-z_.-]+'
+	return re.fullmatch(pattern, namespace)is not None
 
 
 @dataclass(order=True, unsafe_hash=True, frozen=True)

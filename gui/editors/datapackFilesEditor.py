@@ -3,13 +3,16 @@ from typing import Optional
 
 from PyQt5.QtGui import QIcon
 
+from Cat.CatPythonGUI.AutoGUI.propertyDecorators import Validator, ValidatorResult
 from Cat.CatPythonGUI.GUI import adjustOverlap, maskCorners, CORNERS, SizePolicy, NO_MARGINS
 from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
+from Cat.Serializable import SerializableContainer, Serialized
 from Cat.icons import icons
 from Cat.utils import DeferredCallOnceMethod, openOrCreate
 from gui.datapackEditorGUI import DatapackEditorGUI, LocalFilesPropInfo, ContextMenuEntries, FilesTreeItem, createNewFileGUI, createNewFolderGUI, createNewFolder
 from model.Model import World, Datapack
 from model.dataPackStructure import DATAPACK_FOLDERS, NAME_SPACE_VAR
+from model.datapackContents import isNamespaceValid
 
 from model.parsingUtils import Position
 from model.pathUtils import FilePath, normalizeDirSeparators
@@ -76,44 +79,68 @@ class DatapackFilesEditor(EditorBase[World]):
 			self.redraw('DatapackFilesEditor._deleteFileFunc(...)')
 			# TODO: maybe close opened file?
 
-	def _createNewDatapackGUI(self):
-		newName = "new Datapack"
-		newName, isOk = self._gui.askUserInput(f"new Datapack", newName)
-		if not isOk:
-			return
+	def _newDatapackDialog(self):
+		pass
 
-		datapackPath = normalizeDirSeparators(os.path.join(getSession().world.path, 'datapacks', newName))
-		if os.path.exists(datapackPath):
-			self._gui.showInformationDialog(f"The name \"{newName}\" cannot be used.", "Another datapack with the same name already exists.")
-			return
+	def _createNewDatapackGUI(self) -> None:
+		def datapackPathFromName(name: str):
+			return normalizeDirSeparators(os.path.join(getSession().world.path, 'datapacks', name))
 
+		def validateName(name: str) -> Optional[ValidatorResult]:
+			datapackPath = datapackPathFromName(name)
+			if os.path.exists(datapackPath):
+				return ValidatorResult(f"Another datapack with the same name already exists.", 'error')
+			return None
+
+		def validateNamespace(namespace: str) -> Optional[ValidatorResult]:
+			if not isNamespaceValid(namespace):
+				return ValidatorResult(f"Not a valid namespace.\nNamespaces mut only contain:\n"
+									   f" - Numbers (0-9)\n"
+									   f" - Lowercase letters (a-z)\n"
+									   f" - Underscore (_)\n"
+									   f" - Hyphen/minus (-)\n"
+									   f" - dot (.)\n", 'error')
+			return None
+
+		class Context(SerializableContainer):
+			name: str = Serialized(default='new Datapack', decorators=[Validator(validateName)])
+			namespace: str = Serialized(default='new_datapack', decorators=[Validator(validateNamespace)])
+
+		def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
+			gui.propertyField(context, Context.name)
+			gui.propertyField(context, Context.namespace)
+			return context
+
+		context = Context()
 		while True:
-			namespace, isOk = self._gui.askUserInput(f"choose a namespace", newName)
+			context, isOk = self._gui.askUserInput(f"new Datapack", context, guiFunc)
 			if not isOk:
 				return
-			if not namespace:
-				self._gui.showInformationDialog(f"Invalid input.", "The namespace cannot be blank.")
-			else:
+			isValid = validateName(context.name) is None and validateNamespace(context.namespace) is None
+			if isValid:
 				break
+
+		datapackPath = datapackPathFromName(context.name)
 
 		try:
 			with openOrCreate(f"{datapackPath}/pack.mcmeta", 'w') as f:
-				f.write("""{
-	"pack": {
-		"pack_format": 6, 
-		"description": "[{"text":" """ + newName + """ ","color":"white"}{"text":"\nCreated with","color":"white"},{"text":"Data Pack Editor","color":"yellow"}] "
-	}
-}""")
+				f.write(
+					'{\n'
+					'	"pack": {\n'
+					'		"pack_format": 6,\n' 
+					'		"description": "[{"text":" """ + context.name + """ ","color":"white"}{"text":"\\nCreated with","color":"white"},{"text":"Data Pack Editor","color":"yellow"}] "\n'
+					'	}\n'
+					'}')
 
 			for folder in DATAPACK_FOLDERS:
-				folderPath = f"data/{namespace}/{folder.folder}"
+				folderPath = f"data/{context.namespace}/{folder.folder}"
 				createNewFolder(datapackPath, folderPath)
 
 				for file in folder.initialFiles:
-					fileNS = file.namespace.replace(NAME_SPACE_VAR, namespace)
+					fileNS = file.namespace.replace(NAME_SPACE_VAR, context.namespace)
 					filePath = f"{datapackPath}/data/{fileNS}/{folder.folder}{file.name}"
 					with openOrCreate(filePath, 'w') as f:
-						f.write(file.contents.replace(NAME_SPACE_VAR, namespace))
+						f.write(file.contents.replace(NAME_SPACE_VAR, context.namespace))
 
 		except OSError as e:
 			self._gui.showAndLogError(e)
