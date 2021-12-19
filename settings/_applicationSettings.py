@@ -7,15 +7,16 @@ from json import JSONDecodeError
 from typing import Optional
 from zipfile import ZipFile
 
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QFont, QFontDatabase, QDesktopServices
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QFontDatabase
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
 from Cat.CatPythonGUI.GUI import getStyles
 from Cat.Serializable import Computed, RegisterContainer, SerializableContainer, Serialized
 from Cat.Serializable.serializedProperty import ComputedCached
 from Cat.utils import getExePath
-from Cat.utils.profiling import logError, logWarning
+from Cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory
 
 
@@ -74,37 +75,36 @@ class AppearanceSettings(SerializableContainer):
 		return font
 
 
-def folderPathValidator(path: str) -> tuple[Optional[str], str]:
+def folderPathValidator(path: str) -> Optional[ValidatorResult]:
 	if not os.path.lexists(path):
-		return 'Folder not found', 'error'
+		return ValidatorResult('Folder not found', 'error')
 
 	if not os.path.isdir(path):
-		return 'Not a directory', 'error'
+		return ValidatorResult('Not a directory', 'error')
 
-	return None, 'info'
+	return None
 
 
-def jarPathValidator(path: str) -> tuple[Optional[str], str]:
+def jarPathValidator(path: str) -> Optional[ValidatorResult]:
 	if not os.path.lexists(path):
-		return 'File not found', 'error'
+		return ValidatorResult('File not found', 'error')
 
 	if not os.path.isfile(path) or os.path.splitext(path)[1].lower() != '.jar':
-		return 'Not a .jar File', 'error'
+		return ValidatorResult('Not a .jar File', 'error')
 
-	return None, 'info'
+	return None
 
 
-def minecraftJarValidator(path: str) -> tuple[Optional[str], str]:
-	msg, style = jarPathValidator(path)
+def minecraftJarValidator(path: str) -> Optional[ValidatorResult]:
+	result = jarPathValidator(path)
 
-	try:
-		library = ZipFile(path, 'r')
-	except (FileNotFoundError, PermissionError) as e:
-		logWarning(e)
-	else:
-		logWarning(path)
-
-	return msg, style
+	if not result:
+		try:
+			with ZipFile(path, 'r'):
+				pass
+		except (FileNotFoundError, PermissionError) as e:
+			result = ValidatorResult(str(e), 'error')
+	return result
 
 
 @RegisterContainer
