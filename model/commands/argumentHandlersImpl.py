@@ -457,7 +457,7 @@ class ItemStackHandler(ArgumentHandler):
 		return None
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
-		result = choicesFromResourceLocations(chain(ITEMS, BLOCKS))
+		result = choicesFromResourceLocations(contextStr, chain(ITEMS, BLOCKS))
 		if self._allowTag:
 			result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.items))
 			result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks))
