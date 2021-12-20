@@ -4,7 +4,7 @@ import copy
 import os
 import traceback
 from json import JSONDecodeError
-from typing import Optional
+from typing import Optional, final
 from zipfile import ZipFile
 
 from PyQt5.QtCore import Qt
@@ -159,6 +159,13 @@ class DebugSettings(SerializableContainer):
 	)
 
 
+@final
+class AboutQt:
+	"""
+	Just a placeholder for the aboutQt dialog.
+	"""
+	pass
+
 @RegisterContainer
 class AboutSettings(SerializableContainer):
 	__slots__ = ()
@@ -201,6 +208,10 @@ class AboutSettings(SerializableContainer):
 	@Serialized(shouldSerialize=False, wordWrap=False, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True)
 	def affiliation(self) -> str:
 		return """<font>This program is <em>not</em> affiliated with Mojang Studios.</font>"""
+
+	@Serialized(shouldSerialize=False, label=' ')
+	def aboutQt(self) -> AboutQt:
+		return AboutQt()
 
 
 @RegisterContainer

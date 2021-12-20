@@ -1,7 +1,8 @@
 import copy
 from typing import Any, List, NamedTuple, Optional, Type, Union
 
-from PyQt5.QtWidgets import QDialog, QWidget
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.GUI import CORNERS, Overlap, RoundedCorners
@@ -10,8 +11,25 @@ from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 from Cat.Serializable import SerializableContainer
 
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI
+from Cat.CatPythonGUI.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
 from settings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings
+from settings._applicationSettings import AboutQt
+
+
+_qtIcon: Optional[QIcon] = None
+
+
+@WidgetDrawer(AboutQt)
+def aboutQt(gui: AutoGUI, v: AboutQt, **kwargs) -> AboutQt:
+	global _qtIcon
+	if _qtIcon is None:
+		_qtIcon = QIcon(":/qt-project.org/qmessagebox/images/qtlogo-64.png")
+
+	with gui.hLayout(preventHStretch=True, **kwargs):
+		kwargs.pop('label', None)
+		if gui.button("About Qt", icon=_qtIcon, **kwargs):
+			QApplication.aboutQt()
+	return v
 
 
 class SettingsDialog(CatFramelessWindowMixin, QDialog):
