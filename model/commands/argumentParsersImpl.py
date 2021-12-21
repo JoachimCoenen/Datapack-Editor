@@ -1,6 +1,5 @@
-from typing import Optional, Union
+from typing import Optional
 
-from Cat.utils.collections_ import OrderedDict
 from model.commands.argumentHandlers import makeParsedArgument
 from model.commands.command import ArgumentInfo
 from model.commands.snbt import parseNBTTag
@@ -9,7 +8,6 @@ from model.commands.parsedCommands import ParsedArgument
 from model.commands.stringReader import StringReader
 from model.Model import ResourceLocation
 from model.nbt.tags import NBTTag, CompoundTag
-from model.parsingUtils import Span
 
 
 def _init():
@@ -84,42 +82,6 @@ def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[
 		return tag
 	else:
 		sr.rollback()
-		return None
-
-
-def _parseBlockStates(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[OrderedDict[str, str]]:
-	if sr.tryConsumeChar('['):
-		# block states:
-		states = OrderedDict[str, str]()
-		sr.tryConsumeWhitespace()
-		while not sr.tryConsumeChar(']'):
-			prop = sr.tryReadString()
-			if prop is None:
-				errorsIO.append(CommandSyntaxError(f"Expected a String.", Span(sr.currentPos), style='error'))
-				prop = ''
-			elif prop in states:
-				errorsIO.append(CommandSyntaxError(f"Property '{prop}' already defined.", Span(sr.currentPos), style='error'))
-
-			sr.tryConsumeWhitespace()
-			if not sr.tryConsumeChar('='):
-				errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", Span(sr.currentPos), style='error'))
-
-			value = sr.tryReadString()
-			if value is None:
-				errorsIO.append(CommandSyntaxError(f"Expected a String.", Span(sr.currentPos), style='error'))
-				value = ''
-			else:
-				sr.mergeLastSave()
-			states[prop] = value
-
-			sr.tryConsumeWhitespace()
-			if sr.tryConsumeChar(']'):
-				break
-			if sr.tryConsumeChar(','):
-				sr.tryConsumeWhitespace()
-				continue
-		return states
-	else:
 		return None
 
 

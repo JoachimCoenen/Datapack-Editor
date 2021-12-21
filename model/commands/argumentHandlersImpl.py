@@ -11,14 +11,16 @@ from Cat.utils import HTMLStr
 from Cat.utils.collections_ import OrderedDict
 from model.Model import Datapack
 from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider
-from model.commands.argumentParsersImpl import _parse3dPos, _parseBlockStates, tryReadNBTCompoundTag, _parseResourceLocation, _parseEntityLocator, _parse2dPos
+from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
+from model.commands.blockStates import getBlockStatesDict
 from model.commands.command import ArgumentInfo
 from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs
 from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart
 from model.commands.snbt import parseNBTPath, parseNBTTag
 from model.commands.stringReader import StringReader
+from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.data.dataValues import BLOCKS, DIMENSIONS, ITEMS, SLOTS, ENTITIES, EFFECTS, ENCHANTMENTS, BIOMES, PARTICLES
 from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations
@@ -132,11 +134,12 @@ class BlockStateHandler(ArgumentHandler):
 			return None
 		blockID = ResourceLocation.fromString(blockID)
 		# block states:
-		states: Optional[OrderedDict[str, str]] = _parseBlockStates(sr, ai, errorsIO=errorsIO)
+		blockStatesDict = getBlockStatesDict(blockID)
+		states: Optional[FilterArguments] = parseFilterArgs(sr, blockStatesDict, errorsIO=errorsIO)
 		if states is not None:
 			sr.mergeLastSave()
 		else:
-			states = OrderedDict()
+			states = FilterArguments()
 		# data tags:
 		if sr.tryConsumeChar('{'):
 			sr.cursor -= 1
@@ -165,6 +168,15 @@ class BlockStateHandler(ArgumentHandler):
 		return None
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+		if '[' in contextStr:
+			sr = StringReader(contextStr, 0, 0, contextStr)
+			blockID = sr.tryReadResourceLocation(allowTag=self._allowTag)
+			if blockID is not None:
+				if cursorPos > len(blockID):
+					blockID = ResourceLocation.fromString(blockID)
+					blockStatesDict = getBlockStatesDict(blockID)
+					argsStart = sr.currentPos.index
+					return suggestionsForFilterArgs(sr.tryReadRemaining() or '', cursorPos - argsStart, blockStatesDict)
 		result = choicesFromResourceLocations(contextStr, BLOCKS)
 		if self._allowTag:
 			tags = _choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks)

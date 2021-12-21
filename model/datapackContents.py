@@ -21,6 +21,10 @@ class ResourceLocation:
 	path: str
 	isTag: bool
 
+	def __post_init__(self):
+		if self.namespace is None:
+			object.__setattr__(self, 'namespace', 'minecraft')
+
 	@property
 	def asString(self) -> str:
 		tag = '#' if self.isTag else ''
