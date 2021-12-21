@@ -10,7 +10,7 @@ from Cat.CatPythonGUI.GUI.codeEditor import MyQsciAPIs, AutoCompletionTree, Posi
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override
 from model.commands.argumentHandlers import getArgumentHandler, defaultDocumentationProvider
-from model.commands.argumentTypes import LiteralsArgumentType, ArgumentType, MINECRAFT_FUNCTION
+from model.commands.argumentTypes import ArgumentType
 from model.commands.command import ArgumentInfo, Keyword, Switch, CommandNode, TERMINAL, COMMANDS_ROOT
 from model.commands.commands import BASIC_COMMAND_INFO
 from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedComment, ParsedArgument
@@ -164,7 +164,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 			tip = '<br/>'.join(tips)
 			return f"{tip}"
 
-	def _getNextKeywords(self, nexts: Iterable[CommandNode], contextStr: str) -> list[str]:
+	def _getNextKeywords(self, nexts: Iterable[CommandNode], contextStr: str, cursorPos: int) -> list[str]:
 		result = []
 		for nx in nexts:
 			if isinstance(nx, Keyword):
@@ -178,7 +178,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 				type_: ArgumentType = nx.type
 				handler = getArgumentHandler(type_)
 				if handler is not None:
-					result += handler.getSuggestions(nx, contextStr)
+					result += handler.getSuggestions(nx, contextStr, cursorPos)
 			elif nx is COMMANDS_ROOT:
 				result += list(BASIC_COMMAND_INFO.keys())
 		return result
@@ -196,6 +196,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		editor: QsciScintilla = lexer.editor()
 		text: str = editor.text()
 		position = Position(*editor.getCursorPosition())
+		idx: int = editor.positionFromLineIndex(*position)
 
 		function, errors = parseMCFunction(text)
 		if function is None:
@@ -205,16 +206,25 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		if match is None:
 			return list(BASIC_COMMAND_INFO.keys())
 
-		argument = match.prev
-		if argument is None:
+		# if match.info is None or (0 <= idx-1 < len(text) and text[idx-1] != ' '):
+		if match.span.end.index >= idx:
+			argument = match.prev
+			contextStr = match.content
+			posInContextStr = idx - match.span.start.index
+			if argument is None:
+				argument = match
+				contextStr = ''
+				posInContextStr = 0
+		else:
 			argument = match
-			# return super().updateAutoCompletionList(context, aList)
-
+			contextStr = ''
+			posInContextStr = 0
 		info = argument.info
 		if info is None:
 			return super().updateAutoCompletionList(context, aList)
-		contextStr = context[-1] if context else ''
-		result = self._getNextKeywords(info.next, contextStr)
+		# contextStr = context[-1] if context else ''
+
+		result = self._getNextKeywords(info.next, contextStr, posInContextStr)
 		return result
 
 	@override

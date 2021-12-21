@@ -1,26 +1,15 @@
 import re
 from typing import Optional
 
-from Cat.Serializable import RegisterContainer, Serialized
 from Cat.utils.collections_ import OrderedMultiDict
-from Cat.utils.profiling import ProfiledFunction
-from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser, argumentHandler, ArgumentHandler
+from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, argumentHandler, ArgumentHandler
 from model.commands.argumentTypes import *
-from model.commands.argumentValues import TargetSelector
 from model.commands.command import ArgumentInfo
+from model.commands.filterArgs import FilterArgumentInfo
 from model.commands.parsedCommands import ParsedArgument
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
-from model.parsingUtils import Span
-
-
-@RegisterContainer
-class TSArgumentInfo(ArgumentInfo):
-	__slots__ = ()
-	multipleAllowed: bool = Serialized(default=False)
-	isNegatable: bool = Serialized(default=False)
-	canBeEmpty: bool = Serialized(default=False)
 
 
 DPE_TARGET_SELECTOR_SCORES = ArgumentType.create(
@@ -31,49 +20,49 @@ DPE_TARGET_SELECTOR_SCORES = ArgumentType.create(
 	* `@e[scores={foo=10,bar=1..5}]`""",
 )
 
-targetSelectorArguments: list[TSArgumentInfo] = [
+targetSelectorArguments: list[FilterArgumentInfo] = [
 	# Selection by Position:
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='x',
 		type=BRIGADIER_DOUBLE,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='y',
 		type=BRIGADIER_DOUBLE,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='z',
 		type=BRIGADIER_DOUBLE,
 	),
-	TSArgumentInfo.create(  # TODO: only unsigned values are allowed
+	FilterArgumentInfo.create(  # TODO: only unsigned values are allowed
 		name='distance',
 		type=MINECRAFT_FLOAT_RANGE,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='dx',
 		type=BRIGADIER_DOUBLE,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='dy',
 		type=BRIGADIER_DOUBLE,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='dz',
 		type=BRIGADIER_DOUBLE,
 	),
 	# Selection by Scoreboard Values:
-	TSArgumentInfo.create(  # TODO: scores: @e[scores={foo=10,bar=1..5}]
+	FilterArgumentInfo.create(  # TODO: scores: @e[scores={foo=10,bar=1..5}]
 		name='scores',
 		type=DPE_TARGET_SELECTOR_SCORES,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='tag',
 		type=BRIGADIER_STRING,
 		multipleAllowed=True,
 		isNegatable=True,
 		canBeEmpty=True,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='team',
 		type=MINECRAFT_TEAM,
 		multipleAllowed=True,
@@ -81,57 +70,57 @@ targetSelectorArguments: list[TSArgumentInfo] = [
 		canBeEmpty=True,
 	),
 	# Selection by Traits:
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='limit',
 		type=BRIGADIER_INTEGER,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='sort',
 		type=LiteralsArgumentType(['nearest', 'furthest', 'random', 'arbitrary']),
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='level',
 		type=MINECRAFT_INT_RANGE,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='gamemode',
 		type=MINECRAFT_GAME_MODE,
 		isNegatable=True,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='name',
 		type=BRIGADIER_STRING,
 		multipleAllowed=True,  # TODO: Arguments testing for equality cannot be duplicated, while arguments testing for inequality can.
 		isNegatable=True,
 	),
-	TSArgumentInfo.create(  # TODO: apply bound check (-90 ... +90)
+	FilterArgumentInfo.create(  # TODO: apply bound check (-90 ... +90)
 		name='x_rotation',
 		type=MINECRAFT_FLOAT_RANGE,
 	),
-	TSArgumentInfo.create(  # TODO: apply bound check (-90 ... +180)
+	FilterArgumentInfo.create(  # TODO: apply bound check (-90 ... +180)
 		name='y_rotation',
 		type=MINECRAFT_FLOAT_RANGE,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='type',
 		type=MINECRAFT_ENTITY_SUMMON,
 		multipleAllowed=True,  # TODO: Arguments testing for equality cannot be duplicated, while arguments testing for inequality can.
 		isNegatable=True,
 	),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='nbt',
 		type=MINECRAFT_NBT_COMPOUND_TAG,
 		multipleAllowed=True,
 		isNegatable=True,
 	),
-	# TSArgumentInfo.create(  # TODO: Selecting targets by advancements
+	# FilterArgumentInfo.create(  # TODO: Selecting targets by advancements
 	# 	name='advancements',
 	# 	type=advancements,
 	# 	multipleAllowed=False,
 	# 	isNegatable=False,
 	# 	canBeEmpty=False,
 	# ),
-	TSArgumentInfo.create(
+	FilterArgumentInfo.create(
 		name='predicate',
 		type=MINECRAFT_RESOURCE_LOCATION,  # TODO: actually, the type is predicates.
 		multipleAllowed=True,
@@ -139,12 +128,12 @@ targetSelectorArguments: list[TSArgumentInfo] = [
 	),
 ]
 
-targetSelectorArgumentsDict: dict[str, TSArgumentInfo] = {
+TARGET_SELECTOR_ARGUMENTS_DICT: dict[str, FilterArgumentInfo] = {
 	tsa.name: tsa
 	for tsa in targetSelectorArguments
 }
 
-FALLBACK_TS_ARGUMENT_INFO = TSArgumentInfo.create(
+FALLBACK_TS_ARGUMENT_INFO = FilterArgumentInfo.create(
 	name='_fallback',
 	type=BRIGADIER_STRING,
 	multipleAllowed=True,
@@ -154,6 +143,7 @@ FALLBACK_TS_ARGUMENT_INFO = TSArgumentInfo.create(
 
 
 _GOTO_NEXT_ARG_PATTERN = re.compile(r'[,}=]')
+
 
 @argumentHandler(DPE_TARGET_SELECTOR_SCORES.name)
 class TargetSelectorScoresArgumentHandler(ArgumentHandler):
@@ -210,82 +200,7 @@ class TargetSelectorScoresArgumentHandler(ArgumentHandler):
 		return makeParsedArgument(sr, ai, value=scores)
 
 
-def _parseTargetSelectorArgs(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[OrderedMultiDict[str, ParsedArgument]]:
-	if sr.tryConsumeChar('['):
-		# block states:
-		arguments: OrderedMultiDict[str, ParsedArgument] = OrderedMultiDict[str, ParsedArgument]()
-		sr.tryConsumeWhitespace()
-		sr.save()
-		while not sr.tryConsumeChar(']'):
-			sr.mergeLastSave()
-			prop = sr.tryReadString()
-			if prop is None:
-				errorsIO.append(CommandSyntaxError(f"Expected a String.", Span(sr.currentPos), style='error'))
-				prop = ''
-				tsai = FALLBACK_TS_ARGUMENT_INFO
-			elif prop not in targetSelectorArgumentsDict:
-				errorsIO.append(CommandSyntaxError(f"Unknown target selector argument '`{prop}`'.", sr.currentSpan, style='error'))
-				tsai = FALLBACK_TS_ARGUMENT_INFO
-			else:
-				tsai = targetSelectorArgumentsDict[prop]
-			# duplicate?:
-			if prop in arguments and not tsai.multipleAllowed:
-				errorsIO.append(CommandSyntaxError(f"Target selector argument '`{prop}`' cannot be duplicated.", sr.currentSpan, style='error'))
-
-			sr.tryConsumeWhitespace()
-			if not sr.tryConsumeChar('='):
-				errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", Span(sr.currentPos), style='error'))
-			sr.tryConsumeWhitespace()
-			isNegated = sr.tryConsumeChar('!')
-			if isNegated and not tsai.isNegatable:
-				errorsIO.append(CommandSyntaxError(f"Target selector argument '`{prop}`' cannot be negated.", sr.currentSpan, style='error'))
-
-			handler = getArgumentHandler(tsai.type)
-			if handler is None:
-				value = missingArgumentParser(sr, tsai, errorsIO=errorsIO)
-			# return firstArg, errors
-			else:
-				value = handler.parse(sr, tsai, errorsIO=errorsIO)
-			if value is None:
-				remainig = sr.readUntilEndOrRegex(re.compile(r'[],]'))
-				value = makeParsedArgument(sr, None, value=remainig)
-				errorsIO.append(CommandSyntaxError(f"Expected {tsai.type.name}.", sr.currentSpan, style='error'))
-			sr.mergeLastSave()
-			arguments.add(prop, value)
-
-			sr.tryConsumeWhitespace()
-			if sr.tryConsumeChar(']'):
-				break
-			if sr.tryConsumeChar(','):
-				sr.tryConsumeWhitespace()
-				continue
-			if sr.hasReachedEnd:
-				errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format(f"`]`", 'end of str'), sr.currentSpan, style='error'))
-				break
-		return arguments
-	else:
-		return None
-
-
-@ProfiledFunction(enabled=False, colourNodesBySelftime=False)
-def parseTargetSelector(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[TargetSelector]:
-	# Must be a player name, a target selector or a UUID.
-	variable = sr.tryReadRegex(re.compile(r'@[praes]\b'))
-	if variable is None:
-		return None
-
-	arguments = _parseTargetSelectorArgs(sr, ai, errorsIO=errorsIO)
-	if arguments is None:
-		arguments = OrderedMultiDict()
-	else:
-		sr.mergeLastSave()
-
-	return TargetSelector.create(variable=variable, arguments=arguments)
-
-
 __all__ = [
-	'TSArgumentInfo',
-	'targetSelectorArguments',
-	'targetSelectorArgumentsDict',
+	'TARGET_SELECTOR_ARGUMENTS_DICT',
 	'FALLBACK_TS_ARGUMENT_INFO',
 ]

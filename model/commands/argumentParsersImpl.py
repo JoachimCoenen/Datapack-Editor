@@ -2,10 +2,8 @@ from typing import Optional, Union
 
 from Cat.utils.collections_ import OrderedDict
 from model.commands.argumentHandlers import makeParsedArgument
-from model.commands.argumentValues import TargetSelector
 from model.commands.command import ArgumentInfo
 from model.commands.snbt import parseNBTTag
-from model.commands.targetSelector import parseTargetSelector
 from model.commands.utils import CommandSyntaxError
 from model.commands.parsedCommands import ParsedArgument
 from model.commands.stringReader import StringReader
@@ -123,15 +121,6 @@ def _parseBlockStates(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[Comm
 		return states
 	else:
 		return None
-
-
-def _parseEntityLocator(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[Union[str, TargetSelector]]:
-	# Must be a player name, a target selector or a UUID.
-	string = sr.tryReadString()
-	if string is None:
-		# tryParse Target selector:
-		string = parseTargetSelector(sr, ai, errorsIO=errorsIO)
-	return string
 
 
 def _parseResourceLocation(sr: StringReader, ai: ArgumentInfo, *, allowTag: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:

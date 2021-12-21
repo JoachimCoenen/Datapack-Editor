@@ -1,11 +1,14 @@
-from dataclasses import dataclass
-from typing import NamedTuple, Optional, Any
+from typing import Optional
 
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized
 from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from model.commands.parsedCommands import ParsedArgument
 from model.datapackContents import ResourceLocation
 from model.nbt.tags import CompoundTag
+
+
+class FilterArguments(OrderedMultiDict[str, ParsedArgument]):
+	__slots__ = ()
 
 
 @RegisterContainer
@@ -35,8 +38,9 @@ class ItemStack(SerializableContainer):
 class TargetSelector(SerializableContainer):
 	__slots__ = ()
 	variable: str = Serialized(default='')
-	arguments: OrderedMultiDict[str, ParsedArgument] = Serialized(default_factory=OrderedMultiDict[str, ParsedArgument])
+	arguments: FilterArguments = Serialized(default_factory=FilterArguments)
 
 	@classmethod
-	def create(cls, *, variable: ResourceLocation, arguments: OrderedMultiDict[str, Any]):
+	def create(cls, *, variable: str, arguments: OrderedMultiDict[str, ParsedArgument]):
 		return super(TargetSelector, cls).create(variable=variable, arguments=arguments)
+

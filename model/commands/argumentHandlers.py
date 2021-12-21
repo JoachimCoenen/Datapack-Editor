@@ -52,7 +52,13 @@ class ArgumentHandler:
 	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+		"""
+		:param ai:
+		:param contextStr:
+		:param cursorPos: cursor position in contextStr
+		:return:
+		"""
 		return []
 
 	def getDocumentation(self, argument: ParsedArgument) -> HTMLStr:
@@ -166,7 +172,7 @@ class LiteralArgumentHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return parseLiteral(sr, ai, errorsIO=errorsIO)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
 		if isinstance(ai.type, LiteralsArgumentType):
 			return ai.type.options
 		else:
