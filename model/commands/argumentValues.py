@@ -2,12 +2,24 @@ from typing import Optional
 
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized
 from Cat.utils.collections_ import OrderedMultiDict
-from model.commands.parsedCommands import ParsedArgument
+from model.commands.parsedCommands import ParsedArgument, ParsedNode
 from model.datapackContents import ResourceLocation
 from model.nbt.tags import CompoundTag
 
 
-class FilterArguments(OrderedMultiDict[str, ParsedArgument]):
+@RegisterContainer
+class FilterArgument(SerializableContainer):
+	__slots__ = ()
+	key: ParsedNode = Serialized(default_factory=ParsedNode)
+	value: Optional[ParsedArgument] = Serialized(default=None)
+	isNegated: bool = Serialized(default=False)
+
+	@classmethod
+	def create(cls, *, key: ParsedNode, value: Optional[ParsedArgument], isNegated: bool):
+		return super(FilterArgument, cls).create(key=key, value=value, isNegated=isNegated)
+
+
+class FilterArguments(OrderedMultiDict[str, FilterArgument]):
 	__slots__ = ()
 
 

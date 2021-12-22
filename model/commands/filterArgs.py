@@ -3,15 +3,15 @@ filterArgs are a list of comma separated arguments enclosed in square brackets. 
 They are either block states ot target selector arguments
 """
 import re
+from dataclasses import dataclass
 from typing import Optional
 
 from Cat.Serializable import RegisterContainer, Serialized
 from Cat.utils.profiling import ProfiledFunction
-from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser
+from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser, Suggestions, makeParsedNode
 from model.commands.argumentTypes import *
-from model.commands.argumentValues import FilterArguments
+from model.commands.argumentValues import FilterArguments, FilterArgument
 from model.commands.command import ArgumentInfo
-from model.commands.parsedCommands import ParsedArgument
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
@@ -43,41 +43,49 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 		sr.save()
 		while not sr.tryConsumeChar(']'):
 			sr.mergeLastSave()
-			prop = sr.tryReadString()
-			if prop is None:
+
+			key = sr.tryReadString()
+			if key is None:
 				sr.save()
 				errorsIO.append(CommandSyntaxError(f"Expected a String.", Span(sr.currentPos), style='error'))
-				prop = ''
+				key = ''
 				tsai = FALLBACK_FILTER_ARGUMENT_INFO
-			elif prop not in argsInfo:
-				errorsIO.append(CommandSyntaxError(f"Unknown argument '`{prop}`'.", sr.currentSpan, style='error'))
+			elif key not in argsInfo:
+				errorsIO.append(CommandSyntaxError(f"Unknown argument '`{key}`'.", sr.currentSpan, style='error'))
 				tsai = FALLBACK_FILTER_ARGUMENT_INFO
 			else:
-				tsai = argsInfo[prop]
+				tsai = argsInfo[key]
+
+			keyNode = makeParsedNode(sr)
+			assert keyNode.content == key
+
 			# duplicate?:
-			if prop in arguments and not tsai.multipleAllowed:
-				errorsIO.append(CommandSyntaxError(f"Argument '`{prop}`' cannot be duplicated.", sr.currentSpan, style='error'))
+			if key in arguments and not tsai.multipleAllowed:
+				errorsIO.append(CommandSyntaxError(f"Argument '`{key}`' cannot be duplicated.", sr.currentSpan, style='error'))
 
 			sr.tryConsumeWhitespace()
 			if not sr.tryConsumeChar('='):
 				errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", Span(sr.currentPos), style='error'))
-			sr.tryConsumeWhitespace()
-			isNegated = sr.tryConsumeChar('!')
-			if isNegated and not tsai.isNegatable:
-				errorsIO.append(CommandSyntaxError(f"Argument '`{prop}`' cannot be negated.", sr.currentSpan, style='error'))
-
-			handler = getArgumentHandler(tsai.type)
-			if handler is None:
-				value = missingArgumentParser(sr, tsai, errorsIO=errorsIO)
-			# return firstArg, errors
+				isNegated = False
+				sr.readUntilEndOrRegex(re.compile(r'[],]'))
+				valueNode = None
 			else:
-				value = handler.parse(sr, tsai, errorsIO=errorsIO)
-			if value is None:
-				remaining = sr.readUntilEndOrRegex(re.compile(r'[],]'))
-				value = makeParsedArgument(sr, tsai, value=remaining)
-				errorsIO.append(CommandSyntaxError(f"Expected {tsai.type.name}.", sr.currentSpan, style='error'))
+				sr.tryConsumeWhitespace()
+				isNegated = sr.tryConsumeChar('!')
+				if isNegated and not tsai.isNegatable:
+					errorsIO.append(CommandSyntaxError(f"Argument '`{key}`' cannot be negated.", sr.currentSpan, style='error'))
+
+				handler = getArgumentHandler(tsai.type)
+				if handler is None:
+					valueNode = missingArgumentParser(sr, tsai, errorsIO=errorsIO)
+				else:
+					valueNode = handler.parse(sr, tsai, errorsIO=errorsIO)
+				if valueNode is None:
+					remaining = sr.readUntilEndOrRegex(re.compile(r'[],]'))
+					valueNode = makeParsedArgument(sr, tsai, value=remaining)
+					errorsIO.append(CommandSyntaxError(f"Expected {tsai.type.name}.", sr.currentSpan, style='error'))
 			sr.mergeLastSave()
-			arguments.add(prop, value)
+			arguments.add(key, FilterArgument.create(key=keyNode, value=valueNode, isNegated=isNegated))
 
 			sr.tryConsumeWhitespace()
 			if sr.tryConsumeChar(']'):
@@ -86,32 +94,68 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 				sr.tryConsumeWhitespace()
 				continue
 			if sr.hasReachedEnd:
-				errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format(f"`]`", 'end of str'), sr.currentSpan, style='error'))
+				errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format(f"`]`", 'end of str'), Span(sr.currentPos), style='error'))
 				break
+			errorsIO.append(CommandSyntaxError(f"Expected `,` or `]`", Span(sr.currentPos), style='error'))
 		return arguments
 	else:
 		return None
 
 
-def getBestFAMatch(fas: FilterArguments, cursorPos: int) -> Optional[ParsedArgument]:
-	for fa in fas.values():
-		if fa.span.start.index <= cursorPos <= fa.span.end.index:
-			return fa
-	return None
+@dataclass
+class CursorCtx:
+	fa: Optional[FilterArgument]
+	isValue: bool
+	inside: bool = False
+	after: bool = False
 
 
-def getNextFAMatch(fas: FilterArguments, cursorPos: int) -> Optional[ParsedArgument]:
-	for fa in fas.values():
-		if fa.span.start.index >= cursorPos:
-			return fa
-	return None
+def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, FilterArgumentInfo], fas: FilterArguments) -> CursorCtx:
+	assert contextStr
+	assert contextStr[0] == '['
+	if cursorPos == 1:
+		return CursorCtx(None, isValue=False, inside=False, after=False)
+
+	for fa in reversed(fas.values()):
+		keySpan = fa.key.span
+		if fa.value is not None:
+			valSpan = fa.value.span
+			if valSpan.end.index < cursorPos:
+				if re.search(r', *$', contextStr[:cursorPos]) is not None:
+					return CursorCtx(fa, isValue=False, inside=True)
+				else:
+					return CursorCtx(fa, isValue=True, after=True)
+			elif valSpan.start.index <= cursorPos and not cursorPos <= keySpan.end.index:
+				# TODO: check if value is parsable: if not: set after=False
+				return CursorCtx(fa, isValue=True, inside=True, after=False)
+
+		if keySpan.end.index < cursorPos:
+			if re.search(r'= *$', contextStr[:cursorPos]) is not None:
+				return CursorCtx(fa, isValue=True, inside=True)
+			else:
+				return CursorCtx(fa, isValue=False, after=True)
+		elif keySpan.start.index <= cursorPos:
+			if (keyMatch := re.search(r'\w+$', contextStr[:cursorPos])) is not None:
+				keyStr = keyMatch.group(0)
+				return CursorCtx(fa, isValue=False, inside=True, after=keyStr in argsInfo)
+			return CursorCtx(fa, isValue=False, inside=True)
+
+	return CursorCtx(None, isValue=False, inside=False, after=False)
 
 
 @ProfiledFunction(enabled=False, colourNodesBySelftime=False)
-def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str, FilterArgumentInfo]) -> list[str]:
-	# if cursorPos == 0:
-	# 	if len(contextStr) == 2:
-	# 		return [contextStr + '[]']
+def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str, FilterArgumentInfo]) -> Suggestions:
+	if cursorPos == 0:
+		# if len(contextStr) == 0:
+		if not argsInfo:
+			return [contextStr + '[]']
+		else:
+			return [contextStr + '[']
+	# elif cursorPos == 1:
+	# 	if len(contextStr) >= 1:
+	# 		if contextStr[0] == '[':
+	#
+
 	if contextStr.startswith('[') and not contextStr.endswith(']'):
 		contextStr += ']'
 	sr = StringReader(contextStr, 0, 0, contextStr)
@@ -119,23 +163,34 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str
 	ts = parseFilterArgs(sr, argsInfo, errorsIO=errors)
 	if ts is None:
 		return []
-	tsaMatch = getBestFAMatch(ts, cursorPos)
-	if tsaMatch is None and re.search(r'= *$', contextStr[:cursorPos]) is not None:
-		tsaMatch = getNextFAMatch(ts, cursorPos)
 
-	if tsaMatch is None:
-		return [t.name for t in argsInfo.values()]
+	cursorTouchesWord = re.search(r'\w*$', contextStr[:cursorPos]).group()
+
+	context = getCursorContext(contextStr, cursorPos, argsInfo, ts)
+	if context.fa is None:
+		return [cursorTouchesWord + ']'] + [f'{key}=' for key in argsInfo.keys()]
+
+	suggestions: Suggestions = []
+	if context.isValue:
+		if context.inside:
+			tsaInfo = context.fa.value.info
+			if isinstance(tsaInfo, ArgumentInfo):
+				type_: ArgumentType = tsaInfo.type
+				handler = getArgumentHandler(type_)
+				if handler is not None:
+					suggestions += handler.getSuggestions(tsaInfo, contextStr, cursorPos)
+					# TODO: maybe log if no handler has been found...
+		if context.after:
+			suggestions.append(cursorTouchesWord + ', ')
+			suggestions.append(cursorTouchesWord + ']')
 	else:
-		tsaInfo = tsaMatch.info
-		if tsaInfo is None:
-			return []
+		if context.after:
+			suggestions.append(cursorTouchesWord + '=')
+		if context.inside:
+			# context.fa is not None, so we already have an '=' after the key, so don't add one here.
+			suggestions += [f'{key}' for key in argsInfo.keys()]
 
-		if isinstance(tsaInfo, ArgumentInfo):
-			type_: ArgumentType = tsaInfo.type
-			handler = getArgumentHandler(type_)
-			if handler is not None:
-				return handler.getSuggestions(tsaInfo, contextStr, cursorPos)
-		return []
+	return suggestions
 
 
 __all__ = [

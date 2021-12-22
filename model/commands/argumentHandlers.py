@@ -9,7 +9,7 @@ from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.profiling import logError
 from model.commands.argumentTypes import ArgumentType, LiteralsArgumentType
 from model.commands.command import ArgumentInfo, CommandNode
-from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart
+from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart, ParsedNode
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.parsingUtils import Span, Position
@@ -25,8 +25,12 @@ class ValidatorFunc(Protocol):
 		pass
 
 
+Suggestion = str  # for now...
+Suggestions = list[Suggestion]
+
+
 class SuggestionProviderFunc(Protocol):
-	def __call__(self, argument: ParsedArgument) -> list[str]:
+	def __call__(self, argument: ParsedArgument) -> Suggestions:
 		pass
 
 
@@ -52,7 +56,7 @@ class ArgumentHandler:
 	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		"""
 		:param ai:
 		:param contextStr:
@@ -118,11 +122,18 @@ def missingArgumentParser(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[
 	return None
 
 
+def makeParsedNode(sr: StringReader) -> ParsedNode:
+	argument = ParsedNode.create(
+		source=sr.fullSource,
+		span=sr.currentSpan,
+	)
+	return argument
+
+
 def makeParsedArgument(sr: StringReader, ai: Optional[CommandNode], value: Any) -> ParsedArgument:
-	span = sr.currentSpan
 	argument = ParsedArgument.create(
 		source=sr.fullSource,
-		span=span,
+		span=sr.currentSpan,
 		value=value,
 		info=ai,
 	)
@@ -172,7 +183,7 @@ class LiteralArgumentHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return parseLiteral(sr, ai, errorsIO=errorsIO)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		if isinstance(ai.type, LiteralsArgumentType):
 			return ai.type.options
 		else:

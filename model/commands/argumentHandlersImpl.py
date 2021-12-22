@@ -10,7 +10,7 @@ from Cat.Serializable import SerializedPropertyABC
 from Cat.utils import HTMLStr
 from Cat.utils.collections_ import OrderedDict
 from model.Model import Datapack
-from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider
+from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider, Suggestions
 from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
@@ -38,7 +38,7 @@ def _containsResourceLocation(rl: ResourceLocation, container: set[ResourceLocat
 	return rl in container
 
 
-def _choicesForDatapackContents(text: str, prop: SerializedPropertyABC[Datapack, OrderedDict[ResourceLocation, MetaInfo]]) -> list[str]:
+def _choicesForDatapackContents(text: str, prop: SerializedPropertyABC[Datapack, OrderedDict[ResourceLocation, MetaInfo]]) -> Suggestions:
 	locations = [b for dp in getSession().world.datapacks for b in prop.get(dp)]
 	return choicesFromResourceLocations(text, locations)
 
@@ -51,7 +51,7 @@ class BoolHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=string)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return ['true', 'false']
 
 
@@ -117,7 +117,7 @@ class BlockPosHandler(ArgumentHandler):
 		useFloat = ai.args is not None and ai.args.get('type', None) is float
 		return _parse3dPos(sr, ai, useFloat=useFloat, errorsIO=errorsIO)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return ['^ ^ ^', '~ ~ ~']
 
 
@@ -167,21 +167,23 @@ class BlockStateHandler(ArgumentHandler):
 				return CommandSemanticsError(f"Unknown block id '{blockId.asString}'.", argument.span, style='warning')
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
-		if '[' in contextStr:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+		suggestions: Suggestions = []
+		if '[' in contextStr or cursorPos == len(contextStr):
 			sr = StringReader(contextStr, 0, 0, contextStr)
 			blockID = sr.tryReadResourceLocation(allowTag=self._allowTag)
 			if blockID is not None:
-				if cursorPos > len(blockID):
-					blockID = ResourceLocation.fromString(blockID)
-					blockStatesDict = getBlockStatesDict(blockID)
+				if cursorPos >= len(blockID):
+					blockStatesDict = getBlockStatesDict(ResourceLocation.fromString(blockID))
 					argsStart = sr.currentPos.index
-					return suggestionsForFilterArgs(sr.tryReadRemaining() or '', cursorPos - argsStart, blockStatesDict)
-		result = choicesFromResourceLocations(contextStr, BLOCKS)
+					suggestions += suggestionsForFilterArgs(sr.tryReadRemaining() or '', cursorPos - argsStart, blockStatesDict)
+					if cursorPos > len(blockID):  # we're inside the block states, so don't suggest blocks anymore.
+						return suggestions
+		suggestions += choicesFromResourceLocations(contextStr, BLOCKS)
 		if self._allowTag:
 			tags = _choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks)
-			result.extend(tags)
-		return result
+			suggestions += tags
+		return suggestions
 
 	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
 		blockState: BlockState = argument.value
@@ -236,7 +238,7 @@ class ColumnPosHandler(ArgumentHandler):
 		blockPos = f'{columnPos1} {columnPos2}'
 		return makeParsedArgument(sr, ai, value=blockPos)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return ['~ ~']
 
 
@@ -270,7 +272,7 @@ class DimensionHandler(ArgumentHandler):
 		else:
 			return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, DIMENSIONS)
 
 
@@ -293,7 +295,7 @@ class EntityHandler(ArgumentHandler):
 
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		if 0 <= cursorPos < 2:
 			return ['@a', '@e', '@s', '@p', '@r', ]
 		else:
@@ -313,7 +315,7 @@ class EntitySummonHandler(ArgumentHandler):
 		if not _containsResourceLocation(entity, ENTITIES):
 			return CommandSemanticsError(f"Unknown entity id '{entity.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, ENTITIES)
 
 
@@ -329,7 +331,7 @@ class FloatRangeHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=range_)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return ['0...']
 
 
@@ -352,7 +354,7 @@ class FunctionHandler(ArgumentHandler):
 			else:
 				return CommandSemanticsError(f"Unknown function '{value.asString}'.", argument.span)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		result = []
 		result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.functions))
 		result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.functions))
@@ -403,7 +405,7 @@ class IntRangeHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=range_)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return ['0...']
 
 
@@ -420,7 +422,7 @@ class ItemEnchantmentHandler(ArgumentHandler):
 		if not _containsResourceLocation(enchantment, ENCHANTMENTS):
 			return CommandSemanticsError(f"Unknown enchantment '{enchantment.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, ENCHANTMENTS)
 
 
@@ -437,7 +439,7 @@ class ItemSlotHandler(ArgumentHandler):
 		if slot not in SLOTS:
 			return CommandSemanticsError(f"Unknown item slot '{slot}'.", argument.span, style='error')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return list(SLOTS.keys())
 
 
@@ -482,7 +484,7 @@ class ItemStackHandler(ArgumentHandler):
 				return CommandSemanticsError(f"Unknown item id '{itemId.asString}'.", argument.span, style='warning')
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		result = choicesFromResourceLocations(contextStr, chain(ITEMS, BLOCKS))
 		if self._allowTag:
 			result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.items))
@@ -542,7 +544,7 @@ class MobEffectHandler(ArgumentHandler):
 		if not _containsResourceLocation(effect, EFFECTS):
 			return CommandSemanticsError(f"Unknown mob effect '{effect.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, EFFECTS)
 
 
@@ -602,7 +604,7 @@ class ParticleHandler(ArgumentHandler):
 		if not _containsResourceLocation(particle, PARTICLES):
 			return CommandSemanticsError(f"Unknown biome '{particle.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, PARTICLES)
 
 
@@ -653,7 +655,7 @@ class ScoreHolderHandler(EntityHandler):
 				return None
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		suggestions = super(ScoreHolderHandler, self).getSuggestions(ai, contextStr, cursorPos)
 		if cursorPos <= 2:
 			suggestions.append('*')
@@ -744,7 +746,7 @@ class BiomeIdHandler(ArgumentHandler):
 		if not _containsResourceLocation(biome, BIOMES):
 			return CommandSemanticsError(f"Unknown biome '{biome.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> list[str]:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, BIOMES)
 
 @argumentHandler(ST_DPE_COMMAND.name)
