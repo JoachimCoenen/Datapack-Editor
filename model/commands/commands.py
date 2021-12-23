@@ -1335,8 +1335,8 @@ EXECUTE_INSTRUCTIONS.append(Keyword.create(name='positioned',
 EXECUTE_INSTRUCTIONS.append(Keyword.create(name='rotated',
 	next=[
 		ArgumentInfo.create(
-			name='pos',
-			type=MINECRAFT_VEC3,
+			name='rot',
+			type=MINECRAFT_ROTATION,
 			next=EXECUTE_INSTRUCTIONS
 		),
 		Keyword.create(
