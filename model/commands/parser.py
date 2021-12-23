@@ -17,8 +17,9 @@ argumentParsersImpl._init()  # do not remove!
 
 
 @ProfiledFunction(enabled=False, colourNodesBySelftime=False)
-def parseMCFunction(source: str) -> tuple[Optional[ParsedMCFunction], list[CommandSyntaxError]]:
-	lines = source.splitlines()
+def parseMCFunction(origSource: str) -> tuple[Optional[ParsedMCFunction], list[CommandSyntaxError]]:
+	lines = origSource.splitlines()
+	source = '\n'.join(lines)
 	result: ParsedMCFunction = ParsedMCFunction()
 	errors: list[CommandSyntaxError] = []
 	lineStart: int = 0

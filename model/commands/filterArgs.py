@@ -57,7 +57,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 				tsai = argsInfo[key]
 
 			keyNode = makeParsedNode(sr)
-			assert keyNode.content == key
+			assert keyNode.content == key, f"keyNode.content = {keyNode.content!r}, key = {key!r}"
 
 			# duplicate?:
 			if key in arguments and not tsai.multipleAllowed:
