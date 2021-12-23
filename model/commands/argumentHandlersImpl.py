@@ -10,13 +10,14 @@ from Cat.Serializable import SerializedPropertyABC
 from Cat.utils import HTMLStr
 from Cat.utils.collections_ import OrderedDict
 from model.Model import Datapack
-from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider, Suggestions
+from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider, Suggestions, \
+	getArgumentHandler
 from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
 from model.commands.blockStates import getBlockStatesDict
 from model.commands.command import ArgumentInfo
-from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs
+from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs
 from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart
 from model.commands.snbt import parseNBTPath, parseNBTTag
 from model.commands.stringReader import StringReader
@@ -25,11 +26,16 @@ from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.data.dataValues import BLOCKS, DIMENSIONS, ITEMS, SLOTS, ENTITIES, EFFECTS, ENCHANTMENTS, BIOMES, PARTICLES
 from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations
 from model.parsingUtils import Span, Position
+from model.pathUtils import FilePath
 from session.session import getSession
 
 
 def _init():
 	pass  # do not remove!
+
+
+def _openOrSelectDocument(window: QWidget, filePath: FilePath, selectedPosition: Optional[Position] = None):
+	window._tryOpenOrSelectDocument(filePath, selectedPosition=selectedPosition)  # very bad...
 
 
 def _containsResourceLocation(rl: ResourceLocation, container: set[ResourceLocation]) -> bool:
@@ -41,6 +47,16 @@ def _containsResourceLocation(rl: ResourceLocation, container: set[ResourceLocat
 def _choicesForDatapackContents(text: str, prop: SerializedPropertyABC[Datapack, OrderedDict[ResourceLocation, MetaInfo]]) -> Suggestions:
 	locations = [b for dp in getSession().world.datapacks for b in prop.get(dp)]
 	return choicesFromResourceLocations(text, locations)
+
+
+def _openFromDatapackContents(window: QWidget, rl: ResourceLocation, prop: SerializedPropertyABC[Datapack, OrderedDict[ResourceLocation, MetaInfo]]) -> bool:
+	for dp in getSession().world.datapacks:
+		# TODO: show prompt, when there are multiple files this applies to.
+		if (file := prop.get(dp).get(rl)) is not None:
+			fp = file.filePath
+			_openOrSelectDocument(window, fp)
+			return True
+	return False
 
 
 @argumentHandler(BRIGADIER_BOOL.name)
@@ -191,28 +207,30 @@ class BlockStateHandler(ArgumentHandler):
 			return None
 
 		blockId = blockState.blockId
-		start = argument.span.end.copy()
+		start = argument.span.start.copy()
 		end = argument.span.end.copy()
 		end.column = min(end.column, start.column + len(blockId.asString))
 		end.index = min(end.index, start.index + len(blockId.asString))
 
+		ranges = []
 		if blockId.isTag:
 			span = Span(start, end)
-			return [span]
-		return None
+			ranges.append(span)
+
+		ranges += clickableRangesForFilterArgs(blockState.states)
+
+		return ranges
 
 	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
-		for dp in getSession().world.datapacks:
-			if (func := dp.contents.tags.blocks.get(argument.value)) is not None:
-				# TODO: show prompt, when there are multiple files this applies to.
-				fp = func.filePath
-				window._tryOpenOrSelectDocument(fp)  # very bad...
-				break
+		if position.index <= argument.start.index + len(argument.value.blockId.asString):
+			_openFromDatapackContents(window, argument.value.blockId, Datapack.contents.tags.blocks)
+		else:
+			onIndicatorClickedForFilterArgs(argument.value, position, window)
 
 
 @argumentHandler(MINECRAFT_BLOCK_PREDICATE.name)
 class BlockPredicateHandler(BlockStateHandler):
-	def __init__(self, allowTag: bool = False):
+	def __init__(self):
 		super().__init__(allowTag=True)
 
 
@@ -301,6 +319,17 @@ class EntityHandler(ArgumentHandler):
 		else:
 			return suggestionsForFilterArgs(contextStr[2:], cursorPos - 2, TARGET_SELECTOR_ARGUMENTS_DICT)
 
+	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
+		targetSelector: TargetSelector = argument.value
+		if not isinstance(targetSelector, TargetSelector):
+			return None
+		ranges = clickableRangesForFilterArgs(targetSelector.arguments)
+		return ranges
+
+	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
+		onIndicatorClickedForFilterArgs(argument.value.arguments, position, window)
+
+
 
 class EntityTypeLikeHandler(ArgumentHandler):
 	def __init__(self, allowTag: bool = False):
@@ -337,23 +366,12 @@ class EntityTypeLikeHandler(ArgumentHandler):
 		if not isinstance(entity, ResourceLocation):
 			return None
 
-		start = argument.span.end.copy()
-		end = argument.span.end.copy()
-		# end.column = min(end.column, start.column + len(blockId.asString))
-		# end.index = min(end.index, start.index + len(blockId.asString))
-
 		if entity.isTag:
-			span = Span(start, end)
-			return [span]
+			return [argument.span]
 		return None
 
 	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
-		for dp in getSession().world.datapacks:
-			if (func := dp.contents.tags.entity_types.get(argument.value)) is not None:
-				# TODO: show prompt, when there are multiple files this applies to.
-				fp = func.filePath
-				window._tryOpenOrSelectDocument(fp)  # very bad...
-				break
+		_openFromDatapackContents(window, argument.value, Datapack.contents.tags.entity_types)
 
 
 @argumentHandler(MINECRAFT_ENTITY_SUMMON.name)
@@ -423,17 +441,8 @@ class FunctionHandler(ArgumentHandler):
 		return [argument.span]
 
 	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
-		for dp in getSession().world.datapacks:
-			if (func := dp.contents.functions.get(argument.value)) is not None:
-				fp = func.filePath
-				window._tryOpenOrSelectDocument(fp)  # very bad...
-				break
-
-			if (func := dp.contents.tags.functions.get(argument.value)) is not None:
-				# TODO: show prompt, when there are multiple files this applies to.
-				fp = func.filePath
-				window._tryOpenOrSelectDocument(fp)  # very bad...
-				break
+		if not _openFromDatapackContents(window, argument.value, Datapack.contents.functions):
+			_openFromDatapackContents(window, argument.value, Datapack.contents.tags.functions)
 
 
 @argumentHandler(MINECRAFT_GAME_PROFILE.name)
@@ -547,7 +556,7 @@ class ItemStackHandler(ArgumentHandler):
 
 		itemId = itemStack.itemId
 		if itemId.isTag:
-			start = argument.span.end.copy()
+			start = argument.span.start.copy()
 			end = argument.span.end.copy()
 			end.column = min(end.column, start.column + len(itemId.asString))
 			end.index = min(end.index, start.index + len(itemId.asString))
@@ -556,13 +565,8 @@ class ItemStackHandler(ArgumentHandler):
 		return None
 
 	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
-		for dp in getSession().world.datapacks:
-			if (func := dp.contents.tags.items.get(argument.value)) is not None \
-			or (func := dp.contents.tags.blocks.get(argument.value)) is not None:
-				# TODO: show prompt, when there are multiple files this applies to.
-				fp = func.filePath
-				window._tryOpenOrSelectDocument(fp)  # very bad...
-				break
+		if not _openFromDatapackContents(window, argument.value.itemId, Datapack.contents.tags.items):
+			_openFromDatapackContents(window, argument.value.itemId, Datapack.contents.tags.blocks)
 
 
 @argumentHandler(MINECRAFT_ITEM_PREDICATE.name)

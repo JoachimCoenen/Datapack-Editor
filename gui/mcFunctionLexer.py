@@ -6,18 +6,17 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QColor
 
 from Cat.CatPythonGUI.GUI import PythonGUI
-from Cat.CatPythonGUI.GUI.codeEditor import MyQsciAPIs, AutoCompletionTree, Position, CodeEditorLexer
+from Cat.CatPythonGUI.GUI.codeEditor import MyQsciAPIs, AutoCompletionTree, Position as CEPosition, CodeEditorLexer
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override
 from model.commands.argumentHandlers import getArgumentHandler, defaultDocumentationProvider
-from model.commands.argumentTypes import ArgumentType
 from model.commands.command import ArgumentInfo, Keyword, Switch, CommandNode, TERMINAL, COMMANDS_ROOT
 from model.commands.commands import BASIC_COMMAND_INFO
 from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedComment, ParsedArgument
 from model.commands.parser import parseMCFunction
 from model.commands.tokenizer import TokenType, tokenizeCommand, tokenizeComment, Token2
 from model.commands.validator import checkMCFunction
-from model.parsingUtils import GeneralParsingError, Span
+from model.parsingUtils import GeneralParsingError, Span, Position
 
 TT = TypeVar('TT')
 
@@ -132,10 +131,10 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 				bestMatch = self._getBestMatch(child, bestMatch, pos)
 		return bestMatch
 
-	def getHoverTip(self, position: Position) -> Optional[str]:
+	def getHoverTip(self, cePosition: CEPosition) -> Optional[str]:
 		lexer: LexerMCFunction = self.lexer()
 		editor: QsciScintilla = lexer.editor()
-		text: str = editor.text()
+		position = Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
 
 		function, errors = lexer._function, lexer._errors
 		if function is None:
@@ -170,13 +169,12 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 			if isinstance(nx, Keyword):
 				result.append(nx.name)
 			elif isinstance(nx, Switch):
-				result += self._getNextKeywords(nx.options, contextStr)
+				result += self._getNextKeywords(nx.options, contextStr, cursorPos)
 				hasTerminal = TERMINAL in nx.options
 				if hasTerminal:
-					result += self._getNextKeywords(nx.next, contextStr)
+					result += self._getNextKeywords(nx.next, contextStr, cursorPos)
 			elif isinstance(nx, ArgumentInfo):
-				type_: ArgumentType = nx.type
-				handler = getArgumentHandler(type_)
+				handler = getArgumentHandler(nx.type)
 				if handler is not None:
 					result += handler.getSuggestions(nx, contextStr, cursorPos)
 			elif nx is COMMANDS_ROOT:
@@ -195,8 +193,8 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		lexer: LexerMCFunction = self.lexer()
 		editor: QsciScintilla = lexer.editor()
 		text: str = editor.text()
-		position = Position(*editor.getCursorPosition())
-		idx: int = editor.positionFromLineIndex(*position)
+		cePosition = CEPosition(*editor.getCursorPosition())
+		position = Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
 
 		function, errors = parseMCFunction(text)
 		if function is None:
@@ -207,10 +205,10 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 			return list(BASIC_COMMAND_INFO.keys())
 
 		# if match.info is None or (0 <= idx-1 < len(text) and text[idx-1] != ' '):
-		if match.span.end.index >= idx:
+		if match.span.end.index >= position.index:
 			argument = match.prev
 			contextStr = match.content
-			posInContextStr = idx - match.span.start.index
+			posInContextStr = position.index - match.span.start.index
 			if argument is None:
 				argument = match
 				contextStr = ''
@@ -228,7 +226,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		return result
 
 	@override
-	def getClickableRanges(self) -> list[tuple[Position, Position]]:
+	def getClickableRanges(self) -> list[tuple[CEPosition, CEPosition]]:
 		lexer: LexerMCFunction = self.lexer()
 		editor: QsciScintilla = lexer.editor()
 		text: str = editor.text()
@@ -253,11 +251,10 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		return ranges
 
 	@override
-	def indicatorClicked(self, position: Position, state: Qt.KeyboardModifiers) -> None:
-		from session.session import getSession
+	def indicatorClicked(self, cePosition: CEPosition, state: Qt.KeyboardModifiers) -> None:
 		lexer: LexerMCFunction = self.lexer()
 		editor: QsciScintilla = lexer.editor()
-		text: str = editor.text()
+		position = Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
 
 		if state != Qt.ControlModifier:
 			return

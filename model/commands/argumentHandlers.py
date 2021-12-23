@@ -98,6 +98,13 @@ def getArgumentHandler(type: ArgumentType) -> Optional[ArgumentHandler]:
 	return handler
 
 
+def getArgumentHandlerForNode(node: CommandNode) -> Optional[ArgumentHandler]:
+	if isinstance(node, ArgumentInfo):
+		type_: ArgumentType = node.type
+		return getArgumentHandler(type_)
+	return None
+
+
 def makeCommandSyntaxError(sr: StringReader, message: str, *, style: str = 'error') -> CommandSyntaxError:
 	return CommandSyntaxError(message, sr.currentSpan, style=style)
 
@@ -188,3 +195,4 @@ class LiteralArgumentHandler(ArgumentHandler):
 			return ai.type.options
 		else:
 			return []
+

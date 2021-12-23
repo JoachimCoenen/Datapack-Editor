@@ -6,16 +6,19 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
+from PyQt5.QtWidgets import QWidget
+
 from Cat.Serializable import RegisterContainer, Serialized
 from Cat.utils.profiling import ProfiledFunction
 from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser, Suggestions, makeParsedNode
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import FilterArguments, FilterArgument
 from model.commands.command import ArgumentInfo
+from model.commands.parsedCommands import ParsedArgument
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
-from model.parsingUtils import Span
+from model.parsingUtils import Span, Position
 
 
 @RegisterContainer
@@ -102,6 +105,13 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 		return None
 
 
+def getBestFAMatch(fas: FilterArguments, cursorPos: int) -> Optional[ParsedArgument]:
+	for fa in fas.values():
+		if fa.value is not None and fa.value.span.start.index <= cursorPos <= fa.value.span.end.index:
+			return fa.value
+	return None
+
+
 @dataclass
 class CursorCtx:
 	fa: Optional[FilterArgument]
@@ -175,8 +185,7 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str
 		if context.inside:
 			tsaInfo = context.fa.value.info
 			if isinstance(tsaInfo, ArgumentInfo):
-				type_: ArgumentType = tsaInfo.type
-				handler = getArgumentHandler(type_)
+				handler = getArgumentHandler(tsaInfo.type)
 				if handler is not None:
 					suggestions += handler.getSuggestions(tsaInfo, contextStr, cursorPos)
 					# TODO: maybe log if no handler has been found...
@@ -193,9 +202,31 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str
 	return suggestions
 
 
+def clickableRangesForFilterArgs(filterArgs: FilterArguments) -> list[Span]:
+	ranges = []
+	for fa in filterArgs.values():
+		argInfo = fa.value.info
+		if isinstance(argInfo, ArgumentInfo):
+			if (handler := getArgumentHandler(argInfo.type)) is not None:
+				if (rng := handler.getClickableRanges(fa.value)) is not None:
+					ranges += rng
+		# TODO: maybe log if no handler has been found...
+	return ranges
+
+
+def onIndicatorClickedForFilterArgs(filterArgs: FilterArguments, position: Position, window: QWidget) -> None:
+	if (match := getBestFAMatch(filterArgs, position.index)) is not None:
+		argInfo = match.info
+		if isinstance(argInfo, ArgumentInfo):
+			if (handler := getArgumentHandler(argInfo.type)) is not None:
+				handler.onIndicatorClicked(match, position, window)
+
+
 __all__ = [
 	'FilterArgumentInfo',
 	'parseFilterArgs',
 	'suggestionsForFilterArgs',
+	'clickableRangesForFilterArgs',
+	'onIndicatorClickedForFilterArgs',
 	# 'FALLBACK_FILTER_ARGUMENT_INFO',
 ]
