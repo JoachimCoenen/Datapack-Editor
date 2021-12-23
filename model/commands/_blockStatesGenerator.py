@@ -505,8 +505,9 @@ RAW_BSAs_4: list[BlockStateInfo] = [
 			}), (
 			# TODO: 'Integer ({{code|0}} to {{code|15}})'
 			"BRIGADIER_INTEGER", {
-				ResourceLocation.fromString('water'),
 				ResourceLocation.fromString('lava'),
+				ResourceLocation.fromString('light'),
+				ResourceLocation.fromString('water'),
 			}),
 		]),
 	),
@@ -865,6 +866,7 @@ RAW_BSAs_7: list[BlockStateInfo] = [
 				ResourceLocation.fromString('iron_bars'),
 				ResourceLocation.fromString('ladder'),
 				ResourceLocation.fromString('lantern'),
+				ResourceLocation.fromString('light'),
 				ResourceLocation.fromString('scaffolding'),
 				ResourceLocation.fromString('sea_pickle'),
 				ResourceLocation.fromString('soul_lantern'),
