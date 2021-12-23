@@ -1342,6 +1342,7 @@ ENTITIES_MISC: set[ResourceLocation] = {
 	ResourceLocation.fromString('leash_knot'),
 	ResourceLocation.fromString('lightning_bolt'),
 	ResourceLocation.fromString('painting'),
+	ResourceLocation.fromString('marker'),
 }
 
 
