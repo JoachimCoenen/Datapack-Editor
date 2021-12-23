@@ -15,6 +15,7 @@ from Cat.utils import format_full_exc
 from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
 from Cat.utils.profiling import TimedMethod, logError
+from model.Model import Datapack
 from model.commands.parser import parseMCFunction
 from model.commands.validator import checkMCFunction
 from session.documents import ErrorCounts, getErrorCounts
@@ -62,6 +63,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self.totalErrorCounts: ErrorCounts = ErrorCounts()
 		self.errorsByFile: OrderedDict[FilePath, Collection[Error]] = OrderedDict()
 
+		self._includedDatapacks: list[Datapack] = []
 		self._allFiles: list[FilePath] = []
 		self._filesCount: int = 100
 		self._filesChecked: int = 50
@@ -69,6 +71,14 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self._spoilerSizePolicy = QSizePolicy(SizePolicy.Expanding.value, SizePolicy.Fixed.value)
 
 		self.setWindowTitle('Validate all files')
+
+	def OnSidebarGUI(self, gui: DatapackEditorGUI):
+		includedDatapacks = []
+		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
+			for dp in getSession().world.datapacks:
+				if gui.checkboxLeft(None, dp.name):
+					includedDatapacks.append(dp)
+		self._includedDatapacks = includedDatapacks
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.hLayout():
@@ -136,10 +146,11 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self.errorsByFile.clear()
 		self.totalErrorCounts = ErrorCounts()
 
-		allFiles = getSession().world.datapacksProp[:].files[:].get(getSession().world)
+		# allFiles = getSession().world.datapacksProp[:].files[:].get(getSession().world)
+		# allFiles = [f for dp in self._includedDatapacks for f in dp.files]
 		self._allFiles = []
-		for dp in allFiles:
-			for f in dp:
+		for dp in self._includedDatapacks:
+			for f in dp.files:
 				if isinstance(f, tuple):
 					fn = f[1]
 				else:
