@@ -631,11 +631,15 @@ class NbtTagHandler(ArgumentHandler):
 @argumentHandler(MINECRAFT_OBJECTIVE.name)
 class ObjectiveHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		pattern = re.compile(r"[a-zA-Z0-9_.+-]{0,16}")
+		pattern = re.compile(r"[a-zA-Z0-9_.+-]+")
 		objective = sr.tryReadRegex(pattern)
 		if objective is None:
 			return None
 		return makeParsedArgument(sr, ai, value=objective)
+
+	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+		if len(argument.value) > 16:
+			return CommandSemanticsError(f"Objective names cannot be longer than 16 characters.", argument.span, style='error')
 
 
 @argumentHandler(MINECRAFT_OBJECTIVE_CRITERIA.name)
