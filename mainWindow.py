@@ -96,6 +96,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		self.setAcceptDrops(True)
 
 		getSession().documents.onCanCloseModifiedDocument = self._canCloseModifiedDocument
+		getSession().onError.connect('showError', lambda e, title: self._gui.showWarningDialog(title, str(e)))
 
 		# close document as shortcut:
 		# self.closeDocumentShortcut = QShortcut(KEY_SEQUENCES.CLOSE_DOCUMENT, self, lambda d=document, s=self: self._safelyCloseDocument(gui, getSession().selectedDocument),
@@ -179,7 +180,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 					try:
 						document.loadFromFile()
 					except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-						gui.showAndLogError(e)
+						getSession().showAndLogError(e)
 
 			with gui.hLayout(horizontalSpacing=0):
 				if button(icon=icons.undo, tip='Undo', roundedCorners=maskCorners(btnCorners, CORNERS.LEFT), overlap=btnOverlap, margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Undo):
@@ -409,7 +410,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			try:
 				document.saveToFile()
 			except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-				gui.showAndLogError(e)
+				getSession().showAndLogError(e)
 				return False
 			return True
 		return False
@@ -422,7 +423,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			try:
 				document.saveToFile()
 			except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-				gui.showAndLogError(e)
+				getSession().showAndLogError(e)
 				return False
 			return True
 
@@ -432,7 +433,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			getSession().documents.openOrShowDocument(filePath, Span(selectedPosition) if selectedPosition is not None else None)
 			self._gui.redrawGUI()
 		except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-			self._gui.showAndLogError(e)
+			getSession().showAndLogError(e)
 
 	def _safelyCloseDocument(self, gui: DatapackEditorGUI, document: Document):
 		getSession().documents.safelyCloseDocument(document)

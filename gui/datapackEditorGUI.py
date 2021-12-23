@@ -30,7 +30,7 @@ from gui import mcFunctionLexer
 from session.documents import Document, ErrorCounts
 from model.Model import Datapack
 from model.pathUtils import FilePath
-
+from session.session import getSession
 
 mcFunctionLexer.init()  # don't delete!
 
@@ -58,7 +58,7 @@ def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Cal
 		filePath = createNewFile(folderPath, name)
 		openFunc(filePath)
 	except OSError as e:
-		gui.showAndLogError(e, "Cannot create file")
+		getSession().showAndLogError(e, "Cannot create file")
 
 
 def createNewFile(folderPath: FilePath, name: str) -> FilePath:
@@ -82,7 +82,7 @@ def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
 	try:
 		createNewFolder(folderPath, name)
 	except OSError as e:
-		gui.showAndLogError(e, "Cannot create folder")
+		getSession().showAndLogError(e, "Cannot create folder")
 
 
 def createNewFolder(folderPath: FilePath, name: str):
@@ -510,10 +510,6 @@ class Project:
 
 
 class DatapackEditorGUI(AutoGUI):
-
-	def showAndLogError(self, e: Exception, title: str = 'Error') -> None:
-		logError(format_full_exc(e))
-		self.showWarningDialog(title, str(e))
 
 	def searchableChoicePopup(
 			self,

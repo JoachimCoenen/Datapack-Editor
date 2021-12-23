@@ -52,7 +52,7 @@ class DatapackFilesEditor(EditorBase[World]):
 				try:
 					os.rename(os.path.join(*path), joinedNewPath)
 				except OSError as e:
-					self._gui.showAndLogError(e)
+					getSession().showAndLogError(e)
 				else:
 					data.label = newName
 					# update paths of opened files:
@@ -75,7 +75,7 @@ class DatapackFilesEditor(EditorBase[World]):
 			try:
 				os.unlink(os.path.join(*path))
 			except OSError as e:
-				self._gui.showAndLogError(e)
+				getSession().showAndLogError(e)
 			self.redraw('DatapackFilesEditor._deleteFileFunc(...)')
 			# TODO: maybe close opened file?
 
@@ -143,7 +143,7 @@ class DatapackFilesEditor(EditorBase[World]):
 						f.write(file.contents.replace(NAME_SPACE_VAR, context.namespace))
 
 		except OSError as e:
-			self._gui.showAndLogError(e)
+			getSession().showAndLogError(e)
 		else:
 			self.redraw('DatapackFilesEditor._createNewDatapackGUI(...)')
 

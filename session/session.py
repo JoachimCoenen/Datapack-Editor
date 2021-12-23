@@ -4,12 +4,13 @@ import gc
 import os
 import traceback
 from json import JSONDecodeError
-from typing import NewType
+from typing import NewType, Callable
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, Computed
-from Cat.utils import getExePath, openOrCreate
+from Cat.utils import getExePath, openOrCreate, format_full_exc
 from Cat.utils.profiling import logError
+from Cat.utils.signals import CatSignal, CatBoundSignal
 from model.Model import World
 from session.documentHandling import DocumentsManager
 
@@ -20,6 +21,7 @@ WindowId = NewType('WindowId', str)
 class Session(SerializableContainer):
 	"""docstring for Session"""
 	__slots__ = ()
+
 	def __typeCheckerInfo___(self):
 		# giving the type checker a helping hand...
 		pass
@@ -39,8 +41,15 @@ class Session(SerializableContainer):
 		self.closeWorld()
 		self.world.path = newWorldPath
 
+	onError: CatBoundSignal[Session, Callable[[Exception, str], None]] = CatSignal[Callable[[Exception, str], None]]('onError')
+
+	def showAndLogError(self, e: Exception, title: str = 'Error') -> None:
+		self.onError.emit(e, title)
+
 
 __session = Session()
+
+__session.onError.connect('logError', lambda e, title: logError(f'title:', format_full_exc(e)))
 
 
 def getSession() -> Session:
@@ -50,26 +59,29 @@ def getSession() -> Session:
 def setSession(session: Session):
 	global __session
 	assert isinstance(session, Session)
-	__session = session
+	if session is not __session:
+		__session.reset()
+		__session.copyFrom(session)
 
 
 def getSessionFilePath() -> str:
-	return os.path.join(os.path.dirname(getExePath()), 'sessions', 'session.json')
-
-
-def _logError(e, s):
-	logError(e, s)
-	raise e
+	return os.path.join(os.path.dirname(getExePath()), 'sessions', 'session1.json')
 
 
 def loadSessionFromFile(filePath: str = None) -> None:
+	def _logError(ex, s):
+		logError(ex, s)
+		raise ex
+
 	if filePath is None:
 		filePath = getSessionFilePath()
 	try:
 		with open(filePath, "r") as inFile:
-			deferredSelf = getSession().fromJSONDefer(inFile.read(), onError=_logError)
-			setSession(next(deferredSelf))
-			next(deferredSelf)
+			session = getSession().fromJSON(inFile.read(), onError=_logError)
+			setSession(session)
+			# deferredSelf = getSession().fromJSONDefer(inFile.read(), onError=_logError)
+			# setSession(next(deferredSelf))
+			# next(deferredSelf)
 	except (JSONDecodeError, FileNotFoundError, AttributeError, TypeError, RuntimeError) as e:
 		logError(f'Unable to load session: \n{traceback.format_exc()}')
 
