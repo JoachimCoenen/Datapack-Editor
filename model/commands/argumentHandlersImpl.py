@@ -810,28 +810,37 @@ class BiomeIdHandler(ArgumentHandler):
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, BIOMES)
 
+
 @argumentHandler(ST_DPE_COMMAND.name)
-class ST_DPE_COMMANDHandler(ArgumentHandler):
+class StDpeCommandHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 
 @argumentHandler(ST_DPE_DATAPACK.name)
-class ST_DPE_DATAPACKHandler(ArgumentHandler):
+class StDpeDataPackHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 
 @argumentHandler(ST_DPE_GAME_RULE.name)
-class ST_DPE_GAME_RULEHandler(ArgumentHandler):
+class StDpeGameRuleHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 
 @argumentHandler(ST_DPE_RAW_JSON_TEXT.name)
-class ST_DPE_RAW_JSON_TEXTHandler(ArgumentHandler):
+class StDpeRawJSONTextHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 	def getDocumentation(self, argument: ParsedCommandPart) -> HTMLStr:
 		return defaultDocumentationProvider(argument)
+
+
+# check if there's an ArgumentHandler for every registered named ArgumentType:
+for name, argType in ALL_NAMED_ARGUMENT_TYPES.items():
+	if name != argType.name:
+		raise ValueError(f"argumentType {argType.name!r} registered under wrong name {name!r}.")
+	if getArgumentHandler(argType) is None:
+		raise ValueError(f"missing argumentHandler for argumentType {argType.name!r}.")

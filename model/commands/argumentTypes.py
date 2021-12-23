@@ -1,28 +1,41 @@
-from typing import Any, Optional, Callable
+from __future__ import annotations
+from typing import cast
 
-from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, Computed
+from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, ComputedCached
+from Cat.utils.collections_ import OrderedDict, AddToDictDecorator
 
 
 @RegisterContainer
 class ArgumentType(SerializableContainer):
 	__slots__ = ()
-	# def parse(self, reader: StringReader) -> Any:  # throws CommandSyntaxException;
-	# 	pass
-	name: str = Serialized(default='')
+	name: str = ComputedCached(default='')
 	description: str = Serialized(default='')
 	description2: str = Serialized(default='')
 	example: str = Serialized(default='')
 	examples: str = Serialized(default='')
 	jsonProperties: str = Serialized(default='')
-	# getSuggestions: Optional[Callable[[]]] = Serialized(default='')
+
+	@classmethod
+	def create(cls, *, name: str, description: str = '', description2: str = '', example: str = '', examples: str = '', jsonProperties: str = '') -> ArgumentType:
+		self = cast(ArgumentType, super(ArgumentType, cls).create(description=description, description2=description2, example=example, examples=examples, jsonProperties=jsonProperties))
+		self.nameProp.setCachedValue(self, name)
+		registerNamedArgumentType(self)
+		return self
+
+
+ALL_NAMED_ARGUMENT_TYPES: OrderedDict[ArgumentType] = OrderedDict()
+_registerNamedArgumentType: AddToDictDecorator[str, ArgumentType] = AddToDictDecorator(ALL_NAMED_ARGUMENT_TYPES)
+
+
+def registerNamedArgumentType(argumentType: ArgumentType, forceOverride: bool = False) -> None:
+	_registerNamedArgumentType(argumentType.name, forceOverride)(argumentType)
+
 
 @RegisterContainer
 class LiteralsArgumentType(ArgumentType):
 	__slots__ = ()
-	# def parse(self, reader: StringReader) -> Any:  # throws CommandSyntaxException;
-	# 	pass
-	name: str = Serialized(getInitValue=lambda s: f"({'|'.join(s.options)})")
-	options: list[str] = Serialized(default_factory=list[str])
+	name: str = ComputedCached(getInitValue=lambda s: f"({'|'.join(s.options)})")
+	options: list[str] = ComputedCached(default_factory=list[str])
 	description: str = Serialized(default='')
 	description2: str = Serialized(default='')
 	example: str = Serialized(default='')
@@ -30,9 +43,16 @@ class LiteralsArgumentType(ArgumentType):
 	jsonProperties: str = Serialized(default='')
 
 	def __init__(self, options: list[str] = None):
+		super(LiteralsArgumentType, self).__init__()
+		# do not register in ALL_NAMED_ARGUMENT_TYPES if created using init!
 		if options is not None:
-			self.options = options
+			self.optionsProp.setCachedValue(self, options)
 
+	@classmethod
+	def create(cls, *, name: str, options: list[str], description: str = '', description2: str = '', example: str = '', examples: str = '', jsonProperties: str = '') -> LiteralsArgumentType:
+		self = cast(LiteralsArgumentType, super(LiteralsArgumentType, cls).create(name=name, description=description, description2=description2, example=example, examples=examples, jsonProperties=jsonProperties))
+		self.optionsProp.setCachedValue(self, options)
+		return self
 
 
 CHAT_COLORS: set[str] = {
@@ -804,6 +824,7 @@ ST_DPE_RAW_JSON_TEXT = ArgumentType.create(
 
 __all__ = [
 	'ArgumentType',
+	'ALL_NAMED_ARGUMENT_TYPES',
 	'LiteralsArgumentType',
 
 	'CHAT_COLORS',
