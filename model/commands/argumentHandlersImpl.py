@@ -764,10 +764,18 @@ class TimeHandler(ArgumentHandler):
 		return makeParsedArgument(sr, ai, value=(number, unit))
 
 
+# 8-4-4-4-12
+UUID_PATTERN = re.compile(r'[a-fA-F0-9]{1,8}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,12}')
+
+
 @argumentHandler(MINECRAFT_UUID.name)
 class UuidHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
+		# 8-4-4-4-12
+		literal = sr.tryReadRegex(UUID_PATTERN)
+		if literal is None:
+			return None
+		return makeParsedArgument(sr, ai, value=literal)
 
 
 @argumentHandler(MINECRAFT_VEC2.name)
