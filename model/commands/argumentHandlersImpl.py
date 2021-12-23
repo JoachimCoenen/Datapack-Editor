@@ -302,21 +302,70 @@ class EntityHandler(ArgumentHandler):
 			return suggestionsForFilterArgs(contextStr[2:], cursorPos - 2, TARGET_SELECTOR_ARGUMENTS_DICT)
 
 
-@argumentHandler(MINECRAFT_ENTITY_SUMMON.name)
-class EntitySummonHandler(ArgumentHandler):
+class EntityTypeLikeHandler(ArgumentHandler):
+	def __init__(self, allowTag: bool = False):
+		super().__init__()
+		self._allowTag: bool = allowTag
+
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=self._allowTag)
 
 	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
 		entity: ResourceLocation = argument.value
 		if not isinstance(entity, ResourceLocation):
 			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{entity}'.", argument.span)
 
-		if not _containsResourceLocation(entity, ENTITIES):
-			return CommandSemanticsError(f"Unknown entity id '{entity.asString}'.", argument.span, style='warning')
+		if entity.isTag:
+			isValid = any(entity in dp.contents.tags.entity_types for dp in getSession().world.datapacks)
+			if not isValid:
+				return CommandSemanticsError(f"Unknown entity type '{entity.asString}'.", argument.span, style='error')
+		else:
+			if not _containsResourceLocation(entity, ENTITIES):
+				return CommandSemanticsError(f"Unknown entity id '{entity.asString}'.", argument.span, style='warning')
+		return None
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, ENTITIES)
+		suggestions: Suggestions = []
+		suggestions += choicesFromResourceLocations(contextStr, ENTITIES)
+		if self._allowTag:
+			tags = _choicesForDatapackContents(contextStr, Datapack.contents.tags.entity_types)
+			suggestions += tags
+		return suggestions
+
+	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
+		entity: ResourceLocation = argument.value
+		if not isinstance(entity, ResourceLocation):
+			return None
+
+		start = argument.span.end.copy()
+		end = argument.span.end.copy()
+		# end.column = min(end.column, start.column + len(blockId.asString))
+		# end.index = min(end.index, start.index + len(blockId.asString))
+
+		if entity.isTag:
+			span = Span(start, end)
+			return [span]
+		return None
+
+	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
+		for dp in getSession().world.datapacks:
+			if (func := dp.contents.tags.entity_types.get(argument.value)) is not None:
+				# TODO: show prompt, when there are multiple files this applies to.
+				fp = func.filePath
+				window._tryOpenOrSelectDocument(fp)  # very bad...
+				break
+
+
+@argumentHandler(MINECRAFT_ENTITY_SUMMON.name)
+class EntitySummonHandler(EntityTypeLikeHandler):
+	def __init__(self, ):
+		super().__init__(allowTag=False)
+
+
+@argumentHandler(MINECRAFT_ENTITY_TYPE.name)
+class EntityTypeHandler(EntityTypeLikeHandler):
+	def __init__(self, ):
+		super().__init__(allowTag=True)
 
 
 @argumentHandler(MINECRAFT_FLOAT_RANGE.name)

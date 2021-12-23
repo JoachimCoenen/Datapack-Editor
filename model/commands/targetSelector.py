@@ -103,7 +103,7 @@ targetSelectorArguments: list[FilterArgumentInfo] = [
 	),
 	FilterArgumentInfo.create(
 		name='type',
-		type=MINECRAFT_ENTITY_SUMMON,
+		type=MINECRAFT_ENTITY_TYPE,
 		multipleAllowed=True,  # TODO: Arguments testing for equality cannot be duplicated, while arguments testing for inequality can.
 		isNegatable=True,
 	),

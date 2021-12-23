@@ -306,6 +306,16 @@ MINECRAFT_ENTITY_SUMMON = ArgumentType.create(
 	* {{cd|cow}}""",
 )
 
+MINECRAFT_ENTITY_TYPE = ArgumentType.create(
+	name='dpe:entity_type',
+	description="Must be an entity type in the format of resource location of a entity type or entity type tag.",
+	description2="""""",
+	examples="""
+	* {{cd|minecraft:pig}}
+	* {{cd|cow}}
+	* {{cd|#du:undead}}""",
+)
+
 MINECRAFT_FLOAT_RANGE = ArgumentType.create(
 	name='minecraft:float_range',
 	description="Must be a range acceptable for float values. (e.g. `0.1` - exact match of `0.1`. `..0.1` - less than or equal to `0.1`. `0.1..` - more than or equal to `0.1`. `0.1..1` - between `0.1` and `1`, inclusive.)",
@@ -818,6 +828,7 @@ __all__ = [
 	'MINECRAFT_ENTITY',
 	'MINECRAFT_ENTITY_ANCHOR',
 	'MINECRAFT_ENTITY_SUMMON',
+	'MINECRAFT_ENTITY_TYPE',
 	'MINECRAFT_FLOAT_RANGE',
 	'MINECRAFT_FUNCTION',
 	'MINECRAFT_GAME_MODE',
