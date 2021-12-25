@@ -1,19 +1,22 @@
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Iterable, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
+from PyQt5.QtCore import QEventLoop, pyqtSignal, QTimer
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QDialog, QWidget
+from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
 from Cat.CatPythonGUI.GUI import CORNERS, PythonGUI
 from Cat.CatPythonGUI.GUI.Widgets import HTMLDelegate
 from Cat.CatPythonGUI.GUI.codeEditor import Position, SearchOptions, SearchMode
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
+from Cat.CatPythonGUI.utilities import connectOnlyOnce
 from Cat.icons import icons
 from Cat.utils import escapeForXml
 from Cat.utils.collections_ import OrderedMultiDict
+from Cat.utils.profiling import TimedMethod
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
 from model.Model import Datapack
 from model.pathUtils import FilePath, ZipFilePool, loadTextFile
@@ -29,21 +32,10 @@ class Occurrence:
 
 @dataclass
 class SearchResult:
+	filesToSearch: list[FilePath] = field(default_factory=list)
 	occurrences: OrderedMultiDict[FilePath, Occurrence] = field(default_factory=OrderedMultiDict)
 	filesSearched: int = 0
 	error: Optional[Exception] = None
-
-
-@dataclass
-class FilterByFilterOptions:
-	filterStrFolder: str = "src/main/webapp/**"
-	filterStrZip: str = "**"
-	extensionRegEx: str = ".xml"
-
-
-class FilterBy(Enum):
-	Role = 1
-	Filter = 2
 
 
 class SearchAllDialog(CatFramelessWindowMixin, QDialog):
@@ -51,7 +43,8 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=PythonGUI, parent=parent)
 
-		self.selectedDatapacks: list[Datapack] = []
+		self._includedDatapacks: list[Datapack] = []
+		self.searchExpr: str = ''
 		self.searchOptions: SearchOptions = SearchOptions(
 			searchMode=SearchMode.Normal,
 			isCaseSensitive=False,
@@ -60,77 +53,43 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 
 		self._searchResult: SearchResult = SearchResult()
 		self.htmlDelegate = HTMLDelegate()
-		self.OnSidebarGUI = None
 
 		self.setWindowTitle('Search')
 
-	# def OnSidebarGUI(self, gui: PythonGUI):
-	# 	self.selectedProjs = self.datapacksSelectionGUI(gui)
+	progressSignal = pyqtSignal(int)
+
+	def resetUserInterface(self):
+		allFilePaths = self.filePathsToSearch
+		self._searchResult = SearchResult(allFilePaths)
+
+	def OnSidebarGUI(self, gui: PythonGUI):
+		includedDatapacks = []
+		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
+			for dp in getSession().world.datapacks:
+				if gui.checkboxLeft(None, dp.name):
+					includedDatapacks.append(dp)
+		self._includedDatapacks = includedDatapacks
 
 	def OnGUI(self, gui: PythonGUI):
-		self.selectedProjs = self.datapacksSelectionGUI(gui)
-		self.mainGUI(gui, self.selectedProjs)
-
-	def datapacksSelectionGUI(self, gui: PythonGUI) -> list[Datapack]:
-		datapacks = getSession().world.datapacks
-		# skip this gui for now:
-		return datapacks
-		searchAllProjs = gui.toggleLeft(None, label='search in all datapacks')
-
-		with gui.vLayout(verticalSpacing=0):
-			filterStr, allFilteredProjects = gui.advancedFilterTextField(
-				None,
-				allProjsList,
-				getStrChoices=lambda x: (pr.name for pr in x),
-				filterFunc=filterComputedChoices(Datapack.name.get),
-				valuesName='data packs',
-				enabled=not searchAllProjs,
-			)
-
-			def onContextMenu(x: Project, column: int, *, s=self):
-				with gui.popupMenu(atMousePosition=True) as menu:
-					menu.addItems(ContextMenuEntries.datapackItems(x, s.parent()._tryOpenOrSelectDocument))
-
-			selectedProj = gui.tree(DataListBuilder(
-				allFilteredProjects,
-				lambda p, i: p.name,
-				None,
-				lambda p, i: str(p.path),
-				1,
-				onContextMenu=onContextMenu
-			), enabled=not searchAllProjs).selectedItem
-
-			if searchAllProjs:
-				return allProjsList
-			else:
-				if selectedProj is not None:
-					return [selectedProj]
-				else:
-					return []
-
-	def mainGUI(self, gui: PythonGUI, selectedProjs: list[Datapack]):
 		with gui.vLayout(preventVStretch=False):
 			with gui.vLayout(preventVStretch=False):
 				with gui.hLayout(horizontalSpacing=0):
-					searchExpr = gui.codeField(None, isMultiline=False, roundedCorners=CORNERS.NONE)
-					searchPressed = gui.toolButton(icon=icons.search, overlap=(1, 0), roundedCorners=(False, True, False, True), default=True, windowShortcut=QKeySequence("Return"))
+					self.searchExpr = gui.codeField(self.searchExpr, isMultiline=False, roundedCorners=CORNERS.NONE)
+					if gui.toolButton(icon=icons.search, overlap=(1, 0), roundedCorners=(False, True, False, True), default=True, windowShortcut=QKeySequence("Return")):
+						self.resetUserInterface()
+						QTimer.singleShot(1, self.search)
 				if self.searchOptions.searchMode == SearchMode.RegEx:
 					try:
-						re.compile(searchExpr)
+						re.compile(self.searchExpr)
 					except Exception as e:
 						gui.helpBox(str(e),  'error', hasLabel=False)
 
-			# ============ Search Options: ============
 			self._searchOptionsGUI(gui)
-			# ============ Search Results: ============
-			if searchPressed:
-				searchFiles = self.getFilePathsToSearch(selectedProjs)
-				if searchFiles is not None:
-					self._searchResult = self.search(searchExpr, self.searchOptions, searchFiles)
-					self._searchResult.filesSearched = len(searchFiles)
-
-			gui.vSeparator()
-			self._resultsGUI(gui)
+			gui.progressBar(self.progressSignal, min=0, max=len(self._searchResult.filesToSearch), value=self._searchResult.filesSearched, format='', textVisible=True)
+			resultsGUI = gui.subGUI(PythonGUI, self._resultsGUI1, suppressRedrawLogging=False)
+			connectOnlyOnce(self, self.progressSignal, lambda i: resultsGUI.redrawGUI(), 'resultsGUI')
+			resultsGUI.redrawGUI()
+			self._resultsGUI2(gui)
 
 	def _searchOptionsGUI(self, gui: PythonGUI):
 		so = self.searchOptions
@@ -144,12 +103,13 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 			so.isCaseSensitive = gui.toggleLeft(so.isCaseSensitive, 'Case sensitive')
 			so.isMultiLine = gui.toggleLeft(so.isMultiLine, 'Multiline', enabled=so.searchMode == SearchMode.RegEx)
 
-	def _resultsGUI(self, gui: PythonGUI) -> None:
+	def _resultsGUI1(self, gui: PythonGUI) -> None:
 		if self._searchResult.error is not None:
 			gui.helpBox(f'error during search: {self._searchResult.error}', style='error')
 		else:
 			gui.label(f'found {len(self._searchResult.occurrences)} occurrences in {len(self._searchResult.occurrences.uniqueKeys())} files ({self._searchResult.filesSearched} files searched total): (double-click to open)')
 
+	def _resultsGUI2(self, gui: PythonGUI) -> None:
 		def labelMaker(x:  Union[SearchResult, FilePath, Occurrence], i: int) -> str:
 			if isinstance(x, Occurrence):
 				return x.line
@@ -162,15 +122,6 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 					filename = x.rpartition('/')[2]
 					return f'{filename} - (countInFile) - "{str(x[0])}"'
 			return '<root>'
-			# if isinstance(x[0], tuple):
-			# 	filename = x[0][1].rpartition('/')[2]
-			# else:
-			# 	filename = x[0].rpartition('/')[2]
-			# return (
-			# 	x[1][0],
-			# 	filename,
-			# 	str(x[0]),
-			# )[i]
 
 		def openDocument(x: Union[FilePath, Occurrence], *, s=self):
 			if isinstance(x, Occurrence):
@@ -209,44 +160,45 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 			itemDelegate=self.htmlDelegate
 		)
 
-	def getFilePathsToSearch(
-			self,
-			allDatapacks: list[Datapack],
-	) -> Optional[list[FilePath]]:
-
+	@property
+	def filePathsToSearch(self) -> list[FilePath]:
 		filePathsToSearch: list[FilePath] = []
-		for datapack in allDatapacks:
+		for datapack in self._includedDatapacks:
 			filePathsToSearch.extend(datapack.files)
-
 		return filePathsToSearch
 
-	def search(self, expr: str, searchOptions: SearchOptions, allFilePaths: Iterable[FilePath]) -> SearchResult:
-		result: SearchResult = SearchResult()
+	@TimedMethod()
+	def search(self) -> None:
+		searchResult = self._searchResult
 
 		try:
-			searcher = makeTextSearcher(expr, searchOptions)
-		except Exception as e:
-			result.error = e
-			return result
+			try:
+				searcher = makeTextSearcher(self.searchExpr, self.searchOptions)
+			except Exception as e:
+				searchResult.error = e
+				return
+			with ZipFilePool() as zipFilePool:
+				for i, filePath in enumerate(searchResult.filesToSearch):
+					self._searchResult.filesSearched = i + 1
+					if i % 100 == 0:
+						self.progressSignal.emit(i+1)
+						QApplication.processEvents(QEventLoop.ExcludeUserInputEvents, 1)
+					try:
+						text = loadTextFile(filePath, zipFilePool)
+					except UnicodeDecodeError:
+						continue
+					lastStart = 0
+					lastLineNr = 0
+					for matchStart, matchEnd in searcher(text):
+						start = text.rfind('\n', 0, matchStart)
+						start = start + 1  # skip \n at beginning of line  # if start != -1 else 0
+						end = text.find('\n', matchEnd)
+						end = end if end != -1 else len(text)
+						occurrenceStr = f'<font>{escapeForXml(text[start:matchStart])}<b>{escapeForXml(text[matchStart:matchEnd])}</b>{escapeForXml(text[matchEnd:end])}</font>'
 
-		with ZipFilePool() as zipFilePool:
-			for filePath in allFilePaths:
-				try:
-					text = loadTextFile(filePath, zipFilePool)
-				except UnicodeDecodeError:
-					continue
-				lastStart = 0
-				lastLineNr = 0
-				for matchStart, matchEnd in searcher(text):
-					start = text.rfind('\n', 0, matchStart)
-					start = start + 1  # skip \n at beginnig of line  # if start != -1 else 0
-					end = text.find('\n', matchEnd)
-					end = end if end != -1 else len(text)
-					occurrenceStr = f'<font>{escapeForXml(text[start:matchStart])}<b>{escapeForXml(text[matchStart:matchEnd])}</b>{escapeForXml(text[matchEnd:end])}</font>'
+						lastLineNr += text.count('\n', lastStart, start)
+						lastStart = start
 
-					lastLineNr += text.count('\n', lastStart, start)
-					lastStart = start
-
-					result.occurrences.add(filePath, Occurrence(filePath, Position(lastLineNr, matchStart - start), occurrenceStr))
-		return result
-
+						searchResult.occurrences.add(filePath, Occurrence(filePath, Position(lastLineNr, matchStart - start), occurrenceStr))
+		finally:
+			self._gui.redrawGUI()
