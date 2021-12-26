@@ -1,2 +1,2 @@
 ## next version
- * TBD
+ * added support for MC versions 1.17 & 1.18
