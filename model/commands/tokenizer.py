@@ -4,10 +4,10 @@ from enum import Enum
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized
 from model.commands.argumentTypes import *
 from model.commands.command import Keyword, ArgumentInfo
-from model.commands.commands import BASIC_COMMAND_INFO
 from model.commands.parsedCommands import ParsedComment, ParsedCommand
 from model.commands.parser import parseMCFunction
 from model.parsingUtils import Span
+from session.session import getSession
 
 
 class TokenType(Enum):
@@ -68,7 +68,7 @@ def tokenizeMCFunction1(text: str, start: int, end: int) -> list[Token1]:
 			token.style = TokenType.Operator
 		elif re.fullmatch(r'\d+(?:\.\d*)?', tokenText) is not None:
 			token.style = TokenType.Number
-		elif tokenText in BASIC_COMMAND_INFO:
+		elif tokenText in getSession().minecraftData.commands:
 			token.style = TokenType.Command
 		elif tokenText.startswith('#'):
 			token.style = TokenType.Comment

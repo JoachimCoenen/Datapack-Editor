@@ -12,7 +12,9 @@ from Cat.utils import getExePath, openOrCreate, format_full_exc
 from Cat.utils.profiling import logError
 from Cat.utils.signals import CatSignal, CatBoundSignal
 from model.Model import World
+from model.data.mcVersions import MCVersion, getMCVersion
 from session.documentHandling import DocumentsManager
+from settings import applicationSettings
 
 WindowId = NewType('WindowId', str)
 
@@ -30,6 +32,8 @@ class Session(SerializableContainer):
 	hasOpenedWorld: bool = Computed(getInitValue=lambda s: bool(s.world.isValid))
 
 	documents: DocumentsManager = Serialized(default_factory=DocumentsManager, decorators=[pd.NoUI()])
+
+	minecraftData: MCVersion = Computed(default_factory=lambda: getMCVersion(applicationSettings.minecraft.version))
 
 	def closeWorld(self) -> None:
 		world = self.world
