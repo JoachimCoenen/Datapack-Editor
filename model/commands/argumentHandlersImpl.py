@@ -15,7 +15,6 @@ from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, mi
 from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
-from model.commands.blockStates import getBlockStatesDict
 from model.commands.command import ArgumentInfo
 from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs
 from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart
@@ -149,7 +148,7 @@ class BlockStateHandler(ArgumentHandler):
 			return None
 		blockID = ResourceLocation.fromString(blockID)
 		# block states:
-		blockStatesDict = getBlockStatesDict(blockID)
+		blockStatesDict = getSession().minecraftData.getBlockStatesDict(blockID)
 		states: Optional[FilterArguments] = parseFilterArgs(sr, blockStatesDict, errorsIO=errorsIO)
 		if states is not None:
 			sr.mergeLastSave()
@@ -189,7 +188,7 @@ class BlockStateHandler(ArgumentHandler):
 			blockID = sr.tryReadResourceLocation(allowTag=self._allowTag)
 			if blockID is not None:
 				if cursorPos >= len(blockID):
-					blockStatesDict = getBlockStatesDict(ResourceLocation.fromString(blockID))
+					blockStatesDict = getSession().minecraftData.getBlockStatesDict(ResourceLocation.fromString(blockID))
 					argsStart = sr.currentPos.index
 					suggestions += suggestionsForFilterArgs(sr.tryReadRemaining() or '', cursorPos - argsStart, blockStatesDict)
 					if cursorPos > len(blockID):  # we're inside the block states, so don't suggest blocks anymore.

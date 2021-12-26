@@ -55,6 +55,13 @@ class MCVersion:
 
 	commands: dict[str, CommandInfo]
 
+	def getBlockStatesDict(self, blockID: ResourceLocation) -> dict[str, FilterArgumentInfo]:
+		arguments = self.blockStates.get(blockID)
+		if arguments is None:
+			return {}
+		else:
+			return {argument.name: argument for argument in arguments}
+
 
 def _copyRecursive(data):
 	newData = copy(data)
