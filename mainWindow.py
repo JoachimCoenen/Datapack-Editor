@@ -15,23 +15,25 @@ from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxB
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.icons import icons
-from Cat.utils import openOrCreate, format_full_exc
+from Cat.utils import openOrCreate
 from Cat.utils.formatters import formatVal, FW
-from Cat.utils.profiling import logError
 from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
 from keySequences import KEY_SEQUENCES
-from model.commands.commands import AllCommands, BASIC_COMMAND_INFO
 from model.commands.parser import parseMCFunction
 from model.parsingUtils import Span
+from session.session import getSession, WindowId, saveSessionToFile
 from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
+from session import documentsImpl
 from gui.checkAllDialog import CheckAllDialog
 from gui.searchAllDialog import SearchAllDialog
 from gui.spotlightSearch import SpotlightSearchGui
 from model.pathUtils import FilePath
 from gui.datapackEditorGUI import DatapackEditorGUI
-from session.session import getSession, WindowId, saveSessionToFile
 from settings import applicationSettings
 from settings.settingsDialog import SettingsDialog
+
+
+documentsImpl.init()
 
 
 def frange(a: float, b: float, jump: float, *, includeLAst: bool = False):
@@ -192,7 +194,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			if button(icon=icons.camera, tip='parse MCFunction', **btnKwArgs, enabled=document is not None):
 				if self.selectedDocument is not None:
 					text = self.selectedDocument.content
-					func, errors = parseMCFunction(text)
+					func, errors = parseMCFunction(getSession().minecraftData.commands, text)
 					filePath = "D:/Programming/Python/MinecraftDataPackEditor/sessions/mcFunction.ast"
 					with openOrCreate(filePath, "w") as outFfile:
 						formatVal((func, errors), s=FW(outFfile))
@@ -238,30 +240,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			if button(icon=icons.settings, tip='Settings', **btnKwArgs, windowShortcut=QKeySequence.Preferences):
 				self._showSettingsDialog(gui)
 
-			# gui.hSeparator()
-			# if button(icon=icons.camera_ban, tip='Ban Cameras', **btnKwArgs):
-			# 	if gui.askUser(title='Really?', message='You want to ban all cameras?!'):
-			# 		gui.showErrorDialog(title='Error', message='You cannot ban all cameras!')
-			# 	else:
-			# 		gui.showInformationDialog(title='phew...', message='Thank goodness!')
-
 			if applicationSettings.debugging.isDeveloperMode:
-				gui.hSeparator()
-				if button(icon=icons.camera, tip='showCommandInfo', **btnKwArgs):
-					try:
-						ac = AllCommands.create(BASIC_COMMAND_INFO=BASIC_COMMAND_INFO)
-						filePath = "D:/Programming/Python/MinecraftDataPackEditor/sessions/commands.ast"
-						with openOrCreate(filePath, "w") as outFfile:
-							ac.toJSON(outFfile)
-						self._tryOpenOrSelectDocument(filePath)
-					except Exception as e:
-						fullMsg = format_full_exc(e)
-						logError(fullMsg)
-						gui.showErrorDialog(
-							type(e).__name__,
-							f"```{fullMsg}```",
-							textFormat=Qt.MarkdownText
-						)
 				gui.hSeparator()
 				Cat.CatPythonGUI.GUI.pythonGUI.profilingEnabled = gui.toggleSwitch(Cat.CatPythonGUI.GUI.pythonGUI.profilingEnabled, enabled=True)
 				gui.label('P')

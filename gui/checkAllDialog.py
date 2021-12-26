@@ -45,7 +45,7 @@ class WrappedError(SerializableContainer):
 def checkMcFunctionFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[Error]:
 	try:
 		sourceCode = loadTextFile(filePath, archiveFilePool)
-		tree, errors = parseMCFunction(sourceCode)
+		tree, errors = parseMCFunction(getSession().minecraftData.commands, sourceCode)
 		if tree is not None:
 			errors += checkMCFunction(tree)
 		return errors

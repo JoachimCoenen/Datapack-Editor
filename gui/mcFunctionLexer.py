@@ -11,11 +11,10 @@ from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override
 from model.commands.argumentHandlers import getArgumentHandler, defaultDocumentationProvider
 from model.commands.command import ArgumentInfo, Keyword, Switch, CommandNode, TERMINAL, COMMANDS_ROOT
-from model.commands.commands import BASIC_COMMAND_INFO
 from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedComment, ParsedArgument
 from model.commands.parser import parseMCFunction
 from model.commands.tokenizer import TokenType, tokenizeCommand, tokenizeComment, Token2
-from model.commands.validator import checkMCFunction
+from model.commands.validator import checkMCFunction, getSession
 from model.parsingUtils import GeneralParsingError, Span, Position
 
 TT = TypeVar('TT')
@@ -178,7 +177,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 				if handler is not None:
 					result += handler.getSuggestions(nx, contextStr, cursorPos)
 			elif nx is COMMANDS_ROOT:
-				result += list(BASIC_COMMAND_INFO.keys())
+				result += list(getSession().minecraftData.commands.keys())
 		return result
 
 	@CrashReportWrapped
@@ -196,13 +195,13 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		cePosition = CEPosition(*editor.getCursorPosition())
 		position = Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
 
-		function, errors = parseMCFunction(text)
+		function, errors = parseMCFunction(getSession().minecraftData.commands, text)
 		if function is None:
 			return super().updateAutoCompletionList(context, aList)
 
 		match = self.getBestMatch(function, position)
 		if match is None:
-			return list(BASIC_COMMAND_INFO.keys())
+			return list(getSession().minecraftData.commands.keys())
 
 		# if match.info is None or (0 <= idx-1 < len(text) and text[idx-1] != ' '):
 		if match.span.end.index >= position.index:
@@ -231,7 +230,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		editor: QsciScintilla = lexer.editor()
 		text: str = editor.text()
 
-		function, errors = parseMCFunction(text)
+		function, errors = parseMCFunction(getSession().minecraftData.commands, text)
 		if function is None:
 			return []
 
@@ -374,7 +373,7 @@ class LexerMCFunction(QsciLexerCustom):
 		start = 0
 		text: str = self.parent().text()
 
-		function, errors = parseMCFunction(text)
+		function, errors = parseMCFunction(getSession().minecraftData.commands, text)
 		if function is None:
 			self._function = None
 			self._errors = []

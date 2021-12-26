@@ -15,7 +15,6 @@ from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, mi
 from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
-from model.commands.blockStates import getBlockStatesDict
 from model.commands.command import ArgumentInfo
 from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs
 from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart
@@ -23,7 +22,6 @@ from model.commands.snbt import parseNBTPath, parseNBTTag
 from model.commands.stringReader import StringReader
 from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
-from model.data.dataValues import BLOCKS, DIMENSIONS, ITEMS, SLOTS, ENTITIES, EFFECTS, ENCHANTMENTS, BIOMES, PARTICLES
 from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations
 from model.parsingUtils import Span, Position
 from model.pathUtils import FilePath
@@ -150,7 +148,7 @@ class BlockStateHandler(ArgumentHandler):
 			return None
 		blockID = ResourceLocation.fromString(blockID)
 		# block states:
-		blockStatesDict = getBlockStatesDict(blockID)
+		blockStatesDict = getSession().minecraftData.getBlockStatesDict(blockID)
 		states: Optional[FilterArguments] = parseFilterArgs(sr, blockStatesDict, errorsIO=errorsIO)
 		if states is not None:
 			sr.mergeLastSave()
@@ -179,7 +177,7 @@ class BlockStateHandler(ArgumentHandler):
 			if not isValid:
 				return CommandSemanticsError(f"Unknown block tag '{blockId.asString}'.", argument.span, style='error')
 		else:
-			if not _containsResourceLocation(blockId, BLOCKS):
+			if not _containsResourceLocation(blockId, getSession().minecraftData.blocks):
 				return CommandSemanticsError(f"Unknown block id '{blockId.asString}'.", argument.span, style='warning')
 		return None
 
@@ -190,12 +188,12 @@ class BlockStateHandler(ArgumentHandler):
 			blockID = sr.tryReadResourceLocation(allowTag=self._allowTag)
 			if blockID is not None:
 				if cursorPos >= len(blockID):
-					blockStatesDict = getBlockStatesDict(ResourceLocation.fromString(blockID))
+					blockStatesDict = getSession().minecraftData.getBlockStatesDict(ResourceLocation.fromString(blockID))
 					argsStart = sr.currentPos.index
 					suggestions += suggestionsForFilterArgs(sr.tryReadRemaining() or '', cursorPos - argsStart, blockStatesDict)
 					if cursorPos > len(blockID):  # we're inside the block states, so don't suggest blocks anymore.
 						return suggestions
-		suggestions += choicesFromResourceLocations(contextStr, BLOCKS)
+		suggestions += choicesFromResourceLocations(contextStr, getSession().minecraftData.blocks)
 		if self._allowTag:
 			tags = _choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks)
 			suggestions += tags
@@ -285,13 +283,13 @@ class DimensionHandler(ArgumentHandler):
 		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
 
 	def validate(self, argument: ParsedCommandPart) -> Optional[CommandSemanticsError]:
-		if not _containsResourceLocation(argument.value, DIMENSIONS):
+		if not _containsResourceLocation(argument.value, getSession().minecraftData.dimensions):
 			return CommandSemanticsError(f"Unknown dimension '{argument.value}'.", argument.span)
 		else:
 			return None
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, DIMENSIONS)
+		return choicesFromResourceLocations(contextStr, getSession().minecraftData.dimensions)
 
 
 @argumentHandler(MINECRAFT_ENTITY.name)
@@ -349,13 +347,13 @@ class EntityTypeLikeHandler(ArgumentHandler):
 			if not isValid:
 				return CommandSemanticsError(f"Unknown entity type '{entity.asString}'.", argument.span, style='error')
 		else:
-			if not _containsResourceLocation(entity, ENTITIES):
+			if not _containsResourceLocation(entity, getSession().minecraftData.entities):
 				return CommandSemanticsError(f"Unknown entity id '{entity.asString}'.", argument.span, style='warning')
 		return None
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
 		suggestions: Suggestions = []
-		suggestions += choicesFromResourceLocations(contextStr, ENTITIES)
+		suggestions += choicesFromResourceLocations(contextStr, getSession().minecraftData.entities)
 		if self._allowTag:
 			tags = _choicesForDatapackContents(contextStr, Datapack.contents.tags.entity_types)
 			suggestions += tags
@@ -477,11 +475,11 @@ class ItemEnchantmentHandler(ArgumentHandler):
 		if not isinstance(enchantment, ResourceLocation):
 			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{enchantment}'.", argument.span)
 
-		if not _containsResourceLocation(enchantment, ENCHANTMENTS):
+		if not _containsResourceLocation(enchantment, getSession().minecraftData.enchantments):
 			return CommandSemanticsError(f"Unknown enchantment '{enchantment.asString}'.", argument.span, style='warning')
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, ENCHANTMENTS)
+		return choicesFromResourceLocations(contextStr, getSession().minecraftData.enchantments)
 
 
 @argumentHandler(MINECRAFT_ITEM_SLOT.name)
@@ -494,11 +492,11 @@ class ItemSlotHandler(ArgumentHandler):
 
 	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
 		slot: str = argument.value
-		if slot not in SLOTS:
+		if slot not in getSession().minecraftData.slots:
 			return CommandSemanticsError(f"Unknown item slot '{slot}'.", argument.span, style='error')
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		return list(SLOTS.keys())
+		return list(getSession().minecraftData.slots.keys())
 
 
 @argumentHandler(MINECRAFT_ITEM_STACK.name)
@@ -538,12 +536,12 @@ class ItemStackHandler(ArgumentHandler):
 			if not isValid:
 				return CommandSemanticsError(f"Unknown block tag '{itemId.asString}'.", argument.span, style='error')
 		else:
-			if not (_containsResourceLocation(itemId, ITEMS) or _containsResourceLocation(itemId, BLOCKS)):
+			if not (_containsResourceLocation(itemId, getSession().minecraftData.items) or _containsResourceLocation(itemId, getSession().minecraftData.blocks)):
 				return CommandSemanticsError(f"Unknown item id '{itemId.asString}'.", argument.span, style='warning')
 		return None
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		result = choicesFromResourceLocations(contextStr, chain(ITEMS, BLOCKS))
+		result = choicesFromResourceLocations(contextStr, chain(getSession().minecraftData.items, getSession().minecraftData.blocks))
 		if self._allowTag:
 			result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.items))
 			result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks))
@@ -594,11 +592,11 @@ class MobEffectHandler(ArgumentHandler):
 		if not isinstance(effect, ResourceLocation):
 			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{effect}'.", argument.span)
 
-		if not _containsResourceLocation(effect, EFFECTS):
+		if not _containsResourceLocation(effect, getSession().minecraftData.effects):
 			return CommandSemanticsError(f"Unknown mob effect '{effect.asString}'.", argument.span, style='warning')
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, EFFECTS)
+		return choicesFromResourceLocations(contextStr, getSession().minecraftData.effects)
 
 
 @argumentHandler(MINECRAFT_NBT_COMPOUND_TAG.name)
@@ -638,7 +636,7 @@ class ObjectiveHandler(ArgumentHandler):
 		return makeParsedArgument(sr, ai, value=objective)
 
 	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
-		if len(argument.value) > 16:
+		if len(argument.value) > 16 and getSession().minecraftData.name < '1.18':
 			return CommandSemanticsError(f"Objective names cannot be longer than 16 characters.", argument.span, style='error')
 
 
@@ -658,11 +656,11 @@ class ParticleHandler(ArgumentHandler):
 		if not isinstance(particle, ResourceLocation):
 			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{particle}'.", argument.span)
 
-		if not _containsResourceLocation(particle, PARTICLES):
+		if not _containsResourceLocation(particle, getSession().minecraftData.particles):
 			return CommandSemanticsError(f"Unknown biome '{particle.asString}'.", argument.span, style='warning')
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, PARTICLES)
+		return choicesFromResourceLocations(contextStr, getSession().minecraftData.particles)
 
 
 @argumentHandler(MINECRAFT_RESOURCE_LOCATION.name)
@@ -808,11 +806,11 @@ class BiomeIdHandler(ArgumentHandler):
 		if not isinstance(biome, ResourceLocation):
 			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{biome}'.", argument.span)
 
-		if not _containsResourceLocation(biome, BIOMES):
+		if not _containsResourceLocation(biome, getSession().minecraftData.biomes):
 			return CommandSemanticsError(f"Unknown biome '{biome.asString}'.", argument.span, style='warning')
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, BIOMES)
+		return choicesFromResourceLocations(contextStr, getSession().minecraftData.biomes)
 
 
 @argumentHandler(ST_DPE_COMMAND.name)

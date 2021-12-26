@@ -22,6 +22,8 @@ from PyQt5.QtWidgets import QStyleFactory
 
 QFont.__deepcopy__ = lambda x, m: QFont(x)
 
+from model.data.mcVersions import ALL_MC_VERSIONS
+
 
 @RegisterContainer
 class AppearanceSettings(SerializableContainer):
@@ -114,9 +116,9 @@ class MinecraftSettings(SerializableContainer):
 		label='Minecraft Version',
 		default='1.17',
 		decorators=[
-			pd.ComboBox(choices=['1.17']),
+			pd.ComboBox(choices=ALL_MC_VERSIONS.keys()),
 		],
-		shouldSerialize=False
+		shouldSerialize=True
 	)
 
 	executable: str = Serialized(
