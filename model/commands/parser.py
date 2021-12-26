@@ -53,7 +53,7 @@ class Parser:
 
 	def parseComment(self, sr: StringReader) -> ParsedComment:
 		sr.tryReadRemaining()
-		return ParsedComment.create(
+		return ParsedComment(
 			source=sr.fullSource,
 			span=sr.currentSpan
 		)
@@ -83,8 +83,8 @@ class Parser:
 		sr.tryReadRemaining()
 		commandSpan = Span(commandSpan.start, sr.currentPos)
 
-		command = ParsedCommand.create(name=commandName, info=commandInfo, span=commandSpan, source=sr.fullSource)
-		command.argument = argument
+		command = ParsedCommand(value=commandName, info=commandInfo, span=commandSpan, source=sr.fullSource)
+		command.next = argument
 
 		return command
 

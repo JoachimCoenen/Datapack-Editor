@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from Cat.Serializable import RegisterContainer
-from model.parsingUtils import Position, GeneralParsingError
+from model.parsingUtils import GeneralParsingError
 from model.utils import Message
 
 

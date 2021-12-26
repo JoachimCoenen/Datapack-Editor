@@ -205,10 +205,13 @@ class BlockStateHandler(ArgumentHandler):
 			return None
 
 		blockId = blockState.blockId
-		start = argument.span.start.copy()
-		end = argument.span.end.copy()
-		end.column = min(end.column, start.column + len(blockId.asString))
-		end.index = min(end.index, start.index + len(blockId.asString))
+		start = argument.span.start
+		end = argument.span.end
+		end = replace(
+			end,
+			column=min(end.column, start.column + len(blockId.asString)),
+			index=min(end.index, start.index + len(blockId.asString))
+		)
 
 		ranges = []
 		if blockId.isTag:
@@ -554,10 +557,13 @@ class ItemStackHandler(ArgumentHandler):
 
 		itemId = itemStack.itemId
 		if itemId.isTag:
-			start = argument.span.start.copy()
-			end = argument.span.end.copy()
-			end.column = min(end.column, start.column + len(itemId.asString))
-			end.index = min(end.index, start.index + len(itemId.asString))
+			start = argument.span.start
+			end = argument.span.end
+			end = replace(
+				end,
+				column=min(end.column, start.column + len(itemId.asString)),
+				index=min(end.index, start.index + len(itemId.asString))
+			)
 			span = Span(start, end)
 			return [span]
 		return None

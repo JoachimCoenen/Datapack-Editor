@@ -70,7 +70,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 
 		self._spoilerSizePolicy = QSizePolicy(SizePolicy.Expanding.value, SizePolicy.Fixed.value)
 
-		self.setWindowTitle('Validate all files')
+		self.setWindowTitle('Validate Files')
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
 		includedDatapacks = []
@@ -83,7 +83,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.hLayout():
 			gui.progressBar(self.progressSignal, min=0, max=self._filesCount, value=self._filesChecked, format='', textVisible=True)
-			if gui.button('check all', default=True):
+			if gui.button('check files', default=True):
 				self.resetUserInterface()
 				QTimer.singleShot(1, self.checkAllFiles)
 

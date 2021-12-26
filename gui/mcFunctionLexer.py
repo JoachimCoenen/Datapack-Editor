@@ -245,7 +245,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 						if handler is not None:
 							partRanges = handler.getClickableRanges(part)
 							if partRanges:
-								ranges.extend(map(Span.asTuple.get, partRanges))
+								ranges.extend(r.asTuple for r in partRanges)
 				part = part.next
 		return ranges
 
