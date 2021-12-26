@@ -139,11 +139,20 @@ class StringReader:
 		else:
 			return False
 
+	@cy_final
 	def tryConsumeChar(self, char: Char) -> bool:
 		if self.cursor < self.totalLength and self.source[self.cursor] == char:
 			self.cursor += 1
 			return True
 		return False
+
+	@cy_final
+	def tryPeek(self) -> Char:
+		if self.cursor < self.totalLength:
+			return self.source[self.cursor]
+		else:
+			return None
+
 
 	@cy_final
 	def tryReadRemaining(self) -> Optional[str]:

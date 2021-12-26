@@ -93,7 +93,7 @@ class Token2(SerializableContainer):
 
 def tokenizeMCFunction2(text: str, start: int, end: int) -> list[Token2]:
 
-	function, errors = parseMCFunction(text)
+	function, errors = parseMCFunction(getSession().minecraftData.commands, text)
 	if function is None:
 		return []
 

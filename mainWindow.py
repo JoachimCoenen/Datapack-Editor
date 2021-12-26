@@ -196,7 +196,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			if button(icon=icons.camera, tip='parse MCFunction', **btnKwArgs, enabled=document is not None):
 				if self.selectedDocument is not None:
 					text = self.selectedDocument.content
-					func, errors = parseMCFunction(text)
+					func, errors = parseMCFunction(getSession().minecraftData.commands, text)
 					filePath = "D:/Programming/Python/MinecraftDataPackEditor/sessions/mcFunction.ast"
 					with openOrCreate(filePath, "w") as outFfile:
 						formatVal((func, errors), s=FW(outFfile))
