@@ -22,47 +22,47 @@ DPE_TARGET_SELECTOR_SCORES = ArgumentType.create(
 
 targetSelectorArguments: list[FilterArgumentInfo] = [
 	# Selection by Position:
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='x',
 		type=BRIGADIER_DOUBLE,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='y',
 		type=BRIGADIER_DOUBLE,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='z',
 		type=BRIGADIER_DOUBLE,
 	),
-	FilterArgumentInfo.create(  # TODO: only unsigned values are allowed
+	FilterArgumentInfo(  # TODO: only unsigned values are allowed
 		name='distance',
 		type=MINECRAFT_FLOAT_RANGE,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='dx',
 		type=BRIGADIER_DOUBLE,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='dy',
 		type=BRIGADIER_DOUBLE,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='dz',
 		type=BRIGADIER_DOUBLE,
 	),
 	# Selection by Scoreboard Values:
-	FilterArgumentInfo.create(  # TODO: scores: @e[scores={foo=10,bar=1..5}]
+	FilterArgumentInfo(  # TODO: scores: @e[scores={foo=10,bar=1..5}]
 		name='scores',
 		type=DPE_TARGET_SELECTOR_SCORES,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='tag',
 		type=BRIGADIER_STRING,
 		multipleAllowed=True,
 		isNegatable=True,
 		canBeEmpty=True,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='team',
 		type=MINECRAFT_TEAM,
 		multipleAllowed=True,
@@ -70,57 +70,57 @@ targetSelectorArguments: list[FilterArgumentInfo] = [
 		canBeEmpty=True,
 	),
 	# Selection by Traits:
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='limit',
 		type=BRIGADIER_INTEGER,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='sort',
 		type=LiteralsArgumentType(['nearest', 'furthest', 'random', 'arbitrary']),
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='level',
 		type=MINECRAFT_INT_RANGE,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='gamemode',
 		type=MINECRAFT_GAME_MODE,
 		isNegatable=True,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='name',
 		type=BRIGADIER_STRING,
 		multipleAllowed=True,  # TODO: Arguments testing for equality cannot be duplicated, while arguments testing for inequality can.
 		isNegatable=True,
 	),
-	FilterArgumentInfo.create(  # TODO: apply bound check (-90 ... +90)
+	FilterArgumentInfo(  # TODO: apply bound check (-90 ... +90)
 		name='x_rotation',
 		type=MINECRAFT_FLOAT_RANGE,
 	),
-	FilterArgumentInfo.create(  # TODO: apply bound check (-90 ... +180)
+	FilterArgumentInfo(  # TODO: apply bound check (-90 ... +180)
 		name='y_rotation',
 		type=MINECRAFT_FLOAT_RANGE,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='type',
 		type=MINECRAFT_ENTITY_TYPE,
 		multipleAllowed=True,  # TODO: Arguments testing for equality cannot be duplicated, while arguments testing for inequality can.
 		isNegatable=True,
 	),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='nbt',
 		type=MINECRAFT_NBT_COMPOUND_TAG,
 		multipleAllowed=True,
 		isNegatable=True,
 	),
-	# FilterArgumentInfo.create(  # TODO: Selecting targets by advancements
+	# FilterArgumentInfo(  # TODO: Selecting targets by advancements
 	# 	name='advancements',
 	# 	type=advancements,
 	# 	multipleAllowed=False,
 	# 	isNegatable=False,
 	# 	canBeEmpty=False,
 	# ),
-	FilterArgumentInfo.create(
+	FilterArgumentInfo(
 		name='predicate',
 		type=MINECRAFT_RESOURCE_LOCATION,  # TODO: actually, the type is predicates.
 		multipleAllowed=True,
@@ -133,7 +133,7 @@ TARGET_SELECTOR_ARGUMENTS_DICT: dict[str, FilterArgumentInfo] = {
 	for tsa in targetSelectorArguments
 }
 
-FALLBACK_TS_ARGUMENT_INFO = FilterArgumentInfo.create(
+FALLBACK_TS_ARGUMENT_INFO = FilterArgumentInfo(
 	name='_fallback',
 	type=BRIGADIER_STRING,
 	multipleAllowed=True,

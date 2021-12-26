@@ -57,7 +57,7 @@ def _unknownOrTooManyArgumentsError(commandPart: ParsedCommandPart, possibilitie
 
 
 def _missingArgumentError(command: ParsedCommand, lastCommandPart: ParsedCommandPart, possibilities: Sequence[CommandNode]) -> CommandSemanticsError:
-	# lastArgEnd = Maybe(command.argument).recursive(ParsedArgument.next.get).orElse(command).span.end
+	# lastArgEnd = Maybe(command.next).recursive(ParsedArgument.next.get).orElse(command).span.end
 	# if lastArgEnd.index >= command.span.end.index:
 	# 	lastArgEnd = lastArgEnd.copy()
 	# 	lastArgEnd.column -= 1

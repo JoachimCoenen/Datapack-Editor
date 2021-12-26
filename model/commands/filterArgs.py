@@ -21,15 +21,14 @@ from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
 from model.parsingUtils import Span, Position
 
 
-@RegisterContainer
+@dataclass
 class FilterArgumentInfo(ArgumentInfo):
-	__slots__ = ()
-	multipleAllowed: bool = Serialized(default=False)
-	isNegatable: bool = Serialized(default=False)
-	canBeEmpty: bool = Serialized(default=False)
+	multipleAllowed: bool = False
+	isNegatable: bool = False
+	canBeEmpty: bool = False
 
 
-FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo.create(
+FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo(
 	name='_fallback',
 	type=BRIGADIER_STRING,
 	multipleAllowed=True,

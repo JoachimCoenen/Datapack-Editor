@@ -1,3 +1,5 @@
+from copy import copy
+
 from Cat.utils.collections_ import ChainedList
 from model.commands.argumentTypes import *
 from model.commands.command import CommandInfo, Keyword, ArgumentInfo, TERMINAL, COMMANDS_ROOT, Switch
@@ -6,469 +8,469 @@ from model.data.mcVersions import MCVersion
 
 def fillCommandsFor1_17(version: MCVersion) -> None:
 	_BASIC_COMMAND_INFO_LIST = [
-		CommandInfo.create(
-			command='?',
+		CommandInfo(
+			name='?',
 			description='An alias of /help. Provides help for commands.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='advancement',
+		CommandInfo(
+			name='advancement',
 			description='Gives, removes, or checks player advancements.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='attribute',
+		CommandInfo(
+			name='attribute',
 			description='Queries, adds, removes or sets an entity attribute.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='ban',
+		CommandInfo(
+			name='ban',
 			description='Adds player to banlist.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='ban-ip',
+		CommandInfo(
+			name='ban-ip',
 			description='Adds IP address to banlist.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='banlist',
+		CommandInfo(
+			name='banlist',
 			description='Displays banlist.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='bossbar',
+		CommandInfo(
+			name='bossbar',
 			description='Creates and modifies bossbars.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='clear',
+		CommandInfo(
+			name='clear',
 			description='Clears items from player inventory.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='clone',
+		CommandInfo(
+			name='clone',
 			description='Copies blocks from one place to another.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='data',
+		CommandInfo(
+			name='data',
 			description='Gets, merges, modifies and removes block entity and entity NBT data.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='datapack',
+		CommandInfo(
+			name='datapack',
 			description='Controls loaded data packs.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='debug',
+		CommandInfo(
+			name='debug',
 			description='Starts or stops a debugging session.',
 			opLevel=3,
 		),
-		CommandInfo.create(
-			command='defaultgamemode',
+		CommandInfo(
+			name='defaultgamemode',
 			description='Sets the default game mode.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='deop',
+		CommandInfo(
+			name='deop',
 			description='Revokes operator status from a player.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='difficulty',
+		CommandInfo(
+			name='difficulty',
 			description='Sets the difficulty level.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='effect',
+		CommandInfo(
+			name='effect',
 			description='Add or remove status effects.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='enchant',
+		CommandInfo(
+			name='enchant',
 			description="Adds an enchantment to a player's selected item.",
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='execute',
+		CommandInfo(
+			name='execute',
 			description='Executes another command.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='experience',
+		CommandInfo(
+			name='experience',
 			description='An alias of /xp. Adds or removes player experience.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='fill',
+		CommandInfo(
+			name='fill',
 			description='Fills a region with a specific block.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='forceload',
+		CommandInfo(
+			name='forceload',
 			description='Forces chunks to constantly be loaded or not.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='function',
+		CommandInfo(
+			name='function',
 			description='Runs a function.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='gamemode',
+		CommandInfo(
+			name='gamemode',
 			description="Sets a player's game mode.",
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='gamerule',
+		CommandInfo(
+			name='gamerule',
 			description='Sets or queries a game rule value.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='give',
+		CommandInfo(
+			name='give',
 			description='Gives an item to a player.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='help',
+		CommandInfo(
+			name='help',
 			description='An alias of /?. Provides help for commands.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='item',
+		CommandInfo(
+			name='item',
 			description='Manipulates items in inventories.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='kick',
+		CommandInfo(
+			name='kick',
 			description='Kicks a player off a server.',
 			opLevel=3,
 		),
-		CommandInfo.create(
-			command='kill',
+		CommandInfo(
+			name='kill',
 			description='Kills entities (players, mobs, items, etc.).',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='list',
+		CommandInfo(
+			name='list',
 			description='Lists players on the server.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='locate',
+		CommandInfo(
+			name='locate',
 			description='Locates closest structure.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='locatebiome',
+		CommandInfo(
+			name='locatebiome',
 			description='Locates closest biome.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='loot',
+		CommandInfo(
+			name='loot',
 			description='Drops items from an inventory slot onto the ground.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='me',
+		CommandInfo(
+			name='me',
 			description='Displays a message about the sender.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='msg',
+		CommandInfo(
+			name='msg',
 			description='An alias of /tell and /w. Displays a private message to other players.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='op',
+		CommandInfo(
+			name='op',
 			description='Grants operator status to a player.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='pardon',
+		CommandInfo(
+			name='pardon',
 			description='Removes entries from the banlist.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='pardon-ip',
+		CommandInfo(
+			name='pardon-ip',
 			description='Removes entries from the banlist.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='particle',
+		CommandInfo(
+			name='particle',
 			description='Creates particles.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='perf',
+		CommandInfo(
+			name='perf',
 			description='Captures info and metrics about the game for 10 seconds.',
 			opLevel=4,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='playsound',
+		CommandInfo(
+			name='playsound',
 			description='Plays a sound.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='publish',
+		CommandInfo(
+			name='publish',
 			description='Opens single-player world to local network.',
 			opLevel=4,
 			availableInMP=False
 		),
-		CommandInfo.create(
-			command='recipe',
+		CommandInfo(
+			name='recipe',
 			description='Gives or takes player recipes.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='reload',
+		CommandInfo(
+			name='reload',
 			description='Reloads loot tables, advancements, and functions from disk.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='replaceitem',
+		CommandInfo(
+			name='replaceitem',
 			description='Replaces items in inventories.',
 			removed=True,
 			removedVersion='1.17',
 			removedComment='Replaced with `/item replace`',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='save-all',
+		CommandInfo(
+			name='save-all',
 			description='Saves the server to disk.',
 			opLevel=4,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='save-off',
+		CommandInfo(
+			name='save-off',
 			description='Disables automatic server saves.',
 			opLevel=4,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='save-on',
+		CommandInfo(
+			name='save-on',
 			description='Enables automatic server saves.',
 			opLevel=4,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='say',
+		CommandInfo(
+			name='say',
 			description='Displays a message to multiple players.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='schedule',
+		CommandInfo(
+			name='schedule',
 			description='Delays the execution of a function.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='scoreboard',
+		CommandInfo(
+			name='scoreboard',
 			description='Manages scoreboard objectives and players.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='seed',
+		CommandInfo(
+			name='seed',
 			description='Displays the world seed.',
 			opLevel='0 in singleplayer, 2 in multiplayer',
 		),
-		CommandInfo.create(
-			command='setblock',
+		CommandInfo(
+			name='setblock',
 			description='Changes a block to another block.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='setidletimeout',
+		CommandInfo(
+			name='setidletimeout',
 			description='Sets the time before idle players are kicked.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='setworldspawn',
+		CommandInfo(
+			name='setworldspawn',
 			description='Sets the world spawn.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='spawnpoint',
+		CommandInfo(
+			name='spawnpoint',
 			description='Sets the spawn point for a player.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='spectate',
+		CommandInfo(
+			name='spectate',
 			description='Make one player in spectator mode spectate an entity.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='spreadplayers',
+		CommandInfo(
+			name='spreadplayers',
 			description='Teleports entities to random locations.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='stop',
+		CommandInfo(
+			name='stop',
 			description='Stops a server.',
 			opLevel=4,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='stopsound',
+		CommandInfo(
+			name='stopsound',
 			description='Stops a sound.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='summon',
+		CommandInfo(
+			name='summon',
 			description='Summons an entity.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='tag',
+		CommandInfo(
+			name='tag',
 			description='Controls entity tags.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='team',
+		CommandInfo(
+			name='team',
 			description='Controls teams.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='teammsg',
+		CommandInfo(
+			name='teammsg',
 			description='An alias of /tm. Specifies the message to send to team.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='teleport',
+		CommandInfo(
+			name='teleport',
 			description='An alias of /tp. Teleports entities.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='tell',
+		CommandInfo(
+			name='tell',
 			description='An alias of /msg and /w. Displays a private message to other players.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='tellraw',
+		CommandInfo(
+			name='tellraw',
 			description='Displays a JSON message to players.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='testfor',
+		CommandInfo(
+			name='testfor',
 			description='Counts entities matching specified conditions.',
 			removed=True,
 			removedVersion='1.13',
-			removedComment='',  # TODO: removedComment for '/testfor' command
+			removedComment='Use `/execute if` instead', # TODO: removedComment for '/testfor' command
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='testforblock',
+		CommandInfo(
+			name='testforblock',
 			description='Tests whether a block is in a location.',
 			removed=True,
 			removedVersion='1.13',
-			removedComment='Use `/execute if` instead',
+			removedComment='Use `/execute if block` instead',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='testforblocks',
+		CommandInfo(
+			name='testforblocks',
 			description='Tests whether the blocks in two regions match.',
 			removed=True,
 			removedVersion='1.13',
 			removedComment='Use `/execute if` instead',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='time',
+		CommandInfo(
+			name='time',
 			description="Changes or queries the world's game time.",
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='title',
+		CommandInfo(
+			name='title',
 			description='Manages screen titles.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='tm',
+		CommandInfo(
+			name='tm',
 			description='An alias of /teammsg. Specifies the message to send to team.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='toggledownfall',
-			description='Toggles the weather.',
-			removed=True,
-			removedVersion='1.13',
-			removedComment='Use `/weather ...` instead',
-			opLevel=1,
-		),
-		CommandInfo.create(
-			command='tp',
+		# CommandInfo(
+		# 	name='toggledownfall',
+		# 	description='Toggles the weather.',
+		# 	removed=True,
+		# 	removedVersion='1.13',
+		# 	removedComment='Use `/weather ...` instead',
+		# 	opLevel=1,
+		# ),
+		CommandInfo(
+			name='tp',
 			description='An alias of /teleport. Teleports entities.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='trigger',
+		CommandInfo(
+			name='trigger',
 			description='Sets a trigger to be activated.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='w',
+		CommandInfo(
+			name='w',
 			description='An alias of /tell and /msg. Displays a private message to other players.',
 			opLevel=0,
 		),
-		CommandInfo.create(
-			command='weather',
+		CommandInfo(
+			name='weather',
 			description='Sets the weather.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='whitelist',
+		CommandInfo(
+			name='whitelist',
 			description='Manages server whitelist.',
 			opLevel=3,
 			availableInSP=False
 		),
-		CommandInfo.create(
-			command='worldborder',
+		CommandInfo(
+			name='worldborder',
 			description='Manages the world border.',
 			opLevel=2,
 		),
-		CommandInfo.create(
-			command='xp',
+		CommandInfo(
+			name='xp',
 			description='An alias of /experience [Java Edition only]. Adds or removes player experience.',
 			opLevel=2,
 		)
 	]
 
-	BASIC_COMMAND_INFO: dict[str, CommandInfo] = {c.command: c for c in _BASIC_COMMAND_INFO_LIST}
+	BASIC_COMMAND_INFO: dict[str, CommandInfo] = {c.name: c for c in _BASIC_COMMAND_INFO_LIST}
 	version.commands = BASIC_COMMAND_INFO
 
-	BASIC_COMMAND_INFO['?'].argument = []
+	BASIC_COMMAND_INFO['?'].next = []
 
-	BASIC_COMMAND_INFO['advancement'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['advancement'].next = [
+		ArgumentInfo(
 			name='__action',
 			type=LiteralsArgumentType(['grant', 'revoke']),
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targets',
 					type=MINECRAFT_ENTITY,
 					next=[
-						Keyword.create(
+						Keyword(
 							name='everything',
 						),
-						Keyword.create(
+						Keyword(
 							name='only',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='advancement',
 									type=MINECRAFT_RESOURCE_LOCATION,
 									next=[
 										TERMINAL,
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='criterion',
 											type=BRIGADIER_STRING,
 										),
@@ -476,28 +478,28 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								),
 							]
 						),
-						Keyword.create(
+						Keyword(
 							name='from',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='advancement',
 									type=MINECRAFT_RESOURCE_LOCATION,
 								),
 							]
 						),
-						Keyword.create(
+						Keyword(
 							name='through',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='advancement',
 									type=MINECRAFT_RESOURCE_LOCATION,
 								),
 							]
 						),
-						Keyword.create(
+						Keyword(
 							name='until',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='advancement',
 									type=MINECRAFT_RESOURCE_LOCATION,
 								),
@@ -509,42 +511,42 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['attribute'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['attribute'].next = [
+		ArgumentInfo(
 			name='target',
 			type=MINECRAFT_ENTITY,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='attribute',
 					type=MINECRAFT_RESOURCE_LOCATION,
 					next=[
-						Keyword.create(
+						Keyword(
 							name='get',
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='scale',
 									type=BRIGADIER_DOUBLE,
 								),
 							]
 						),
-						Keyword.create(
+						Keyword(
 							name='base',
 							next=[
-								Keyword.create(
+								Keyword(
 									name='get',
 									next=[
 										TERMINAL,
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='scale',
 											type=BRIGADIER_DOUBLE,
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='set',
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='value',
 											type=BRIGADIER_DOUBLE,
 										),
@@ -552,25 +554,25 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								),
 							],
 						),
-						Keyword.create(
+						Keyword(
 							name='modifier',
 							next=[
-								Keyword.create(
+								Keyword(
 									name='add',
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='uuid',
 											type=MINECRAFT_UUID,
 											next=[
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='name',
 													type=BRIGADIER_STRING,
 													next=[
-														ArgumentInfo.create(
+														ArgumentInfo(
 															name='value',
 															type=BRIGADIER_DOUBLE,
 															next=[
-																ArgumentInfo.create(
+																ArgumentInfo(
 																	name='uuid',
 																	type=LiteralsArgumentType(['add', 'multiply', 'multiply_base']),
 																),
@@ -582,27 +584,27 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='remove',
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='uuid',
 											type=MINECRAFT_UUID,
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='value',
 									next=[
-										Keyword.create(
+										Keyword(
 											name='get',
 											next=[
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='uuid',
 													type=MINECRAFT_UUID,
 													next=[
 														TERMINAL,
-														ArgumentInfo.create(
+														ArgumentInfo(
 															name='scale',
 															type=BRIGADIER_DOUBLE,
 														),
@@ -621,13 +623,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['ban'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['ban'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='reason',
 					type=MINECRAFT_MESSAGE,
 				),
@@ -635,13 +637,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['ban-ip'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['ban-ip'].next = [
+		ArgumentInfo(
 			name='target',
 			type=BRIGADIER_STRING,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='reason',
 					type=MINECRAFT_MESSAGE,
 				),
@@ -649,25 +651,25 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['banlist'].argument = [
+	BASIC_COMMAND_INFO['banlist'].next = [
 		TERMINAL,
-		Keyword.create(
+		Keyword(
 			name='ips',
 		),
-		Keyword.create(
+		Keyword(
 			name='players',
 		),
 	]
 
-	BASIC_COMMAND_INFO['bossbar'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['bossbar'].next = [
+		Keyword(
 			name='add',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='id',
 					type=MINECRAFT_RESOURCE_LOCATION,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='name',
 							type=MINECRAFT_COMPONENT,
 						),
@@ -675,14 +677,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			],
 		),
-		Keyword.create(
+		Keyword(
 			name='get',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='id',
 					type=MINECRAFT_RESOURCE_LOCATION,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='__setting',
 							type=LiteralsArgumentType(['max', 'players', 'value', 'visible']),
 						),
@@ -690,84 +692,84 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			],
 		),
-		Keyword.create(
+		Keyword(
 			name='list',
 		),
-		Keyword.create(
+		Keyword(
 			name='remove',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='id',
 					type=MINECRAFT_RESOURCE_LOCATION,
 				),
 			],
 		),
-		Keyword.create(
+		Keyword(
 			name='set',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='id',
 					type=MINECRAFT_RESOURCE_LOCATION,
 					next=[
-						Keyword.create(
+						Keyword(
 							name='color',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='color',
 									type=LiteralsArgumentType(['blue', 'green', 'pink', 'purple', 'red', 'white', 'yellow']),
 								),
 							],
 						),
-						Keyword.create(
+						Keyword(
 							name='max',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='max',
 									type=BRIGADIER_INTEGER,
 								),
 							],
 						),
-						Keyword.create(
+						Keyword(
 							name='name',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='name',
 									type=MINECRAFT_COMPONENT,
 								),
 							],
 						),
-						Keyword.create(
+						Keyword(
 							name='players',
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='targets',
 									type=MINECRAFT_ENTITY,
 								),
 							],
 						),
-						Keyword.create(
+						Keyword(
 							name='style',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='style',
 									type=LiteralsArgumentType(['notched_6', 'notched_10', 'notched_12', 'notched_20', 'progress']),
 								),
 							],
 						),
-						Keyword.create(
+						Keyword(
 							name='value	',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='value',
 									type=BRIGADIER_INTEGER,
 								),
 							],
 						),
-						Keyword.create(
+						Keyword(
 							name='visible',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='visible',
 									type=BRIGADIER_BOOL,
 								),
@@ -779,19 +781,19 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['clear'].argument = [
+	BASIC_COMMAND_INFO['clear'].next = [
 		TERMINAL,
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='item',
 					type=MINECRAFT_ITEM_PREDICATE,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='maxCount',
 							type=BRIGADIER_INTEGER,
 						),
@@ -801,40 +803,40 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['clone'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['clone'].next = [
+		ArgumentInfo(
 			name='begin',
 			type=MINECRAFT_BLOCK_POS,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='end',
 					type=MINECRAFT_BLOCK_POS,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='destination',
 							type=MINECRAFT_BLOCK_POS,
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='maskMode',
 									type=LiteralsArgumentType(['replace', 'masked']),
 									next=[
 										TERMINAL,
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='cloneMode',
 											type=LiteralsArgumentType(['force', 'move', 'normal']),
 										),
 									],
 								),
-								Keyword.create(
+								Keyword(
 									name='filtered',
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='filter',
 											type=MINECRAFT_BLOCK_PREDICATE,
 											next=[
 												TERMINAL,
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='cloneMode',
 													type=LiteralsArgumentType(['force', 'move', 'normal']),
 												),
@@ -853,28 +855,28 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# data command:
 
 	DATA_TARGET = [
-		Keyword.create(
+		Keyword(
 			name='block',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targetPos',
 					type=MINECRAFT_BLOCK_POS,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='entity',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='target',
 					type=MINECRAFT_ENTITY,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='storage',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='target',
 					type=MINECRAFT_RESOURCE_LOCATION,
 				),
@@ -883,52 +885,52 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	DATA_MODIFICATION = [
-		Keyword.create(
+		Keyword(
 			name='append',
 		),
-		Keyword.create(
+		Keyword(
 			name='insert',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='index',
 					type=BRIGADIER_INTEGER,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='merge',
 		),
-		Keyword.create(
+		Keyword(
 			name='prepend',
 		),
-		Keyword.create(
+		Keyword(
 			name='set',
 		),
 	]
 
 	DATA_SOURCE = [
-		Keyword.create(
+		Keyword(
 			name='block',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='sourcePos',
 					type=MINECRAFT_BLOCK_POS,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='entity',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='source',
 					type=MINECRAFT_ENTITY,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='storage',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='source',
 					type=MINECRAFT_RESOURCE_LOCATION,
 				),
@@ -936,21 +938,21 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['data'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['data'].next = [
+		Keyword(
 			name='get',
 			next=[
-				Switch.create(
+				Switch(
 					name='TARGET',
 					options=DATA_TARGET,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='path',
 							type=MINECRAFT_NBT_PATH,
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='scale',
 									type=BRIGADIER_FLOAT,
 								),
@@ -960,14 +962,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='merge',
 			next=[
-				Switch.create(
+				Switch(
 					name='TARGET',
 					options=DATA_TARGET,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='nbt',
 							type=MINECRAFT_NBT_COMPOUND_TAG,
 						),
@@ -975,30 +977,30 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='modify',
 			next=[
-				Switch.create(
+				Switch(
 					name='TARGET',
 					options=DATA_TARGET,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='targetPath',
 							type=MINECRAFT_NBT_PATH,
 							next=[
-								Switch.create(
+								Switch(
 									name='MODIFICATION',
 									options=DATA_MODIFICATION,
 									next=[
-										Keyword.create(
+										Keyword(
 											name='from',
 											next=[
-												Switch.create(
+												Switch(
 													name='SOURCE',
 													options=DATA_SOURCE,
 													next=[
 														TERMINAL,
-														ArgumentInfo.create(
+														ArgumentInfo(
 															name='sourcePath',
 															type=MINECRAFT_NBT_PATH,
 														),
@@ -1006,10 +1008,10 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 												),
 											]
 										),
-										Keyword.create(
+										Keyword(
 											name='value',
 											next=[
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='value',
 													type=MINECRAFT_NBT_TAG,
 												),
@@ -1024,14 +1026,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			]
 		),
 		# remove <TARGET> <path>
-		Keyword.create(
+		Keyword(
 			name='remove',
 			next=[
-				Switch.create(
+				Switch(
 					name='TARGET',
 					options=DATA_TARGET,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='path',
 							type=MINECRAFT_NBT_PATH,
 						),
@@ -1041,46 +1043,46 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['datapack'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['datapack'].next = [
+		Keyword(
 			name='disable',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='name',
 					type=BRIGADIER_STRING,
 					subType=ST_DPE_DATAPACK,
 				),
 			],
 		),
-		Keyword.create(
+		Keyword(
 			name='enable',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='name',
 					type=BRIGADIER_STRING,
 					subType=ST_DPE_DATAPACK,
 					next=[
 						TERMINAL,
-						Keyword.create(
+						Keyword(
 							name='first',
 						),
-						Keyword.create(
+						Keyword(
 							name='last',
 						),
-						Keyword.create(
+						Keyword(
 							name='before',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='name',
 									type=BRIGADIER_STRING,
 									subType=ST_DPE_DATAPACK,
 								),
 							],
 						),
-						Keyword.create(
+						Keyword(
 							name='after',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='name',
 									type=BRIGADIER_STRING,
 									subType=ST_DPE_DATAPACK,
@@ -1091,16 +1093,16 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			],
 		),
-		Keyword.create(
+		Keyword(
 			name='list',
 			description="List all data packs, or list only the available/enabled ones. Hovering over the data packs in the chat output shows their description defined in their pack.mcmeta.",
 			next=[
 				TERMINAL,
-				Keyword.create(
+				Keyword(
 						name='available',
 						next=[TERMINAL],
 					),
-				Keyword.create(
+				Keyword(
 						name='enabled',
 						next=[TERMINAL],
 					),
@@ -1108,17 +1110,17 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['debug'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['debug'].next = [
+		Keyword(
 			name='start',
 		),
-		Keyword.create(
+		Keyword(
 			name='stop',
 		),
-		Keyword.create(
+		Keyword(
 			name='function',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='name',
 					type=MINECRAFT_FUNCTION,
 				),
@@ -1127,54 +1129,54 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 
-	BASIC_COMMAND_INFO['defaultgamemode'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['defaultgamemode'].next = [
+		ArgumentInfo(
 			name='mode',
 			type=LiteralsArgumentType(['survival', 'creative', 'adventure', 'spectator']),
 		),
 	]
 
-	BASIC_COMMAND_INFO['deop'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['deop'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
 		),
 	]
 
-	BASIC_COMMAND_INFO['difficulty'].argument = [
+	BASIC_COMMAND_INFO['difficulty'].next = [
 		TERMINAL,
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='difficulty',
 			type=LiteralsArgumentType(['peaceful', 'easy', 'normal', 'hard']),
 		),
 	]
 
-	BASIC_COMMAND_INFO['effect'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['effect'].next = [
+		Keyword(
 			name='give',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targets',
 					type=MINECRAFT_ENTITY,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='effect',
 							type=MINECRAFT_MOB_EFFECT,
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='seconds',
 									type=BRIGADIER_INTEGER,
 									args={'min': 0, 'max': 1000000},
 									next=[
 										TERMINAL,
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='amplifier',
 											type=BRIGADIER_INTEGER,
 											args={'min': 0, 'max': 255},
 											next=[
 												TERMINAL,
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='hideParticles',
 													type=BRIGADIER_BOOL,
 												),
@@ -1188,16 +1190,16 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			],
 		),
-		Keyword.create(
+		Keyword(
 			name='clear',
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targets',
 					type=MINECRAFT_ENTITY,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='effect',
 							type=MINECRAFT_MOB_EFFECT,
 						),
@@ -1207,17 +1209,17 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['enchant'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['enchant'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='enchantment',
 					type=MINECRAFT_ITEM_ENCHANTMENT,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='level',
 							type=BRIGADIER_INTEGER,
 						),
@@ -1230,57 +1232,57 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# execute Command:
 	EXECUTE_INSTRUCTIONS = []
 
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='align',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='align',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='axes',
 				type=MINECRAFT_SWIZZLE,
 				next=EXECUTE_INSTRUCTIONS
 			),
 		],
 	))
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='anchored',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='anchored',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='anchor',
 				type=MINECRAFT_ENTITY_ANCHOR,
 				next=EXECUTE_INSTRUCTIONS
 			),
 		],
 	))
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='as',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='as',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				type=MINECRAFT_ENTITY,
 				next=EXECUTE_INSTRUCTIONS
 			),
 		],
 	))
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='at',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='at',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				type=MINECRAFT_ENTITY,
 				next=EXECUTE_INSTRUCTIONS
 			),
 		],
 	))
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='facing',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='facing',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='pos',
 				type=MINECRAFT_VEC3,
 				next=EXECUTE_INSTRUCTIONS
 			),
-			Keyword.create(
+			Keyword(
 				name='entity',
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='targets',
 						type=MINECRAFT_ENTITY,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='anchor',
 								type=MINECRAFT_ENTITY_ANCHOR,
 								next=EXECUTE_INSTRUCTIONS
@@ -1291,26 +1293,26 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			)
 		],
 	))
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='in',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='in',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='dimension',
 				type=MINECRAFT_DIMENSION,
 				next=EXECUTE_INSTRUCTIONS
 			),
 		],
 	))
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='positioned',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='positioned',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='pos',
 				type=MINECRAFT_VEC3,
 				next=EXECUTE_INSTRUCTIONS
 			),
-			Keyword.create(
+			Keyword(
 				name='as',
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='targets',
 						type=MINECRAFT_ENTITY,
 						next=EXECUTE_INSTRUCTIONS
@@ -1319,17 +1321,17 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			)
 		],
 	))
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='rotated',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='rotated',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='rot',
 				type=MINECRAFT_ROTATION,
 				next=EXECUTE_INSTRUCTIONS
 			),
-			Keyword.create(
+			Keyword(
 				name='as',
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='targets',
 						type=MINECRAFT_ENTITY,
 						next=EXECUTE_INSTRUCTIONS
@@ -1343,13 +1345,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 	TERMINAL_LIST = [TERMINAL]
 
-	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword.create(name='block',
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword(name='block',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='pos',
 				type=MINECRAFT_BLOCK_POS,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='block',
 						type=MINECRAFT_BLOCK_PREDICATE,
 						next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS)
@@ -1359,25 +1361,25 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		],
 	))
 
-	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword.create(name='blocks',
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword(name='blocks',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='start',
 				type=MINECRAFT_BLOCK_POS,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='end',
 						type=MINECRAFT_BLOCK_POS,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='destination',
 								type=MINECRAFT_BLOCK_POS,
 								next=[
-									Keyword.create(
+									Keyword(
 										name='all',
 										next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
 									),
-									Keyword.create(
+									Keyword(
 										name='masked',
 										next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
 									),
@@ -1390,16 +1392,16 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		],
 	))
 
-	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword.create(name='data',
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword(name='data',
 		next=[
-			Keyword.create(
+			Keyword(
 				name='block',
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='pos',
 						type=MINECRAFT_BLOCK_POS,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='path',
 								type=MINECRAFT_NBT_PATH,
 								next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
@@ -1408,14 +1410,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 					),
 				],
 			),
-			Keyword.create(
+			Keyword(
 				name='entity',
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='target',
 						type=MINECRAFT_ENTITY,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='path',
 								type=MINECRAFT_NBT_PATH,
 								next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
@@ -1424,14 +1426,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 					),
 				],
 			),
-			Keyword.create(
+			Keyword(
 				name='storage',
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='source',
 						type=MINECRAFT_RESOURCE_LOCATION,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='path',
 								type=MINECRAFT_NBT_PATH,
 								next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
@@ -1443,9 +1445,9 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		],
 	))
 
-	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword.create(name='entity',
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword(name='entity',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='entities',
 				type=MINECRAFT_ENTITY,
 				next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
@@ -1453,9 +1455,9 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		],
 	))
 
-	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword.create(name='predicate',
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword(name='predicate',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='predicate',
 				type=MINECRAFT_RESOURCE_LOCATION,
 				next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
@@ -1463,35 +1465,35 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		],
 	))
 
-	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword.create(name='score',
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(Keyword(name='score',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='target',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='targetObjective',
 						type=MINECRAFT_OBJECTIVE,
 						next=[
-							Keyword.create(
+							Keyword(
 								name='matches',
 								next=[
-									ArgumentInfo.create(
+									ArgumentInfo(
 										name='range',
 										type=MINECRAFT_INT_RANGE,
 										next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
 									),
 								]
 							),
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='__compare',
 								type=LiteralsArgumentType(['<=', '<', '=', '>=', '>']),
 								next=[
-									ArgumentInfo.create(
+									ArgumentInfo(
 										name='source',
 										type=MINECRAFT_SCORE_HOLDER,
 										next=[
-											ArgumentInfo.create(
+											ArgumentInfo(
 												name='sourceObjective',
 												type=MINECRAFT_OBJECTIVE,
 												next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
@@ -1507,32 +1509,32 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		],
 	))
 
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='if',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='if',
 		next=EXECUTE_IF_UNLESS_ARGUMENTS,
 	))
 
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='unless',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='unless',
 		next=EXECUTE_IF_UNLESS_ARGUMENTS,
 	))
 
 
 	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS = []
 
-	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword.create(name='block',
+	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword(name='block',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targetPos',
 				type=MINECRAFT_BLOCK_POS,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='path',
 						type=MINECRAFT_NBT_PATH,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='type',
 								type=LiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
 								next=[
-									ArgumentInfo.create(
+									ArgumentInfo(
 										name='scale',
 										description="Multiplier to apply before storing value",
 										type=BRIGADIER_DOUBLE,
@@ -1547,13 +1549,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		]
 	))
 
-	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword.create(name='bossbar',
+	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword(name='bossbar',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='id',
 				type=MINECRAFT_RESOURCE_LOCATION,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='value',
 						type=LiteralsArgumentType(['value', 'max']),
 						next=EXECUTE_INSTRUCTIONS,
@@ -1563,21 +1565,21 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		]
 	))
 
-	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword.create(name='entity',
+	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword(name='entity',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='target',
 				type=MINECRAFT_ENTITY,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='path',
 						type=MINECRAFT_NBT_PATH,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='type',
 								type=LiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
 								next=[
-									ArgumentInfo.create(
+									ArgumentInfo(
 										name='scale',
 										description="Multiplier to apply before storing value",
 										type=BRIGADIER_DOUBLE,
@@ -1592,14 +1594,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		]
 	))
 
-	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword.create(name='score',
+	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword(name='score',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				description='Specifies score holder(s) whose score is to be overridden',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='objective',
 						description='A scoreboard objective',
 						type=MINECRAFT_OBJECTIVE,
@@ -1610,21 +1612,21 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		]
 	))
 
-	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword.create(name='storage',
+	EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS.append(Keyword(name='storage',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='target',
 				type=MINECRAFT_RESOURCE_LOCATION,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='path',
 						type=MINECRAFT_NBT_PATH,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='type',
 								type=LiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
 								next=[
-									ArgumentInfo.create(
+									ArgumentInfo(
 										name='scale',
 										description="Multiplier to apply before storing value",
 										type=BRIGADIER_DOUBLE,
@@ -1639,38 +1641,38 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		]
 	))
 
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='store',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='store',
 		next=[
-			Keyword.create(
+			Keyword(
 				name='result',
 				next=EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS,
 			),
-			Keyword.create(
+			Keyword(
 				name='success',
 				next=EXECUTE_STORE_RESULT_SUCCESS_ARGUMENTS,
 			),
 		]
 	))
 
-	EXECUTE_INSTRUCTIONS.append(Keyword.create(name='run',
+	EXECUTE_INSTRUCTIONS.append(Keyword(name='run',
 		next=[COMMANDS_ROOT],
 	))
 
-	BASIC_COMMAND_INFO['execute'].argument = EXECUTE_INSTRUCTIONS
+	BASIC_COMMAND_INFO['execute'].next = EXECUTE_INSTRUCTIONS
 
-	BASIC_COMMAND_INFO['experience'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['experience'].next = [
+		Keyword(
 			name='add',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targets',
 					type=MINECRAFT_ENTITY,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='amount',
 							type=BRIGADIER_INTEGER,
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='__levels',
 									type=LiteralsArgumentType(['levels', 'points']),
 								),
@@ -1680,18 +1682,18 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='set',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targets',
 					type=MINECRAFT_ENTITY,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='amount',
 							type=BRIGADIER_INTEGER,
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='__levels',
 									type=LiteralsArgumentType(['levels', 'points']),
 								),
@@ -1701,14 +1703,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			],
 		),
-		Keyword.create(
+		Keyword(
 			name='query',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targets',
 					type=MINECRAFT_ENTITY,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='__levels',
 							type=LiteralsArgumentType(['levels', 'points']),
 						),
@@ -1720,29 +1722,29 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 	# fill <from> <to> <block> [destroy|hollow|keep|outline]
 	# fill <from> <to> <block> replace [<filter>]
-	BASIC_COMMAND_INFO['fill'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['fill'].next = [
+		ArgumentInfo(
 			name='from',
 			type=MINECRAFT_BLOCK_POS,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='to',
 					type=MINECRAFT_BLOCK_POS,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='block',
 							type=MINECRAFT_BLOCK_STATE,
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='option',
 									type=LiteralsArgumentType(['destroy', 'hollow', 'keep', 'outline']),
 								),
-								Keyword.create(
+								Keyword(
 									name='replace',
 									next=[
 										TERMINAL,
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='replace',
 											type=MINECRAFT_BLOCK_PREDICATE
 										),
@@ -1756,37 +1758,37 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	FORCELOAD_RANGE_ARG = ArgumentInfo.create(
+	FORCELOAD_RANGE_ARG = ArgumentInfo(
 		name='from',
 		type=MINECRAFT_COLUMN_POS,
 		next=[
 			TERMINAL,
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='to',
 				type=MINECRAFT_COLUMN_POS,
 			),
 		]
 	)
 
-	BASIC_COMMAND_INFO['forceload'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['forceload'].next = [
+		Keyword(
 			name='add',
 			next=[
 				FORCELOAD_RANGE_ARG,
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='remove',
 			next=[
 				Keyword('all'),
 				FORCELOAD_RANGE_ARG,
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='query',
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='pos',
 					type=MINECRAFT_COLUMN_POS,
 				),
@@ -1794,20 +1796,20 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['function'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['function'].next = [
+		ArgumentInfo(
 			name='name',
 			type=MINECRAFT_FUNCTION,
 		),
 	]
 
-	BASIC_COMMAND_INFO['gamemode'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['gamemode'].next = [
+		ArgumentInfo(
 			name='gamemode',
 			type=MINECRAFT_GAME_MODE,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='target',
 					type=MINECRAFT_ENTITY,
 				)
@@ -1815,13 +1817,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['gamerule'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['gamerule'].next = [
+		Keyword(
 			name=gr.name,
 			description=gr.description,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='value',
 					type=gr.type,
 				),
@@ -1829,17 +1831,17 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		) for gr in version.gamerules
 	]
 
-	BASIC_COMMAND_INFO['give'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['give'].next = [
+		ArgumentInfo(
 			name='target',
 			type=MINECRAFT_ENTITY,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='item',
 					type=MINECRAFT_ITEM_STACK,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='count',
 							type=BRIGADIER_INTEGER,
 						),
@@ -1849,22 +1851,22 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['help'].argument = []
+	BASIC_COMMAND_INFO['help'].next = []
 
 	ITEM_TARGET = [
-		Keyword.create(
+		Keyword(
 			name='block',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='pos',
 					type=MINECRAFT_BLOCK_POS,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='entity',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targets',
 					type=MINECRAFT_ENTITY,
 				),
@@ -1873,19 +1875,19 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	ITEM_SOURCE = [
-		Keyword.create(
+		Keyword(
 			name='block',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='sourcePos',
 					type=MINECRAFT_BLOCK_POS,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='entity',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='sourceTarget',
 					type=MINECRAFT_ENTITY,
 				),
@@ -1894,21 +1896,21 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	ITEM_MODIFIER = [
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='modifier',
 			type=MINECRAFT_RESOURCE_LOCATION,
 		),
 	]
 
-	BASIC_COMMAND_INFO['item'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['item'].next = [
+		Keyword(
 			name='modify',
 			next=[
-				Switch.create(
+				Switch(
 					name='TARGET',
 					options=ITEM_TARGET,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='slot',
 							type=MINECRAFT_NBT_PATH,
 							next=[*ITEM_MODIFIER]
@@ -1917,26 +1919,26 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='replace',
 			next=[
-				Switch.create(
+				Switch(
 					name='TARGET',
 					options=ITEM_TARGET,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='slot',
 							type=MINECRAFT_NBT_PATH,
 							next=[
-								Keyword.create(
+								Keyword(
 									name='with',
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='item',
 											type=MINECRAFT_ITEM_STACK,
 											next=[
 												TERMINAL,
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='count',
 													type=BRIGADIER_INTEGER,
 													args={'min': 1, 'max': 64},
@@ -1945,14 +1947,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='from',
 									next=[
-										Switch.create(
+										Switch(
 											name='SOURCE',
 											options=ITEM_SOURCE,
 											next=[
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='sourceSlot',
 													type=MINECRAFT_ITEM_SLOT,
 													next=[
@@ -1972,13 +1974,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['kick'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['kick'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='reason',
 					type=MINECRAFT_MESSAGE,
 				),
@@ -1986,63 +1988,63 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['kill'].argument = [
+	BASIC_COMMAND_INFO['kill'].next = [
 		TERMINAL,  # An entity is required to run the command without args
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 		),
 	]
 
-	BASIC_COMMAND_INFO['list'].argument = [
+	BASIC_COMMAND_INFO['list'].next = [
 		TERMINAL,
 		Keyword('uuids'),
 	]
 
-	BASIC_COMMAND_INFO['locate'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['locate'].next = [
+		ArgumentInfo(
 			name='StructureType',
 			type=LiteralsArgumentType(list(version.structures)),
 		),
 	]
 
-	BASIC_COMMAND_INFO['locatebiome'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['locatebiome'].next = [
+		ArgumentInfo(
 			name='biome',
 			type=DPE_BIOME_ID,
 		),
 	]
 
 	LOOT_TARGETS = [
-		Keyword.create(
+		Keyword(
 			name='spawn',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targetPos',
 					type=MINECRAFT_BLOCK_POS,
 					args={'type': float}
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='replace',
 			next=[
-				Switch.create(
+				Switch(
 					name='REPLACE',
 					options=[
-						Keyword.create(
+						Keyword(
 							name='entity',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='entities',
 									type=MINECRAFT_ENTITY,
 								),
 							]
 						),
-						Keyword.create(
+						Keyword(
 							name='block',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='targetPos',
 									type=MINECRAFT_BLOCK_POS,
 								),
@@ -2050,12 +2052,12 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						),
 					],
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='slot',
 							type=MINECRAFT_ITEM_SLOT,
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='count',
 									type=BRIGADIER_INTEGER,
 								),
@@ -2066,19 +2068,19 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='give',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='players',
 					type=MINECRAFT_ENTITY,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='insert',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targetPos',
 					type=MINECRAFT_BLOCK_POS,
 				),
@@ -2087,23 +2089,23 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	LOOT_SOURCES = [
-		Keyword.create(
+		Keyword(
 			name='fish',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='loot_table',
 					type=MINECRAFT_RESOURCE_LOCATION,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='pos',
 							type=MINECRAFT_BLOCK_POS,
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='hand',
 									type=LiteralsArgumentType(['mainhand', 'offhand']),
 								),
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='tool',
 									type=MINECRAFT_ITEM_STACK,
 								),
@@ -2113,37 +2115,37 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='loot',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='loot_table',
 					type=MINECRAFT_RESOURCE_LOCATION,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='kill',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='target',
 					type=MINECRAFT_ENTITY,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='mine',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='pos',
 					type=MINECRAFT_BLOCK_POS,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='hand',
 							type=LiteralsArgumentType(['mainhand', 'offhand']),
 						),
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='tool',
 							type=MINECRAFT_ITEM_STACK,
 						),
@@ -2153,12 +2155,12 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['loot'].argument = [
-		Switch.create(
+	BASIC_COMMAND_INFO['loot'].next = [
+		Switch(
 			name='TARGET',
 			options=LOOT_TARGETS,
 			next=[
-				Switch.create(
+				Switch(
 					name='SOURCE',
 					options=LOOT_SOURCES,
 				),
@@ -2166,19 +2168,19 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['me'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['me'].next = [
+		ArgumentInfo(
 			name='action',
 			type=MINECRAFT_MESSAGE,
 		)
 	]
 
-	BASIC_COMMAND_INFO['msg'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['msg'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='message',
 					type=MINECRAFT_MESSAGE,
 				),
@@ -2186,22 +2188,22 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['op'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['op'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
 		),
 	]
 
-	BASIC_COMMAND_INFO['pardon'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['pardon'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
 		),
 	]
 
-	BASIC_COMMAND_INFO['pardon-ip'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['pardon-ip'].next = [
+		ArgumentInfo(
 			name='target',
 			type=BRIGADIER_STRING,
 		),
@@ -2211,30 +2213,30 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 	PARTICLE_ARGUMENTS = [
 		TERMINAL,
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='pos',
 			type=MINECRAFT_VEC3,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='delta',
 					type=MINECRAFT_VEC3,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='speed',
 							type=BRIGADIER_FLOAT,
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='count',
 									type=BRIGADIER_INTEGER,
 									next=[
 										TERMINAL,
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='display_mode',
 											type=LiteralsArgumentType(['force', 'normal']),
 											next=[
 												TERMINAL,
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='viewers',
 													type=MINECRAFT_ENTITY,
 													next=[]
@@ -2253,22 +2255,22 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 
 	_SPECIAL_PARTICLES_tmp = [
-		Keyword.create(
+		Keyword(
 			name='dust',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='red',
 					type=BRIGADIER_FLOAT,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='green',
 							type=BRIGADIER_FLOAT,
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='blue',
 									type=BRIGADIER_FLOAT,
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='size',
 											type=BRIGADIER_FLOAT,
 											next=PARTICLE_ARGUMENTS
@@ -2281,34 +2283,34 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='dust_color_transition',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='red',
 					type=BRIGADIER_FLOAT,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='green',
 							type=BRIGADIER_FLOAT,
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='blue',
 									type=BRIGADIER_FLOAT,
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='size',
 											type=BRIGADIER_FLOAT,
 											next=[
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='red',
 													type=BRIGADIER_FLOAT,
 													next=[
-														ArgumentInfo.create(
+														ArgumentInfo(
 															name='green',
 															type=BRIGADIER_FLOAT,
 															next=[
-																ArgumentInfo.create(
+																ArgumentInfo(
 																	name='blue',
 																	type=BRIGADIER_FLOAT,
 																	next=PARTICLE_ARGUMENTS
@@ -2327,64 +2329,64 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='block',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='blockState',
 					type=MINECRAFT_BLOCK_STATE,
 					next=PARTICLE_ARGUMENTS
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='falling_dust',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='blockState',
 					type=MINECRAFT_BLOCK_STATE,
 					next=PARTICLE_ARGUMENTS
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='item',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='item',
 					type=MINECRAFT_ITEM_STACK,
 					next=PARTICLE_ARGUMENTS
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='vibration',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='x_start',
 					type=BRIGADIER_DOUBLE,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='y_start',
 							type=BRIGADIER_DOUBLE,
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='z_start',
 									type=BRIGADIER_DOUBLE,
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='x_end',
 											type=BRIGADIER_DOUBLE,
 											next=[
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='y_end',
 													type=BRIGADIER_DOUBLE,
 													next=[
-														ArgumentInfo.create(
+														ArgumentInfo(
 															name='z_end',
 															type=BRIGADIER_DOUBLE,
 															next=[
-																ArgumentInfo.create(
+																ArgumentInfo(
 																	name='duration',
 																	type=BRIGADIER_INTEGER,
 																	next=PARTICLE_ARGUMENTS
@@ -2408,57 +2410,57 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	_SPECIAL_PARTICLES = []
 	for particle in _SPECIAL_PARTICLES_tmp:
 		_SPECIAL_PARTICLES.append(particle)
-		particle = particle.copy()
+		particle = copy(particle)
 		particle.name = f'minecraft:{particle.name}'
 		_SPECIAL_PARTICLES.append(particle)
 
 	del _SPECIAL_PARTICLES_tmp
 
-	BASIC_COMMAND_INFO['particle'].argument = [
+	BASIC_COMMAND_INFO['particle'].next = [
 		*_SPECIAL_PARTICLES,
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='name',
 			type=MINECRAFT_PARTICLE,
 			next=PARTICLE_ARGUMENTS
 		),
 	]
 
-	BASIC_COMMAND_INFO['perf'].argument = [
+	BASIC_COMMAND_INFO['perf'].next = [
 		Keyword('start'),
 		Keyword('stop'),
 	]
 
 	# playsound <sound> <source> <targets> [<pos>] [<volume>] [<pitch>] [<minVolume>]
-	BASIC_COMMAND_INFO['playsound'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['playsound'].next = [
+		ArgumentInfo(
 			name='sound',
 			type=MINECRAFT_RESOURCE_LOCATION,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='source',
 					type=LiteralsArgumentType(['master', 'music', 'record', 'weather', 'block', 'hostile', 'neutral', 'player', 'ambient', 'voice']),
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='targets',
 							type=MINECRAFT_ENTITY,
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='pos',
 									type=MINECRAFT_VEC3,
 									next=[
 										TERMINAL,
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='volume',
 											type=BRIGADIER_FLOAT,
 											next=[
 												TERMINAL,
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='pitch',
 													type=BRIGADIER_FLOAT,
 													next=[
 														TERMINAL,
-														ArgumentInfo.create(
+														ArgumentInfo(
 															name='minVolume',
 															type=BRIGADIER_FLOAT,
 														),
@@ -2476,26 +2478,26 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['publish'].argument = [
+	BASIC_COMMAND_INFO['publish'].next = [
 		TERMINAL,
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='port',
 			type=BRIGADIER_INTEGER,
 		),
 	]
 
 	# recipe (give|take) <targets> (*|<recipe>)
-	BASIC_COMMAND_INFO['recipe'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['recipe'].next = [
+		ArgumentInfo(
 			name='action',
 			type=LiteralsArgumentType(['give', 'take']),
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='target',
 					type=MINECRAFT_ENTITY,
 					next=[
 						Keyword('*'),
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='recipe',
 							type=MINECRAFT_RESOURCE_LOCATION,
 						),
@@ -2505,26 +2507,26 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['reload'].argument = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO['reload'].next = [TERMINAL]  # has no arguments!
 
-	BASIC_COMMAND_INFO['replaceitem'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['replaceitem'].next = [
+		ArgumentInfo(
 			name='OUTDATED!',
 			type=MINECRAFT_MESSAGE,
 		),
 	]  # This command was superseded by the /item command in Java Edition 1.17.
 
-	BASIC_COMMAND_INFO['save-all'].argument = [
+	BASIC_COMMAND_INFO['save-all'].next = [
 		TERMINAL,
 		Keyword('flush'),
 	]
 
-	BASIC_COMMAND_INFO['save-off'].argument = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO['save-off'].next = [TERMINAL]  # has no arguments!
 
-	BASIC_COMMAND_INFO['save-on'].argument = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO['save-on'].next = [TERMINAL]  # has no arguments!
 
-	BASIC_COMMAND_INFO['say'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['say'].next = [
+		ArgumentInfo(
 			name='message',
 			type=MINECRAFT_MESSAGE,
 		),
@@ -2532,20 +2534,20 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 	# schedule function <function> <time> [append|replace]
 	# schedule clear <function>
-	BASIC_COMMAND_INFO['schedule'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['schedule'].next = [
+		Keyword(
 			name='function',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='function',
 					type=MINECRAFT_FUNCTION,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='time',
 							type=MINECRAFT_TIME,
 							next=[
 								TERMINAL,
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='replace_behaviour',
 									type=LiteralsArgumentType(['append', 'replace']),
 								),
@@ -2555,10 +2557,10 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='clear',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='function',
 					type=MINECRAFT_FUNCTION,
 				),
@@ -2570,21 +2572,21 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# scoreboard Command:
 	SCOREBOARD_OBJECTIVES = []
 
-	SCOREBOARD_OBJECTIVES.append(Keyword.create(name='list'))
+	SCOREBOARD_OBJECTIVES.append(Keyword(name='list'))
 
 	# scoreboard objectives add <objective> <criteria> [<displayName>]
-	SCOREBOARD_OBJECTIVES.append(Keyword.create(name='add',
+	SCOREBOARD_OBJECTIVES.append(Keyword(name='add',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='objective',
 				type=BRIGADIER_STRING,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='criteria',
 						type=MINECRAFT_OBJECTIVE_CRITERIA,
 						next=[
 							TERMINAL,
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='displayName',
 								type=MINECRAFT_COMPONENT,
 							),
@@ -2596,9 +2598,9 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard objectives remove <objective>
-	SCOREBOARD_OBJECTIVES.append(Keyword.create(name='remove',
+	SCOREBOARD_OBJECTIVES.append(Keyword(name='remove',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='objective',
 				type=MINECRAFT_OBJECTIVE,
 			),
@@ -2606,14 +2608,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard objectives setdisplay <slot> [<objective>]
-	SCOREBOARD_OBJECTIVES.append(Keyword.create(name='setdisplay',
+	SCOREBOARD_OBJECTIVES.append(Keyword(name='setdisplay',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='slot',
 				type=MINECRAFT_SCOREBOARD_SLOT,
 				next=[
 					TERMINAL,
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='objective',
 						type=MINECRAFT_OBJECTIVE,
 					),
@@ -2624,25 +2626,25 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 	# scoreboard objectives modify <objective> displayname <displayName>
 	# scoreboard objectives modify <objective> rendertype (hearts|integer)
-	SCOREBOARD_OBJECTIVES.append(Keyword.create(name='modify',
+	SCOREBOARD_OBJECTIVES.append(Keyword(name='modify',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='objective',
 				type=MINECRAFT_OBJECTIVE,
 				next=[
-					Keyword.create(
+					Keyword(
 						name='displayname',
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='displayName',
 								type=MINECRAFT_COMPONENT,
 							),
 						]
 					),
-					Keyword.create(
+					Keyword(
 						name='rendertype',
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='rendertype',
 								type=LiteralsArgumentType(['hearts', 'integer']),
 							),
@@ -2657,10 +2659,10 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	SCOREBOARD_PLAYERS = []
 
 	# scoreboard players list [<target>]
-	SCOREBOARD_PLAYERS.append(Keyword.create(name='list',
+	SCOREBOARD_PLAYERS.append(Keyword(name='list',
 		next=[
 			TERMINAL,
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='target',
 				type=MINECRAFT_SCORE_HOLDER,
 			),
@@ -2668,13 +2670,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard players get <target> <objective>
-	SCOREBOARD_PLAYERS.append(Keyword.create(name='get',
+	SCOREBOARD_PLAYERS.append(Keyword(name='get',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='target',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='objective',
 						type=MINECRAFT_OBJECTIVE,
 					),
@@ -2684,17 +2686,17 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard players set <targets> <objective> <score>
-	SCOREBOARD_PLAYERS.append(Keyword.create(name='set',
+	SCOREBOARD_PLAYERS.append(Keyword(name='set',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='objective',
 						type=MINECRAFT_OBJECTIVE,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='score',
 								type=BRIGADIER_INTEGER,
 							),
@@ -2706,17 +2708,17 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard players add <targets> <objective> <score>
-	SCOREBOARD_PLAYERS.append(Keyword.create(name='add',
+	SCOREBOARD_PLAYERS.append(Keyword(name='add',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='objective',
 						type=MINECRAFT_OBJECTIVE,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='score',
 								type=BRIGADIER_INTEGER,
 							),
@@ -2728,17 +2730,17 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard players remove <targets> <objective> <score>
-	SCOREBOARD_PLAYERS.append(Keyword.create(name='remove',
+	SCOREBOARD_PLAYERS.append(Keyword(name='remove',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='objective',
 						type=MINECRAFT_OBJECTIVE,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='score',
 								type=BRIGADIER_INTEGER,
 							),
@@ -2750,14 +2752,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard players reset <targets> [<objective>]
-	SCOREBOARD_PLAYERS.append(Keyword.create(name='reset',
+	SCOREBOARD_PLAYERS.append(Keyword(name='reset',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
 					TERMINAL,
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='objective',
 						type=MINECRAFT_OBJECTIVE,
 					),
@@ -2767,13 +2769,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard players enable <targets> <objective>
-	SCOREBOARD_PLAYERS.append(Keyword.create(name='enable',
+	SCOREBOARD_PLAYERS.append(Keyword(name='enable',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='objective',
 						type=MINECRAFT_OBJECTIVE,
 					),
@@ -2783,25 +2785,25 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	))
 
 	# scoreboard players operation <targets> <targetObjective> <operation> <source> <sourceObjective>
-	SCOREBOARD_PLAYERS.append(Keyword.create(name='operation',
+	SCOREBOARD_PLAYERS.append(Keyword(name='operation',
 		next=[
-			ArgumentInfo.create(
+			ArgumentInfo(
 				name='targets',
 				type=MINECRAFT_SCORE_HOLDER,
 				next=[
-					ArgumentInfo.create(
+					ArgumentInfo(
 						name='targetObjective',
 						type=MINECRAFT_OBJECTIVE,
 						next=[
-							ArgumentInfo.create(
+							ArgumentInfo(
 								name='operation',
 								type=MINECRAFT_OPERATION,
 								next=[
-									ArgumentInfo.create(
+									ArgumentInfo(
 										name='source',
 										type=MINECRAFT_SCORE_HOLDER,
 										next=[
-											ArgumentInfo.create(
+											ArgumentInfo(
 												name='sourceObjective',
 												type=MINECRAFT_OBJECTIVE,
 											),
@@ -2816,31 +2818,31 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		]
 	))
 
-	BASIC_COMMAND_INFO['scoreboard'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['scoreboard'].next = [
+		Keyword(
 			name='objectives',
 			next=SCOREBOARD_OBJECTIVES
 		),
-		Keyword.create(
+		Keyword(
 			name='players',
 			next=SCOREBOARD_PLAYERS
 		),
 	]
 
-	BASIC_COMMAND_INFO['seed'].argument = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO['seed'].next = [TERMINAL]  # has no arguments!
 
 	# setblock <pos> <block> [destroy|keep|replace]
-	BASIC_COMMAND_INFO['setblock'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['setblock'].next = [
+		ArgumentInfo(
 			name='pos',
 			type=MINECRAFT_BLOCK_POS,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='block',
 					type=MINECRAFT_BLOCK_STATE,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='operation',
 							type=LiteralsArgumentType(['destroy', 'keep', 'replace']),
 						),
@@ -2850,22 +2852,22 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['setidletimeout'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['setidletimeout'].next = [
+		ArgumentInfo(
 			name='minutes',
 			type=BRIGADIER_INTEGER,
 		),
 	]
 
 	# setworldspawn [<pos>] [<angle>]
-	BASIC_COMMAND_INFO['setworldspawn'].argument = [
+	BASIC_COMMAND_INFO['setworldspawn'].next = [
 		TERMINAL,
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='pos',
 			type=MINECRAFT_BLOCK_POS,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='angle',
 					type=MINECRAFT_ANGLE,
 				),
@@ -2874,19 +2876,19 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	# spawnpoint [<targets>] [<pos>] [<angle>]
-	BASIC_COMMAND_INFO['spawnpoint'].argument = [
+	BASIC_COMMAND_INFO['spawnpoint'].next = [
 		TERMINAL,
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='pos',
 					type=MINECRAFT_BLOCK_POS,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='angle',
 							type=MINECRAFT_ANGLE,
 						),
@@ -2897,13 +2899,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	# spectate <target> [<player>]
-	BASIC_COMMAND_INFO['spectate'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['spectate'].next = [
+		ArgumentInfo(
 			name='target',
 			type=MINECRAFT_ENTITY,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='player',
 					type=MINECRAFT_ENTITY,
 				),
@@ -2914,11 +2916,11 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# spreadplayers <center> <spreadDistance> <maxRange> <respectTeams> <targets>
 	# spreadplayers <center> <spreadDistance> <maxRange> under <maxHeight> <respectTeams> <targets>
 	SPREADPLAYERS_RESPECT_TEAMS = [
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='respectTeams',
 			type=BRIGADIER_BOOL,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='targets',
 					type=MINECRAFT_ENTITY,
 				),
@@ -2926,23 +2928,23 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['spreadplayers'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['spreadplayers'].next = [
+		ArgumentInfo(
 			name='center',
 			type=MINECRAFT_VEC2,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='spreadDistance',
 					type=BRIGADIER_FLOAT,
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='maxRange',
 							type=BRIGADIER_FLOAT,
 							next=[
-								Keyword.create(
+								Keyword(
 									name='under',
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='maxHeight',
 											type=BRIGADIER_INTEGER,
 											next=SPREADPLAYERS_RESPECT_TEAMS
@@ -2958,21 +2960,21 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['stop'].argument = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO['stop'].next = [TERMINAL]  # has no arguments!
 
 	# stopsound <targets> [<source>] [<sound>]
-	BASIC_COMMAND_INFO['stopsound'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['stopsound'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='source',
 					type=LiteralsArgumentType(['*', 'master', 'music', 'record', 'weather', 'block', 'hostile', 'neutral', 'player', 'ambient', 'voice']),
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='sound',
 							type=MINECRAFT_RESOURCE_LOCATION,
 							description="Specifies the sound to stop. Must be a resource location. \n\nMust be a sound event defined in `sounds.json` (for example, `entity.pig.ambient`).",
@@ -2984,18 +2986,18 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	#  summon <entity> [<pos>] [<nbt>]
-	BASIC_COMMAND_INFO['summon'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['summon'].next = [
+		ArgumentInfo(
 			name='entity',
 			type=MINECRAFT_ENTITY_SUMMON,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='pos',
 					type=MINECRAFT_VEC3,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='nbt',
 							type=MINECRAFT_NBT_COMPOUND_TAG,
 						),
@@ -3008,25 +3010,25 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# tag <targets> add <name>
 	# tag <targets> list
 	# tag <targets> remove <name>
-	BASIC_COMMAND_INFO['tag'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['tag'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
-				Keyword.create(
+				Keyword(
 					name='add',
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='name',
 							type=BRIGADIER_STRING,
 						),
 					]
 				),
 				Keyword('list'),
-				Keyword.create(
+				Keyword(
 					name='remove',
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='name',
 							type=BRIGADIER_STRING,
 						),
@@ -3056,28 +3058,28 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	#
 	# team modify <team> <option> <value>
 	# 	Modifies the options of the specified team.
-	BASIC_COMMAND_INFO['team'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['team'].next = [
+		Keyword(
 			name='list',
 			description="Lists all teams, with their display names and the amount of entities in them. The optional `<team>` can be used to specify a particular team.",
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='team',
 					type=MINECRAFT_TEAM,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='add',
 			description="Creates a team with the given name and optional display name. `<displayName>` defaults to `<objective>` when unspecified.",
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='team',
 					type=BRIGADIER_STRING,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='displayName',
 							type=MINECRAFT_COMPONENT,
 						),
@@ -3085,36 +3087,36 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='remove',
 			description="Deletes the specified team.",
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='team',
 					type=MINECRAFT_TEAM,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='empty',
 			description="Removes all members from the named team.",
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='team',
 					type=MINECRAFT_TEAM,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='join',
 			description="Assigns the specified entities to the specified team. If no entities is specified, makes the executor join the team.",
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='team',
 					type=MINECRAFT_TEAM,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='members',
 							type=MINECRAFT_SCORE_HOLDER,
 						),
@@ -3122,153 +3124,153 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='leave',
 			description="Makes the specified entities leave their teams.",
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='members',
 					type=MINECRAFT_SCORE_HOLDER,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='modify',
 			description="Modifies the options of the specified team.",
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='team',
 					type=MINECRAFT_TEAM,
 					next=[
-						Switch.create(
+						Switch(
 							name='option',
 							options=[
-								Keyword.create(
+								Keyword(
 									name='displayName',
 									description="Set the display name of the team.",
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='displayName',
 											type=MINECRAFT_COMPONENT,
 											description="Specifies the team name to be displayed. Must be a raw JSON text.",
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='color',
 									description="Decide the color of the team and players in chat, above their head, on the Tab menu, and on the sidebar. Also changes the color of the outline of the entities caused by the Glowing effect.",
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='value',
 											type=MINECRAFT_COLOR,
 											description="Must be a color.\n\nDefaults to reset. If reset, names are shown in default color and formatting.",
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='friendlyFire',
 									description="Enable/Disable players inflicting damage on each other when on the same team. (Note: players can still inflict status effects on each other.) Does not affect some non-player entities in a team.",
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='allowed',
 											type=BRIGADIER_BOOL,
 											description="  - true - (Default) Enable players inflicting damage on each other when in the same team.\n  - false - Disable players inflicting damage on each other when in the same team.",
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='seeFriendlyInvisibles',
 									description="Decide players can see invisible players on their team as whether semi-transparent or completely invisible.",
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='allowed',
 											type=BRIGADIER_BOOL,
 											description="  - true - (Default) Can see invisible players on the same team semi-transparently.\n  - false - Cannot see invisible players on the same team.",
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='nametagVisibility',
 									description="Decide whose name tags above their heads can be seen.",
 									next=[
-										Keyword.create(
+										Keyword(
 											name='never',
 											description="Name above player's head cannot be seen by any players.",
 										),
-										Keyword.create(
+										Keyword(
 											name='hideForOtherTeams',
 											description="Name above player's head can be seen only by players in the same team.",
 										),
-										Keyword.create(
+										Keyword(
 											name='hideForOwnTeam',
 											description="Name above player's head cannot be seen by all the players in the same team.",
 										),
-										Keyword.create(
+										Keyword(
 											name='always',
 											description="(Default) Name above player's head can be seen by all the players.",
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='deathMessageVisibility',
 									description="Control the visibility of death messages for players.",
 									next=[
-										Keyword.create(
+										Keyword(
 											name='never',
 											description="Hide death message for all the players.",
 										),
-										Keyword.create(
+										Keyword(
 											name='hideForOtherTeams',
 											description="Hide death message to all the players who are not in the same team.",
 										),
-										Keyword.create(
+										Keyword(
 											name='hideForOwnTeam',
 											description="Hide death message to players in the same team.",
 										),
-										Keyword.create(
+										Keyword(
 											name='always',
 											description="(Default) Make death message visible to all the players.",
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='collisionRule',
 									description="Controls the way the entities on the team collide with other entities.",
 									next=[
-										Keyword.create(
+										Keyword(
 											name='always',
 											description="(Default) Normal collision.",
 										),
-										Keyword.create(
+										Keyword(
 											name='never',
 											description="No entities can push entities in this team.",
 										),
-										Keyword.create(
+										Keyword(
 											name='pushOtherTeams',
 											description="Entities in this team can be pushed only by other entities in the same team.",
 										),
-										Keyword.create(
+										Keyword(
 											name='pushOwnTeam',
 											description="Entities in this team cannot be pushed by another entity in this team.",
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='prefix',
 									description="Modifies the prefix that displays before players' names.",
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='prefix',
 											type=MINECRAFT_COMPONENT,
 											description="Specifies the prefix to display. Must be a raw JSON text.",
 										),
 									]
 								),
-								Keyword.create(
+								Keyword(
 									name='suffix',
 									description="Modifies the suffix that displays before players' names.",
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='suffix',
 											type=MINECRAFT_COMPONENT,
 											description="Specifies the suffix to display. Must be a raw JSON text.",
@@ -3283,8 +3285,8 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['teammsg'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['teammsg'].next = [
+		ArgumentInfo(
 			name='message',
 			type=MINECRAFT_MESSAGE,
 		),
@@ -3298,45 +3300,45 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# teleport <targets> <location> <rotation>
 	# teleport <targets> <location> facing <facingLocation>
 	# teleport <targets> <location> facing entity <facingEntity> [<facingAnchor>]
-	BASIC_COMMAND_INFO['teleport'].argument = [
-		# ArgumentInfo.create(
+	BASIC_COMMAND_INFO['teleport'].next = [
+		# ArgumentInfo(
 		# 	name='destination',
 		# 	type=MINECRAFT_ENTITY,
 		# ),
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='location',
 			type=MINECRAFT_VEC3,
 		),
-		ArgumentInfo.create(
+		ArgumentInfo(
 			name='targets|destination',
 			type=MINECRAFT_ENTITY,
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='location',
 					type=MINECRAFT_VEC3,
 					next=[
 						TERMINAL,
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='rotation',
 							type=MINECRAFT_ROTATION,
 						),
-						Keyword.create(
+						Keyword(
 							name='facing',
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='facingLocation',
 									type=MINECRAFT_VEC3,
 								),
-								Keyword.create(
+								Keyword(
 									name='entity',
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='facingEntity',
 											type=MINECRAFT_ENTITY,
 											next=[
 												TERMINAL,
-												ArgumentInfo.create(
+												ArgumentInfo(
 													name='facingAnchor',
 													type=MINECRAFT_ENTITY_ANCHOR,
 												),
@@ -3348,7 +3350,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						),
 					]
 				),
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='destination',
 					type=MINECRAFT_ENTITY,
 				),
@@ -3356,15 +3358,15 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['tell'].argument = BASIC_COMMAND_INFO['msg'].argument
+	BASIC_COMMAND_INFO['tell'].next = BASIC_COMMAND_INFO['msg'].next
 
 	# tellraw <targets> <message>
-	BASIC_COMMAND_INFO['tellraw'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['tellraw'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='message',
 					type=MINECRAFT_COMPONENT,
 				),
@@ -3372,46 +3374,46 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['testfor'].argument = []  # This command has been removed
+	BASIC_COMMAND_INFO['testfor'].next = []  # This command has been removed
 
-	BASIC_COMMAND_INFO['testforblock'].argument = []  # This command has been removed
+	BASIC_COMMAND_INFO['testforblock'].next = []  # This command has been removed
 
-	BASIC_COMMAND_INFO['testforblocks'].argument = []  # This command has been removed
+	BASIC_COMMAND_INFO['testforblocks'].next = []  # This command has been removed
 
-	BASIC_COMMAND_INFO['time'].argument = [
-		Keyword.create(
+	BASIC_COMMAND_INFO['time'].next = [
+		Keyword(
 			name='add',
 			description="Adds `<time>` to the in-game daytime.",
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='time',
 					type=MINECRAFT_TIME,
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='query',
 			description="Queries current time.",
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='daytime|gametime|day',
 					type=LiteralsArgumentType(['daytime', 'gametime', 'day']),
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='set',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='timeSpec',
 					type=LiteralsArgumentType(['day', 'night', 'noon', 'midnight']),
 				),
 			]
 		),
-		Keyword.create(
+		Keyword(
 			name='set',
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='time',
 					type=MINECRAFT_TIME,
 				),
@@ -3422,37 +3424,37 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# title <targets> (clear|reset)
 	# title <targets> (title|subtitle|actionbar) <title>
 	# title <targets> times <fadeIn> <stay> <fadeOut>
-	BASIC_COMMAND_INFO['title'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['title'].next = [
+		ArgumentInfo(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='clear|reset',
 					type=LiteralsArgumentType(['clear', 'reset']),
 				),
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='title|subtitle|actionbar',
 					type=LiteralsArgumentType(['title', 'subtitle', 'actionbar']),
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='title',
 							type=MINECRAFT_COMPONENT,
 						),
 					]
 				),
-				Keyword.create(
+				Keyword(
 					name='times',
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='fadeIn',
 							type=BRIGADIER_INTEGER,
 							next=[
-								ArgumentInfo.create(
+								ArgumentInfo(
 									name='stay',
 									type=BRIGADIER_INTEGER,
 									next=[
-										ArgumentInfo.create(
+										ArgumentInfo(
 											name='fadeOut',
 											type=BRIGADIER_INTEGER,
 										),
@@ -3466,34 +3468,34 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['tm'].argument = BASIC_COMMAND_INFO['teammsg'].argument
+	BASIC_COMMAND_INFO['tm'].next = BASIC_COMMAND_INFO['teammsg'].next
 
-	# BASIC_COMMAND_INFO['toggledownfall'].argument = []  has been removed
+	# BASIC_COMMAND_INFO['toggledownfall'].next = []  has been removed
 
-	BASIC_COMMAND_INFO['tp'].argument = BASIC_COMMAND_INFO['teleport'].argument
+	BASIC_COMMAND_INFO['tp'].next = BASIC_COMMAND_INFO['teleport'].next
 
 	# trigger <objective>
 	# trigger <objective> add <value>
 	# trigger <objective> set <value>
-	BASIC_COMMAND_INFO['trigger'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['trigger'].next = [
+		ArgumentInfo(
 			name='objective',
 			type=MINECRAFT_OBJECTIVE,
 			next=[
 				TERMINAL,
-				Keyword.create(
+				Keyword(
 					name='add',
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='value',
 							type=BRIGADIER_INTEGER,
 						),
 					]
 				),
-				Keyword.create(
+				Keyword(
 					name='set',
 					next=[
-						ArgumentInfo.create(
+						ArgumentInfo(
 							name='value',
 							type=BRIGADIER_INTEGER,
 						),
@@ -3503,16 +3505,16 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['w'].argument = BASIC_COMMAND_INFO['msg'].argument
+	BASIC_COMMAND_INFO['w'].next = BASIC_COMMAND_INFO['msg'].next
 
 	# weather (clear|rain|thunder) [<duration>]
-	BASIC_COMMAND_INFO['weather'].argument = [
-		ArgumentInfo.create(
+	BASIC_COMMAND_INFO['weather'].next = [
+		ArgumentInfo(
 			name='objective',
 			type=LiteralsArgumentType(['clear', 'rain', 'thunder']),
 			next=[
 				TERMINAL,
-				ArgumentInfo.create(
+				ArgumentInfo(
 					name='duration',
 					type=BRIGADIER_INTEGER,
 				),
@@ -3520,8 +3522,8 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['whitelist'].argument = []  # TODO: BASIC_COMMAND_INFO['whitelist'].argument
+	BASIC_COMMAND_INFO['whitelist'].next = []  # TODO: BASIC_COMMAND_INFO['whitelist'].next
 
-	BASIC_COMMAND_INFO['worldborder'].argument = []  # TODO: BASIC_COMMAND_INFO['worldborder'].argument
+	BASIC_COMMAND_INFO['worldborder'].next = []  # TODO: BASIC_COMMAND_INFO['worldborder'].next
 
-	BASIC_COMMAND_INFO['xp'].argument = BASIC_COMMAND_INFO['experience'].argument
+	BASIC_COMMAND_INFO['xp'].next = BASIC_COMMAND_INFO['experience'].next

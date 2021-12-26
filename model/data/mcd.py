@@ -42,7 +42,7 @@ def buildBlockState(state: dict) -> FilterArgumentInfo:
 	else:
 		assert False
 
-	fai = FilterArgumentInfo.create(
+	fai = FilterArgumentInfo(
 		name=state['name'],
 		description=DESCRIPTIONS.get(state['name'], ''),
 		type=type_,

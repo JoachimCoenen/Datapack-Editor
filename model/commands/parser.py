@@ -115,7 +115,7 @@ class Parser:
 		return argument
 
 	def parseArguments(self, sr: StringReader, commandInfo: CommandInfo) -> Optional[ParsedArgument]:
-		possibilities: Sequence[CommandNode] = commandInfo.argument
+		possibilities: Sequence[CommandNode] = commandInfo.next
 		firstArg: Optional[ParsedArgument] = None
 		lastArg: Optional[ParsedArgument] = None
 
