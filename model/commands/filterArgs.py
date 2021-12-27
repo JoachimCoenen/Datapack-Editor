@@ -85,7 +85,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 					valueNode = makeParsedArgument(sr, tsai, value=remaining)
 					errorsIO.append(CommandSyntaxError(f"Expected {tsai.type.name}.", sr.currentSpan, style='error'))
 			sr.mergeLastSave()
-			arguments.add(key, FilterArgument.create(key=keyNode, value=valueNode, isNegated=isNegated))
+			arguments.add(key, FilterArgument(keyNode, valueNode, isNegated))
 
 			sr.tryConsumeWhitespace()
 			if sr.tryConsumeChar(']'):

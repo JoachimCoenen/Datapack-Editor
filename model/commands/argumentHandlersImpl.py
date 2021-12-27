@@ -163,7 +163,7 @@ class BlockStateHandler(ArgumentHandler):
 		if nbt is not None:
 			sr.mergeLastSave()
 
-		blockPredicate = BlockState.create(blockId=blockID, states=states, nbt=nbt)
+		blockPredicate = BlockState(blockId=blockID, states=states, nbt=nbt)
 		return makeParsedArgument(sr, ai, value=blockPredicate)
 
 	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
@@ -310,7 +310,7 @@ class EntityHandler(ArgumentHandler):
 				arguments = FilterArguments()
 			else:
 				sr.mergeLastSave()
-			locator = TargetSelector.create(variable=variable, arguments=arguments)
+			locator = TargetSelector(variable=variable, arguments=arguments)
 
 		return makeParsedArgument(sr, ai, value=locator)
 
@@ -524,7 +524,7 @@ class ItemStackHandler(ArgumentHandler):
 		if nbt is not None:
 			sr.mergeLastSave()
 
-		itemStack = ItemStack.create(itemId=itemID, nbt=nbt)
+		itemStack = ItemStack(itemId=itemID, nbt=nbt)
 		return makeParsedArgument(sr, ai, value=itemStack)
 
 	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
@@ -575,7 +575,7 @@ class ItemStackHandler(ArgumentHandler):
 
 @argumentHandler(MINECRAFT_ITEM_PREDICATE.name)
 class ItemPredicateHandler(ItemStackHandler):
-	def __init__(self, allowTag: bool = False):
+	def __init__(self):
 		super().__init__(allowTag=True)
 
 
