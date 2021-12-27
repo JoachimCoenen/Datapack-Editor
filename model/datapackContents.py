@@ -4,9 +4,8 @@ from dataclasses import dataclass
 from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable
 
 from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
-from Cat.Serializable import RegisterContainer, Serialized, SerializableContainer, ComputedCached
 from Cat.utils.profiling import logError
-from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute
+from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute, CachedProperty
 from model.pathUtils import FilePathTpl, loadTextFile, ZipFilePool
 
 
@@ -112,23 +111,18 @@ class ResourceLocation:
 		return hash(self._asTuple)
 
 
-@RegisterContainer
-class MetaInfo(SerializableContainer):
-	__slots__ = ()
-	filePath: FilePathTpl = Serialized(default=FilePathTpl(('', '')))
-	resourceLocation: ResourceLocation = Serialized(default=ResourceLocation(None, '', False))
+@dataclass
+class MetaInfo:
+	filePath: FilePathTpl = FilePathTpl(('', ''))
+	resourceLocation: ResourceLocation = ResourceLocation(None, '', False)
 
 
 _TMetaInfo = TypeVar('_TMetaInfo', bound=MetaInfo)
 
-@RegisterContainer
+
 class FunctionMeta(MetaInfo):
-	__slots__ = ()
 
-	def __typeCheckerInfo___(self):
-		self.documentation: HTMLStr = HTMLStr('')
-
-	@ComputedCached()
+	@CachedProperty
 	def documentation(self) -> HTMLStr:
 		"""
 		TODO: add documentation for Formatting of MCFunction Documentation
@@ -181,7 +175,7 @@ class FunctionMeta(MetaInfo):
 
 
 def buildMetaInfo(cls: Type[_TMetaInfo], filePath: FilePathTpl, resourceLocation: ResourceLocation) -> _TMetaInfo:
-	return cls.create(filePath=filePath, resourceLocation=resourceLocation)
+	return cls(filePath, resourceLocation)
 
 
 def buildFunctionMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation) -> FunctionMeta:
