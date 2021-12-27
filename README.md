@@ -6,7 +6,7 @@
 ![Lines of code](https://img.shields.io/tokei/lines/github/JoachimCoenen/Datapack-Editor?color=0072FF)
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FJoachimCoenen%2FDatapack-Editor&count_bg=%230072FF&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
 
-An editor for Minecraft datapacks for Minecraft 1.17+.
+An editor for Minecraft datapacks for Minecraft 1.17 and 1.18.
 
 ![MainWindow1_IMG][MainWindow1_IMG]
 
@@ -64,7 +64,7 @@ Download the zip file, extract it to a folder and run the `start.cmd` file.
   <tr style="padding:0px">
     <td style="padding:0px"> <img src="screenshots/mainWindow.png" alt="Main Window" style="width:width;height:height;"> </td>
     <td style="padding:0px"> <img src="screenshots/quickFind.png" alt="Quickly find and open a file" style="width:width;height:height;"> </td>
-  </tr style="padding:0px">
+  </tr>
 </table>
 
 
