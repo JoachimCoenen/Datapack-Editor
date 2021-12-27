@@ -12,7 +12,7 @@ from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
 
 
-DPE_TARGET_SELECTOR_SCORES = ArgumentType.create(
+DPE_TARGET_SELECTOR_SCORES = ArgumentType(
 	name='dpe:target_selector_scores',
 	description="`[scores={<objective>=<value>,...}]` — Filter target selection based on their scores in the specified objectives. All tested objectives are in a single object, with a list of individual score arguments between braces afterward. The values inside the braces support integer ranges. Cannot duplicate this argument.",
 	description2="""""",
@@ -76,7 +76,7 @@ targetSelectorArguments: list[FilterArgumentInfo] = [
 	),
 	FilterArgumentInfo(
 		name='sort',
-		type=LiteralsArgumentType(['nearest', 'furthest', 'random', 'arbitrary']),
+		type=makeLiteralsArgumentType(['nearest', 'furthest', 'random', 'arbitrary']),
 	),
 	FilterArgumentInfo(
 		name='level',

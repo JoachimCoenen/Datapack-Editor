@@ -38,7 +38,7 @@ def buildBlockState(state: dict) -> FilterArgumentInfo:
 	elif state['type'] == 'bool':
 		type_ = BRIGADIER_BOOL
 	elif state['type'] == 'enum':
-		type_ = LiteralsArgumentType(state['values'])
+		type_ = makeLiteralsArgumentType(state['values'])
 	else:
 		assert False
 

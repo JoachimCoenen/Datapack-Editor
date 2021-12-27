@@ -453,7 +453,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	BASIC_COMMAND_INFO['advancement'].next = [
 		ArgumentInfo(
 			name='__action',
-			type=LiteralsArgumentType(['grant', 'revoke']),
+			type=makeLiteralsArgumentType(['grant', 'revoke']),
 			next=[
 				ArgumentInfo(
 					name='targets',
@@ -574,7 +574,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 															next=[
 																ArgumentInfo(
 																	name='uuid',
-																	type=LiteralsArgumentType(['add', 'multiply', 'multiply_base']),
+																	type=makeLiteralsArgumentType(['add', 'multiply', 'multiply_base']),
 																),
 															]
 														),
@@ -686,7 +686,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 					next=[
 						ArgumentInfo(
 							name='__setting',
-							type=LiteralsArgumentType(['max', 'players', 'value', 'visible']),
+							type=makeLiteralsArgumentType(['max', 'players', 'value', 'visible']),
 						),
 					]
 				),
@@ -716,7 +716,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentInfo(
 									name='color',
-									type=LiteralsArgumentType(['blue', 'green', 'pink', 'purple', 'red', 'white', 'yellow']),
+									type=makeLiteralsArgumentType(['blue', 'green', 'pink', 'purple', 'red', 'white', 'yellow']),
 								),
 							],
 						),
@@ -753,7 +753,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentInfo(
 									name='style',
-									type=LiteralsArgumentType(['notched_6', 'notched_10', 'notched_12', 'notched_20', 'progress']),
+									type=makeLiteralsArgumentType(['notched_6', 'notched_10', 'notched_12', 'notched_20', 'progress']),
 								),
 							],
 						),
@@ -819,12 +819,12 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								TERMINAL,
 								ArgumentInfo(
 									name='maskMode',
-									type=LiteralsArgumentType(['replace', 'masked']),
+									type=makeLiteralsArgumentType(['replace', 'masked']),
 									next=[
 										TERMINAL,
 										ArgumentInfo(
 											name='cloneMode',
-											type=LiteralsArgumentType(['force', 'move', 'normal']),
+											type=makeLiteralsArgumentType(['force', 'move', 'normal']),
 										),
 									],
 								),
@@ -838,7 +838,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 												TERMINAL,
 												ArgumentInfo(
 													name='cloneMode',
-													type=LiteralsArgumentType(['force', 'move', 'normal']),
+													type=makeLiteralsArgumentType(['force', 'move', 'normal']),
 												),
 											],
 										),
@@ -1132,7 +1132,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	BASIC_COMMAND_INFO['defaultgamemode'].next = [
 		ArgumentInfo(
 			name='mode',
-			type=LiteralsArgumentType(['survival', 'creative', 'adventure', 'spectator']),
+			type=makeLiteralsArgumentType(['survival', 'creative', 'adventure', 'spectator']),
 		),
 	]
 
@@ -1147,7 +1147,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		TERMINAL,
 		ArgumentInfo(
 			name='difficulty',
-			type=LiteralsArgumentType(['peaceful', 'easy', 'normal', 'hard']),
+			type=makeLiteralsArgumentType(['peaceful', 'easy', 'normal', 'hard']),
 		),
 	]
 
@@ -1487,7 +1487,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							),
 							ArgumentInfo(
 								name='__compare',
-								type=LiteralsArgumentType(['<=', '<', '=', '>=', '>']),
+								type=makeLiteralsArgumentType(['<=', '<', '=', '>=', '>']),
 								next=[
 									ArgumentInfo(
 										name='source',
@@ -1532,7 +1532,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						next=[
 							ArgumentInfo(
 								name='type',
-								type=LiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
+								type=makeLiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
 								next=[
 									ArgumentInfo(
 										name='scale',
@@ -1557,7 +1557,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				next=[
 					ArgumentInfo(
 						name='value',
-						type=LiteralsArgumentType(['value', 'max']),
+						type=makeLiteralsArgumentType(['value', 'max']),
 						next=EXECUTE_INSTRUCTIONS,
 					),
 				],
@@ -1577,7 +1577,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						next=[
 							ArgumentInfo(
 								name='type',
-								type=LiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
+								type=makeLiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
 								next=[
 									ArgumentInfo(
 										name='scale',
@@ -1624,7 +1624,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						next=[
 							ArgumentInfo(
 								name='type',
-								type=LiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
+								type=makeLiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
 								next=[
 									ArgumentInfo(
 										name='scale',
@@ -1674,7 +1674,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentInfo(
 									name='__levels',
-									type=LiteralsArgumentType(['levels', 'points']),
+									type=makeLiteralsArgumentType(['levels', 'points']),
 								),
 							]
 						),
@@ -1695,7 +1695,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentInfo(
 									name='__levels',
-									type=LiteralsArgumentType(['levels', 'points']),
+									type=makeLiteralsArgumentType(['levels', 'points']),
 								),
 							]
 						),
@@ -1712,7 +1712,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 					next=[
 						ArgumentInfo(
 							name='__levels',
-							type=LiteralsArgumentType(['levels', 'points']),
+							type=makeLiteralsArgumentType(['levels', 'points']),
 						),
 					]
 				),
@@ -1738,7 +1738,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								TERMINAL,
 								ArgumentInfo(
 									name='option',
-									type=LiteralsArgumentType(['destroy', 'hollow', 'keep', 'outline']),
+									type=makeLiteralsArgumentType(['destroy', 'hollow', 'keep', 'outline']),
 								),
 								Keyword(
 									name='replace',
@@ -2004,7 +2004,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	BASIC_COMMAND_INFO['locate'].next = [
 		ArgumentInfo(
 			name='StructureType',
-			type=LiteralsArgumentType(list(version.structures)),
+			type=makeLiteralsArgumentType(list(version.structures)),
 		),
 	]
 
@@ -2103,7 +2103,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								TERMINAL,
 								ArgumentInfo(
 									name='hand',
-									type=LiteralsArgumentType(['mainhand', 'offhand']),
+									type=makeLiteralsArgumentType(['mainhand', 'offhand']),
 								),
 								ArgumentInfo(
 									name='tool',
@@ -2143,7 +2143,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						TERMINAL,
 						ArgumentInfo(
 							name='hand',
-							type=LiteralsArgumentType(['mainhand', 'offhand']),
+							type=makeLiteralsArgumentType(['mainhand', 'offhand']),
 						),
 						ArgumentInfo(
 							name='tool',
@@ -2233,7 +2233,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 										TERMINAL,
 										ArgumentInfo(
 											name='display_mode',
-											type=LiteralsArgumentType(['force', 'normal']),
+											type=makeLiteralsArgumentType(['force', 'normal']),
 											next=[
 												TERMINAL,
 												ArgumentInfo(
@@ -2438,7 +2438,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			next=[
 				ArgumentInfo(
 					name='source',
-					type=LiteralsArgumentType(['master', 'music', 'record', 'weather', 'block', 'hostile', 'neutral', 'player', 'ambient', 'voice']),
+					type=makeLiteralsArgumentType(['master', 'music', 'record', 'weather', 'block', 'hostile', 'neutral', 'player', 'ambient', 'voice']),
 					next=[
 						ArgumentInfo(
 							name='targets',
@@ -2490,7 +2490,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	BASIC_COMMAND_INFO['recipe'].next = [
 		ArgumentInfo(
 			name='action',
-			type=LiteralsArgumentType(['give', 'take']),
+			type=makeLiteralsArgumentType(['give', 'take']),
 			next=[
 				ArgumentInfo(
 					name='target',
@@ -2549,7 +2549,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								TERMINAL,
 								ArgumentInfo(
 									name='replace_behaviour',
-									type=LiteralsArgumentType(['append', 'replace']),
+									type=makeLiteralsArgumentType(['append', 'replace']),
 								),
 							]
 						),
@@ -2646,7 +2646,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						next=[
 							ArgumentInfo(
 								name='rendertype',
-								type=LiteralsArgumentType(['hearts', 'integer']),
+								type=makeLiteralsArgumentType(['hearts', 'integer']),
 							),
 						]
 					),
@@ -2844,7 +2844,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						TERMINAL,
 						ArgumentInfo(
 							name='operation',
-							type=LiteralsArgumentType(['destroy', 'keep', 'replace']),
+							type=makeLiteralsArgumentType(['destroy', 'keep', 'replace']),
 						),
 					]
 				),
@@ -2971,7 +2971,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				TERMINAL,
 				ArgumentInfo(
 					name='source',
-					type=LiteralsArgumentType(['*', 'master', 'music', 'record', 'weather', 'block', 'hostile', 'neutral', 'player', 'ambient', 'voice']),
+					type=makeLiteralsArgumentType(['*', 'master', 'music', 'record', 'weather', 'block', 'hostile', 'neutral', 'player', 'ambient', 'voice']),
 					next=[
 						TERMINAL,
 						ArgumentInfo(
@@ -3397,7 +3397,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			next=[
 				ArgumentInfo(
 					name='daytime|gametime|day',
-					type=LiteralsArgumentType(['daytime', 'gametime', 'day']),
+					type=makeLiteralsArgumentType(['daytime', 'gametime', 'day']),
 				),
 			]
 		),
@@ -3406,7 +3406,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			next=[
 				ArgumentInfo(
 					name='timeSpec',
-					type=LiteralsArgumentType(['day', 'night', 'noon', 'midnight']),
+					type=makeLiteralsArgumentType(['day', 'night', 'noon', 'midnight']),
 				),
 			]
 		),
@@ -3431,11 +3431,11 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			next=[
 				ArgumentInfo(
 					name='clear|reset',
-					type=LiteralsArgumentType(['clear', 'reset']),
+					type=makeLiteralsArgumentType(['clear', 'reset']),
 				),
 				ArgumentInfo(
 					name='title|subtitle|actionbar',
-					type=LiteralsArgumentType(['title', 'subtitle', 'actionbar']),
+					type=makeLiteralsArgumentType(['title', 'subtitle', 'actionbar']),
 					next=[
 						ArgumentInfo(
 							name='title',
@@ -3511,7 +3511,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	BASIC_COMMAND_INFO['weather'].next = [
 		ArgumentInfo(
 			name='objective',
-			type=LiteralsArgumentType(['clear', 'rain', 'thunder']),
+			type=makeLiteralsArgumentType(['clear', 'rain', 'thunder']),
 			next=[
 				TERMINAL,
 				ArgumentInfo(

@@ -1,26 +1,21 @@
 from __future__ import annotations
-from typing import cast
 
-from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, ComputedCached
+from dataclasses import dataclass
 from Cat.utils.collections_ import OrderedDict, AddToDictDecorator
 
 
-@RegisterContainer
-class ArgumentType(SerializableContainer):
-	__slots__ = ()
-	name: str = ComputedCached(default='')
-	description: str = Serialized(default='')
-	description2: str = Serialized(default='')
-	example: str = Serialized(default='')
-	examples: str = Serialized(default='')
-	jsonProperties: str = Serialized(default='')
+@dataclass
+class ArgumentType:
+	def __post_init__(self):
+		if type(self) is ArgumentType:
+			registerNamedArgumentType(self)
 
-	@classmethod
-	def create(cls, *, name: str, description: str = '', description2: str = '', example: str = '', examples: str = '', jsonProperties: str = '') -> ArgumentType:
-		self = cast(ArgumentType, super(ArgumentType, cls).create(description=description, description2=description2, example=example, examples=examples, jsonProperties=jsonProperties))
-		self.nameProp.setCachedValue(self, name)
-		registerNamedArgumentType(self)
-		return self
+	name: str
+	description: str = ''
+	description2: str = ''
+	example: str = ''
+	examples: str = ''
+	jsonProperties: str = ''
 
 
 ALL_NAMED_ARGUMENT_TYPES: OrderedDict[ArgumentType] = OrderedDict()
@@ -31,28 +26,18 @@ def registerNamedArgumentType(argumentType: ArgumentType, forceOverride: bool = 
 	_registerNamedArgumentType(argumentType.name, forceOverride)(argumentType)
 
 
-@RegisterContainer
+@dataclass
 class LiteralsArgumentType(ArgumentType):
-	__slots__ = ()
-	name: str = ComputedCached(getInitValue=lambda s: f"({'|'.join(s.options)})")
-	options: list[str] = ComputedCached(default_factory=list[str])
-	description: str = Serialized(default='')
-	description2: str = Serialized(default='')
-	example: str = Serialized(default='')
-	examples: str = Serialized(default='')
-	jsonProperties: str = Serialized(default='')
+	def __post_init__(self):
+		if not self.options:
+			raise ValueError("options must be set for a LiteralsArgumentType.")
 
-	def __init__(self, options: list[str] = None):
-		super(LiteralsArgumentType, self).__init__()
-		# do not register in ALL_NAMED_ARGUMENT_TYPES if created using init!
-		if options is not None:
-			self.optionsProp.setCachedValue(self, options)
+	options: list[str] = None
 
-	@classmethod
-	def create(cls, *, name: str, options: list[str], description: str = '', description2: str = '', example: str = '', examples: str = '', jsonProperties: str = '') -> LiteralsArgumentType:
-		self = cast(LiteralsArgumentType, super(LiteralsArgumentType, cls).create(name=name, description=description, description2=description2, example=example, examples=examples, jsonProperties=jsonProperties))
-		self.optionsProp.setCachedValue(self, options)
-		return self
+
+def makeLiteralsArgumentType(options: list[str], description: str = '', description2: str = '', example: str = '', examples: str = '', jsonProperties: str = '') -> LiteralsArgumentType:
+	name = f"({'|'.join(options)})"
+	return LiteralsArgumentType(name, description, description2, example, examples, jsonProperties, options)
 
 
 CHAT_COLORS: set[str] = {
@@ -83,7 +68,7 @@ ENTITY_ANCHORS: set[str] = {'eyes', 'feet'}
 
 GAME_MODES: list[str] = ['adventure', 'creative', 'spectator', 'survival']
 
-BRIGADIER_BOOL = ArgumentType.create(
+BRIGADIER_BOOL = ArgumentType(
 	name='brigadier:bool',
 	description="Must be a boolean (either true or false).",
 	description2="""""",
@@ -92,7 +77,7 @@ BRIGADIER_BOOL = ArgumentType.create(
 	* {{cd|false}}""",
 )
 
-BRIGADIER_DOUBLE = ArgumentType.create(
+BRIGADIER_DOUBLE = ArgumentType(
 	name='brigadier:double',
 	description="{{Arg desc|je=double}}",
 	description2="""
@@ -111,7 +96,7 @@ BRIGADIER_DOUBLE = ArgumentType.create(
 	** {{nbt|double|min}}: The minimum value of this double argument.""",
 )
 
-BRIGADIER_FLOAT = ArgumentType.create(
+BRIGADIER_FLOAT = ArgumentType(
 	name='brigadier:float',
 	description="{{Arg desc|je=float}}",
 	description2="""
@@ -130,7 +115,7 @@ BRIGADIER_FLOAT = ArgumentType.create(
 	** {{nbt|float|min}}: The minimum value of this float argument.""",
 )
 
-BRIGADIER_INTEGER = ArgumentType.create(
+BRIGADIER_INTEGER = ArgumentType(
 	name='brigadier:integer',
 	description="{{Arg desc|je=integer}}",
 	description2="""
@@ -146,7 +131,7 @@ BRIGADIER_INTEGER = ArgumentType.create(
 	** {{nbt|int|min}}: The minimum value of this integer argument.""",
 )
 
-BRIGADIER_LONG = ArgumentType.create(
+BRIGADIER_LONG = ArgumentType(
 	name='brigadier:long',
 	description="{{Arg desc|je=long}}",
 	description2="""
@@ -163,7 +148,7 @@ BRIGADIER_LONG = ArgumentType.create(
 	** {{nbt|long|min}}: The minimum value of this long argument.""",
 )
 
-BRIGADIER_STRING = ArgumentType.create(
+BRIGADIER_STRING = ArgumentType(
 	name='brigadier:string',
 	description="{{Arg desc|je=string}}",
 	description2="""
@@ -185,7 +170,7 @@ BRIGADIER_STRING = ArgumentType.create(
 	** {{nbt|string|type}}: The type of this string argument. Can be {{cd|word}}, {{cd|phrase}}, or {{cd|greedy}}""",
 )
 
-MINECRAFT_ANGLE = ArgumentType.create(
+MINECRAFT_ANGLE = ArgumentType(
 	name='minecraft:angle',
 	description="{{Arg desc|je=angle}}",
 	description2="""""",
@@ -197,7 +182,7 @@ MINECRAFT_ANGLE = ArgumentType.create(
 
 # args:
 #   -'type': (int|float), default = int
-MINECRAFT_BLOCK_POS = ArgumentType.create(
+MINECRAFT_BLOCK_POS = ArgumentType(
 	name='minecraft:block_pos',
 	description="{{Arg desc|je=block_pos}}",
 	description2="""""",
@@ -209,7 +194,7 @@ MINECRAFT_BLOCK_POS = ArgumentType.create(
 	* {{cd|~0.5 ~1 ~-5}}""",
 )
 
-MINECRAFT_BLOCK_PREDICATE = ArgumentType.create(
+MINECRAFT_BLOCK_PREDICATE = ArgumentType(
 	name='minecraft:block_predicate',
 	description="<!--{{Arg desc|je=block_predicate}}-->",
 	description2="""
@@ -230,7 +215,7 @@ MINECRAFT_BLOCK_PREDICATE = ArgumentType.create(
 	* <code>#stone[foo=bar]{baz:nbt}</code>""",
 )
 
-MINECRAFT_BLOCK_STATE = ArgumentType.create(
+MINECRAFT_BLOCK_STATE = ArgumentType(
 	name='minecraft:block_state',
 	description="<!--{{Arg desc|je=block_state}}-->",
 	description2="""
@@ -249,7 +234,7 @@ MINECRAFT_BLOCK_STATE = ArgumentType.create(
 	* <code>foo{bar:baz}</code>""",
 )
 
-MINECRAFT_COLOR = LiteralsArgumentType.create(
+MINECRAFT_COLOR = LiteralsArgumentType(
 	name='minecraft:color',
 	options=sorted(TEAM_COLORS),
 	description="Must be a team color (= `reset` or one of the 16 chat colors.)",
@@ -259,7 +244,7 @@ MINECRAFT_COLOR = LiteralsArgumentType.create(
 	* {{cd|green}}""",
 )
 
-MINECRAFT_COLUMN_POS = ArgumentType.create(
+MINECRAFT_COLUMN_POS = ArgumentType(
 	name='minecraft:column_pos',
 	description="Must be a column coordinates composed of `<x>` and `<z>`, each of which must be an integer or tilde notation.",
 	description2="""""",
@@ -269,7 +254,7 @@ MINECRAFT_COLUMN_POS = ArgumentType.create(
 	* {{cd|~1 ~-2}}""",
 )
 
-MINECRAFT_COMPONENT = ArgumentType.create(
+MINECRAFT_COMPONENT = ArgumentType(
 	name='minecraft:component',
 	description="Must be a raw JSON text.",
 	description2="""""",
@@ -280,7 +265,7 @@ MINECRAFT_COMPONENT = ArgumentType.create(
 	* {{cd|[""]}}""",
 )
 
-MINECRAFT_DIMENSION = ArgumentType.create(
+MINECRAFT_DIMENSION = ArgumentType(
 	name='minecraft:dimension',
 	description="Must be the resource location of a dimension. ",
 	description2="""""",
@@ -289,7 +274,7 @@ MINECRAFT_DIMENSION = ArgumentType.create(
 	* {{cd|minecraft:the_nether}}""",
 )
 
-MINECRAFT_ENTITY = ArgumentType.create(
+MINECRAFT_ENTITY = ArgumentType(
 	name='minecraft:entity',
 	description="Must be a player name, a target selector or a UUID.",
 	description2="""
@@ -307,7 +292,7 @@ MINECRAFT_ENTITY = ArgumentType.create(
 	** {{nbt|string|type}}: The target entity type. Can be {{cd|players}} or {{cd|entities}}. """,
 )
 
-MINECRAFT_ENTITY_ANCHOR = LiteralsArgumentType.create(
+MINECRAFT_ENTITY_ANCHOR = LiteralsArgumentType(
 	name='minecraft:entity_anchor',
 	options=sorted(ENTITY_ANCHORS),
 	description="Must be either `eyes` or `feet`.",
@@ -317,7 +302,7 @@ MINECRAFT_ENTITY_ANCHOR = LiteralsArgumentType.create(
 	* {{cd|feet}}""",
 )
 
-MINECRAFT_ENTITY_SUMMON = ArgumentType.create(
+MINECRAFT_ENTITY_SUMMON = ArgumentType(
 	name='minecraft:entity_summon',
 	description="Must be an entity type in the format of resource location of a summonable entity type.",
 	description2="""""",
@@ -326,7 +311,7 @@ MINECRAFT_ENTITY_SUMMON = ArgumentType.create(
 	* {{cd|cow}}""",
 )
 
-MINECRAFT_ENTITY_TYPE = ArgumentType.create(
+MINECRAFT_ENTITY_TYPE = ArgumentType(
 	name='dpe:entity_type',
 	description="Must be an entity type in the format of resource location of a entity type or entity type tag.",
 	description2="""""",
@@ -336,7 +321,7 @@ MINECRAFT_ENTITY_TYPE = ArgumentType.create(
 	* {{cd|#du:undead}}""",
 )
 
-MINECRAFT_FLOAT_RANGE = ArgumentType.create(
+MINECRAFT_FLOAT_RANGE = ArgumentType(
 	name='minecraft:float_range',
 	description="Must be a range acceptable for float values. (e.g. `0.1` - exact match of `0.1`. `..0.1` - less than or equal to `0.1`. `0.1..` - more than or equal to `0.1`. `0.1..1` - between `0.1` and `1`, inclusive.)",
 	description2="""""",
@@ -348,7 +333,7 @@ MINECRAFT_FLOAT_RANGE = ArgumentType.create(
 	* {{cd|..100}}""",
 )
 
-MINECRAFT_FUNCTION = ArgumentType.create(
+MINECRAFT_FUNCTION = ArgumentType(
 	name='minecraft:function',
 	description="It must be a resource location, which refers to a single function, or one prefixed with a `#`, which refers to a function tag. ",
 	description2="""""",
@@ -358,7 +343,7 @@ MINECRAFT_FUNCTION = ArgumentType.create(
 	* {{cd|#foo}}""",
 )
 
-MINECRAFT_GAME_MODE = LiteralsArgumentType.create(
+MINECRAFT_GAME_MODE = LiteralsArgumentType(
 	name='game_mode',
 	options=GAME_MODES,
 	description="Must be a valid game mode",
@@ -368,7 +353,7 @@ MINECRAFT_GAME_MODE = LiteralsArgumentType.create(
 	* {{cd|creative}}""",
 )
 
-MINECRAFT_GAME_PROFILE = ArgumentType.create(
+MINECRAFT_GAME_PROFILE = ArgumentType(
 	name='minecraft:game_profile',
 	description="Must be a collection of game profiles (player profiles), which can be a player name (must be a real one if the server is in online mode), or a player-type target selector.",
 	description2="""""",
@@ -379,7 +364,7 @@ MINECRAFT_GAME_PROFILE = ArgumentType.create(
 	* {{cd|@e}}""",
 )
 
-MINECRAFT_INT_RANGE = ArgumentType.create(
+MINECRAFT_INT_RANGE = ArgumentType(
 	name='minecraft:int_range',
 	description="Must be a range acceptable for integer values. (e.g. `0` - exact match of `0`. `..0` - less than or equal to `0`. `0..` - more than or equal to `0`. `0..1` - between `0` and `1`, inclusive.)",
 	description2="""""",
@@ -391,7 +376,7 @@ MINECRAFT_INT_RANGE = ArgumentType.create(
 	* {{cd|..100}}""",
 )
 
-MINECRAFT_ITEM_ENCHANTMENT = ArgumentType.create(
+MINECRAFT_ITEM_ENCHANTMENT = ArgumentType(
 	name='minecraft:item_enchantment',
 	description="Must be an ID of an enchantment.",
 	description2="""""",
@@ -400,7 +385,7 @@ MINECRAFT_ITEM_ENCHANTMENT = ArgumentType.create(
 	* {{cd|silk_touch}}""",
 )
 
-MINECRAFT_ITEM_PREDICATE = ArgumentType.create(
+MINECRAFT_ITEM_PREDICATE = ArgumentType(
 	name='minecraft:item_predicate',
 	description="",
 	description2="""
@@ -416,7 +401,7 @@ MINECRAFT_ITEM_PREDICATE = ArgumentType.create(
 	* <code>#stick{foo:bar}</code>""",
 )
 
-MINECRAFT_ITEM_SLOT = ArgumentType.create(
+MINECRAFT_ITEM_SLOT = ArgumentType(
 	name='minecraft:item_slot',
 	description="Must be a string notation that refer to certain slots in the inventory.",
 	description2="""
@@ -523,7 +508,7 @@ MINECRAFT_ITEM_SLOT = ArgumentType.create(
 	* {{cd|weapon}}""",
 )
 
-MINECRAFT_ITEM_STACK = ArgumentType.create(
+MINECRAFT_ITEM_STACK = ArgumentType(
 	name='minecraft:item_stack',
 	description="",
 	description2="""
@@ -537,7 +522,7 @@ MINECRAFT_ITEM_STACK = ArgumentType.create(
 	* <code>stick{foo:bar}</code>""",
 )
 
-MINECRAFT_MESSAGE = ArgumentType.create(
+MINECRAFT_MESSAGE = ArgumentType(
 	name='minecraft:message',
 	description="Must be a plain text. Can include spaces as well as target selectors. The game replaces entity selectors in the message with the list of selected entities' names, which is formatted as \"name1 and name2\" for two entities, or \"name1, name2, ... and namen\" for n entities.",
 	description2="""""",
@@ -548,7 +533,7 @@ MINECRAFT_MESSAGE = ArgumentType.create(
 	* {{cd|Hello @p :)}}""",
 )
 
-MINECRAFT_MOB_EFFECT = ArgumentType.create(
+MINECRAFT_MOB_EFFECT = ArgumentType(
 	name='minecraft:mob_effect',
 	description="Must be an ID of a status effect.",
 	description2="""""",
@@ -557,7 +542,7 @@ MINECRAFT_MOB_EFFECT = ArgumentType.create(
 	* {{cd|effect}}""",
 )
 
-MINECRAFT_NBT_COMPOUND_TAG = ArgumentType.create(
+MINECRAFT_NBT_COMPOUND_TAG = ArgumentType(
 	name='minecraft:nbt_compound_tag',
 	description="Must be a compound NBT in SNBT format.",
 	description2="""""",
@@ -566,7 +551,7 @@ MINECRAFT_NBT_COMPOUND_TAG = ArgumentType.create(
 	* <code>{foo:bar}</code>""",
 )
 
-MINECRAFT_NBT_PATH = ArgumentType.create(
+MINECRAFT_NBT_PATH = ArgumentType(
 	name='minecraft:nbt_path',
 	description="Must be an NBT path.",
 	description2="""""",
@@ -589,7 +574,7 @@ MINECRAFT_NBT_PATH = ArgumentType.create(
 	* <code>{foo:bar}</code>""",
 )
 
-MINECRAFT_NBT_TAG = ArgumentType.create(
+MINECRAFT_NBT_TAG = ArgumentType(
 	name='minecraft:nbt_tag',
 	description="Must be an NBT tag of any type in SNBT format.",
 	description2="""""",
@@ -602,7 +587,7 @@ MINECRAFT_NBT_TAG = ArgumentType.create(
 	* <code>{foo:bar}</code>""",
 )
 
-MINECRAFT_OBJECTIVE = ArgumentType.create(
+MINECRAFT_OBJECTIVE = ArgumentType(
 	name='minecraft:objective',
 	description="It must be an valid scoreboard objective name.",
 	description2="""""",
@@ -612,7 +597,7 @@ MINECRAFT_OBJECTIVE = ArgumentType.create(
 	* {{cd|012}}""",
 )
 
-MINECRAFT_OBJECTIVE_CRITERIA = ArgumentType.create(
+MINECRAFT_OBJECTIVE_CRITERIA = ArgumentType(
 	name='minecraft:objective_criteria',
 	description="Must be a scoreboard objective criterion.",
 	description2="""""",
@@ -622,7 +607,7 @@ MINECRAFT_OBJECTIVE_CRITERIA = ArgumentType.create(
 	* {{cd|minecraft:foo}}""",
 )
 
-MINECRAFT_OPERATION = LiteralsArgumentType.create(
+MINECRAFT_OPERATION = LiteralsArgumentType(
 	name='minecraft:operation',
 	options=['=', '+=', '-=', '*=', '/=', '%=', '><', '<', '>'],
 	description="Must be an arithmetic operator for `/scoreboard`.\n"
@@ -634,7 +619,7 @@ MINECRAFT_OPERATION = LiteralsArgumentType.create(
 	* {{cd|<}}""",
 )
 
-MINECRAFT_PARTICLE = ArgumentType.create(
+MINECRAFT_PARTICLE = ArgumentType(
 	name='minecraft:particle',
 	description="{{Arg desc|je=particle}}",
 	description2="""""",
@@ -644,7 +629,7 @@ MINECRAFT_PARTICLE = ArgumentType.create(
 	* {{cd|particle with options}}""",
 )
 
-MINECRAFT_RESOURCE_LOCATION = ArgumentType.create(
+MINECRAFT_RESOURCE_LOCATION = ArgumentType(
 	name='minecraft:resource_location',
 	description="{{Arg desc|je=resource_location}}",
 	description2="""""",
@@ -654,7 +639,7 @@ MINECRAFT_RESOURCE_LOCATION = ArgumentType.create(
 	* {{cd|012}}""",
 )
 
-MINECRAFT_ROTATION = ArgumentType.create(
+MINECRAFT_ROTATION = ArgumentType(
 	name='minecraft:rotation',
 	description="{{Arg desc|je=rotation}}",
 	description2="""""",
@@ -664,7 +649,7 @@ MINECRAFT_ROTATION = ArgumentType.create(
 	* {{cd|~-5 ~5}}""",
 )
 
-MINECRAFT_SCORE_HOLDER = ArgumentType.create(
+MINECRAFT_SCORE_HOLDER = ArgumentType(
 	name='minecraft:score_holder',
 	description="Must be a selection of score holders. It may be either a target selector, a player name, a UUID, or * for all score holders tracked by the scoreboard. Named player needn't be online, and it even needn't be a real player's name.",
 	description2="""Each score holder argument may specify if it can select only one score holder or multiple score holders.""",
@@ -678,7 +663,7 @@ MINECRAFT_SCORE_HOLDER = ArgumentType.create(
 	** {{nbt|string|amount}}: The amount of score holders that can be selected. Can be {{cd|single}} or {{cd|multiple}}.""",
 )
 
-MINECRAFT_SCOREBOARD_SLOT = ArgumentType.create(
+MINECRAFT_SCOREBOARD_SLOT = ArgumentType(
 	name='minecraft:scoreboard_slot',
 	description="{{Arg desc|je=scoreboard_slot}}",
 	description2="""""",
@@ -687,7 +672,7 @@ MINECRAFT_SCOREBOARD_SLOT = ArgumentType.create(
 	* {{cd|foo.bar}}""",
 )
 
-MINECRAFT_SWIZZLE = ArgumentType.create(
+MINECRAFT_SWIZZLE = ArgumentType(
 	name='minecraft:swizzle',
 	description="{{Arg desc|je=swizzle}}",
 	description2="""""",
@@ -696,7 +681,7 @@ MINECRAFT_SWIZZLE = ArgumentType.create(
 	* {{cd|x}}""",
 )
 
-MINECRAFT_TEAM = ArgumentType.create(
+MINECRAFT_TEAM = ArgumentType(
 	name='minecraft:team',
 	description="{{Arg desc|je=team}}",
 	description2="""""",
@@ -705,7 +690,7 @@ MINECRAFT_TEAM = ArgumentType.create(
 	* {{cd|123}}""",
 )
 
-MINECRAFT_TIME = ArgumentType.create(
+MINECRAFT_TIME = ArgumentType(
 	name='minecraft:time',
 	description="{{Arg desc|je=time}}",
 	description2="""""",
@@ -716,7 +701,7 @@ MINECRAFT_TIME = ArgumentType.create(
 	* {{cd|0}}""",
 )
 
-MINECRAFT_UUID = ArgumentType.create(
+MINECRAFT_UUID = ArgumentType(
 	name='minecraft:uuid',
 	description="{{Arg desc|je=uuid}}",
 	description2="""""",
@@ -724,7 +709,7 @@ MINECRAFT_UUID = ArgumentType.create(
 	* {{cd|dd12be42-52a9-4a91-a8a1-11c01849e498}}""",
 )
 
-MINECRAFT_VEC2 = ArgumentType.create(
+MINECRAFT_VEC2 = ArgumentType(
 	name='minecraft:vec2',
 	description="{{Arg desc|je=vec2}}",
 	description2="""""",
@@ -735,7 +720,7 @@ MINECRAFT_VEC2 = ArgumentType.create(
 	* {{cd|~1 ~-2}}""",
 )
 
-MINECRAFT_VEC3 = ArgumentType.create(
+MINECRAFT_VEC3 = ArgumentType(
 	name='minecraft:vec3',
 	description="{{Arg desc|je=vec3}}",
 	description2="""""",
@@ -749,7 +734,7 @@ MINECRAFT_VEC3 = ArgumentType.create(
 )
 
 
-DPE_COMPARE_OPERATION = LiteralsArgumentType.create(
+DPE_COMPARE_OPERATION = LiteralsArgumentType(
 	name='dpe:compare_operation',
 	options=['<=', '<', '=', '>=', '>'],
 	description="(<|<=|=|>=|>)",
@@ -759,7 +744,7 @@ DPE_COMPARE_OPERATION = LiteralsArgumentType.create(
 )
 
 
-DPE_BIOME_ID = ArgumentType.create(
+DPE_BIOME_ID = ArgumentType(
 	name='dpe:biome_id',
 	description="resource location of a biome",
 	description2="""""",
@@ -772,7 +757,7 @@ DPE_BIOME_ID = ArgumentType.create(
 # SubTypes:
 ###################################################
 
-ST_DPE_COMMAND = ArgumentType.create(
+ST_DPE_COMMAND = ArgumentType(
 	name='dpe:command',
 	description="{{Arg desc|je=string}}",
 	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
@@ -794,7 +779,7 @@ ST_DPE_COMMAND = ArgumentType.create(
 )
 
 
-ST_DPE_DATAPACK = ArgumentType.create(
+ST_DPE_DATAPACK = ArgumentType(
 	name='dpe:datapack',
 	description="{{Arg desc|je=string}}",
 	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
@@ -803,7 +788,7 @@ ST_DPE_DATAPACK = ArgumentType.create(
 )
 
 
-ST_DPE_GAME_RULE = ArgumentType.create(
+ST_DPE_GAME_RULE = ArgumentType(
 	name='dpe:game_rule',
 	description="{{Arg desc|je=string}}",
 	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
@@ -813,7 +798,7 @@ ST_DPE_GAME_RULE = ArgumentType.create(
 )
 
 
-ST_DPE_RAW_JSON_TEXT = ArgumentType.create(
+ST_DPE_RAW_JSON_TEXT = ArgumentType(
 	name='dpe:raw_json_text',
 	description="{{Arg desc|je=string}}",
 	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
@@ -826,6 +811,7 @@ __all__ = [
 	'ArgumentType',
 	'ALL_NAMED_ARGUMENT_TYPES',
 	'LiteralsArgumentType',
+	'makeLiteralsArgumentType',
 
 	'CHAT_COLORS',
 	'TEAM_COLORS',
