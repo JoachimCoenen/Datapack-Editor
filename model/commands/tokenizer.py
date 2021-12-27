@@ -1,13 +1,10 @@
-import re
+from dataclasses import dataclass
 from enum import Enum
 
-from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized
 from model.commands.argumentTypes import *
 from model.commands.command import Keyword, ArgumentInfo
-from model.commands.parsedCommands import ParsedComment, ParsedCommand
-from model.commands.parser import parseMCFunction
+from model.commands.parsedCommands import ParsedComment, ParsedCommand, ParsedMCFunction
 from model.parsingUtils import Span
-from session.session import getSession
 
 
 class TokenType(Enum):
@@ -29,85 +26,25 @@ class TokenType(Enum):
 	# BuiltinFunction = 17
 
 
-@RegisterContainer
-class Token1(SerializableContainer):
-	__slots__ = ()
-	text: str = Serialized(default='')
-	start: int = Serialized(default=0)
-	row: int = Serialized(default=0)
-	column: int = Serialized(default=0)
-	style: TokenType = Serialized(default=TokenType.Default)
+@dataclass
+class Token:
+	text: str
+	span: Span
+	style: TokenType
 
 
-def tokenizeMCFunction1(text: str, start: int, end: int) -> list[Token1]:
-	# Initialize the styling
-	# splitter = re.compile(r"(`[^`]*`|'[^']*'|\$[\w_]+|\d+\.\d+|[\w_]+|[\.\(,\)\{;\}\!]|&&|\|\||==|!=|->|\n)")
-	splitter = re.compile(r'([\w]+|@\w|"[^"]*"|=|\+=|-=|\*=|/=|%=|><|<|>|\[|]|{|}|\.|:|/|#.*)')
-	# Tokenize the text that needs to be styled using regular expressions.
-	# To style a sequence of characters you need to know the length of the sequence
-	# and which style you wish to apply to the sequence. It is up to the implementer
-	# to figure out which style the sequence belongs to.
-	# THE PROCEDURE SHOWN BELOW IS JUST ONE OF MANY!
-	# Scintilla works with bytes, so we have to adjust the start and end boundaries.
-	# Like all Qt objects the lexers parent is the QScintilla editor.
-	findIter = splitter.finditer(text)
-	tokens: list[Token1] = []
-	lineNo: int = 0
-	lineStartIndex: int = 0
-	for i, match in enumerate(findIter):
-		tokenText: str = match.group(0)
-		tokenStart: int = match.start()
-		token: Token1 = Token1.create(text=tokenText, start=tokenStart, row=lineNo, column=tokenStart - lineStartIndex)
-		if tokenText.startswith('@'):
-			token.style = TokenType.TargetSelector
-		elif tokenText.startswith('"'):
-			token.style = TokenType.String
-		elif tokenText in {'true', 'false', 'null'}:
-			token.style = TokenType.Constant
-		elif tokenText in {'.', '(', ',', ')', '{', ';', '}', '[', ']', '=', '+=', '-=', '*=', '/=', '%=', '><', '<', '>', ':', '/'}:
-			token.style = TokenType.Operator
-		elif re.fullmatch(r'\d+(?:\.\d*)?', tokenText) is not None:
-			token.style = TokenType.Number
-		elif tokenText in getSession().minecraftData.commands:
-			token.style = TokenType.Command
-		elif tokenText.startswith('#'):
-			token.style = TokenType.Comment
-		elif tokenText == '\n':
-			lineNo += 1
-			lineStartIndex = tokenStart+1
-			continue
-		else:  # TokenType with the default style
-			token.style = TokenType.Default
-		tokens.append(token)
-
-	return tokens
-
-
-@RegisterContainer
-class Token2(SerializableContainer):
-	__slots__ = ()
-	text: str = Serialized(default='')
-	span: Span = Serialized(default_factory=Span)
-	style: TokenType = Serialized(default=TokenType.Default)
-
-
-def tokenizeMCFunction2(text: str, start: int, end: int) -> list[Token2]:
-
-	function, errors = parseMCFunction(getSession().minecraftData.commands, text)
-	if function is None:
-		return []
-
-	tokens: list[Token2] = []
+def tokenizeMCFunction(function: ParsedMCFunction) -> list[Token]:
+	tokens: list[Token] = []
 	for child in function.children:
 		if child is None:
 			continue
 		elif isinstance(child, ParsedComment):
-			token: Token2 = Token2.create(text=child.content, span=child.span, style=TokenType.Comment)
-			tokens.append(token)
+			tokens.extend(tokenizeComment(child))
 		else:
 			tokens.extend(tokenizeCommand(child))
 
 	return tokens
+
 
 _allArgumentTypeStyles: dict[str, TokenType] = {
 	BRIGADIER_BOOL.name:               TokenType.Constant,
@@ -159,39 +96,33 @@ _allArgumentTypeStyles: dict[str, TokenType] = {
 }
 
 
-def tokenizeComment(comment: ParsedComment) -> list[Token2]:
-	token: Token2 = Token2.create(text=comment.content, span=comment.span, style=TokenType.Comment)
+def tokenizeComment(comment: ParsedComment) -> list[Token]:
+	token: Token = Token(comment.content, comment.span, TokenType.Comment)
 	return [token]
 
 
-def tokenizeCommand(command: ParsedCommand) -> list[Token2]:
-	tokens: list[Token2] = []
-	token: Token2 = Token2.create(text=command.name, span=command.span, style=TokenType.Command)
-	tokens.append(token)
+def tokenizeCommand(command: ParsedCommand) -> list[Token]:
+	tokens: list[Token] = []
 
 	argument = command
-	while argument.next is not None:
-		argument = argument.next
-
+	while argument is not None:
 		if isinstance(argument, ParsedCommand):
-			tokens += tokenizeCommand(argument)
-			break
-
-		token: Token2 = Token2.create(text=argument.content, span=argument.span)
-		tokens.append(token)
-
-		info = argument.info
-		if isinstance(info, Keyword):
-			token.style = TokenType.Keyword
-		elif isinstance(info, ArgumentInfo):
-			if isinstance(info.type, LiteralsArgumentType):
-				token.style = TokenType.Constant
+			style = TokenType.Command
+			text = argument.name
+		else:
+			text = argument.content
+			info = argument.info
+			if isinstance(info, Keyword):
+				style = TokenType.Keyword
+			elif isinstance(info, ArgumentInfo):
+				if isinstance(info.type, LiteralsArgumentType):
+					style = TokenType.Constant
+				else:
+					typeName = info.typeName
+					style = _allArgumentTypeStyles.get(typeName, TokenType.Error)
 			else:
-				typeName = info.typeName
-				style = _allArgumentTypeStyles.get(typeName, TokenType.Error)
-				token.style = style
+				style = TokenType.Error
+		token: Token = Token(text, argument.span, style)
+		tokens.append(token)
+		argument = argument.next
 	return tokens
-
-
-Token = Token2
-tokenizeMCFunction = tokenizeMCFunction2

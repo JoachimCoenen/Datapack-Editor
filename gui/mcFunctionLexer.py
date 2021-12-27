@@ -13,9 +13,10 @@ from model.commands.argumentHandlers import getArgumentHandler, defaultDocumenta
 from model.commands.command import ArgumentInfo, Keyword, Switch, CommandNode, TERMINAL, COMMANDS_ROOT
 from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedComment, ParsedArgument
 from model.commands.parser import parseMCFunction
-from model.commands.tokenizer import TokenType, tokenizeCommand, tokenizeComment, Token2
-from model.commands.validator import checkMCFunction, getSession
-from model.parsingUtils import GeneralParsingError, Span, Position
+from model.commands.tokenizer import TokenType, tokenizeMCFunction
+from model.commands.validator import checkMCFunction
+from model.parsingUtils import GeneralParsingError, Position
+from session.session import getSession
 
 TT = TypeVar('TT')
 
@@ -382,14 +383,7 @@ class LexerMCFunction(QsciLexerCustom):
 		self._function = function
 		self._errors = errors
 
-		tokens: list[Token2] = []
-		for child in function.children:
-			if child is None:
-				continue
-			elif isinstance(child, ParsedComment):
-				tokens.extend(tokenizeComment(child))
-			else:
-				tokens.extend(tokenizeCommand(child))
+		tokens = tokenizeMCFunction(function)
 
 		self.startStyling(start)
 		lastPos: int = 0
