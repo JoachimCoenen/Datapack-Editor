@@ -10,7 +10,6 @@ from Cat.CatPythonGUI.GUI import SizePolicy
 from Cat.CatPythonGUI.GUI.codeEditor import Error, Position
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.utilities import connect
-from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, Computed
 from Cat.utils import format_full_exc
 from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
@@ -24,9 +23,7 @@ from model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool, loadTextFile
 from session.session import getSession
 
 
-@RegisterContainer
-class WrappedError(SerializableContainer):
-	__slots__ = ()
+class WrappedError:
 	"""
 	just a wrapper for any Exception
 	satisfies protocol `Error`
@@ -34,12 +31,10 @@ class WrappedError(SerializableContainer):
 	def __init__(self, exception: Exception):
 		super(WrappedError, self).__init__()
 		self.wrappedEx = exception
-
-	wrappedEx: Exception = Serialized(default_factory=lambda: Exception(''))
-	message: str = Computed(getInitValue=wrappedEx.map(str, str).get)
-	position: Optional[Position] = Computed(default=None)
-	end:      Optional[Position] = Computed(default=None)
-	style:    str = Computed(default='error')
+		self.message: str = str(exception)
+		self.position: Optional[Position] = None
+		self.end: Optional[Position] = None
+		self.style: str = 'error'
 
 
 def checkMcFunctionFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[Error]:
@@ -70,7 +65,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 
 		self._spoilerSizePolicy = QSizePolicy(SizePolicy.Expanding.value, SizePolicy.Fixed.value)
 
-		self.setWindowTitle('Validate all files')
+		self.setWindowTitle('Validate Files')
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
 		includedDatapacks = []
@@ -83,7 +78,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.hLayout():
 			gui.progressBar(self.progressSignal, min=0, max=self._filesCount, value=self._filesChecked, format='', textVisible=True)
-			if gui.button('check all', default=True):
+			if gui.button('check files', default=True):
 				self.resetUserInterface()
 				QTimer.singleShot(1, self.checkAllFiles)
 

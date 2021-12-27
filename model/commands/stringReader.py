@@ -80,7 +80,7 @@ class StringReader:
 
 	@cy_final
 	def posFromColumn(self, cursor: int) -> Position:
-		return Position.create(line=self._lineNo, column=cursor, index=self._lineStart + cursor)
+		return Position(self._lineNo, cursor, self._lineStart + cursor)
 
 	@property
 	@cy_final
@@ -147,7 +147,7 @@ class StringReader:
 		return False
 
 	@cy_final
-	def tryPeek(self) -> Char:
+	def tryPeek(self) -> Optional[Char]:
 		if self.cursor < self.totalLength:
 			return self.source[self.cursor]
 		else:

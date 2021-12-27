@@ -1,6 +1,5 @@
 from typing import Optional, Type, Union, Callable
 
-from Cat.Serializable import RegisterContainer
 from Cat.utils.collections_ import OrderedDict
 from model.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
 from model.nbt.tags import *
@@ -13,9 +12,7 @@ VALUE_OUT_OF_RANGE_MSG: Message = Message("Value is out of range (min={}, max={}
 INVALID_NUMBER_MSG: Message = Message("Invalid {}: '`{}`'", 2)
 
 
-@RegisterContainer
 class SNBTError(GeneralParsingError):
-	__slots__ = ()
 	pass
 
 

@@ -130,19 +130,19 @@ def missingArgumentParser(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[
 
 
 def makeParsedNode(sr: StringReader) -> ParsedNode:
-	argument = ParsedNode.create(
-		source=sr.fullSource,
-		span=sr.currentSpan,
+	argument = ParsedNode(
+		sr.fullSource,
+		sr.currentSpan,
 	)
 	return argument
 
 
 def makeParsedArgument(sr: StringReader, ai: Optional[CommandNode], value: Any) -> ParsedArgument:
-	argument = ParsedArgument.create(
-		source=sr.fullSource,
-		span=sr.currentSpan,
-		value=value,
-		info=ai,
+	argument = ParsedArgument(
+		sr.fullSource,
+		sr.currentSpan,
+		value,
+		ai,
 	)
 	return argument
 

@@ -1,135 +1,81 @@
-from typing import TypeVar, Generic, Type, overload
+from dataclasses import dataclass, field
+from typing import TypeVar, Generic
 
-from Cat.Serializable import RegisterContainer, Serialized, SerializableContainer, Computed
 from Cat.utils.collections_ import OrderedDict
-from model.parsingUtils import Position, Span
+from model.parsingUtils import Span
 
 TS = TypeVar('TS')
 TT = TypeVar('TT')
 TT2 = TypeVar('TT2')
 
 
-@RegisterContainer
-class NBTTag(SerializableContainer, Generic[TT]):
-	__slots__ = ()
-	span: Span = Serialized(default_factory=Span)
-	data: TT = Computed(abstract=True)
-
-	@overload
-	def __init__(self):
-		...
-
-	@overload
-	def __init__(self, data: TT, /):
-		...
-
-	@overload
-	def __init__(self, data: TT, /, span: Span):
-		...
-
-	def __init__(self, data: TT = None, /, span: Span = None):
-		super(NBTTag, self).__init__()
-		if data is not None:
-			self.data = data
-		if span is not None:
-			self.span = span
-
-	@classmethod
-	def create(cls: Type[TS], *, data: TT, **kwargs) -> TS:
-		return super(NBTTag, cls).create(data=data, **kwargs)
+@dataclass
+class NBTTag(Generic[TT]):
+	data: TT
+	span: Span = field(default_factory=Span)
 
 
 TTag = TypeVar('TTag', bound=NBTTag)
 
 
-@RegisterContainer
 class BooleanTag(NBTTag[bool]):
-	__slots__ = ()
-	data: bool = Serialized(default=False)
+	pass  # data: bool
 
 
-@RegisterContainer
 class NumberTag(NBTTag[TT], Generic[TT]):
-	__slots__ = ()
-	data: TT = Computed(abstract=True)
+	pass  # data: TT
 
 
-@RegisterContainer
-class ByteTag(NBTTag[int]):
-	__slots__ = ()
-	data: int = Serialized(default=0)
+class ByteTag(NumberTag[int]):
+	pass  # data: int
 
 
-@RegisterContainer
-class ShortTag(NBTTag[int]):
-	__slots__ = ()
-	data: int = Serialized(default=0)
+class ShortTag(NumberTag[int]):
+	pass  # data: int
 
 
-@RegisterContainer
-class IntTag(NBTTag[int]):
-	__slots__ = ()
-	data: int = Serialized(default=0)
+class IntTag(NumberTag[int]):
+	pass  # data: int
 
 
-@RegisterContainer
-class LongTag(NBTTag[int]):
-	__slots__ = ()
-	data: int = Serialized(default=0)
+class LongTag(NumberTag[int]):
+	pass  # data: int
 
 
-@RegisterContainer
-class FloatTag(NBTTag[float]):
-	__slots__ = ()
-	data: float = Serialized(default=0.)
+class FloatTag(NumberTag[float]):
+	pass  # data: float
 
 
-@RegisterContainer
-class DoubleTag(NBTTag[float]):
-	__slots__ = ()
-	data: float = Serialized(default=0.)
+class DoubleTag(NumberTag[float]):
+	pass  # data: float
 
 
-@RegisterContainer
 class StringTag(NBTTag[str]):
-	__slots__ = ()
-	data: str = Serialized(default='')
+	pass  # data: str
 
 
-@RegisterContainer
 class ListTag(NBTTag[list[NBTTag]]):
-	__slots__ = ()
-	data: list[NBTTag] = Serialized(default_factory=list[NBTTag])
+	pass  # data: list[NBTTag]
 
 
-@RegisterContainer
 class CompoundTag(NBTTag[OrderedDict[str, NBTTag]]):
-	__slots__ = ()
-	data: OrderedDict[str, NBTTag] = Serialized(default_factory=OrderedDict[str, NBTTag])
+	pass  # data: OrderedDict[str, NBTTag]
 
 
-@RegisterContainer
 class ArrayTag(NBTTag[list[TT2]], Generic[TT2]):
-	__slots__ = ()
-	data: list[TT2] = Serialized(abstract=True)
+	pass  # data: list[TT2]
 
 
-@RegisterContainer
 class ByteArrayTag(ArrayTag[ByteTag]):
-	__slots__ = ()
-	data: list[ByteTag] = Serialized(default_factory=list[ByteTag])
+	pass  # data: list[ByteTag]
 
 
-@RegisterContainer
 class IntArrayTag(ArrayTag[IntTag]):
-	__slots__ = ()
-	data: list[IntTag] = Serialized(default_factory=list[IntTag])
+	pass  # data: list[IntTag]
 
 
-@RegisterContainer
 class LongArrayTag(ArrayTag[LongTag]):
-	__slots__ = ()
-	data: list[LongTag] = Serialized(default_factory=list[LongTag])
+	pass  # data: list[LongTag]
 
 
 __all__ = [

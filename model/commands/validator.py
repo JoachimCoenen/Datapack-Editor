@@ -1,12 +1,12 @@
+from dataclasses import replace
 from typing import Sequence, TYPE_CHECKING, Optional
 
-from Cat.Serializable import replace
 from Cat.utils import Maybe, escapeForXml
 from model.commands.argumentHandlers import getArgumentHandler
 from model.commands.argumentTypes import *
-from model.commands.command import formatPossibilities, CommandNode, TERMINAL, Keyword, Switch, ArgumentInfo, COMMANDS_ROOT, CommandInfo
+from model.commands.command import formatPossibilities, CommandNode, TERMINAL, Keyword, Switch, ArgumentInfo, CommandInfo
 from model.commands.utils import CommandSemanticsError
-from model.commands.parsedCommands import ParsedMCFunction, ParsedArgument, ParsedCommandPart, ParsedCommand
+from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedCommand
 from model.parsingUtils import Span
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ def validateCommand(command: ParsedCommand, *, errorsIO: list[CommandSemanticsEr
 		errorsIO.append(CommandSemanticsError(f"Deprecated Command `{command.value}`. (deprecated in version {info.deprecatedVersion}; {info.deprecatedComment}.", command.span, style='warning'))
 
 	lastCommandPart: ParsedCommandPart = command
-	commandPart: Optional[ParsedCommandPart] = command.argument
+	commandPart: Optional[ParsedCommandPart] = command.next
 	possibilities: Sequence[CommandNode] = command.info.next
 	while commandPart is not None:
 		lastCommandPart = commandPart
@@ -57,7 +57,7 @@ def _unknownOrTooManyArgumentsError(commandPart: ParsedCommandPart, possibilitie
 
 
 def _missingArgumentError(command: ParsedCommand, lastCommandPart: ParsedCommandPart, possibilities: Sequence[CommandNode]) -> CommandSemanticsError:
-	# lastArgEnd = Maybe(command.argument).recursive(ParsedArgument.next.get).orElse(command).span.end
+	# lastArgEnd = Maybe(command.next).recursive(ParsedArgument.next.get).orElse(command).span.end
 	# if lastArgEnd.index >= command.span.end.index:
 	# 	lastArgEnd = lastArgEnd.copy()
 	# 	lastArgEnd.column -= 1

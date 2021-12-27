@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, cast, Callable, Iterator, overload
+from typing import Optional, Callable, Iterator
 
-from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized
 from model.parsingUtils import Position, Span
 
 
@@ -24,31 +24,10 @@ class TokenType(Enum):
 	Comma = 12
 
 
-@RegisterContainer
-class Token(SerializableContainer):
-	__slots__ = ()
-	type: TokenType = Serialized(default=TokenType.Invalid)
-	# content: str = Serialized(default='')
-	span: Span = Serialized(getInitValue=Span)
-
-	@overload
-	def __init__(self):
-		...
-
-	@overload
-	def __init__(self, type: TokenType, span: Span, /):
-		...
-
-	def __init__(self, type: TokenType = None, span: Span = None, /):
-		super(Token, self).__init__()
-		if type is not None:
-			self.type = type
-		if span is not None:
-			self.span = span
-
-	@classmethod
-	def create(cls, *, type: TokenType, span: Span) -> Token:
-		return cast(Token, super(Token, cls).create(type=type, span=span))
+@dataclass
+class Token:
+	type: TokenType
+	span: Span
 
 
 STRING_OR_NUMBER_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._+-"

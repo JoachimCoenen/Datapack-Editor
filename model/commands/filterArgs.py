@@ -8,8 +8,6 @@ from typing import Optional
 
 from PyQt5.QtWidgets import QWidget
 
-from Cat.Serializable import RegisterContainer, Serialized
-from Cat.utils.profiling import ProfiledFunction
 from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser, Suggestions, makeParsedNode
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import FilterArguments, FilterArgument
@@ -21,15 +19,14 @@ from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
 from model.parsingUtils import Span, Position
 
 
-@RegisterContainer
+@dataclass
 class FilterArgumentInfo(ArgumentInfo):
-	__slots__ = ()
-	multipleAllowed: bool = Serialized(default=False)
-	isNegatable: bool = Serialized(default=False)
-	canBeEmpty: bool = Serialized(default=False)
+	multipleAllowed: bool = False
+	isNegatable: bool = False
+	canBeEmpty: bool = False
 
 
-FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo.create(
+FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo(
 	name='_fallback',
 	type=BRIGADIER_STRING,
 	multipleAllowed=True,
@@ -88,7 +85,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 					valueNode = makeParsedArgument(sr, tsai, value=remaining)
 					errorsIO.append(CommandSyntaxError(f"Expected {tsai.type.name}.", sr.currentSpan, style='error'))
 			sr.mergeLastSave()
-			arguments.add(key, FilterArgument.create(key=keyNode, value=valueNode, isNegated=isNegated))
+			arguments.add(key, FilterArgument(keyNode, valueNode, isNegated))
 
 			sr.tryConsumeWhitespace()
 			if sr.tryConsumeChar(']'):
@@ -153,7 +150,6 @@ def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, Filter
 	return CursorCtx(None, isValue=False, inside=False, after=False)
 
 
-@ProfiledFunction(enabled=False, colourNodesBySelftime=False)
 def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str, FilterArgumentInfo]) -> Suggestions:
 	if cursorPos == 0:
 		# if len(contextStr) == 0:

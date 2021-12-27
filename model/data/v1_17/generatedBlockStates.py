@@ -7,538 +7,538 @@ from model.commands.filterArgs import FilterArgumentInfo
 from model.datapackContents import ResourceLocation
 # Argument types:
 
-AGE_1 = FilterArgumentInfo.create(
+AGE_1 = FilterArgumentInfo(
 	name='age',
 	description='Tracks the age of plants to handle growth and of fire to handle spread.',
 	type=BRIGADIER_INTEGER,
 )
 
-AGE_2 = FilterArgumentInfo.create(
+AGE_2 = FilterArgumentInfo(
 	name='age',
 	description='Tracks the age of plants to handle growth and of fire to handle spread.',
 	type=BRIGADIER_INTEGER,
 )
 
-AGE_3 = FilterArgumentInfo.create(
+AGE_3 = FilterArgumentInfo(
 	name='age',
 	description='Tracks the age of plants to handle growth and of fire to handle spread.',
 	type=BRIGADIER_INTEGER,
 )
 
-AGE_4 = FilterArgumentInfo.create(
+AGE_4 = FilterArgumentInfo(
 	name='age',
 	description='Tracks the age of plants to handle growth and of fire to handle spread.',
 	type=BRIGADIER_INTEGER,
 )
 
-AGE_5 = FilterArgumentInfo.create(
+AGE_5 = FilterArgumentInfo(
 	name='age',
 	description='Tracks the age of plants to handle growth and of fire to handle spread.',
 	type=BRIGADIER_INTEGER,
 )
 
-AGE_6 = FilterArgumentInfo.create(
+AGE_6 = FilterArgumentInfo(
 	name='age',
 	description='Tracks the age of plants to handle growth and of fire to handle spread.',
 	type=BRIGADIER_INTEGER,
 )
 
-AGE_7 = FilterArgumentInfo.create(
+AGE_7 = FilterArgumentInfo(
 	name='age',
 	description='Tracks the age of plants to handle growth and of fire to handle spread.',
 	type=BRIGADIER_INTEGER,
 )
 
-ATTACHED_1 = FilterArgumentInfo.create(
+ATTACHED_1 = FilterArgumentInfo(
 	name='attached',
 	description='Whether the tripwire hook is connected to a valid tripwire circuit or not.',
 	type=BRIGADIER_BOOL,
 )
 
-ATTACHMENT_1 = FilterArgumentInfo.create(
+ATTACHMENT_1 = FilterArgumentInfo(
 	name='attachment',
 	description='How this block is attached to the block it is on.',
-	type=LiteralsArgumentType(['ceiling', 'double_wall', 'floor', 'single_wall']),
+	type=makeLiteralsArgumentType(['ceiling', 'double_wall', 'floor', 'single_wall']),
 )
 
-AXIS_1 = FilterArgumentInfo.create(
+AXIS_1 = FilterArgumentInfo(
 	name='axis',
 	description='What axis the block is oriented to.',
-	type=LiteralsArgumentType(['x', 'y', 'z']),
+	type=makeLiteralsArgumentType(['x', 'y', 'z']),
 )
 
-AXIS_2 = FilterArgumentInfo.create(
+AXIS_2 = FilterArgumentInfo(
 	name='axis',
 	description='What axis the block is oriented to.',
-	type=LiteralsArgumentType(['x', 'z']),
+	type=makeLiteralsArgumentType(['x', 'z']),
 )
 
-BITES_1 = FilterArgumentInfo.create(
+BITES_1 = FilterArgumentInfo(
 	name='bites',
 	description='The number of bites taken from the cake.',
 	type=BRIGADIER_INTEGER,
 )
 
-BOTTOM_1 = FilterArgumentInfo.create(
+BOTTOM_1 = FilterArgumentInfo(
 	name='bottom',
 	description='Whether this scaffolding is floating (shows the bottom).',
 	type=BRIGADIER_BOOL,
 )
 
-CHARGES_1 = FilterArgumentInfo.create(
+CHARGES_1 = FilterArgumentInfo(
 	name='charges',
 	description='Tracks the remaining uses of respawn anchors.',
 	type=BRIGADIER_INTEGER,
 )
 
-CONDITIONAL_1 = FilterArgumentInfo.create(
+CONDITIONAL_1 = FilterArgumentInfo(
 	name='conditional',
 	description='Whether or not the command block is conditional.',
 	type=BRIGADIER_BOOL,
 )
 
-DELAY_1 = FilterArgumentInfo.create(
+DELAY_1 = FilterArgumentInfo(
 	name='delay',
 	description='The amount of time between receiving a signal and responding.',
 	type=BRIGADIER_INTEGER,
 )
 
-DISARMED_1 = FilterArgumentInfo.create(
+DISARMED_1 = FilterArgumentInfo(
 	name='disarmed',
 	description='Whether the tripwire is broken using shears or not.',
 	type=BRIGADIER_BOOL,
 )
 
-DISTANCE_1 = FilterArgumentInfo.create(
+DISTANCE_1 = FilterArgumentInfo(
 	name='distance',
 	description='The distance from a base block.',
 	type=BRIGADIER_INTEGER,
 )
 
-DISTANCE_2 = FilterArgumentInfo.create(
+DISTANCE_2 = FilterArgumentInfo(
 	name='distance',
 	description='The distance from a base block.',
 	type=BRIGADIER_INTEGER,
 )
 
-DOWN_1 = FilterArgumentInfo.create(
+DOWN_1 = FilterArgumentInfo(
 	name='down',
 	description='Determines whether something is below the block.',
 	type=BRIGADIER_BOOL,
 )
 
-DRAG_1 = FilterArgumentInfo.create(
+DRAG_1 = FilterArgumentInfo(
 	name='drag',
 	description='Determines whether the bubble column is a whirlpool or upwards.',
 	type=BRIGADIER_BOOL,
 )
 
-EAST_1 = FilterArgumentInfo.create(
+EAST_1 = FilterArgumentInfo(
 	name='east',
 	description='Determines whether something is on the east side of the block.',
 	type=BRIGADIER_BOOL,
 )
 
-EAST_2 = FilterArgumentInfo.create(
+EAST_2 = FilterArgumentInfo(
 	name='east',
 	description='Determines whether something is on the east side of the block.',
-	type=LiteralsArgumentType(['low', 'none', 'tall']),
+	type=makeLiteralsArgumentType(['low', 'none', 'tall']),
 )
 
-EAST_3 = FilterArgumentInfo.create(
+EAST_3 = FilterArgumentInfo(
 	name='east',
 	description='Determines whether something is on the east side of the block.',
-	type=LiteralsArgumentType(['none', 'side', 'up']),
+	type=makeLiteralsArgumentType(['none', 'side', 'up']),
 )
 
-EGGS_1 = FilterArgumentInfo.create(
+EGGS_1 = FilterArgumentInfo(
 	name='eggs',
 	description='The amount of eggs in this block.',
 	type=BRIGADIER_INTEGER,
 )
 
-ENABLED_1 = FilterArgumentInfo.create(
+ENABLED_1 = FilterArgumentInfo(
 	name='enabled',
 	description='Whether or not the hopper can collect and transfer items.',
 	type=BRIGADIER_BOOL,
 )
 
-EXTENDED_1 = FilterArgumentInfo.create(
+EXTENDED_1 = FilterArgumentInfo(
 	name='extended',
 	description='Whether or not the piston is extended.',
 	type=BRIGADIER_BOOL,
 )
 
-EYE_1 = FilterArgumentInfo.create(
+EYE_1 = FilterArgumentInfo(
 	name='eye',
 	description='Whether the frame contains an eye of ender.',
 	type=BRIGADIER_BOOL,
 )
 
-FACE_1 = FilterArgumentInfo.create(
+FACE_1 = FilterArgumentInfo(
 	name='face',
 	description='What side of a block the attached block is on.',
-	type=LiteralsArgumentType(['ceiling', 'floor', 'wall']),
+	type=makeLiteralsArgumentType(['ceiling', 'floor', 'wall']),
 )
 
-FACING_1 = FilterArgumentInfo.create(
+FACING_1 = FilterArgumentInfo(
 	name='facing',
 	description='For most blocks, what direction the block faces.\nFor wall-attached [[bell]]s as well as [[cocoa]], the opposite is true.<ref>{{bug|MC-193943}}</ref>',
-	type=LiteralsArgumentType(['down', 'east', 'north', 'south', 'west', 'up']),
+	type=makeLiteralsArgumentType(['down', 'east', 'north', 'south', 'west', 'up']),
 )
 
-FACING_2 = FilterArgumentInfo.create(
+FACING_2 = FilterArgumentInfo(
 	name='facing',
 	description='For most blocks, what direction the block faces.\nFor wall-attached [[bell]]s as well as [[cocoa]], the opposite is true.<ref>{{bug|MC-193943}}</ref>',
-	type=LiteralsArgumentType(['east', 'north', 'south', 'west']),
+	type=makeLiteralsArgumentType(['east', 'north', 'south', 'west']),
 )
 
-FACING_3 = FilterArgumentInfo.create(
+FACING_3 = FilterArgumentInfo(
 	name='facing',
 	description='For most blocks, what direction the block faces.\nFor wall-attached [[bell]]s as well as [[cocoa]], the opposite is true.<ref>{{bug|MC-193943}}</ref>',
-	type=LiteralsArgumentType(['down', 'east', 'north', 'south', 'west']),
+	type=makeLiteralsArgumentType(['down', 'east', 'north', 'south', 'west']),
 )
 
-HALF_1 = FilterArgumentInfo.create(
+HALF_1 = FilterArgumentInfo(
 	name='half',
 	description='For tall plants and doors, which half of the door or plant occupies the block space. For trapdoors and stairs, what part of the block space they are in.',
-	type=LiteralsArgumentType(['lower', 'upper']),
+	type=makeLiteralsArgumentType(['lower', 'upper']),
 )
 
-HALF_2 = FilterArgumentInfo.create(
+HALF_2 = FilterArgumentInfo(
 	name='half',
 	description='For tall plants and doors, which half of the door or plant occupies the block space. For trapdoors and stairs, what part of the block space they are in.',
-	type=LiteralsArgumentType(['bottom', 'top']),
+	type=makeLiteralsArgumentType(['bottom', 'top']),
 )
 
-HANGING_1 = FilterArgumentInfo.create(
+HANGING_1 = FilterArgumentInfo(
 	name='hanging',
 	description='Whether or not the lantern hangs on the ceiling.',
 	type=BRIGADIER_BOOL,
 )
 
-HAS_BOOK_1 = FilterArgumentInfo.create(
+HAS_BOOK_1 = FilterArgumentInfo(
 	name='has_book',
 	description='Whether or not this lectern holds a book.',
 	type=BRIGADIER_BOOL,
 )
 
-HAS_BOTTLE_0_1 = FilterArgumentInfo.create(
+HAS_BOTTLE_0_1 = FilterArgumentInfo(
 	name='has_bottle_0',
 	description='Whether or not a bottle is in slot 1 of the brewing stand.',
 	type=BRIGADIER_BOOL,
 )
 
-HAS_BOTTLE_1_1 = FilterArgumentInfo.create(
+HAS_BOTTLE_1_1 = FilterArgumentInfo(
 	name='has_bottle_1',
 	description='Whether or not a bottle is in slot 2 of the brewing stand.',
 	type=BRIGADIER_BOOL,
 )
 
-HAS_BOTTLE_2_1 = FilterArgumentInfo.create(
+HAS_BOTTLE_2_1 = FilterArgumentInfo(
 	name='has_bottle_2',
 	description='Whether or not a bottle is in slot 3 of the brewing stand.',
 	type=BRIGADIER_BOOL,
 )
 
-HAS_RECORD_1 = FilterArgumentInfo.create(
+HAS_RECORD_1 = FilterArgumentInfo(
 	name='has_record',
 	description='True when the jukebox contains a music disc.',
 	type=BRIGADIER_BOOL,
 )
 
-HATCH_1 = FilterArgumentInfo.create(
+HATCH_1 = FilterArgumentInfo(
 	name='hatch',
 	description='Determines how close an egg is to hatching; starts at 0 and is randomly incremented.',
 	type=BRIGADIER_INTEGER,
 )
 
-HONEY_LEVEL_1 = FilterArgumentInfo.create(
+HONEY_LEVEL_1 = FilterArgumentInfo(
 	name='honey_level',
 	description='Every pollinated bee that leaves the hive after working increases the honey level by one. When at level 5, honey can be bottled or honeycombs can be harvested.',
 	type=BRIGADIER_INTEGER,
 )
 
-HINGE_1 = FilterArgumentInfo.create(
+HINGE_1 = FilterArgumentInfo(
 	name='hinge',
 	description="Identifies the side the hinge is on (when facing the same direction as the door's inside).",
-	type=LiteralsArgumentType(['left', 'right']),
+	type=makeLiteralsArgumentType(['left', 'right']),
 )
 
-IN_WALL_1 = FilterArgumentInfo.create(
+IN_WALL_1 = FilterArgumentInfo(
 	name='in_wall',
 	description='If true, the gate is lowered by three pixels, to accommodate attaching more cleanly with walls.',
 	type=BRIGADIER_BOOL,
 )
 
-INSTRUMENT_1 = FilterArgumentInfo.create(
+INSTRUMENT_1 = FilterArgumentInfo(
 	name='instrument',
 	description='The instrument sound the note block makes when it gets powered or used.',
-	type=LiteralsArgumentType(['banjo', 'basedrum', 'bass', 'bell', 'bit', 'chime', 'cow_bell', 'digeridoo', 'flute', 'guitar', 'harp', 'hat', 'iron_xylophone', 'snare', 'xylophone']),
+	type=makeLiteralsArgumentType(['banjo', 'basedrum', 'bass', 'bell', 'bit', 'chime', 'cow_bell', 'digeridoo', 'flute', 'guitar', 'harp', 'hat', 'iron_xylophone', 'snare', 'xylophone']),
 )
 
-INVERTED_1 = FilterArgumentInfo.create(
+INVERTED_1 = FilterArgumentInfo(
 	name='inverted',
 	description='Whether the daylight detector detects light (false) or darkness (true).',
 	type=BRIGADIER_BOOL,
 )
 
-LAYERS_1 = FilterArgumentInfo.create(
+LAYERS_1 = FilterArgumentInfo(
 	name='layers',
 	description='How many layers of snow are on top of each other.',
 	type=BRIGADIER_INTEGER,
 )
 
-LEAVES_1 = FilterArgumentInfo.create(
+LEAVES_1 = FilterArgumentInfo(
 	name='leaves',
 	description='How big the leaves are on this bamboo.',
-	type=LiteralsArgumentType(['large', 'none', 'small']),
+	type=makeLiteralsArgumentType(['large', 'none', 'small']),
 )
 
-LEVEL_1 = FilterArgumentInfo.create(
+LEVEL_1 = FilterArgumentInfo(
 	name='level',
 	description='How much water or lava is in this block or cauldron.',
 	type=BRIGADIER_INTEGER,
 )
 
-LEVEL_2 = FilterArgumentInfo.create(
+LEVEL_2 = FilterArgumentInfo(
 	name='level',
 	description='How much water or lava is in this block or cauldron.',
 	type=BRIGADIER_INTEGER,
 )
 
-LEVEL_3 = FilterArgumentInfo.create(
+LEVEL_3 = FilterArgumentInfo(
 	name='level',
 	description='How much water or lava is in this block or cauldron.',
 	type=BRIGADIER_INTEGER,
 )
 
-LIT_1 = FilterArgumentInfo.create(
+LIT_1 = FilterArgumentInfo(
 	name='lit',
 	description='Whether the block is turned on or off.',
 	type=BRIGADIER_BOOL,
 )
 
-LOCKED_1 = FilterArgumentInfo.create(
+LOCKED_1 = FilterArgumentInfo(
 	name='locked',
 	description='Whether the repeater can change it is powered state (false) or not (true).',
 	type=BRIGADIER_BOOL,
 )
 
-MODE_1 = FilterArgumentInfo.create(
+MODE_1 = FilterArgumentInfo(
 	name='mode',
 	description='The mode the comparator or structure block is in.',
-	type=LiteralsArgumentType(['compare', 'subtract']),
+	type=makeLiteralsArgumentType(['compare', 'subtract']),
 )
 
-MODE_2 = FilterArgumentInfo.create(
+MODE_2 = FilterArgumentInfo(
 	name='mode',
 	description='The mode the comparator or structure block is in.',
-	type=LiteralsArgumentType(['corner', 'data', 'load', 'save']),
+	type=makeLiteralsArgumentType(['corner', 'data', 'load', 'save']),
 )
 
-MOISTURE_1 = FilterArgumentInfo.create(
+MOISTURE_1 = FilterArgumentInfo(
 	name='moisture',
 	description='How wet the farmland is.',
 	type=BRIGADIER_INTEGER,
 )
 
-NORTH_1 = FilterArgumentInfo.create(
+NORTH_1 = FilterArgumentInfo(
 	name='north',
 	description='Determines whether something is on the north side of the block.',
 	type=BRIGADIER_BOOL,
 )
 
-NORTH_2 = FilterArgumentInfo.create(
+NORTH_2 = FilterArgumentInfo(
 	name='north',
 	description='Determines whether something is on the north side of the block.',
-	type=LiteralsArgumentType(['low', 'none', 'tall']),
+	type=makeLiteralsArgumentType(['low', 'none', 'tall']),
 )
 
-NORTH_3 = FilterArgumentInfo.create(
+NORTH_3 = FilterArgumentInfo(
 	name='north',
 	description='Determines whether something is on the north side of the block.',
-	type=LiteralsArgumentType(['up', 'side', 'none']),
+	type=makeLiteralsArgumentType(['up', 'side', 'none']),
 )
 
-NOTE_1 = FilterArgumentInfo.create(
+NOTE_1 = FilterArgumentInfo(
 	name='note',
 	description='The note the note block plays when it gets powered.',
 	type=BRIGADIER_INTEGER,
 )
 
-OCCUPIED_1 = FilterArgumentInfo.create(
+OCCUPIED_1 = FilterArgumentInfo(
 	name='occupied',
 	description="If there's already a player in this bed.",
 	type=BRIGADIER_BOOL,
 )
 
-OPEN_1 = FilterArgumentInfo.create(
+OPEN_1 = FilterArgumentInfo(
 	name='open',
 	description='Whether the door is open or closed.',
 	type=BRIGADIER_BOOL,
 )
 
-ORIENTATION_1 = FilterArgumentInfo.create(
+ORIENTATION_1 = FilterArgumentInfo(
 	name='orientation',
 	description='Direction the arrows point, followed by the position of the line face.',
-	type=LiteralsArgumentType(['down_east', 'down_north', 'down_south', 'down_west', 'east_up', 'north_up', 'south_up', 'up_east', 'up_north', 'up_south', 'up_west', 'west_up']),
+	type=makeLiteralsArgumentType(['down_east', 'down_north', 'down_south', 'down_west', 'east_up', 'north_up', 'south_up', 'up_east', 'up_north', 'up_south', 'up_west', 'west_up']),
 )
 
-PART_1 = FilterArgumentInfo.create(
+PART_1 = FilterArgumentInfo(
 	name='part',
 	description='Whether this is the foot or head end of the bed.',
-	type=LiteralsArgumentType(['foot', 'head']),
+	type=makeLiteralsArgumentType(['foot', 'head']),
 )
 
-PERSISTENT_1 = FilterArgumentInfo.create(
+PERSISTENT_1 = FilterArgumentInfo(
 	name='persistent',
 	description='Whether leaves decay (false) or not (true)',
 	type=BRIGADIER_BOOL,
 )
 
-PICKLES_1 = FilterArgumentInfo.create(
+PICKLES_1 = FilterArgumentInfo(
 	name='pickles',
 	description='The amount of pickles in this block.',
 	type=BRIGADIER_INTEGER,
 )
 
-POWER_1 = FilterArgumentInfo.create(
+POWER_1 = FilterArgumentInfo(
 	name='power',
 	description='The power level of Redstone emission.',
 	type=BRIGADIER_INTEGER,
 )
 
-POWERED_1 = FilterArgumentInfo.create(
+POWERED_1 = FilterArgumentInfo(
 	name='powered',
 	description='Whether the block is powered.',
 	type=BRIGADIER_BOOL,
 )
 
-ROTATION_1 = FilterArgumentInfo.create(
+ROTATION_1 = FilterArgumentInfo(
 	name='rotation',
 	description='The rotation of standing heads, signs and banners.',
 	type=BRIGADIER_INTEGER,
 )
 
-SHAPE_1 = FilterArgumentInfo.create(
+SHAPE_1 = FilterArgumentInfo(
 	name='shape',
 	description='The way this block connects to its neighbors.',
-	type=LiteralsArgumentType(['ascending_east', 'ascending_north', 'ascending_south', 'ascending_west', 'east_west', 'north_south']),
+	type=makeLiteralsArgumentType(['ascending_east', 'ascending_north', 'ascending_south', 'ascending_west', 'east_west', 'north_south']),
 )
 
-SHAPE_2 = FilterArgumentInfo.create(
+SHAPE_2 = FilterArgumentInfo(
 	name='shape',
 	description='The way this block connects to its neighbors.',
-	type=LiteralsArgumentType(['inner_left', 'inner_right', 'outer_left', 'outer_right', 'straight']),
+	type=makeLiteralsArgumentType(['inner_left', 'inner_right', 'outer_left', 'outer_right', 'straight']),
 )
 
-SHAPE_3 = FilterArgumentInfo.create(
+SHAPE_3 = FilterArgumentInfo(
 	name='shape',
 	description='The way this block connects to its neighbors.',
-	type=LiteralsArgumentType(['ascending_east', 'ascending_north', 'ascending_south', 'ascending_west', 'east_west', 'north_south', 'north_east', 'north_west', 'south_east', 'south_west']),
+	type=makeLiteralsArgumentType(['ascending_east', 'ascending_north', 'ascending_south', 'ascending_west', 'east_west', 'north_south', 'north_east', 'north_west', 'south_east', 'south_west']),
 )
 
-SHORT_1 = FilterArgumentInfo.create(
+SHORT_1 = FilterArgumentInfo(
 	name='short',
 	description="Whether this piston head's arm is 4/16th of a block shorter",
 	type=BRIGADIER_BOOL,
 )
 
-SIGNAL_FIRE_1 = FilterArgumentInfo.create(
+SIGNAL_FIRE_1 = FilterArgumentInfo(
 	name='signal_fire',
 	description='Whether this campfire has higher smoke or not.',
 	type=BRIGADIER_BOOL,
 )
 
-SNOWY_1 = FilterArgumentInfo.create(
+SNOWY_1 = FilterArgumentInfo(
 	name='snowy',
 	description='Whether this block uses the snowy side texture.',
 	type=BRIGADIER_BOOL,
 )
 
-SOUTH_1 = FilterArgumentInfo.create(
+SOUTH_1 = FilterArgumentInfo(
 	name='south',
 	description='Determines whether something is on the south side of the block.',
 	type=BRIGADIER_BOOL,
 )
 
-SOUTH_2 = FilterArgumentInfo.create(
+SOUTH_2 = FilterArgumentInfo(
 	name='south',
 	description='Determines whether something is on the south side of the block.',
-	type=LiteralsArgumentType(['low', 'none', 'tall']),
+	type=makeLiteralsArgumentType(['low', 'none', 'tall']),
 )
 
-SOUTH_3 = FilterArgumentInfo.create(
+SOUTH_3 = FilterArgumentInfo(
 	name='south',
 	description='Determines whether something is on the south side of the block.',
-	type=LiteralsArgumentType(['none', 'side', 'up']),
+	type=makeLiteralsArgumentType(['none', 'side', 'up']),
 )
 
-STAGE_1 = FilterArgumentInfo.create(
+STAGE_1 = FilterArgumentInfo(
 	name='stage',
 	description='Whether this sapling is ready to grow.',
 	type=BRIGADIER_INTEGER,
 )
 
-TRIGGERED_1 = FilterArgumentInfo.create(
+TRIGGERED_1 = FilterArgumentInfo(
 	name='triggered',
 	description='Whether this block has been activated.',
 	type=BRIGADIER_BOOL,
 )
 
-TYPE_1 = FilterArgumentInfo.create(
+TYPE_1 = FilterArgumentInfo(
 	name='type',
 	description='Determines the variant of this block.',
-	type=LiteralsArgumentType(['normal', 'sticky']),
+	type=makeLiteralsArgumentType(['normal', 'sticky']),
 )
 
-TYPE_2 = FilterArgumentInfo.create(
+TYPE_2 = FilterArgumentInfo(
 	name='type',
 	description='Determines the variant of this block.',
-	type=LiteralsArgumentType(['left', 'right', 'single']),
+	type=makeLiteralsArgumentType(['left', 'right', 'single']),
 )
 
-TYPE_3 = FilterArgumentInfo.create(
+TYPE_3 = FilterArgumentInfo(
 	name='type',
 	description='Determines the variant of this block.',
-	type=LiteralsArgumentType(['bottom', 'double', 'top']),
+	type=makeLiteralsArgumentType(['bottom', 'double', 'top']),
 )
 
-UNSTABLE_1 = FilterArgumentInfo.create(
+UNSTABLE_1 = FilterArgumentInfo(
 	name='unstable',
 	description='Whether the TNT explodes when punched or not.',
 	type=BRIGADIER_BOOL,
 )
 
-UP_1 = FilterArgumentInfo.create(
+UP_1 = FilterArgumentInfo(
 	name='up',
 	description='Determines whether something is above the block.',
 	type=BRIGADIER_BOOL,
 )
 
-WATERLOGGED_1 = FilterArgumentInfo.create(
+WATERLOGGED_1 = FilterArgumentInfo(
 	name='waterlogged',
 	description='Whether the block has water in it.',
 	type=BRIGADIER_BOOL,
 )
 
-WEST_1 = FilterArgumentInfo.create(
+WEST_1 = FilterArgumentInfo(
 	name='west',
 	description='Determines whether something is on the west side of the block.',
 	type=BRIGADIER_BOOL,
 )
 
-WEST_2 = FilterArgumentInfo.create(
+WEST_2 = FilterArgumentInfo(
 	name='west',
 	description='Determines whether something is on the west side of the block.',
-	type=LiteralsArgumentType(['low', 'none', 'tall']),
+	type=makeLiteralsArgumentType(['low', 'none', 'tall']),
 )
 
-WEST_3 = FilterArgumentInfo.create(
+WEST_3 = FilterArgumentInfo(
 	name='west',
 	description='Determines whether something is on the west side of the block.',
-	type=LiteralsArgumentType(['none', 'side', 'up']),
+	type=makeLiteralsArgumentType(['none', 'side', 'up']),
 )
 
 # Arguments by block:

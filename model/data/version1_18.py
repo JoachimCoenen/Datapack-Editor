@@ -1,4 +1,5 @@
-from Cat.Serializable import replace
+from dataclasses import replace
+
 from model.commands.command import Keyword
 from model.data.mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
 from model.data.mcd import fillFromMinecraftData
@@ -14,9 +15,9 @@ def fillCommandsFor1_18(version: MCVersion) -> None:
 	fillCommandsFor1_17(version)
 
 	# add 'block_marker' particle:
-	particles = version.commands['particle'].argument
+	particles = version.commands['particle'].next
 	block_marker = replace(next(p for p in particles if p.name == 'block' and isinstance(p, Keyword)), name='block_marker')
-	version.commands['particle'].argument.insert(-1, block_marker)
+	version.commands['particle'].next.insert(-1, block_marker)
 
 
 version1_18: MCVersion = newVersionFrom(getMCVersion('1.17'), name='1.18')
