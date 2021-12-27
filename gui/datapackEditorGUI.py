@@ -6,26 +6,23 @@ import functools as ft
 import os
 import re
 from dataclasses import dataclass
-from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Union, Pattern, NamedTuple, Protocol, Type, Generic
+from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Union, Pattern, NamedTuple, Protocol, Type
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
-from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QSizePolicy
 
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField
-from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin
 from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, Error
-from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData, PythonGUIWidget
+from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
 from Cat.Serializable import SerializedPropertyABC, SerializableContainer
 from Cat.icons import icons
-from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, Maybe, format_full_exc, openOrCreate
-from Cat.utils.abc_ import abstractmethod
+from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, openOrCreate
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
-from Cat.utils.profiling import logError
 from gui import mcFunctionLexer
 from session.documents import Document, ErrorCounts
 from model.Model import Datapack
@@ -147,188 +144,6 @@ class ContextMenuEntries:
 			cls.separator(),
 			(f'copy name', lambda p=datapack: QApplication.clipboard().setText(p.name), {'enabled': enabled}),
 		]
-
-	@classmethod
-	def mvnActions(cls, gui: DatapackEditorGUI, project: Project) -> list[MenuItemData]:
-		return [
-			('Install',       lambda p=project: p.maven.mvnInstall(), {'enabled': project is not None and project.maven.isValid}),
-			('Clean',         lambda p=project: p.maven.mvnClean(), {'enabled': project is not None and project.maven.isValid}),
-			('Clean Install', lambda p=project: p.maven.mvnCleanInstall(), {'enabled': project is not None and project.maven.isValid}),
-			cls.separator(),
-			('Jetty Run',     lambda p=project: p.maven.mvnJettyRun(), {'enabled': project is not None and project.maven.isValid}),
-			cls.separator(),
-			('Download Sources',     lambda p=project: p.maven.downloadSources(), {'enabled': project is not None and project.maven.isValid}),
-		]
-
-
-	@classmethod
-	def gitActions(cls, gui: DatapackEditorGUI, project: Project) -> list[MenuItemData]:
-		gitIsValid = project is not None and project.git.isValid
-		if gitIsValid:
-			git = project.git
-		else:
-			git  = None
-		return [
-			('Pull',           lambda g=git: g.pullFromRemote(), {'enabled': gitIsValid, 'tip': 'Pull current branch'}),
-			('Fetch',          lambda g=git: g.fetchRemotes(), {'enabled': gitIsValid, 'tip': 'Fetch all remote branches'}),
-			('Prune',          lambda g=git: g.pruneRemoteBranches(), {'enabled': gitIsValid, 'tip': 'Prune all remote branches'}),
-			('Switch Branch',
-				lambda g=git: Maybe(GitGUIMethods.branchSelectionPopup(gui, g.localBranches.values())).apply(g.switchBranch),
-				{'enabled': gitIsValid}
-			),
-			('Checkout Remote',
-				lambda g=git: Maybe(GitGUIMethods.branchSelectionPopup(gui, g.remoteBranches.values())).apply(g.switchBranch),
-				{'enabled': gitIsValid}
-			),
-			# ('Switch Branch',
-			# 	[
-			# 		(branchName, lambda g=git, bn=branchName: g.switchBranch(bn) or g.refresh(), {'enabled': gitIsValid})
-			# 		for branchName in git.localBranches.keys()
-			# 	] if gitIsValid else [],
-			# 	{'enabled': gitIsValid}
-			# ),
-			# ('Checkout Remote',
-			# 	[
-			# 		(branchName, lambda g=git, bn=branchName: g.switchBranch(bn) or g.refresh(), {'enabled': gitIsValid})
-			# 		for branchName in git.remoteBranches.keys()
-			# 	] if gitIsValid else [],
-			# 	{'enabled': gitIsValid}
-			# ),
-			('Create Branch',  lambda gui=gui, g=git: GitGUIMethods.createBranchGUI(gui, g), {'enabled': gitIsValid, 'tip': 'Create a new branch and switch to it.'}),
-			('Create Local from Remote',
-				lambda g=git: Maybe(GitGUIMethods.branchSelectionPopup(gui, [b for b in git.remoteBranches.values() if b.name.partition('/')[2] not in git.localBranches])).apply(g.createLocalBranchFromRemote),
-				{'enabled': gitIsValid}
-			),
-			# ('Create Local from Remote',
-			# 	[
-			# 		(branchName, lambda g=git, bn=branchName: g.createLocalBranchFromRemote(bn) or g.refresh(), {'enabled': branchName.partition('/')[2] not in git.localBranches})
-			# 		for branchName in git.remoteBranches.keys()
-			# 	] if gitIsValid else [],
-			# 	{'enabled': gitIsValid}
-			# ),
-			cls.separator(),
-			('Stash',          lambda g=git: g.stashPush(), {'enabled': gitIsValid and bool(git.hasModifiedFiles)}),
-			('Pop stash',      lambda g=git: g.stashPop(), {'enabled': gitIsValid and bool(git.stashes)}),
-			cls.separator(),
-			('Create patch file', lambda gui=gui, g=git: GitGUIMethods.createPatchFileGUI(gui, g), {'enabled': gitIsValid}),
-		]
-
-
-class GitGUIMethods:
-	# @classmethod
-	# def createPatchFileGUI(cls, gui: PumpDriveSelectorGUI, repository: catGit.Repository):
-	# 	if not repository.isValid:
-	# 		raise ValueError('repository must be a valid repository (repository.isValid == True)')
-	#
-	# 	# currentBranch = repository.currentBranch
-	# 	# if currentBranch is None:
-	# 	# 	gui.showWarningDialog('No branch selected', 'You must select a branch before you can create a patch file.')
-	#
-	# 	lastNCommits = repository.getLastNCommits(100)
-	# 	earliestIndex, ok = gui.askUserInput('Select earliest commit to include', 0, lambda g, i, **kwargs: cls.commitsTable(g, lastNCommits),)
-	# 	if not ok:
-	# 		return
-	# 	commitsCount = earliestIndex + 1
-	#
-	# 	#savePath = gui.showFileDialog(repository.path, filters=[('Patch file', '.patch')], style='save')
-	# 	savePath, ok = earliestIndex, ok = gui.askUserInput('choose filename', 'patch1.patch')
-	# 	if not savePath or not ok:
-	# 		return
-	#
-	# 	repository.generatePatchFileForCommits(commitsCount, savePath)
-	#
-	# @classmethod
-	# def createBranchGUI(cls, gui: PumpDriveSelectorGUI, repository: catGit.Repository) -> None:
-	# 	if not repository.isValid:
-	# 		raise ValueError('repository must be a valid repository (repository.isValid == True)')
-	#
-	# 	branchName: str = ''
-	# 	while True:
-	# 		branchName, ok = gui.askUserInput('Branch name ', branchName)
-	# 		if not ok:
-	# 			return
-	# 		branchName = branchName.strip()
-	# 		if not cls.isBranchNameValid(branchName):
-	# 			gui.showWarningDialog('Invalid branch name', f"'{branchName}' is not a valid branch name in git.")
-	# 			continue
-	# 		branches = repository.localBranches
-	# 		if branchName in branches:
-	# 			gui.showWarningDialog('Invalid branch name', f"'{branchName}' already exists.")
-	# 			continue
-	#
-	# 		# branch name is valid!
-	# 		repository.createLocalBranch(branchName)
-	# 		return
-	#
-	# @staticmethod
-	# def branchSelectionPopup(gui: PumpDriveSelectorGUI, branches: list[catGit.Branch]) -> Optional[catGit.Branch]:
-	# 	initialBranch: Optional[catGit.Branch] = None
-	# 	branch = gui.searchableChoicePopup(
-	# 		initialBranch,
-	# 		'New File',
-	# 		branches,
-	# 		getSearchStr=lambda x: x.name,
-	# 		labelMaker=lambda x, i: x.name,
-	# 		iconMaker=None,
-	# 		toolTipMaker=lambda x, i: x.name,
-	# 		columnCount=1,
-	# 		width=450,
-	# 		height=450,
-	# 	)
-	# 	return branch
-	#
-	# @classmethod
-	# def isBranchNameValid(cls, branchName: str) -> bool:
-	# 	return re.fullmatch(r'^(?!@$|build-|/|.*([/.]\.|//|@\{|\\))[^\000-\037\177 ~^:?*[]+(?<!\.lock)(?<![/.])$', branchName) is not None
-	#
-	# @classmethod
-	# def commitsTable(cls, gui: PumpDriveSelectorGUI, commits: list[catGit.Commit], **kwargs) -> int:
-	# 	def labelMaker(c: catGit.Commit, column: int):
-	# 		return (
-	# 			f'<span style="{getStyles().warning}">{escapeForXml(f"{c.committer}")}</span>',
-	# 			f'<span style="{getStyles().warning}">{escapeForXml(f"{c.timeStamp}")}</span>',
-	# 			f'{escapeForXml(c.subject)}',
-	# 		)[column]
-	#
-	# 	# def toolTipMaker(c: catGit.Commit, column: int):
-	# 	# 	return str(pr[0].path)
-	#
-	# 	# def onContextMenu(x: catGit.Commit, column: int):
-	# 	# 	with gui.popupMenu(atMousePosition=True) as menu:
-	# 	# 		menu.addItems(ContextMenuEntries.projectItems(gui, pr[0], self._tryOpenOrSelectDocument))
-	#
-	# 	selection = gui.tree(
-	# 		DataListBuilder(
-	# 			commits,
-	# 			labelMaker,
-	# 			None,
-	# 			None,
-	# 			3,
-	# 			onContextMenu=None,
-	# 			getId=catGit.Commit.id.get
-	# 		),
-	# 		headerBuilder=DataHeaderBuilder(('committer', 'time stamp', 'subject'), lambda x, i: x[i]),
-	# 		headerVisible=True,
-	# 		itemDelegate=HTMLDelegate(),
-	# 		**kwargs
-	# 	).selectedItem
-	#
-	# 	index = -1
-	# 	if selection is not None:
-	# 		try:
-	# 			index = commits.index(selection)
-	# 		except ValueError:
-	# 			index = -1
-	# 	return index
-	#
-	# 	# gui.propertyListField3(commits, Commit(None))
-	# 	return gui.listField(None, [
-	# 		#f'{c.subject} ({c.committer} @ {c.timeStamp})' +
-	# 		f'{escapeForXml(c.subject)} <span style="{getStyles().warning}">{escapeForXml(f"({c.committer} @ {c.timeStamp})")}</span>'
-	# 		for c in commits
-	# 	], itemDelegate=HTMLDelegate(), **kwargs)
-	# 	# gui.dataTable([(commit.id, commit.subject, commit.committer, commit.committerEmail, commit.timeStamp) for commit in commits], headers=('hash', 'subject', 'committer', 'e-mail', 'time stamp'))
-	pass
 
 
 def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str], Iterator[tuple[int, int]]]:
@@ -629,7 +444,7 @@ class DatapackEditorGUI(AutoGUI):
 						iconMaker=iconMaker,
 						toolTipMaker=toolTipMaker,
 						columnCount=columnCount,
-						onDoubleClick=lambda g=gui: gui.host.window().accept(),
+						onDoubleClick=lambda: gui.host.window().accept(),
 						onContextMenu=lambda v, c: (onContextMenu(v, c) and False) or gui.redrawGUI(),
 					),
 					roundedCorners=CORNERS.NONE,
@@ -746,13 +561,6 @@ class DatapackEditorGUI(AutoGUI):
 			roundedCorners: RoundedCorners = CORNERS.NONE,
 			overlap: Overlap = NO_OVERLAP
 	):
-		"""
-		TODO docString for filteredProjectsFilesTree(...)
-		:param allIncludedProjects:
-		:param localLayoutFilesProps:
-		:param openFunc:
-		:return:
-		"""
 
 		def childrenMaker(data: FilesTreeItem) -> list[FilesTreeItem]:
 			filePathsCount = len(data.filePaths)
@@ -793,7 +601,6 @@ class DatapackEditorGUI(AutoGUI):
 		for proj in allIncludedProjects:
 			projPrefix = proj.name + '/'
 			projPrefixLen = len(projPrefix)
-			#filesForProj: list[FileEntry2] = []
 			projIsImmutable: bool = isImmutable(proj)
 			projItem: FilesTreeItem = FilesTreeItem(proj.name, projPrefixLen, [], projIsImmutable, projIsImmutable, _folderPath=proj.path)
 			for filesPropInfo in localLayoutFilesProps:
@@ -814,13 +621,6 @@ class DatapackEditorGUI(AutoGUI):
 			if projItem.filePaths:
 				rootItem.filePaths.append(projItem)
 
-			# filesInProj: list[tuple[FilePath, str]] = []
-			# for fullPath in allAutoCompletesInProj:
-			# 	right = getRight(fullPath)
-			# 	allAutocompleteStrings.append(projPrefix + right)
-			# 	filesInProj.append((fullPath, right))
-			# allFilesByProj.append((proj, filesInProj))
-
 		with self.vLayout(verticalSpacing=0):
 			with self.hLayout(horizontalSpacing=0):
 				filterStr = self.filterTextField(None, allAutocompleteStrings, overlap=adjustOverlap(overlap, (None, None, 0, 1)), roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_LEFT), shortcut=QKeySequence.Find).lower()
@@ -828,21 +628,14 @@ class DatapackEditorGUI(AutoGUI):
 				totalFilesCount = len(allAutocompleteStrings)
 				filteredFilesCount = 0
 
-				# DBG_vpLenSum = 0
-				# DBG_fpLenSum = 0
-
 				if filterStr:
 					for projItem in rootItem.filePaths:
 						for folderItem in projItem.filePaths:
 							folderItem.filePaths = [fp for fp in folderItem.filePaths if filterStr in fp.virtualPath.lower()]
 
-							# DBG_fpLenSum += sum(sys.getsizeof(fp.fullPath) if isinstance(fp.fullPath, str) else (sys.getsizeof(fp.fullPath[0]) + sys.getsizeof(fp.fullPath[1])) for fp in folderItem.filePaths)
-							# DBG_vpLenSum += sum(sys.getsizeof(fp.virtualPath) for fp in folderItem.filePaths)
-
 							filteredFilesCount += len(folderItem.filePaths)
 						projItem.filePaths = [folderItem for folderItem in projItem.filePaths if folderItem.filePaths]
 					rootItem.filePaths = [projItem for projItem in rootItem.filePaths if projItem.filePaths]
-					# filteredFilesCount = len(rootItem.filePaths)
 				else:
 					filteredFilesCount = totalFilesCount
 
@@ -851,18 +644,6 @@ class DatapackEditorGUI(AutoGUI):
 					overlap=adjustOverlap(overlap, (1, None, None, 1)),
 					roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_RIGHT)
 				)  # files shown', alignment=Qt.AlignLeft)
-
-				# self.toolButton(
-				# 	f'{DBG_fpLenSum // filteredFilesCount:,} avg full path length',
-				# 	overlap=adjustOverlap(overlap, (1, None, None, 1)),
-				# 	roundedCorners = maskCorners(roundedCorners, CORNERS.TOP_RIGHT)
-				# )  # files shown', alignment=Qt.AlignLeft)
-				#
-				# self.toolButton(
-				# 	f'{DBG_vpLenSum // filteredFilesCount:,} avg virt. path length',
-				# 	overlap=adjustOverlap(overlap, (1, None, None, 1)),
-				# 	roundedCorners = maskCorners(roundedCorners, CORNERS.TOP_RIGHT)
-				# )  # files shown', alignment=Qt.AlignLeft)
 
 			self.tree(
 				DataTreeBuilder(
@@ -1042,11 +823,3 @@ def drawCodeField(
 __documentDrawers: dict[Type[Document], DocumentGUIFunc] = {}
 DocumentDrawer = AddToDictDecorator(__documentDrawers)
 getDocumentDrawer = ft.partial(getIfKeyIssubclassOrEqual, __documentDrawers)
-
-
-# DocumentDrawer(documents.TextDocument)(      ft.partial(drawTextDocument, language=None))
-# DocumentDrawer(documents.JsonDocument)(      ft.partial(drawTextDocument, language='Json'))
-# DocumentDrawer(documents.MCFunctionDocument)(ft.partial(drawTextDocument, language='MCFunction'))
-#
-
-
