@@ -8,8 +8,6 @@ from typing import Optional
 
 from PyQt5.QtWidgets import QWidget
 
-from Cat.Serializable import RegisterContainer, Serialized
-from Cat.utils.profiling import ProfiledFunction
 from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser, Suggestions, makeParsedNode
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import FilterArguments, FilterArgument
@@ -152,7 +150,6 @@ def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, Filter
 	return CursorCtx(None, isValue=False, inside=False, after=False)
 
 
-@ProfiledFunction(enabled=False, colourNodesBySelftime=False)
 def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str, FilterArgumentInfo]) -> Suggestions:
 	if cursorPos == 0:
 		# if len(contextStr) == 0:
