@@ -223,10 +223,11 @@ class BlockStateHandler(ArgumentHandler):
 		return ranges
 
 	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
-		if position.index <= argument.start.index + len(argument.value.blockId.asString):
-			_openFromDatapackContents(window, argument.value.blockId, Datapack.contents.tags.blocks)
+		blockState: BlockState = argument.value
+		if position.index <= argument.start.index + len(blockState.blockId.asString):
+			_openFromDatapackContents(window, blockState.blockId, Datapack.contents.tags.blocks)
 		else:
-			onIndicatorClickedForFilterArgs(argument.value, position, window)
+			onIndicatorClickedForFilterArgs(blockState.states, position, window)
 
 
 @argumentHandler(MINECRAFT_BLOCK_PREDICATE.name)
