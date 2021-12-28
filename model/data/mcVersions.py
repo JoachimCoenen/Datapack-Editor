@@ -4,32 +4,18 @@ from copy import copy
 from dataclasses import dataclass, Field, fields, is_dataclass
 from typing import Optional
 
+from model.commands.argumentTypes import ArgumentType
 from model.commands.command import CommandInfo
 from model.commands.filterArgs import FilterArgumentInfo
-from model.data.gamerules import Gamerule
 from model.datapackContents import ResourceLocation
 
 
 @dataclass
-class Entities:
-
-	mobs: set[ResourceLocation]
-	misc: set[ResourceLocation]
-	projectiles: set[ResourceLocation]
-	vehicles: set[ResourceLocation]
-	blocks: set[ResourceLocation]
-	items: set[ResourceLocation]
-
-	@property
-	def all(self) -> set[ResourceLocation]:
-		return {
-			*self.mobs,
-			*self.misc,
-			*self.projectiles,
-			*self.vehicles,
-			*self.blocks,
-			*self.items,
-		}
+class Gamerule:
+	name: str
+	description: str
+	type: ArgumentType
+	defaultValue: str
 
 
 @dataclass

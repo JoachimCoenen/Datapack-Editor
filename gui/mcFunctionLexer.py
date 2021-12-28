@@ -15,7 +15,7 @@ from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, P
 from model.commands.parser import parseMCFunction
 from model.commands.tokenizer import TokenType, tokenizeMCFunction
 from model.commands.validator import checkMCFunction
-from model.parsingUtils import GeneralParsingError, Position
+from model.utils import GeneralParsingError, Position
 from session.session import getSession
 
 TT = TypeVar('TT')

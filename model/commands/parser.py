@@ -7,7 +7,7 @@ from model.commands.command import CommandInfo, Keyword, ArgumentInfo, CommandNo
 from model.commands.utils import CommandSyntaxError, EXPECTED_ARGUMENT_SEPARATOR_MSG
 from model.commands.parsedCommands import ParsedMCFunction, ParsedComment, ParsedCommand, ParsedArgument
 from model.commands.stringReader import StringReader
-from model.parsingUtils import Span
+from model.utils import Span
 
 from . import argumentParsersImpl
 from .argumentHandlers import getArgumentHandler, makeCommandSyntaxError, makeParsedArgument, missingArgumentParser

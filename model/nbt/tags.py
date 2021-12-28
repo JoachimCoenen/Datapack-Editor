@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import TypeVar, Generic
 
 from Cat.utils.collections_ import OrderedDict
-from model.parsingUtils import Span
+from model.utils import Span
 
 TS = TypeVar('TS')
 TT = TypeVar('TT')

@@ -11,7 +11,7 @@ from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import SNBTParser, SNBTError
 from model.nbt.tags import NBTTag, ByteTag, ShortTag, IntTag, LongTag, FloatTag, DoubleTag, StringTag, ListTag, CompoundTag, ByteArrayTag, IntArrayTag, LongArrayTag
-from model.parsingUtils import Span
+from model.utils import Span
 
 
 def _parseNBTTagBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[Base]:

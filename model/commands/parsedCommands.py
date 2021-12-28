@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Union, Any
 
 from model.commands.command import CommandInfo, CommandNode
-from model.parsingUtils import Position, Span
+from model.utils import Position, Span
 
 
 @dataclass

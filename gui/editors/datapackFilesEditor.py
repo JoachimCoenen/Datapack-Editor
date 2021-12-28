@@ -13,8 +13,7 @@ from gui.datapackEditorGUI import DatapackEditorGUI, LocalFilesPropInfo, Context
 from model.Model import World, Datapack
 from model.dataPackStructure import DATAPACK_FOLDERS, NAME_SPACE_VAR
 from model.datapackContents import isNamespaceValid
-
-from model.parsingUtils import Position
+from model.utils import Position
 from model.pathUtils import FilePath, normalizeDirSeparators
 from session.session import getSession
 

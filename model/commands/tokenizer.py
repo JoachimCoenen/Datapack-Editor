@@ -4,7 +4,7 @@ from enum import Enum
 from model.commands.argumentTypes import *
 from model.commands.command import Keyword, ArgumentInfo
 from model.commands.parsedCommands import ParsedComment, ParsedCommand, ParsedMCFunction
-from model.parsingUtils import Span
+from model.utils import Span
 
 
 class TokenType(Enum):

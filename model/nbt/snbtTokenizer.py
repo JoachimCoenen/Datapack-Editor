@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Callable, Iterator
 
-from model.parsingUtils import Position, Span
+from model.utils import Position, Span
 
 
 class TokenType(Enum):

@@ -12,7 +12,7 @@ from Cat.utils.abc_ import abstractmethod
 from Cat.utils.collections_ import Stack
 from Cat.utils.profiling import logInfo
 from Cat.utils.signals import CatSignal, CatBoundSignal
-from model.parsingUtils import Span
+from model.utils import Span
 from model.pathUtils import FilePath
 from session.documents import Document, DocumentTypeDescription, getDocumentTypeForFilePath, getDocTypeByName, getFilePathForDisplay
 

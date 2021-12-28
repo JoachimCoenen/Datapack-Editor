@@ -12,7 +12,7 @@ from model.commands.command import ArgumentInfo, CommandNode
 from model.commands.parsedCommands import ParsedArgument, ParsedCommandPart, ParsedNode
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
-from model.parsingUtils import Span, Position
+from model.utils import Span, Position
 
 
 class ArgumentParserFunc(Protocol):

@@ -23,7 +23,7 @@ from model.commands.stringReader import StringReader
 from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations
-from model.parsingUtils import Span, Position
+from model.utils import Span, Position
 from model.pathUtils import FilePath
 from session.session import getSession
 

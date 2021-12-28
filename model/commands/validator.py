@@ -7,7 +7,7 @@ from model.commands.argumentTypes import *
 from model.commands.command import formatPossibilities, CommandNode, TERMINAL, Keyword, Switch, ArgumentInfo, CommandInfo
 from model.commands.utils import CommandSemanticsError
 from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedCommand
-from model.parsingUtils import Span
+from model.utils import Span
 
 if TYPE_CHECKING:
 	from session.session import Session

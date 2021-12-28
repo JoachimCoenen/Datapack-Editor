@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING, final
 from Cython import final as cy_final
 
 from Cat.utils.collections_ import Stack
-from model.parsingUtils import Position, Span
+from model.utils import Position, Span
 
 if TYPE_CHECKING:
 	def cy_final(x): x

@@ -16,7 +16,7 @@ from model.commands.parsedCommands import ParsedArgument
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
-from model.parsingUtils import Span, Position
+from model.utils import Span, Position
 
 
 @dataclass

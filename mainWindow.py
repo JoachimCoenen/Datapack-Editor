@@ -20,7 +20,7 @@ from Cat.utils.formatters import formatVal, FW
 from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
 from keySequences import KEY_SEQUENCES
 from model.commands.parser import parseMCFunction
-from model.parsingUtils import Span
+from model.utils import Span
 from session.session import getSession, WindowId, saveSessionToFile
 from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
 from session import documentsImpl

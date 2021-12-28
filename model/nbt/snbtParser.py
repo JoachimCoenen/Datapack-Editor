@@ -3,8 +3,7 @@ from typing import Optional, Type, Union, Callable
 from Cat.utils.collections_ import OrderedDict
 from model.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
 from model.nbt.tags import *
-from model.parsingUtils import Position, GeneralParsingError, Span
-from model.utils import Message
+from model.utils import Message, Position, GeneralParsingError, Span
 
 
 EXPECTED_BUT_GOT_MSG: Message = Message("Expected {}, but got: `{}`", 2)
