@@ -1,6 +1,6 @@
 import builtins
 from dataclasses import dataclass, field
-from typing import final, Iterator
+from typing import final, Iterator, Optional
 
 from Cat.Serializable import RegisterContainer, SerializableContainer, ComputedCached
 from Cat.utils import HTMLifyMarkDownSubSet
@@ -84,9 +84,24 @@ class GeneralParsingError:
 		return self.span.end
 
 
+class WrappedError:
+	"""
+	just a wrapper for any Exception
+	satisfies protocol `Error`
+	"""
+	def __init__(self, exception: Exception):
+		super(WrappedError, self).__init__()
+		self.wrappedEx = exception
+		self.message: str = str(exception)
+		self.position: Optional[Position] = None
+		self.end: Optional[Position] = None
+		self.style: str = 'error'
+
+
 __all__ = [
 	'Message',
 	'Position',
 	'Span',
 	'GeneralParsingError',
+	'WrappedError',
 ]

@@ -7,7 +7,7 @@ from PyQt5.QtCore import pyqtSignal, QEventLoop, QObject, Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QDialog, QSizePolicy, QWidget
 
 from Cat.CatPythonGUI.GUI import SizePolicy
-from Cat.CatPythonGUI.GUI.codeEditor import Error, Position
+from Cat.CatPythonGUI.GUI.codeEditor import Error
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.utilities import connect
 from Cat.utils import format_full_exc
@@ -17,6 +17,7 @@ from Cat.utils.profiling import TimedMethod, logError
 from model.Model import Datapack
 from model.commands.parser import parseMCFunction
 from model.commands.validator import checkMCFunction
+from model.utils import WrappedError
 from session.documents import ErrorCounts, getErrorCounts
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
 from model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool, loadTextFile
