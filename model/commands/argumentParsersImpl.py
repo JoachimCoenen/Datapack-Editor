@@ -1,6 +1,6 @@
 from typing import Optional
 
-from model.commands.argumentHandlers import makeParsedArgument
+from model.commands.argumentHandlers import makeParsedArgument, Suggestions
 from model.commands.command import ArgumentInfo
 from model.commands.snbt import parseNBTTag
 from model.commands.utils import CommandSyntaxError
@@ -39,6 +39,10 @@ def _parse2dPos(sr: StringReader, ai: ArgumentInfo, *, useFloat: bool, errorsIO:
 	return makeParsedArgument(sr, ai, value=blockPos)
 
 
+def _get2dPosSuggestions(ai: ArgumentInfo, contextStr: str, cursorPos: int, *, useFloat: bool) -> Suggestions:
+	return ['~ ~', '0 0']
+
+
 def _parse3dPos(sr: StringReader, ai: ArgumentInfo, *, useFloat: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 	if useFloat:
 		numberReader = sr.tryReadFloat
@@ -71,6 +75,10 @@ def _parse3dPos(sr: StringReader, ai: ArgumentInfo, *, useFloat: bool, errorsIO:
 
 	blockPos = (blockPos1, blockPos2, blockPos3)
 	return makeParsedArgument(sr, ai, value=blockPos)
+
+
+def _get3dPosSuggestions(ai: ArgumentInfo, contextStr: str, cursorPos: int, *, useFloat: bool) -> Suggestions:
+	return ['~ ~ ~', '^ ^ ^', '0 0 0']
 
 
 def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:

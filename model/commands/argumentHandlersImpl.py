@@ -12,7 +12,7 @@ from Cat.utils.collections_ import OrderedDict
 from model.Model import Datapack
 from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider, Suggestions, \
 	getArgumentHandler
-from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos
+from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
 from model.commands.command import ArgumentInfo
@@ -127,12 +127,15 @@ class AngleHandler(ArgumentHandler):
 
 @argumentHandler(MINECRAFT_BLOCK_POS.name)
 class BlockPosHandler(ArgumentHandler):
+	@staticmethod
+	def useFloat(ai: ArgumentInfo):
+		return ai.args is not None and ai.args.get('type', None) is float
+
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		useFloat = ai.args is not None and ai.args.get('type', None) is float
-		return _parse3dPos(sr, ai, useFloat=useFloat, errorsIO=errorsIO)
+		return _parse3dPos(sr, ai, useFloat=self.useFloat(ai), errorsIO=errorsIO)
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		return ['^ ^ ^', '~ ~ ~']
+		return _get3dPosSuggestions(ai, contextStr, cursorPos, useFloat=self.useFloat(ai))
 
 
 @argumentHandler(MINECRAFT_BLOCK_STATE.name)
@@ -223,10 +226,11 @@ class BlockStateHandler(ArgumentHandler):
 		return ranges
 
 	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
-		if position.index <= argument.start.index + len(argument.value.blockId.asString):
-			_openFromDatapackContents(window, argument.value.blockId, Datapack.contents.tags.blocks)
+		blockState: BlockState = argument.value
+		if position.index <= argument.start.index + len(blockState.blockId.asString):
+			_openFromDatapackContents(window, blockState.blockId, Datapack.contents.tags.blocks)
 		else:
-			onIndicatorClickedForFilterArgs(argument.value, position, window)
+			onIndicatorClickedForFilterArgs(blockState.states, position, window)
 
 
 @argumentHandler(MINECRAFT_BLOCK_PREDICATE.name)
@@ -329,7 +333,6 @@ class EntityHandler(ArgumentHandler):
 
 	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
 		onIndicatorClickedForFilterArgs(argument.value.arguments, position, window)
-
 
 
 class EntityTypeLikeHandler(ArgumentHandler):
@@ -795,11 +798,17 @@ class Vec2Handler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse2dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
 
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+		return _get2dPosSuggestions(ai, contextStr, cursorPos, useFloat=True)
+
 
 @argumentHandler(MINECRAFT_VEC3.name)
 class Vec3Handler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse3dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
+
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+		return _get3dPosSuggestions(ai, contextStr, cursorPos, useFloat=True)
 
 
 @argumentHandler(DPE_BIOME_ID.name)

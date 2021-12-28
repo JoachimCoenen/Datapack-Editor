@@ -104,8 +104,8 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 
 def getBestFAMatch(fas: FilterArguments, cursorPos: int) -> Optional[ParsedArgument]:
 	for fa in fas.values():
-		if fa.value is not None and fa.value.span.start.index <= cursorPos <= fa.value.span.end.index:
-			return fa.value
+		if (value := fa.value) is not None and value.span.start.index <= cursorPos <= value.span.end.index:
+			return value
 	return None
 
 
@@ -125,8 +125,8 @@ def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, Filter
 
 	for fa in reversed(fas.values()):
 		keySpan = fa.key.span
-		if fa.value is not None:
-			valSpan = fa.value.span
+		if (value := fa.value) is not None:
+			valSpan = value.span
 			if valSpan.end.index < cursorPos:
 				if re.search(r', *$', contextStr[:cursorPos]) is not None:
 					return CursorCtx(fa, isValue=False, inside=True)
@@ -179,12 +179,13 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str
 	suggestions: Suggestions = []
 	if context.isValue:
 		if context.inside:
-			tsaInfo = context.fa.value.info
-			if isinstance(tsaInfo, ArgumentInfo):
-				handler = getArgumentHandler(tsaInfo.type)
-				if handler is not None:
-					suggestions += handler.getSuggestions(tsaInfo, contextStr, cursorPos)
-					# TODO: maybe log if no handler has been found...
+			if (value := context.fa.value) is not None:
+				tsaInfo = value.info
+				if isinstance(tsaInfo, ArgumentInfo):
+					handler = getArgumentHandler(tsaInfo.type)
+					if handler is not None:
+						suggestions += handler.getSuggestions(tsaInfo, contextStr, cursorPos)
+						# TODO: maybe log if no handler has been found...
 		if context.after:
 			suggestions.append(cursorTouchesWord + ', ')
 			suggestions.append(cursorTouchesWord + ']')
@@ -201,12 +202,13 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str
 def clickableRangesForFilterArgs(filterArgs: FilterArguments) -> list[Span]:
 	ranges = []
 	for fa in filterArgs.values():
-		argInfo = fa.value.info
-		if isinstance(argInfo, ArgumentInfo):
-			if (handler := getArgumentHandler(argInfo.type)) is not None:
-				if (rng := handler.getClickableRanges(fa.value)) is not None:
-					ranges += rng
-		# TODO: maybe log if no handler has been found...
+		if (value := fa.value) is not None:
+			argInfo = value.info
+			if isinstance(argInfo, ArgumentInfo):
+				if (handler := getArgumentHandler(argInfo.type)) is not None:
+					if (rng := handler.getClickableRanges(value)) is not None:
+						ranges += rng
+					# TODO: maybe log if no handler has been found...
 	return ranges
 
 

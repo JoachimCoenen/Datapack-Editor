@@ -1,3 +1,11 @@
+## Version 0.2.1-alpha
+### Fixes
+ * Fixed crash in `clickableRangesForFilterArgs(...)` (#19)
+ * Fixed crash in `getBestFAMatch(...)` (#20)
+
+## Improvements
+ * Slightly improved suggestions for coordinates
+
 ## Version 0.2.0-alpha
 ### Features
  * Added support for MC versions 1.17 & 1.18 (can be changed in settings)
