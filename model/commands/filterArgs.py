@@ -150,13 +150,13 @@ def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, Filter
 	return CursorCtx(None, isValue=False, inside=False, after=False)
 
 
-def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str, FilterArgumentInfo]) -> Suggestions:
+def suggestionsForFilterArgs(contextStr: str, cursorPos: int, replaceCtx: str, argsInfo: dict[str, FilterArgumentInfo]) -> Suggestions:
 	if cursorPos == 0:
 		# if len(contextStr) == 0:
 		if not argsInfo:
-			return [contextStr + '[]']
+			return [replaceCtx + '[]']
 		else:
-			return [contextStr + '[']
+			return [replaceCtx + '[']
 	# elif cursorPos == 1:
 	# 	if len(contextStr) >= 1:
 	# 		if contextStr[0] == '[':
@@ -184,7 +184,7 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, argsInfo: dict[str
 				if isinstance(tsaInfo, ArgumentInfo):
 					handler = getArgumentHandler(tsaInfo.type)
 					if handler is not None:
-						suggestions += handler.getSuggestions(tsaInfo, contextStr, cursorPos)
+						suggestions += handler.getSuggestions(tsaInfo, contextStr, cursorPos, replaceCtx)
 						# TODO: maybe log if no handler has been found...
 		if context.after:
 			suggestions.append(cursorTouchesWord + ', ')

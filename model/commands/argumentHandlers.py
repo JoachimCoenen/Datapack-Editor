@@ -56,11 +56,12 @@ class ArgumentHandler:
 	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		"""
 		:param ai:
 		:param contextStr:
 		:param cursorPos: cursor position in contextStr
+		:param replaceCtx: the string that will be replaced
 		:return:
 		"""
 		return []
@@ -190,7 +191,7 @@ class LiteralArgumentHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return parseLiteral(sr, ai, errorsIO=errorsIO)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		if isinstance(ai.type, LiteralsArgumentType):
 			return ai.type.options
 		else:

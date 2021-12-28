@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import Optional, TypeVar, Union, Iterable
+from typing import Optional, TypeVar, Union, Iterable, cast
 
 from PyQt5.Qsci import QsciLexer, QsciLexerCustom, QsciScintilla
 from PyQt5.QtCore import Qt
@@ -132,7 +132,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		return bestMatch
 
 	def getHoverTip(self, cePosition: CEPosition) -> Optional[str]:
-		lexer: LexerMCFunction = self.lexer()
+		lexer: LexerMCFunction = cast(LexerMCFunction, self.lexer())
 		editor: QsciScintilla = lexer.editor()
 		position = Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
 
@@ -163,20 +163,20 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 			tip = '<br/>'.join(tips)
 			return f"{tip}"
 
-	def _getNextKeywords(self, nexts: Iterable[CommandNode], contextStr: str, cursorPos: int) -> list[str]:
+	def _getNextKeywords(self, nexts: Iterable[CommandNode], contextStr: str, cursorPos: int, replaceCtx: str) -> list[str]:
 		result = []
 		for nx in nexts:
 			if isinstance(nx, Keyword):
 				result.append(nx.name)
 			elif isinstance(nx, Switch):
-				result += self._getNextKeywords(nx.options, contextStr, cursorPos)
+				result += self._getNextKeywords(nx.options, contextStr, cursorPos, replaceCtx)
 				hasTerminal = TERMINAL in nx.options
 				if hasTerminal:
-					result += self._getNextKeywords(nx.next, contextStr, cursorPos)
+					result += self._getNextKeywords(nx.next, contextStr, cursorPos, replaceCtx)
 			elif isinstance(nx, ArgumentInfo):
 				handler = getArgumentHandler(nx.type)
 				if handler is not None:
-					result += handler.getSuggestions(nx, contextStr, cursorPos)
+					result += handler.getSuggestions(nx, contextStr, cursorPos, replaceCtx)
 			elif nx is COMMANDS_ROOT:
 				result += list(getSession().minecraftData.commands.keys())
 		return result
@@ -190,7 +190,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		words are defined by the lexer.  The last word is a partial word and
 		may be empty if the user has just entered a word separator.
 		"""
-		lexer: LexerMCFunction = self.lexer()
+		lexer: LexerMCFunction = cast(LexerMCFunction, self.lexer())
 		editor: QsciScintilla = lexer.editor()
 		text: str = editor.text()
 		cePosition = CEPosition(*editor.getCursorPosition())
@@ -222,12 +222,14 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 			return super().updateAutoCompletionList(context, aList)
 		# contextStr = context[-1] if context else ''
 
-		result = self._getNextKeywords(info.next, contextStr, posInContextStr)
+		replaceCtx = context[0] if context else ''
+		result = self._getNextKeywords(info.next, contextStr, posInContextStr, replaceCtx)
+
 		return result
 
 	@override
 	def getClickableRanges(self) -> list[tuple[CEPosition, CEPosition]]:
-		lexer: LexerMCFunction = self.lexer()
+		lexer: LexerMCFunction = cast(LexerMCFunction, self.lexer())
 		editor: QsciScintilla = lexer.editor()
 		text: str = editor.text()
 
@@ -252,7 +254,7 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 
 	@override
 	def indicatorClicked(self, cePosition: CEPosition, state: Qt.KeyboardModifiers) -> None:
-		lexer: LexerMCFunction = self.lexer()
+		lexer: LexerMCFunction = cast(LexerMCFunction, self.lexer())
 		editor: QsciScintilla = lexer.editor()
 		position = Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
 

@@ -65,7 +65,7 @@ class BoolHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=string)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return ['true', 'false']
 
 
@@ -134,7 +134,7 @@ class BlockPosHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse3dPos(sr, ai, useFloat=self.useFloat(ai), errorsIO=errorsIO)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return _get3dPosSuggestions(ai, contextStr, cursorPos, useFloat=self.useFloat(ai))
 
 
@@ -184,7 +184,7 @@ class BlockStateHandler(ArgumentHandler):
 				return CommandSemanticsError(f"Unknown block id '{blockId.asString}'.", argument.span, style='warning')
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		suggestions: Suggestions = []
 		if '[' in contextStr or cursorPos == len(contextStr):
 			sr = StringReader(contextStr, 0, 0, contextStr)
@@ -193,7 +193,7 @@ class BlockStateHandler(ArgumentHandler):
 				if cursorPos >= len(blockID):
 					blockStatesDict = getSession().minecraftData.getBlockStatesDict(ResourceLocation.fromString(blockID))
 					argsStart = sr.currentPos.index
-					suggestions += suggestionsForFilterArgs(sr.tryReadRemaining() or '', cursorPos - argsStart, blockStatesDict)
+					suggestions += suggestionsForFilterArgs(sr.tryReadRemaining() or '', cursorPos - argsStart, replaceCtx, blockStatesDict)
 					if cursorPos > len(blockID):  # we're inside the block states, so don't suggest blocks anymore.
 						return suggestions
 		suggestions += choicesFromResourceLocations(contextStr, getSession().minecraftData.blocks)
@@ -261,7 +261,7 @@ class ColumnPosHandler(ArgumentHandler):
 		blockPos = f'{columnPos1} {columnPos2}'
 		return makeParsedArgument(sr, ai, value=blockPos)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return ['~ ~']
 
 
@@ -295,7 +295,7 @@ class DimensionHandler(ArgumentHandler):
 		else:
 			return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, getSession().minecraftData.dimensions)
 
 
@@ -318,11 +318,11 @@ class EntityHandler(ArgumentHandler):
 
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		if 0 <= cursorPos < 2:
 			return ['@a', '@e', '@s', '@p', '@r', ]
 		else:
-			return suggestionsForFilterArgs(contextStr[2:], cursorPos - 2, TARGET_SELECTOR_ARGUMENTS_DICT)
+			return suggestionsForFilterArgs(contextStr[2:], cursorPos - 2, replaceCtx, TARGET_SELECTOR_ARGUMENTS_DICT)
 
 	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
 		targetSelector: TargetSelector = argument.value
@@ -357,7 +357,7 @@ class EntityTypeLikeHandler(ArgumentHandler):
 				return CommandSemanticsError(f"Unknown entity id '{entity.asString}'.", argument.span, style='warning')
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		suggestions: Suggestions = []
 		suggestions += choicesFromResourceLocations(contextStr, getSession().minecraftData.entities)
 		if self._allowTag:
@@ -402,7 +402,7 @@ class FloatRangeHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=range_)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return ['0...']
 
 
@@ -425,7 +425,7 @@ class FunctionHandler(ArgumentHandler):
 			else:
 				return CommandSemanticsError(f"Unknown function '{value.asString}'.", argument.span)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		result = []
 		result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.functions))
 		result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.functions))
@@ -467,7 +467,7 @@ class IntRangeHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=range_)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return ['0...']
 
 
@@ -484,7 +484,7 @@ class ItemEnchantmentHandler(ArgumentHandler):
 		if not _containsResourceLocation(enchantment, getSession().minecraftData.enchantments):
 			return CommandSemanticsError(f"Unknown enchantment '{enchantment.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, getSession().minecraftData.enchantments)
 
 
@@ -501,7 +501,7 @@ class ItemSlotHandler(ArgumentHandler):
 		if slot not in getSession().minecraftData.slots:
 			return CommandSemanticsError(f"Unknown item slot '{slot}'.", argument.span, style='error')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return list(getSession().minecraftData.slots.keys())
 
 
@@ -546,7 +546,7 @@ class ItemStackHandler(ArgumentHandler):
 				return CommandSemanticsError(f"Unknown item id '{itemId.asString}'.", argument.span, style='warning')
 		return None
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		result = choicesFromResourceLocations(contextStr, chain(getSession().minecraftData.items, getSession().minecraftData.blocks))
 		if self._allowTag:
 			result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.items))
@@ -604,7 +604,7 @@ class MobEffectHandler(ArgumentHandler):
 		if not _containsResourceLocation(effect, getSession().minecraftData.effects):
 			return CommandSemanticsError(f"Unknown mob effect '{effect.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, getSession().minecraftData.effects)
 
 
@@ -668,7 +668,7 @@ class ParticleHandler(ArgumentHandler):
 		if not _containsResourceLocation(particle, getSession().minecraftData.particles):
 			return CommandSemanticsError(f"Unknown biome '{particle.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, getSession().minecraftData.particles)
 
 
@@ -719,8 +719,8 @@ class ScoreHolderHandler(EntityHandler):
 				return None
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
-		suggestions = super(ScoreHolderHandler, self).getSuggestions(ai, contextStr, cursorPos)
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
+		suggestions = super(ScoreHolderHandler, self).getSuggestions(ai, contextStr, cursorPos, replaceCtx)
 		if cursorPos <= 2:
 			suggestions.append('*')
 		return suggestions
@@ -798,7 +798,7 @@ class Vec2Handler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse2dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return _get2dPosSuggestions(ai, contextStr, cursorPos, useFloat=True)
 
 
@@ -807,7 +807,7 @@ class Vec3Handler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse3dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return _get3dPosSuggestions(ai, contextStr, cursorPos, useFloat=True)
 
 
@@ -824,7 +824,7 @@ class BiomeIdHandler(ArgumentHandler):
 		if not _containsResourceLocation(biome, getSession().minecraftData.biomes):
 			return CommandSemanticsError(f"Unknown biome '{biome.asString}'.", argument.span, style='warning')
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int) -> Suggestions:
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
 		return choicesFromResourceLocations(contextStr, getSession().minecraftData.biomes)
 
 
