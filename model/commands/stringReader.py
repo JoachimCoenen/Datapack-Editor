@@ -371,7 +371,7 @@ class StringReader:
 		# The following characters are illegal in the namespace, but acceptable in the path:
 		#     / Forward slash (directory separator)
 		# The preferred naming convention for either namespace or path is snake_case.
-		pattern = r'(?:[0-9a-z._-]+:)?[0-9a-z._/-]+'
+		pattern = r'(?:[0-9a-z._-]+:)?[0-9a-z._/-]*'
 		if allowTag:
 			pattern = f'#?{pattern}'
 		literal = self.tryReadRegex(re.compile(pattern))
