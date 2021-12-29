@@ -1459,7 +1459,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		next=[
 			ArgumentInfo(
 				name='predicate',
-				type=MINECRAFT_RESOURCE_LOCATION,
+				type=MINECRAFT_PREDICATE,
 				next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS),
 			),
 		],

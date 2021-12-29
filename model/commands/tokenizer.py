@@ -81,6 +81,7 @@ _allArgumentTypeStyles: dict[str, TokenType] = {
 	MINECRAFT_OBJECTIVE_CRITERIA.name: TokenType.String,
 	MINECRAFT_OPERATION.name:          TokenType.Operator,
 	MINECRAFT_PARTICLE.name:           TokenType.Complex,
+	MINECRAFT_PREDICATE.name:          TokenType.String,
 	MINECRAFT_RESOURCE_LOCATION.name:  TokenType.String,
 	MINECRAFT_ROTATION.name:           TokenType.Number,
 	MINECRAFT_SCORE_HOLDER.name:       TokenType.TargetSelector,

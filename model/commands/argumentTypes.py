@@ -629,6 +629,16 @@ MINECRAFT_PARTICLE = ArgumentType(
 	* {{cd|particle with options}}""",
 )
 
+MINECRAFT_PREDICATE = ArgumentType(
+	name='minecraft:predicate',
+	description="{{Arg desc|je=resource_location}}",
+	description2="""resource location of a predicate.""",
+	examples="""
+	* {{cd|foo}}
+	* {{cd|foo:bar}}
+	* {{cd|012}}""",
+)
+
 MINECRAFT_RESOURCE_LOCATION = ArgumentType(
 	name='minecraft:resource_location',
 	description="{{Arg desc|je=resource_location}}",
@@ -854,6 +864,7 @@ __all__ = [
 	'MINECRAFT_OBJECTIVE_CRITERIA',
 	'MINECRAFT_OPERATION',
 	'MINECRAFT_PARTICLE',
+	'MINECRAFT_PREDICATE',
 	'MINECRAFT_RESOURCE_LOCATION',
 	'MINECRAFT_ROTATION',
 	'MINECRAFT_SCORE_HOLDER',

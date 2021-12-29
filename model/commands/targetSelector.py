@@ -122,7 +122,7 @@ targetSelectorArguments: list[FilterArgumentInfo] = [
 	# ),
 	FilterArgumentInfo(
 		name='predicate',
-		type=MINECRAFT_RESOURCE_LOCATION,  # TODO: actually, the type is predicates.
+		type=MINECRAFT_PREDICATE,
 		multipleAllowed=True,
 		isNegatable=True,
 	),

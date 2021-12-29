@@ -1,13 +1,14 @@
 import re
+from abc import abstractmethod
 from dataclasses import replace
 from itertools import chain
 from json import JSONDecodeError
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Mapping
 
 from PyQt5.QtWidgets import QWidget
 
 from Cat.Serializable import SerializedPropertyABC
-from Cat.utils import HTMLStr
+from Cat.utils import HTMLStr, abstract
 from Cat.utils.collections_ import OrderedDict
 from model.Model import Datapack
 from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider, Suggestions, \
@@ -22,6 +23,7 @@ from model.commands.snbt import parseNBTPath, parseNBTTag
 from model.commands.stringReader import StringReader
 from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
+from model.data.mcVersions import MCVersion
 from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations
 from model.utils import Span, Position
 from model.pathUtils import FilePath
@@ -36,7 +38,7 @@ def _openOrSelectDocument(window: QWidget, filePath: FilePath, selectedPosition:
 	window._tryOpenOrSelectDocument(filePath, selectedPosition=selectedPosition)  # very bad...
 
 
-def _containsResourceLocation(rl: ResourceLocation, container: set[ResourceLocation]) -> bool:
+def _containsResourceLocation(rl: ResourceLocation, container: Iterable[ResourceLocation]) -> bool:
 	if rl.namespace == 'minecraft':
 		rl = replace(rl, namespace=None)
 	return rl in container
@@ -55,6 +57,94 @@ def _openFromDatapackContents(window: QWidget, rl: ResourceLocation, prop: Seria
 			_openOrSelectDocument(window, fp)
 			return True
 	return False
+
+
+def _openFromResourceLocation(window: QWidget, rl: ResourceLocation, values: Mapping[ResourceLocation, MetaInfo]) -> bool:
+	# TODO: show prompt, when there are multiple files this applies to.
+	if (file := values.get(rl)) is not None:
+		fp = file.filePath
+		_openOrSelectDocument(window, fp)
+		return True
+	return False
+
+
+@abstract
+class ResourceLocationLikeHandler(ArgumentHandler):
+	@property
+	@abstractmethod
+	def name(self) -> str:
+		pass
+
+	@abstractmethod
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		pass
+
+	@abstractmethod
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		pass
+
+	@abstractmethod
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		pass
+
+	@abstractmethod
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		pass
+
+	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=self.allowTags(ai))
+
+	def validate(self, argument: ParsedCommandPart) -> Optional[CommandSemanticsError]:
+		value: ResourceLocation = argument.value
+		if not isinstance(value, ResourceLocation):
+			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{value}'.", argument.span)
+
+		if value.isTag:
+			isValid = any(_containsResourceLocation(value, tags) for dp in getSession().world.datapacks for tags in self.tagsFromDP(dp))
+		else:
+			isValid = any(_containsResourceLocation(value, values) for dp in getSession().world.datapacks for values in self.valuesFromDP(dp))
+			if not isValid:
+				isValid = _containsResourceLocation(value, self.valuesFromMC(getSession().minecraftData))
+		if isValid:
+			return None
+		else:
+			if value.isTag:
+				return CommandSemanticsError(f"{self.name} tag '{value.asString}' is never defined.", argument.span, style='warning')
+			else:
+				return CommandSemanticsError(f"Unknown {self.name} '{value.asString}'.", argument.span)
+
+	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
+		class chain:
+			def __init__(self, *iterables: Iterable):
+				self.iterables = iterables
+
+			def __iter__(self):
+				for it in self.iterables:
+					yield from it
+
+		locations = chain(*chain(
+			*(self.tagsFromDP(dp) for dp in getSession().world.datapacks),
+			*(self.valuesFromDP(dp) for dp in getSession().world.datapacks)
+		),
+			self.valuesFromMC(getSession().minecraftData))
+		return choicesFromResourceLocations(contextStr, locations)
+
+	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
+		value: ResourceLocation = argument.value
+		if value.isTag:
+			isValid = any(_containsResourceLocation(value, tags) for dp in getSession().world.datapacks for tags in self.tagsFromDP(dp))
+		else:
+			isValid = any(_containsResourceLocation(value, values) for dp in getSession().world.datapacks for values in self.valuesFromDP(dp))
+		return [argument.span] if isValid else []
+
+	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
+		for dp in getSession().world.datapacks:
+			for tags in self.tagsFromDP(dp):
+				if _openFromResourceLocation(window, argument.value, tags):
+					return
+			for values in self.valuesFromDP(dp):
+				if _openFromResourceLocation(window, argument.value, values):
+					return
 
 
 @argumentHandler(BRIGADIER_BOOL.name)
@@ -285,18 +375,23 @@ class ComponentHandler(ArgumentHandler):
 
 
 @argumentHandler(MINECRAFT_DIMENSION.name)
-class DimensionHandler(ArgumentHandler):
-	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+class DimensionHandler(ResourceLocationLikeHandler):
 
-	def validate(self, argument: ParsedCommandPart) -> Optional[CommandSemanticsError]:
-		if not _containsResourceLocation(argument.value, getSession().minecraftData.dimensions):
-			return CommandSemanticsError(f"Unknown dimension '{argument.value}'.", argument.span)
-		else:
-			return None
+	@property
+	def name(self) -> str:
+		return 'dimension'
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, getSession().minecraftData.dimensions)
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return False
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.dimension,)
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.dimensions
 
 
 @argumentHandler(MINECRAFT_ENTITY.name)
@@ -335,59 +430,35 @@ class EntityHandler(ArgumentHandler):
 		onIndicatorClickedForFilterArgs(argument.value.arguments, position, window)
 
 
-class EntityTypeLikeHandler(ArgumentHandler):
-	def __init__(self, allowTag: bool = False):
-		super().__init__()
-		self._allowTag: bool = allowTag
+@abstract
+class EntityTypeLikeHandler(ResourceLocationLikeHandler):
 
-	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=self._allowTag)
+	@property
+	def name(self) -> str:
+		return 'entity'
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
-		entity: ResourceLocation = argument.value
-		if not isinstance(entity, ResourceLocation):
-			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{entity}'.", argument.span)
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.tags.entity_types,)
 
-		if entity.isTag:
-			isValid = any(entity in dp.contents.tags.entity_types for dp in getSession().world.datapacks)
-			if not isValid:
-				return CommandSemanticsError(f"Unknown entity type '{entity.asString}'.", argument.span, style='error')
-		else:
-			if not _containsResourceLocation(entity, getSession().minecraftData.entities):
-				return CommandSemanticsError(f"Unknown entity id '{entity.asString}'.", argument.span, style='warning')
-		return None
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		suggestions: Suggestions = []
-		suggestions += choicesFromResourceLocations(contextStr, getSession().minecraftData.entities)
-		if self._allowTag:
-			tags = _choicesForDatapackContents(contextStr, Datapack.contents.tags.entity_types)
-			suggestions += tags
-		return suggestions
-
-	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
-		entity: ResourceLocation = argument.value
-		if not isinstance(entity, ResourceLocation):
-			return None
-
-		if entity.isTag:
-			return [argument.span]
-		return None
-
-	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
-		_openFromDatapackContents(window, argument.value, Datapack.contents.tags.entity_types)
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.entities
 
 
 @argumentHandler(MINECRAFT_ENTITY_SUMMON.name)
 class EntitySummonHandler(EntityTypeLikeHandler):
-	def __init__(self, ):
-		super().__init__(allowTag=False)
+
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return False
 
 
 @argumentHandler(MINECRAFT_ENTITY_TYPE.name)
 class EntityTypeHandler(EntityTypeLikeHandler):
-	def __init__(self, ):
-		super().__init__(allowTag=True)
+
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return True
 
 
 @argumentHandler(MINECRAFT_FLOAT_RANGE.name)
@@ -407,29 +478,22 @@ class FloatRangeHandler(ArgumentHandler):
 
 
 @argumentHandler(MINECRAFT_FUNCTION.name)
-class FunctionHandler(ArgumentHandler):
-	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, allowTag=True, errorsIO=errorsIO)
+class FunctionHandler(ResourceLocationLikeHandler):
+	@property
+	def name(self) -> str:
+		return 'function'
 
-	def validate(self, argument: ParsedCommandPart) -> Optional[CommandSemanticsError]:
-		value: ResourceLocation = argument.value
-		if value.isTag:
-			isValid = any(value in dp.contents.tags.functions for dp in getSession().world.datapacks)
-		else:
-			isValid = any(value in dp.contents.functions for dp in getSession().world.datapacks)
-		if isValid:
-			return None
-		else:
-			if value.isTag:
-				return CommandSemanticsError(f"function tag '{value.asString}' is never defined.", argument.span, style='warning')
-			else:
-				return CommandSemanticsError(f"Unknown function '{value.asString}'.", argument.span)
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return True
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		result = []
-		result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.functions))
-		result.extend(_choicesForDatapackContents(contextStr, Datapack.contents.tags.functions))
-		return result
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.tags.functions,)
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.functions,)
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return ()
 
 	def getDocumentation(self, argument: ParsedCommandPart) -> HTMLStr:
 		value: ResourceLocation = argument.value
@@ -440,13 +504,6 @@ class FunctionHandler(ArgumentHandler):
 				if (func := dp.contents.functions.get(value)) is not None:
 					return func.documentation
 		return defaultDocumentationProvider(argument)
-
-	def getClickableRanges(self, argument: ParsedArgument) -> Optional[Iterable[Span]]:
-		return [argument.span]
-
-	def onIndicatorClicked(self, argument: ParsedArgument, position: Position, window: QWidget) -> None:
-		if not _openFromDatapackContents(window, argument.value, Datapack.contents.functions):
-			_openFromDatapackContents(window, argument.value, Datapack.contents.tags.functions)
 
 
 @argumentHandler(MINECRAFT_GAME_PROFILE.name)
@@ -472,20 +529,22 @@ class IntRangeHandler(ArgumentHandler):
 
 
 @argumentHandler(MINECRAFT_ITEM_ENCHANTMENT.name)
-class ItemEnchantmentHandler(ArgumentHandler):
-	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+class ItemEnchantmentHandler(ResourceLocationLikeHandler):
+	@property
+	def name(self) -> str:
+		return 'enchantment'
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
-		enchantment: ResourceLocation = argument.value
-		if not isinstance(enchantment, ResourceLocation):
-			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{enchantment}'.", argument.span)
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return False
 
-		if not _containsResourceLocation(enchantment, getSession().minecraftData.enchantments):
-			return CommandSemanticsError(f"Unknown enchantment '{enchantment.asString}'.", argument.span, style='warning')
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, getSession().minecraftData.enchantments)
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.enchantments
 
 
 @argumentHandler(MINECRAFT_ITEM_SLOT.name)
@@ -592,20 +651,22 @@ class MessageHandler(ArgumentHandler):
 
 
 @argumentHandler(MINECRAFT_MOB_EFFECT.name)
-class MobEffectHandler(ArgumentHandler):
-	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+class MobEffectHandler(ResourceLocationLikeHandler):
+	@property
+	def name(self) -> str:
+		return 'mob effect'
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
-		effect: ResourceLocation = argument.value
-		if not isinstance(effect, ResourceLocation):
-			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{effect}'.", argument.span)
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return False
 
-		if not _containsResourceLocation(effect, getSession().minecraftData.effects):
-			return CommandSemanticsError(f"Unknown mob effect '{effect.asString}'.", argument.span, style='warning')
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, getSession().minecraftData.effects)
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.effects
 
 
 @argumentHandler(MINECRAFT_NBT_COMPOUND_TAG.name)
@@ -653,23 +714,45 @@ class ObjectiveHandler(ArgumentHandler):
 class ObjectiveCriteriaHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, allowTag=False, errorsIO=errorsIO)
+		# TODO: add validation for objective_criteria
 
 
 @argumentHandler(MINECRAFT_PARTICLE.name)
-class ParticleHandler(ArgumentHandler):
-	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+class ParticleHandler(ResourceLocationLikeHandler):
+	@property
+	def name(self) -> str:
+		return 'particle'
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
-		particle: ResourceLocation = argument.value
-		if not isinstance(particle, ResourceLocation):
-			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{particle}'.", argument.span)
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return False
 
-		if not _containsResourceLocation(particle, getSession().minecraftData.particles):
-			return CommandSemanticsError(f"Unknown biome '{particle.asString}'.", argument.span, style='warning')
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, getSession().minecraftData.particles)
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.particles
+
+
+@argumentHandler(MINECRAFT_PREDICATE.name)
+class PredicateHandler(ResourceLocationLikeHandler):
+	@property
+	def name(self) -> str:
+		return 'predicate'
+
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return False
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.predicates,)
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return ()
 
 
 @argumentHandler(MINECRAFT_RESOURCE_LOCATION.name)
@@ -812,20 +895,22 @@ class Vec3Handler(ArgumentHandler):
 
 
 @argumentHandler(DPE_BIOME_ID.name)
-class BiomeIdHandler(ArgumentHandler):
-	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+class BiomeIdHandler(ResourceLocationLikeHandler):
+	@property
+	def name(self) -> str:
+		return 'biome'
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
-		biome: ResourceLocation = argument.value
-		if not isinstance(biome, ResourceLocation):
-			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{biome}'.", argument.span)
+	def allowTags(self, ai: ArgumentInfo) -> bool:
+		return False
 
-		if not _containsResourceLocation(biome, getSession().minecraftData.biomes):
-			return CommandSemanticsError(f"Unknown biome '{biome.asString}'.", argument.span, style='warning')
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
 
-	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return choicesFromResourceLocations(contextStr, getSession().minecraftData.biomes)
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.biomes
 
 
 @argumentHandler(ST_DPE_COMMAND.name)

@@ -1,3 +1,10 @@
+## Next Version
+### Fixes
+ * reverted changes to resource location parsing
+
+## Improvements
+ * added `minecraft:predicate` type
+
 ## Version 0.2.1-alpha
 ### Fixes
  * Fixed crash in `clickableRangesForFilterArgs(...)` (#19)
