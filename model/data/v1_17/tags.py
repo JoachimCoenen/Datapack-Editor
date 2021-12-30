@@ -31,7 +31,7 @@ TAGS_BLOCKS = JsonObjectSchema(
 									value=JsonStringSchema(type_=MINECRAFT_RESOURCE_LOCATION),
 								),
 								PropertySchema(
-									name='value',
+									name='required',
 									description=
 									"Whether or not loading this tag should fail if this entry is not found, `true` by default (also for the string entries). "
 									"A tag that fails to load can still be referenced in any data pack and be (re)defined in other data packs. "

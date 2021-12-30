@@ -254,7 +254,7 @@ _PARSERS = {
 
 
 def parseJsonTokens(tokens: Deque[Token], schema: Optional[JsonSchema]) -> JsonData:
-	"""Recursive JSON parseJsonStr implementation"""
+	"""Recursive JSON parse implementation"""
 	token = tokens[0]
 	if isinstance(schema, JsonUnionSchema):
 		schema = schema.optionsDict.get(token.type, schema)

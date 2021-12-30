@@ -8,7 +8,7 @@ from model.utils import Span, GeneralParsingError, Position
 
 
 class TokenType(Enum):
-	invalid = 0
+	default = 0
 	string = 1
 	number = 2
 	boolean = 3
@@ -19,6 +19,7 @@ class TokenType(Enum):
 	right_brace = 8
 	comma = 9
 	colon = 10
+	invalid = 11
 
 
 class Token(NamedTuple):
@@ -117,6 +118,7 @@ def extract_number(
 			break
 
 		index += 1
+		column += 1
 
 	end = Position(line, column, index)
 	number = json_string[start.index:end.index]
@@ -144,6 +146,7 @@ def extract_special(
 
 		word += char
 		index += 1
+		column += 1
 
 	if word in ('true', 'false', 'null'):
 		end = Position(line, column, index)
@@ -171,7 +174,7 @@ _TOKEN_TYPE_FOR_OPERATOR = {
 }
 
 
-def tokenize(json_string: str) -> Deque[Token]:
+def tokenizeJson(json_string: str) -> Deque[Token]:
 	"""Converts a JSON string into a queue of tokens"""
 	tokens: Deque[Token] = deque()
 	line = 0
