@@ -5,6 +5,7 @@ from typing import Deque, List, Union, Optional, TypeVar, Generic
 
 from Cat.utils.collections_ import OrderedMultiDict
 from model.json.lexer import Token, tokenize, TokenizeError, TokenType
+from model.json.core import *
 from model.utils import GeneralParsingError, Span
 
 
@@ -19,13 +20,14 @@ class ParseError(Exception):
 		self.data: ParseErrorData = data
 
 
-TT = TypeVar('TT')
+_TT = TypeVar('_TT')
 
 
 @dataclass
-class JsonData(Generic[TT]):
-	data: TT
-	span: Span = field(default_factory=Span, hash=False, compare=False)
+class JsonData(Generic[_TT]):
+	data: _TT
+	span: Span = field(hash=False, compare=False)
+	schema: Optional[JsonSchema]
 
 
 class JsonNull(JsonData[None]):
@@ -55,7 +57,7 @@ class JsonObject(JsonData[OrderedMultiDict[JsonString, JsonData]]):
 	pass
 
 
-def parse_object(tokens: Deque[Token]) -> JsonObject:
+def parse_object(tokens: Deque[Token], schema: Optional[JsonObjectSchema]) -> JsonObject:
 	"""Parses an object out of JSON tokens"""
 	objData: OrderedMultiDict[JsonString, JsonData] = OrderedMultiDict()
 
@@ -73,7 +75,7 @@ def parse_object(tokens: Deque[Token]) -> JsonObject:
 					token.span
 				))
 
-			key = parse_string(tokens)
+			key = parse_string(tokens, None)
 
 			if len(tokens) == 0:
 				raise ParseError(ParseErrorData(
@@ -102,7 +104,8 @@ def parse_object(tokens: Deque[Token]) -> JsonObject:
 					token.span
 				))
 
-			value = _parseData(tokens)
+			valueSchema = schema.values.get(key.data) if schema is not None else None
+			value = _parseData(tokens, valueSchema)
 			objData.add(key, value)
 
 			if len(tokens) == 0:
@@ -135,10 +138,10 @@ def parse_object(tokens: Deque[Token]) -> JsonObject:
 					token.span
 				))
 
-	return JsonObject(objData, Span(start.span.start, token.span.end))
+	return JsonObject(objData, Span(start.span.start, token.span.end), schema)
 
 
-def parse_array(tokens: Deque[Token]) -> JsonArray:
+def parse_array(tokens: Deque[Token], schema: Optional[JsonArraySchema]) -> JsonArray:
 	"""Parses an array out of JSON tokens"""
 
 	array: list[JsonData] = []
@@ -148,8 +151,9 @@ def parse_array(tokens: Deque[Token]) -> JsonArray:
 	if tokens[0].type == TokenType.right_bracket:
 		token = tokens.popleft()
 	else:
+		elementSchema = schema.element if schema is not None else None
 		while tokens:
-			value = _parseData(tokens)
+			value = _parseData(tokens, elementSchema)
 			array.append(value)
 
 			token = tokens.popleft()
@@ -176,10 +180,10 @@ def parse_array(tokens: Deque[Token]) -> JsonArray:
 					token.span
 				))
 
-	return JsonArray(array, Span(start.span.start, token.span.end))
+	return JsonArray(array, Span(start.span.start, token.span.end), schema)
 
 
-def parse_string(tokens: Deque[Token]) -> JsonString:
+def parse_string(tokens: Deque[Token], schema: Optional[JsonSchema]) -> JsonString:
 	"""Parses a string out of a JSON token"""
 	chars: List[str] = []
 
@@ -236,10 +240,10 @@ def parse_string(tokens: Deque[Token]) -> JsonString:
 		index += 2
 
 	string = ''.join(chars)
-	return JsonString(string, token.span)
+	return JsonString(string, token.span, schema)
 
 
-def parse_number(tokens: Deque[Token]) -> JsonNumber:
+def parse_number(tokens: Deque[Token], schema: Optional[JsonSchema]) -> JsonNumber:
 	"""Parses a number out of a JSON token"""
 	token = tokens.popleft()
 	try:
@@ -247,7 +251,7 @@ def parse_number(tokens: Deque[Token]) -> JsonNumber:
 			number = int(token.value)
 		else:
 			number = float(token.value)
-		return JsonNumber(number, token.span)
+		return JsonNumber(number, token.span, schema)
 
 	except ValueError as err:
 		raise ParseError(ParseErrorData(
@@ -262,17 +266,17 @@ BOOLEAN_TOKENS = {
 }
 
 
-def parse_boolean(tokens: Deque[Token]) -> JsonBool:
+def parse_boolean(tokens: Deque[Token], schema: Optional[JsonSchema]) -> JsonBool:
 	"""Parses a boolean out of a JSON token"""
 	token = tokens.popleft()
 	value = BOOLEAN_TOKENS[token.value]
-	return JsonBool(value, token.span)
+	return JsonBool(value, token.span, schema)
 
 
-def parse_null(tokens: Deque[Token]) -> JsonNull:
+def parse_null(tokens: Deque[Token], schema: Optional[JsonSchema]) -> JsonNull:
 	"""Parses a boolean out of a JSON token"""
 	token = tokens.popleft()
-	return JsonNull(None, token.span)
+	return JsonNull(None, token.span, schema)
 
 
 _PARSERS = {
@@ -285,13 +289,14 @@ _PARSERS = {
 }
 
 
-def _parseData(tokens: Deque[Token]) -> JsonData:
+def _parseData(tokens: Deque[Token], schema: Optional[JsonSchema]) -> JsonData:
 	"""Recursive JSON parse implementation"""
 	token = tokens[0]
-
+	if isinstance(schema, JsonUnionSchema):
+		schema = schema.optionsDict.get(token.type, schema)
 	parser = _PARSERS.get(token.type)
 	if parser is not None:
-		return parser(tokens)
+		return parser(tokens, schema)
 	else:
 		raise ParseError(ParseErrorData(
 			f"Unexpected token: {token.value} ",
@@ -299,12 +304,12 @@ def _parseData(tokens: Deque[Token]) -> JsonData:
 		))
 
 
-def parse(json_string: str) -> tuple[Optional[object], list[ParseErrorData]]:
+def parse(json_string: str, schema: Optional[JsonSchema]) -> tuple[Optional[object], list[ParseErrorData]]:
 	"""Parses a JSON string into a Python object"""
 	value = None
 	try:
 		tokens = tokenize(json_string)
-		value = _parseData(tokens)
+		value = _parseData(tokens, schema)
 		if len(tokens) != 0:
 			raise ParseError(ParseErrorData(
 				f"Invalid JSON at {tokens[0].value} ",

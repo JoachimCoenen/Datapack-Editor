@@ -8,6 +8,7 @@ from model.utils import Span, GeneralParsingError, Position
 
 
 class TokenType(Enum):
+	invalid = 0
 	string = 1
 	number = 2
 	boolean = 3
