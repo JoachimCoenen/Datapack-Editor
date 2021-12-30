@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from math import inf
-from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping
+from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar
 
 from Cat.utils import abstract, CachedProperty, NoneType
 from Cat.utils.collections_ import OrderedMultiDict
@@ -18,38 +18,44 @@ _TT = TypeVar('_TT', NoneType, bool, int, float, str, Array, Object)
 _TN = TypeVar('_TN', int, float)
 
 
+@abstract
 @dataclass
 class JsonData(Generic[_TT]):
 	data: _TT
 	span: Span = field(hash=False, compare=False)
 	schema: Optional[JsonSchema]
 
+	typeName: ClassVar[str] = 'JsonData'
 
+
+@dataclass
 class JsonNull(JsonData[None]):
-	pass
+	typeName: ClassVar[str] = 'null'
 
 
 @dataclass(unsafe_hash=True, order=True)
 class JsonBool(JsonData[bool]):
-	pass
+	typeName: ClassVar[str] = 'boolean'
 
 
 @dataclass(unsafe_hash=True, order=True)
 class JsonNumber(JsonData[Union[int, float]]):
-	pass
+	typeName: ClassVar[str] = 'number'
 
 
 @dataclass(unsafe_hash=True, order=True)
 class JsonString(JsonData[str]):
-	pass
+	typeName: ClassVar[str] = 'string'
 
 
+@dataclass
 class JsonArray(JsonData[Array]):
-	pass
+	typeName: ClassVar[str] = 'array'
 
 
+@dataclass
 class JsonObject(JsonData[Object]):
-	pass
+	typeName: ClassVar[str] = 'object'
 
 
 @abstract
@@ -60,6 +66,7 @@ class JsonSchema(Generic[_TT]):
 	"""
 	TOKEN: TokenType = TokenType.invalid
 	"""The parser tries to use a Schema of this Type if the parser encounters a token == TOKEN. (see also class JsonUnionSchema)"""
+	typeName: ClassVar[str] = 'JsonData'
 
 	def __init__(self, *, description: str = ''):
 		self.description: str = description
@@ -67,15 +74,18 @@ class JsonSchema(Generic[_TT]):
 
 class JsonNullSchema(JsonSchema[None]):
 	TOKEN = TokenType.null
+	typeName: ClassVar[str] = 'null'
 
 
 class JsonBoolSchema(JsonSchema[bool]):
 	TOKEN = TokenType.boolean
+	typeName: ClassVar[str] = 'boolean'
 
 
 @abstract
 class JsonNumberSchema(JsonSchema[_TN], Generic[_TN]):
 	TOKEN = TokenType.number
+	typeName: ClassVar[str] = 'number'
 
 	def __init__(self, *, minVal: _TN = -inf, maxVal: _TN = inf, description: str = ''):
 		super(JsonNumberSchema, self).__init__(description=description)
@@ -84,15 +94,16 @@ class JsonNumberSchema(JsonSchema[_TN], Generic[_TN]):
 
 
 class JsonIntSchema(JsonNumberSchema[int]):
-	pass
+	typeName: ClassVar[str] = 'integer'
 
 
 class JsonFloatSchema(JsonNumberSchema[float]):
-	pass
+	typeName: ClassVar[str] = 'float'
 
 
 class JsonStringSchema(JsonSchema[str]):
 	TOKEN = TokenType.string
+	typeName: ClassVar[str] = 'string'
 
 	def __init__(self, *, type_: ArgumentType, description: str = ''):
 		super(JsonStringSchema, self).__init__(description=description)
@@ -101,6 +112,7 @@ class JsonStringSchema(JsonSchema[str]):
 
 class JsonArraySchema(JsonSchema[Array]):
 	TOKEN = TokenType.left_bracket
+	typeName: ClassVar[str] = 'array'
 
 	def __init__(self, *, description: str = '', element: JsonSchema):
 		super(JsonArraySchema, self).__init__(description=description)
@@ -121,6 +133,7 @@ class PropertySchema(Generic[_TT]):
 
 class JsonObjectSchema(JsonSchema[Object]):
 	TOKEN = TokenType.left_brace
+	typeName: ClassVar[str] = 'object'
 
 	def __init__(self, *, description: str = '', properties: list[PropertySchema]):
 		super(JsonObjectSchema, self).__init__(description=description)
@@ -137,6 +150,8 @@ class JsonObjectSchema(JsonSchema[Object]):
 
 
 class JsonUnionSchema(JsonSchema[JsonTypes]):
+	typeName: ClassVar[str] = 'union'
+
 	def __init__(self, *, description: str = '', options: Sequence[JsonSchema]):
 		super(JsonUnionSchema, self).__init__(description=description)
 		self.options: Sequence[JsonSchema] = options
@@ -150,6 +165,10 @@ class JsonUnionSchema(JsonSchema[JsonTypes]):
 			else:
 				result[opt.TOKEN] = opt
 		return result
+
+	@CachedProperty
+	def typeName(self) -> str:
+		return f"({'|'.join(o.typeName for o in self.optionsDict.values())})"
 
 
 __all__ = [
