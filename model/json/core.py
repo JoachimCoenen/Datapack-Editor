@@ -105,9 +105,9 @@ class JsonStringSchema(JsonSchema[str]):
 	TOKEN = TokenType.string
 	typeName: ClassVar[str] = 'string'
 
-	def __init__(self, *, type_: Optional[ArgumentType] = None, description: str = ''):
+	def __init__(self, *, type: Optional[ArgumentType] = None, description: str = ''):
 		super(JsonStringSchema, self).__init__(description=description)
-		self.type: Optional[ArgumentType] = type_
+		self.type: Optional[ArgumentType] = type
 
 
 class JsonArraySchema(JsonSchema[Array]):

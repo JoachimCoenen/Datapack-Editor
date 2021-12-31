@@ -20,7 +20,7 @@ TAGS_BLOCKS = JsonObjectSchema(
 					options=[
 						JsonStringSchema(
 							description="An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`.",
-							type_=MINECRAFT_RESOURCE_LOCATION,
+							type=MINECRAFT_RESOURCE_LOCATION,
 						),
 						JsonObjectSchema(
 							description="An entry with additional options. (1.16.2+) ",
@@ -28,7 +28,7 @@ TAGS_BLOCKS = JsonObjectSchema(
 								PropertySchema(
 									name='id',
 									description="A string in one of the string formats above.",
-									value=JsonStringSchema(type_=MINECRAFT_RESOURCE_LOCATION),
+									value=JsonStringSchema(type=MINECRAFT_RESOURCE_LOCATION),
 								),
 								PropertySchema(
 									name='required',
