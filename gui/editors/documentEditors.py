@@ -1,15 +1,18 @@
 import functools as ft
 from typing import TypeVar, Generic, final, Optional, Type
 
+from PyQt5.Qsci import QsciLexer
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from Cat.CatPythonGUI.GUI import NO_MARGINS, SizePolicy, getStyles, codeEditor, adjustOverlap, maskCorners, CORNERS
+from Cat.CatPythonGUI.GUI.codeEditor import getLexer
 from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
 from Cat.utils import format_full_exc, override
 from Cat.utils.abc_ import abstractmethod
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
 from Cat.utils.formatters import indentMultilineStr
 from Cat.utils.profiling import logError
+from gui.lexers.documentLexer import DocumentLexerBase
 from session.documents import TextDocument, Document
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, drawCodeField
 from settings import applicationSettings
@@ -116,6 +119,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 	@override
 	def postInit(self):
 		super(TextDocumentEditor, self).postInit()
+		self._currentLexer: Optional[QsciLexer] = None
 		self.redraw('TextDocumentEditor.postInit(...)')  # force a second redraw!
 
 	@override
@@ -143,10 +147,21 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		else:
 			errors = []
 
+		lexerCls = getLexer(document.language)
+		if type(self._currentLexer) is lexerCls:
+			lexer = self._currentLexer
+		else:
+			if lexerCls is None:
+				lexer = None
+			else:
+				lexer = lexerCls(self)
+		if isinstance(lexer, DocumentLexerBase):
+			lexer.setDocument(document)
+
 		document.content, document.highlightErrors, document.cursorPosition, document.forceLocate = drawCodeField(
 			gui,
 			document.content,
-			language=document.language,
+			lexer=lexer,
 			errors=errors,
 			forceLocateElement=True,
 			currentCursorPos=document.cursorPosition,

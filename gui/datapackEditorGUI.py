@@ -777,7 +777,6 @@ TPythonGUI = TypeVar('TPythonGUI', bound=DatapackEditorGUI)
 def drawCodeField(
 		gui: DatapackEditorGUI,
 		code: str,
-		language: str,
 		errors: list[Error],
 		forceLocateElement: bool,
 		highlightErrors: bool,
@@ -802,7 +801,6 @@ def drawCodeField(
 
 		code, cursorPos = gui.advancedCodeField(
 			code,
-			language=language,
 			braceMatching=braceMatching.value,
 			searchResults=searchResults,
 			prev=prevPressed,
