@@ -1,23 +1,41 @@
 """Lexer functions, based on www.github.com/tusharsadhwani/json_parser"""
 from collections import deque
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Deque, NamedTuple, Tuple
-from string import whitespace as WHITESPACE
+from typing import NamedTuple
+from string import whitespace as WHITESPACE, ascii_letters
 
-from model.utils import Span, GeneralParsingError, Position
+from model.utils import Span, GeneralParsingError, Position, Message
+
+
+INCOMPLETE_ESCAPE_MSG = Message("Incomplete escape at end of string", 0)
+SINGLE_QUOTED_STRING_MSG = Message("JSON standard does not allow single quoted strings", 0)
+EXPECTED_END_OF_STRING_MSG = Message("Expected end of string", 0)
+MISSING_CLOSING_QUOTE_MSG = Message("Missing closing quote", 0)
+# TOO_MANY_DECIMAL_POINTS_MSG = Message("Too many decimal points in number", 0)
+# MINUS_SIGN_INSIDE_NUMBER_MSG = Message("Minus sign in between number", 0)
+INVALID_NUMBER_MSG = Message("Minus sign in between number `{0}`", 1)
+UNKNOWN_LITERAL_MSG = Message("Unknown literal `{0}`", 1)
+ILLEGAL_CHARS_MSG = Message("Illegal characters `{0}`", 1)
+EMPTY_STRING_MSG = Message("Cannot parse empty string", 0)
+
+
+Char = str
 
 
 class TokenType(Enum):
-	string = 1
-	number = 2
-	boolean = 3
-	null = 4
+	default = 0
+	null = 1
+	boolean = 2
+	number = 3
+	string = 4
 	left_bracket = 5
 	left_brace = 6
 	right_bracket = 7
 	right_brace = 8
 	comma = 9
 	colon = 10
+	invalid = 11
 
 
 class Token(NamedTuple):
@@ -25,139 +43,223 @@ class Token(NamedTuple):
 	value: str
 	type: TokenType
 	span: Span
+	# isValid: bool = True
 
 
-class TokenizeErrorData(GeneralParsingError):
+class JsonTokenizeError(GeneralParsingError):
 	pass
 
 
-class TokenizeError(Exception):
-	"""Error thrown when an invalid JSON string is tokenized"""
-	def __init__(self, data: TokenizeErrorData):
-		super(TokenizeError, self).__init__(str(data))
-		self.data: TokenizeErrorData = data
+WHITESPACE_NO_LF = ' \t\r\v\f'
+"""without the line feed character (\\n)"""
 
 
-def extract_string(
-		json_string: str,
-		index: int,
-		tokens: Deque[Token],
-		line: int,
-		column: int) -> Tuple[int, int, int]:
+CR_LF = '\r\n'
+"""carriage return & line feed (\\r\\n)"""
+
+
+@dataclass
+class JsonTokenizer:
+	source: str
+	allowMultilineStr: bool
+	cursor: int = 0
+	line: int = 0
+	lineStart: int = 0
+	totalLength: int = field(init=False)
+	tokens: deque[Token] = field(default_factory=deque)
+	errors: list[JsonTokenizeError] = field(default_factory=list)
+	_errorsNextToken: list[tuple[Message, tuple, str]] = field(default_factory=list, init=False)
+
+	def __post_init__(self):
+		self.totalLength = len(self.source)
+
+	@property
+	def position(self) -> Position:
+		return Position(self.line, self.cursor-self.lineStart, self.cursor)
+
+	@property
+	def char(self) -> Char:
+		return self.source[self.cursor]
+
+	def advanceLine(self) -> None:
+		self.lineStart = self.cursor
+		self.line += 1
+
+	def addToken(self, start: Position, tokenType: TokenType) -> Token:
+		end = self.position
+		span = Span(start, end)
+		token = Token(self.source[start.index:end.index], tokenType, span)
+		self.tokens.append(token)
+		# add errors:
+		if self._errorsNextToken:
+			for msg, args, style in self._errorsNextToken:
+				self.errorLastToken(msg, *args, style=style)
+			self._errorsNextToken.clear()
+		return token
+
+	def addToken2(self, start: Position, value: str, tokenType: TokenType) -> Token:
+		end = self.position
+		span = Span(start, end)
+		token = Token(value, tokenType, span)
+		self.tokens.append(token)
+		# add errors:
+		if self._errorsNextToken:
+			for msg, args, style in self._errorsNextToken:
+				self.errorLastToken(msg, *args, style=style)
+			self._errorsNextToken.clear()
+		return token
+
+	def errorNextToken(self, msg: Message, *args, style: str = 'error') -> None:
+		self._errorsNextToken.append((msg, args, style))
+
+	def errorLastToken(self, msg: Message, *args, style: str = 'error') -> None:
+		msgStr = msg.format(*args)
+		if self.tokens:
+			span = self.tokens[-1].span  # maybe self.tokens[0] ?
+		else:
+			span = Span()
+		self.errors.append(JsonTokenizeError(msgStr, span, style=style))
+
+	def consumeWhitespace(self) -> None:
+		cursor: int = self.cursor
+		source: str = self.source
+		length: int = self.totalLength
+		while cursor < length:
+			if source[cursor] in WHITESPACE_NO_LF:
+				cursor += 1
+			elif source[cursor] == '\n':
+				cursor += 1
+				self.lineStart = cursor
+				self.line += 1
+			else:
+				break
+		self.cursor = cursor
+
+
+def extract_string(tkz: JsonTokenizer) -> None:
 	"""Extracts a single string token from JSON string"""
-	end = len(json_string)
-	start = Position(line, column, index)
-	index += 1
-	column += 1
+	start = tkz.position
+	quote = tkz.source[tkz.cursor]
+	if quote == "'":
+		tkz.errorNextToken(SINGLE_QUOTED_STRING_MSG)
+	tkz.cursor += 1  # opening '"'
 
-	while index < end:
-		char = json_string[index]
+	while tkz.cursor < tkz.totalLength:
+		char = tkz.source[tkz.cursor]
+		tkz.cursor += 1
 
 		if char == '\\':
-			if index + 1 == end:
-				end = Position(line, column, index)
-				raise TokenizeError(TokenizeErrorData("Incomplete escape at end of string", Span(start, end)))
+			if tkz.cursor == tkz.totalLength or tkz.source[tkz.cursor] in CR_LF:
+				tkz.addToken(start, TokenType.string)
+				tkz.errorLastToken(INCOMPLETE_ESCAPE_MSG)
+				return
+			else:
+				tkz.cursor += 1
+				continue
 
-			index += 2
-			column += 2
+		elif char == quote:
+			tkz.addToken(start, TokenType.string)
+			return
+
+		elif char == '\n':
+			if tkz.allowMultilineStr:
+				tkz.advanceLine()
+			else:
+				tkz.cursor -= 1  # '\n' is not part of the string
+				break
+
+	tkz.addToken(start, TokenType.string)
+	tkz.errorLastToken(MISSING_CLOSING_QUOTE_MSG)
+
+
+def extract_number(tkz: JsonTokenizer) -> None:
+	"""Extracts a single number token (eg. 42, -12.3) from JSON string"""
+	start = tkz.position
+
+	decimal_point_found = False
+	exponent_found = False
+	isValid = True
+
+	if tkz.cursor < tkz.totalLength and tkz.source[tkz.cursor] in '-+':
+		tkz.cursor += 1
+
+	while tkz.cursor < tkz.totalLength:
+		char = tkz.source[tkz.cursor]
+		tkz.cursor += 1
+
+		if char.isdigit():
+			continue
+		elif char == '.':
+			if decimal_point_found:
+				isValid = False
+			decimal_point_found = True
+			continue
+		elif char in '+-':
+			if not tkz.source[tkz.cursor] in 'eE':
+				isValid = False
+			continue
+		elif char in 'eE':
+			if exponent_found:
+				isValid = False
+			exponent_found = True
+			continue
+		elif char in ',' + WHITESPACE + '}]"\':=[{\\':
+			tkz.cursor -= 1
+			break
+		else:
 			continue
 
-		if char == '"':
-			index += 1
-			column += 1
-			end = Position(line, column, index)
-			string = json_string[start.index:end.index]
-			tokens.append(Token(string, TokenType.string, Span(start, end)))
+	token = tkz.addToken(start, TokenType.number)
 
-			return index, line, column
-
-		index += 1
-		if char == '\n':
-			column = 0
-			line += 1
-		else:
-			column += 1
-
-	end = Position(line, column, index)
-	err = f"Expected end of string"
-	raise TokenizeError(TokenizeErrorData(err, Span(start, end)))
+	if not isValid:
+		tkz.errorLastToken(INVALID_NUMBER_MSG, token.value)
 
 
-def extract_number(
-		json_string: str,
-		index: int,
-		tokens: Deque[Token],
-		line: int,
-		column: int) -> Tuple[int, int, int]:
-	"""Extracts a single number token (eg. 42, -12.3) from JSON string"""
-	end = len(json_string)
-	start = Position(line, column, index)
-
-	leading_minus_found = False
-	decimal_point_found = False
-
-	while index < end:
-		char = json_string[index]
-		if char == '.':
-			if decimal_point_found:
-				end = Position(line, column, index)
-				raise TokenizeError(TokenizeErrorData("Too many decimal points in number", Span(start, end)))
-
-			decimal_point_found = True
-
-		elif char == '-':
-			if leading_minus_found:
-				end = Position(line, column, index)
-				raise TokenizeError(TokenizeErrorData("Minus sign in between number", Span(start, end)))
-
-			leading_minus_found = True
-
-		elif not char.isdigit():
-			break
-
-		index += 1
-
-	end = Position(line, column, index)
-	number = json_string[start.index:end.index]
-	tokens.append(Token(number, TokenType.number, Span(start, end)))
-	length = index - start.index
-	column += length
-	return index, line, column
+_TOKEN_TYPE_FOR_SPECIAL = {
+	'true': TokenType.boolean,
+	'false': TokenType.boolean,
+	'null': TokenType.null,
+}
 
 
-def extract_special(
-		json_string: str,
-		index: int,
-		tokens: Deque[Token],
-		line: int,
-		column: int) -> Tuple[int, int, int]:
+def extract_special(tkz: JsonTokenizer) -> None:
 	"""Extracts true, false and null from JSON string"""
-	end = len(json_string)
-	start = Position(line, column, index)
+	start = tkz.position
+	tkz.cursor += 1  # first letter
+	while tkz.cursor < tkz.totalLength and tkz.source[tkz.cursor].isalpha():
+		tkz.cursor += 1
 
-	word = ''
-	while index < end:
-		char = json_string[index]
-		if not char.isalpha():
+	word = tkz.source[start.index:tkz.cursor]
+	tkType = _TOKEN_TYPE_FOR_SPECIAL.get(word, TokenType.invalid)
+	token = tkz.addToken2(start, word, tkType)
+	if token.type is TokenType.invalid:
+		tkz.errorLastToken(UNKNOWN_LITERAL_MSG, token.value)
+
+
+def extract_illegal(tkz: JsonTokenizer) -> None:
+	"""Extracts illegal characters from JSON string"""
+	start = tkz.position
+	tkz.cursor += 1  # first character
+	while tkz.cursor < tkz.totalLength:
+		char = tkz.source[tkz.cursor]
+		if char.isalnum():
 			break
+		if char in WHITESPACE:
+			break
+		if char in '[]{},:+-.':
+			break
+		tkz.cursor += 1
 
-		word += char
-		index += 1
+	token = tkz.addToken(start, TokenType.invalid)
+	if token.type is TokenType.invalid:
+		tkz.errorLastToken(ILLEGAL_CHARS_MSG, repr(token.value))
 
-	if word in ('true', 'false', 'null'):
-		end = Position(line, column, index)
-		token = Token(
-			word,
-			type=TokenType.null if word == 'null' else TokenType.boolean,
-			span=Span(start, end)
-		)
-		tokens.append(token)
-		column += len(word)
-		return index, line, column
 
-	err = f"Unknown token found: {word}"
-	end = Position(line, column, index)
-	raise TokenizeError(TokenizeErrorData(err, Span(start, end)))
+def extract_operator(tkz: JsonTokenizer) -> None:
+	start = tkz.position
+	char = tkz.source[tkz.cursor]
+	tkz.cursor += 1
+	tkz.addToken2(start, char, _TOKEN_TYPE_FOR_OPERATOR[char])
 
 
 _TOKEN_TYPE_FOR_OPERATOR = {
@@ -169,50 +271,52 @@ _TOKEN_TYPE_FOR_OPERATOR = {
 	':': TokenType.colon,
 }
 
+_TOKEN_EXTRACTORS_BY_CHAR = {
+	# **{c: extract_operator for c in '[]{},:'},
+	**{c: extract_string for c in '"\''},
+	**{c: extract_special for c in ascii_letters},  # 'e' & 'E' will be replaced again with 'e': extract_number,
+	**{c: extract_number for c in '0123456789+-.eE'},
+}
 
-def tokenize(json_string: str) -> Deque[Token]:
+
+def tokenizeJson(source: str, allowMultilineStr: bool) -> tuple[deque[Token], list[GeneralParsingError]]:
 	"""Converts a JSON string into a queue of tokens"""
-	tokens: Deque[Token] = deque()
-	line = 0
-	column = 0
-	index = 0
-	end = len(json_string)
-	while index < end:
-		char = json_string[index]
+	tkz = JsonTokenizer(source, allowMultilineStr)
 
-		if char in WHITESPACE:
-			index += 1
-
-			if char == '\n':
-				column = 0
-				line += 1
-			else:
-				column += 1
-
+	tkz.consumeWhitespace()
+	while tkz.cursor < tkz.totalLength:
+		char = tkz.source[tkz.cursor]
+		if char == '"':
+			extract_string(tkz)
 		elif char in '[]{},:':
-			span = Span(Position(line, column, index), Position(line, column + 1, index + 1))
-			token = Token(
-				char,
-				type=_TOKEN_TYPE_FOR_OPERATOR[char],
-				span=span,
-			)
-			tokens.append(token)
-			index += 1
-			column += 1
-
-		elif char == '"':
-			index, line, column = extract_string(
-				json_string, index, tokens, line, column)
-
-		elif char == '-' or char.isdigit():
-			index, line, column = extract_number(
-				json_string, index, tokens, line, column)
-
+			extract_operator(tkz)
+		# elif char in '0123456789+-.eE':
+		# 	extract_number(tkz)
+		elif char in 'tfn':
+			extract_special(tkz)
+		# elif char == "'":
+		# 	extract_string(tkz)
 		else:
-			index, line, column = extract_special(
-				json_string, index, tokens, line, column)
+			extractor = _TOKEN_EXTRACTORS_BY_CHAR.get(char, extract_illegal)
+			extractor(tkz)
+		tkz.consumeWhitespace()
 
-	if len(tokens) == 0:
-		raise TokenizeError(TokenizeErrorData("Cannot parse empty string", Span()))
+		# if char in '[]{},:':
+		# 	start = tkz.position
+		# 	tkz.cursor += 1
+		# 	tkz.addToken(start, _TOKEN_TYPE_FOR_OPERATOR[char])
+		# elif char == '"':
+		# 	extract_string(tkz)
+		# elif char.isdigit() or char in '+-':
+		# 	extract_number(tkz)
+		# elif char.isalpha():
+		# 	extract_special(tkz)
+		# else:
+		# 	extract_illegal(tkz)
+		#
+		# tkz.consumeWhitespace()
 
-	return tokens
+	if len(tkz.tokens) == 0:
+		tkz.errorLastToken(EMPTY_STRING_MSG)
+
+	return tkz.tokens, tkz.errors

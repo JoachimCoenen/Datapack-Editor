@@ -55,6 +55,10 @@ class Span:
 	def asTuple(self) -> tuple[Position, Position]:
 		return self.start, self.end
 
+	@property
+	def length(self) -> int:
+		return self.end.index - self.start.index
+
 	def __iter__(self) -> Iterator[Position]:
 		yield self.start
 		yield self.end
