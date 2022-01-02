@@ -117,25 +117,25 @@ def validateJsonObject(data: JsonObject, *, errorsIO: list[JsonSemanticsError]) 
 		return
 
 	validatedProps: set[str] = set()
-	key: JsonString
-	value: JsonData
-	for key, value in data.data.items():
-		if key.data in validatedProps:
-			msg = DUPLICATE_PROPERTY_MSG.format(repr(key.data))
-			errorsIO.append(JsonSemanticsError(msg, key.span))
+	key: str
+	prop: JsonProperty
+	for key, prop in data.data.items():
+		if key in validatedProps:
+			msg = DUPLICATE_PROPERTY_MSG.format(repr(key))
+			errorsIO.append(JsonSemanticsError(msg, prop.key.span))
 		else:
-			validatedProps.add(key.data)
+			validatedProps.add(key)
 
-		if key.data not in data.schema.propertiesDict:
-			msg = UNKNOWN_PROPERTY_MSG.format(repr(key.data))
-			errorsIO.append(JsonSemanticsError(msg, key.span))
+		if key not in data.schema.propertiesDict:
+			msg = UNKNOWN_PROPERTY_MSG.format(repr(key))
+			errorsIO.append(JsonSemanticsError(msg, prop.key.span))
 			continue
 
-		_validateInternal(value, errorsIO=errorsIO)
+		_validateInternal(prop.value, errorsIO=errorsIO)
 
-	for prop in data.schema.properties:
-		if prop.name not in validatedProps and prop.mandatory:
-			msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(prop.name))
+	for propSchema in data.schema.properties:
+		if propSchema.name not in validatedProps and propSchema.mandatory:
+			msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(propSchema.name))
 			errorsIO.append(JsonSemanticsError(msg, Span(data.span.end)))
 
 
