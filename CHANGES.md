@@ -1,23 +1,23 @@
 ## Next Version
 ### Features
- * Added support for different data pack versions
- * 
+ * Added support for different data pack versions.
+ * Added syntax checking for JSON files.
+ * Added validation support for JSON files. (#4)
+ * Added basic validation for tag files (files in 'data/{namespace}/tags/'). (#6)
 
-## Improvements
- * Improved create-new-file dialog
+### Improvements
+ * Improved create-new-file dialog.
+ * Added `minecraft:predicate` type (for mcFunction validation).
 
 ### Fixes
- * Reverted changes to resource location parsing
-
-## Improvements
- * Added `minecraft:predicate` type
+ * Reverted changes to resource location parsing.
 
 ## Version 0.2.1-alpha
 ### Fixes
- * Fixed crash in `clickableRangesForFilterArgs(...)` (#19)
- * Fixed crash in `getBestFAMatch(...)` (#20)
+ * Fixed crash in `clickableRangesForFilterArgs(...)` (#19).
+ * Fixed crash in `getBestFAMatch(...)` (#20).
 
-## Improvements
+### Improvements
  * Slightly improved suggestions for coordinates
 
 ## Version 0.2.0-alpha
