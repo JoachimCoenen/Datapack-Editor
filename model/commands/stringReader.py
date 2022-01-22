@@ -1,4 +1,5 @@
 import re
+from string import ascii_letters, digits
 from typing import Optional, TYPE_CHECKING, final
 
 from Cython import final as cy_final
@@ -53,10 +54,10 @@ JAVA_WHITESPACES = {
 	'\u001E',  # It is '\u001E', U+001E RECORD SEPARATOR.
 	'\u001F',  # It is '\u001F', U+001F UNIT SEPARATOR.
 }
-DIGITS = set('0123456789')
+DIGITS = set(digits)
 DOT_OR_MINUS = set('.-')
 QUOTES = set('\'"')
-UNQUOTED_STRING_CHARS = set('0123456789' + 'abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + '_-.+')
+UNQUOTED_STRING_CHARS = set(digits + ascii_letters + '_-.+')
 BOOLEAN_VALUES = {'true', 'false'}
 
 NOT_JAVA_WHITESPACES_REGEX = f"[^{''.join(JAVA_WHITESPACES)}]"
@@ -126,7 +127,6 @@ class StringReader:
 
 	@cy_final
 	def tryConsumeWhitespace(self) -> bool:
-		start: int = self.cursor
 		cursor: int = self.cursor
 		source: str = self.source
 		length: int = self.totalLength
@@ -152,7 +152,6 @@ class StringReader:
 			return self.source[self.cursor]
 		else:
 			return None
-
 
 	@cy_final
 	def tryReadRemaining(self) -> Optional[str]:

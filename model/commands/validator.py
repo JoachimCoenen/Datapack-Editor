@@ -100,7 +100,10 @@ def validateArgument(commandPart: ParsedCommandPart, *, errorsIO: list[CommandSe
 			if handler is not None:
 				error = handler.validate(commandPart)
 				if error is not None:
-					errorsIO.append(error)
+					if isinstance(error, list):
+						errorsIO.extend(error)
+					else:
+						errorsIO.append(error)
 		return commandPart.next, commandPart.info.next
 
 	if isinstance(info, CommandInfo):

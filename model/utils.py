@@ -2,20 +2,13 @@ import builtins
 from dataclasses import dataclass, field
 from typing import final, Iterator, Optional
 
-from Cat.Serializable import RegisterContainer, SerializableContainer, ComputedCached
 from Cat.utils import HTMLifyMarkDownSubSet
 
 
-@RegisterContainer
-class Message(SerializableContainer):
-	__slots__ = ()
-	rawMessage: str = ComputedCached(default='', shouldSerialize=True, shouldPrint=True)
-	argsCount: int = ComputedCached(default=-1, shouldSerialize=True, shouldPrint=True)
-
-	def __init__(self, message: str, argsCount: int):
-		super(Message, self).__init__()
-		self.rawMessageProp.setCachedValue(self, message)
-		self.argsCountProp.setCachedValue(self, argsCount)
+@dataclass(frozen=True)
+class Message:
+	rawMessage: str
+	argsCount: int
 
 	def format(self, *args) -> str:
 		if len(args) > self.argsCount:
@@ -42,10 +35,14 @@ class Position:
 
 
 @final
-@dataclass
+@dataclass(init=False)
 class Span:
-	start: Position = field(default_factory=Position)
-	end: Position = field(default_factory=Position)
+	start: Position
+	end: Position
+
+	def __init__(self, start: Position = None, end: Position = None):
+		self.start = Position() if start is None else start
+		self.end = self.start if end is None else end
 
 	@property
 	def slice(self) -> builtins.slice:

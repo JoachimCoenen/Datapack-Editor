@@ -4,6 +4,7 @@
  * Added syntax checking for JSON files.
  * Added validation support for JSON files. (#4)
  * Added basic validation for tag files (files in 'data/{namespace}/tags/'). (#6)
+ * Added validation for raw json text (`minecraft:component` type) in mcFunction files.
 
 ### Improvements
  * Improved create-new-file dialog.

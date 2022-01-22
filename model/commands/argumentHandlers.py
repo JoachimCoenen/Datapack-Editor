@@ -1,5 +1,5 @@
 import re
-from typing import Protocol, Optional, Iterable, MutableSequence, Type, Any
+from typing import Protocol, Optional, Iterable, MutableSequence, Type, Any, Union
 
 from PyQt5.QtWidgets import QWidget
 
@@ -28,6 +28,8 @@ class ValidatorFunc(Protocol):
 Suggestion = str  # for now...
 Suggestions = list[Suggestion]
 
+ValidationResult = Union[CommandSemanticsError, list[CommandSemanticsError]]
+
 
 class SuggestionProviderFunc(Protocol):
 	def __call__(self, argument: ParsedArgument) -> Suggestions:
@@ -53,7 +55,7 @@ class ArgumentHandler:
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+	def validate(self, argument: ParsedArgument) -> Optional[ValidationResult]:
 		return None
 
 	def getSuggestions(self, ai: ArgumentInfo, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:

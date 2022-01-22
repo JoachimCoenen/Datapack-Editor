@@ -12,7 +12,7 @@ from Cat.utils import HTMLStr, abstract
 from Cat.utils.collections_ import OrderedDict
 from model.Model import Datapack
 from model.commands.argumentHandlers import argumentHandler, ArgumentHandler, missingArgumentParser, makeParsedArgument, defaultDocumentationProvider, Suggestions, \
-	getArgumentHandler
+	getArgumentHandler, ValidationResult
 from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
@@ -25,6 +25,8 @@ from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.data.mcVersions import MCVersion
 from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations
+from model.json.parser import parseJsonStr
+from model.json.validator import validateJson
 from model.utils import Span, Position
 from model.pathUtils import FilePath
 from session.session import getSession
@@ -94,7 +96,7 @@ class ResourceLocationLikeHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=self.allowTags(ai))
 
-	def validate(self, argument: ParsedCommandPart) -> Optional[CommandSemanticsError]:
+	def validate(self, argument: ParsedCommandPart) -> Optional[ValidationResult]:
 		value: ResourceLocation = argument.value
 		if not isinstance(value, ResourceLocation):
 			return CommandSemanticsError(f"Internal Error! expected ResourceLocation , but got '{value}'.", argument.span)
@@ -259,7 +261,7 @@ class BlockStateHandler(ArgumentHandler):
 		blockPredicate = BlockState(blockId=blockID, states=states, nbt=nbt)
 		return makeParsedArgument(sr, ai, value=blockPredicate)
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+	def validate(self, argument: ParsedArgument) -> Optional[ValidationResult]:
 		blockState: BlockState = argument.value
 		if not isinstance(blockState, BlockState):
 			return CommandSemanticsError(f"Internal Error! expected BlockState , but got'{blockState}'.", argument.span)
@@ -359,19 +361,41 @@ class ColumnPosHandler(ArgumentHandler):
 class ComponentHandler(ArgumentHandler):
 	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# TODO: parseComponent(...): Must be a raw JSON text.
-		import json
 		remainder = sr.tryReadRemaining()
 		if remainder is None:
 			return None
 		try:
-			json = json.loads(remainder)
+			schema = getSession().datapackData.jsonSchemas.get('rawJsonText')
+			jsonData, errors = parseJsonStr(remainder, False, schema)
+			for e in errors:
+				position = sr.posFromColumn(sr.lastCursors.peek() + e.span.start.index)
+				end = sr.posFromColumn(sr.lastCursors.peek() + e.span.end.index)
+				errorsIO.append(CommandSyntaxError(e.message, Span(position, end), style=e.style))
 		except JSONDecodeError as e:
 			position = sr.posFromColumn(sr.lastCursors.peek() + e.colno)
 			end = sr.currentPos
 			errorsIO.append(CommandSyntaxError(e.msg, Span(position, end), style='error'))
 			return None
 		else:
-			return makeParsedArgument(sr, ai, value=json)
+			return makeParsedArgument(sr, ai, value=jsonData)
+
+	def validate(self, argument: ParsedArgument) -> Optional[ValidationResult]:
+		errors = validateJson(argument.value)
+		result = []
+		for er in errors:
+			s = Position(
+				argument.span.start.line,
+				argument.span.start.column + er.span.start.index,
+				argument.span.start.index + er.span.start.index
+			)
+			e = Position(
+				argument.span.start.line,
+				argument.span.start.column + er.span.end.index,
+				argument.span.start.index + er.span.end.index
+			)
+
+			result.append(CommandSemanticsError(er.message, Span(s, e), er.style))
+		return result
 
 
 @argumentHandler(MINECRAFT_DIMENSION.name)
@@ -555,7 +579,7 @@ class ItemSlotHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=slot)
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+	def validate(self, argument: ParsedArgument) -> Optional[ValidationResult]:
 		slot: str = argument.value
 		if slot not in getSession().minecraftData.slots:
 			return CommandSemanticsError(f"Unknown item slot '{slot}'.", argument.span, style='error')
@@ -589,7 +613,7 @@ class ItemStackHandler(ArgumentHandler):
 		itemStack = ItemStack(itemId=itemID, nbt=nbt)
 		return makeParsedArgument(sr, ai, value=itemStack)
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+	def validate(self, argument: ParsedArgument) -> Optional[ValidationResult]:
 		itemStack: ItemStack = argument.value
 		if not isinstance(itemStack, ItemStack):
 			return CommandSemanticsError(f"Internal Error! expected ItemStack , but got '{itemStack}'.", argument.span)
@@ -705,7 +729,7 @@ class ObjectiveHandler(ArgumentHandler):
 			return None
 		return makeParsedArgument(sr, ai, value=objective)
 
-	def validate(self, argument: ParsedArgument) -> Optional[CommandSemanticsError]:
+	def validate(self, argument: ParsedArgument) -> Optional[ValidationResult]:
 		if len(argument.value) > 16 and getSession().minecraftData.name < '1.18':
 			return CommandSemanticsError(f"Objective names cannot be longer than 16 characters.", argument.span, style='error')
 
