@@ -9,7 +9,7 @@ from Cat.Serializable import RegisterContainer, SerializableContainer, Serialize
 from Cat.extensions import FilesChangedDependency, SingleFileChangedDependency
 from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
-from model.datapackContents import ResourceLocation, FunctionMeta, buildFunctionMeta, MetaInfo, EntryHandlerInfo, buildMetaInfo, collectAllEntries
+from model.datapackContents import ResourceLocation, collectAllEntries, DatapackContents
 from model.pathUtils import getAllFilesFromSearchPath, fileNameFromFilePath, FilePathTpl
 from settings import applicationSettings
 
@@ -28,45 +28,6 @@ class Pack(SerializableContainer):
 	__slots__ = ()
 	pack: PackDescription = Serialized(default_factory=PackDescription)
 
-
-@RegisterContainer
-class TagInfos(SerializableContainer):
-	__slots__ = ()
-	blocks: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	entity_types: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	fluids: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	functions: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	game_events: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	items: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-
-
-@RegisterContainer
-class WorldGenInfos(SerializableContainer):
-	__slots__ = ()
-	biome: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	configured_carver: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	configured_feature: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	configured_structure_feature: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	configured_surface_builder: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	noise_settings: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	processor_list: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	template_pool: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-
-
-@RegisterContainer
-class DatapackContents(SerializableContainer):
-	__slots__ = ()
-	advancements: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	functions: OrderedDict[ResourceLocation, FunctionMeta] = Serialized(default_factory=OrderedDict)
-	item_modifiers: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	loot_tables: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	predicates: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	recipes: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	structures: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	tags: TagInfos = Serialized(default_factory=TagInfos)
-	dimension: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	dimension_type: OrderedDict[ResourceLocation, MetaInfo] = Serialized(default_factory=OrderedDict)
-	worldgen: WorldGenInfos = Serialized(default_factory=WorldGenInfos)
 
 
 @RegisterContainer
@@ -102,7 +63,6 @@ class Datapack(SerializableContainer):
 
 	description: str = meta.description
 
-	@pd.List()
 	@ComputedCached(dependencies_=[FilesChangedDependency(path, 'data/**')])
 	def files(self) -> list[FilePathTpl]:
 		allLocalFiles: list[FilePathTpl] = []
@@ -150,153 +110,155 @@ class Datapack(SerializableContainer):
 	@ComputedCached(dependencies_=[FilesChangedDependency(path, 'data/**')])
 	def contents(self) -> DatapackContents:
 		contents = DatapackContents()
-		allEntryHandlers = [
-			# TagInfos:
-			EntryHandlerInfo(
-				'tags/blocks/',
-				'.json',
-				True,
-				lambda fp, rl: contents.tags.blocks.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'tags/entity_types/',
-				'.json',
-				True,
-				lambda fp, rl: contents.tags.entity_types.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'tags/fluids/',
-				'.json',
-				True,
-				lambda fp, rl: contents.tags.fluids.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'tags/functions/',
-				'.json',
-				True,
-				lambda fp, rl: contents.tags.functions.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'tags/game_events/',
-				'.json',
-				True,
-				lambda fp, rl: contents.tags.game_events.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'tags/items/',
-				'.json',
-				True,
-				lambda fp, rl: contents.tags.items.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-
-			# WorldGenInfos:
-			EntryHandlerInfo(
-				'worldgen/biome/',
-				'.json',
-				False,
-				lambda fp, rl: contents.worldGen.biome.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'worldgen/configured_carver/',
-				'.json',
-				False,
-				lambda fp, rl: contents.worldGen.configured_carver.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'worldgen/configured_feature/',
-				'.json',
-				False,
-				lambda fp, rl: contents.worldGen.configured_feature.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'worldgen/configured_structure_feature/',
-				'.json',
-				False,
-				lambda fp, rl: contents.worldGen.configured_structure_feature.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'worldgen/configured_surface_builder/',
-				'.json',
-				False,
-				lambda fp, rl: contents.worldGen.configured_surface_builder.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'worldgen/noise_settings/',
-				'.json',
-				False,
-				lambda fp, rl: contents.worldGen.noise_settings.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'worldgen/processor_list/',
-				'.json',
-				False,
-				lambda fp, rl: contents.worldGen.processor_list.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'worldgen/template_pool/',
-				'.json',
-				False,
-				lambda fp, rl: contents.worldGen.template_pool.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-
-			# DatapackContents:
-			EntryHandlerInfo(
-				'advancements/',
-				'.json',
-				False,
-				lambda fp, rl: contents.advancements.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'functions/',
-				'.mcfunction',
-				False,
-				lambda fp, rl: contents.functions.__setitem__(rl, buildFunctionMeta(fp, rl)),
-			),
-			EntryHandlerInfo(
-				'item_modifiers/',
-				'.json',
-				False,
-				lambda fp, rl: contents.item_modifiers.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'loot_tables/',
-				'.json',
-				False,
-				lambda fp, rl: contents.loot_tables.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'predicates/',
-				'.json',
-				False,
-				lambda fp, rl: contents.predicates.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'recipes/',
-				'.json',
-				False,
-				lambda fp, rl: contents.recipes.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'structures/',
-				'.nbt',
-				False,
-				lambda fp, rl: contents.structures.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'dimension/',
-				'.json',
-				False,
-				lambda fp, rl: contents.dimension.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-			EntryHandlerInfo(
-				'dimension_type/',
-				'.json',
-				False,
-				lambda fp, rl: contents.dimension_type.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
-			),
-
-		]
-		collectAllEntries(self.files, allEntryHandlers)
+		# allEntryHandlers = [
+		# 	# TagInfos:
+		# 	EntryHandlerInfo(
+		# 		'tags/blocks/',
+		# 		'.json',
+		# 		True,
+		# 		lambda fp, rl: contents.tags.blocks.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'tags/entity_types/',
+		# 		'.json',
+		# 		True,
+		# 		lambda fp, rl: contents.tags.entity_types.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'tags/fluids/',
+		# 		'.json',
+		# 		True,
+		# 		lambda fp, rl: contents.tags.fluids.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'tags/functions/',
+		# 		'.json',
+		# 		True,
+		# 		lambda fp, rl: contents.tags.functions.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'tags/game_events/',
+		# 		'.json',
+		# 		True,
+		# 		lambda fp, rl: contents.tags.game_events.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'tags/items/',
+		# 		'.json',
+		# 		True,
+		# 		lambda fp, rl: contents.tags.items.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		#
+		# 	# WorldGenInfos:
+		# 	EntryHandlerInfo(
+		# 		'worldgen/biome/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.worldGen.biome.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'worldgen/configured_carver/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.worldGen.configured_carver.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'worldgen/configured_feature/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.worldGen.configured_feature.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'worldgen/configured_structure_feature/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.worldGen.configured_structure_feature.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'worldgen/configured_surface_builder/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.worldGen.configured_surface_builder.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'worldgen/noise_settings/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.worldGen.noise_settings.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'worldgen/processor_list/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.worldGen.processor_list.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'worldgen/template_pool/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.worldGen.template_pool.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		#
+		# 	# DatapackContents:
+		# 	EntryHandlerInfo(
+		# 		'advancements/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.advancements.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'functions/',
+		# 		'.mcfunction',
+		# 		False,
+		# 		lambda fp, rl: contents.functions.__setitem__(rl, buildFunctionMeta(fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'item_modifiers/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.item_modifiers.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'loot_tables/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.loot_tables.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'predicates/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.predicates.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'recipes/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.recipes.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'structures/',
+		# 		'.nbt',
+		# 		False,
+		# 		lambda fp, rl: contents.structures.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'dimension/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.dimension.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		# 	EntryHandlerInfo(
+		# 		'dimension_type/',
+		# 		'.json',
+		# 		False,
+		# 		lambda fp, rl: contents.dimension_type.__setitem__(rl, buildMetaInfo(MetaInfo, fp, rl)),
+		# 	),
+		#
+		# ]
+		from session.session import getSession
+		allEntryHandlers = getSession().datapackData.structure
+		collectAllEntries(self.files, allEntryHandlers, contents)
 		return contents
 
 @RegisterContainer

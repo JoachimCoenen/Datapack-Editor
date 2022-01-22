@@ -12,6 +12,8 @@ from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy
 
+from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
+from model.datapackContents import getEntryHandlerForFile, getEntryHandlersForFolder
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
@@ -48,12 +50,27 @@ T2 = TypeVar('T2')
 
 
 def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
-	name, ok = gui.askUserInput('New File', 'untitled.mcFunction')
-	if not ok or not name:
+	handlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.byFolder)
+	extensions = [h.extension for h in handlers]
+
+	@dataclass
+	class Context:
+		extension: int = 0
+		name: str = "untitled"
+
+	def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
+		context.name = gui.textField(context.name, "name")
+		context.extension = gui.radioButtonGroup(context.extension, extensions, "extension")
+		return context
+
+	context = Context()
+	context, isOk = gui.askUserInput(f"new File", context, guiFunc)
+	if not isOk or not context.name:
 		return
 
+	ext = extensions[context.extension]
 	try:
-		filePath = createNewFile(folderPath, name)
+		filePath = createNewFile(folderPath, context.name.removesuffix(ext) + ext)
 		openFunc(filePath)
 	except OSError as e:
 		getSession().showAndLogError(e, "Cannot create file")
@@ -445,7 +462,7 @@ class DatapackEditorGUI(AutoGUI):
 						iconMaker=iconMaker,
 						toolTipMaker=toolTipMaker,
 						columnCount=columnCount,
-						onDoubleClick=lambda: gui.host.window().accept(),
+						onDoubleClick=lambda x: gui.host.window().accept(),
 						onContextMenu=lambda v, c: (onContextMenu(v, c) and False) or gui.redrawGUI(),
 					),
 					roundedCorners=CORNERS.NONE,
