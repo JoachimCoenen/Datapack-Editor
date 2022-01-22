@@ -3,13 +3,17 @@ from typing import Sequence
 from Cat.CatPythonGUI.GUI.codeEditor import Error
 from Cat.Serializable import RegisterContainer, Serialized
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.utils import format_full_exc
 from model.commands.parser import parseMCFunction
 from model.commands.validator import checkMCFunction, getSession
+from model.json.parser import parseJsonStr
+from model.json.validator import validateJson
 from model.pathUtils import FilePath
+from model.utils import WrappedError
 from session.documents import RegisterDocument, TextDocument
 
 
-@RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='JSON')
+@RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='MCJson')
 @RegisterContainer
 class JsonDocument(TextDocument):
 	"""docstring for Document"""
@@ -22,7 +26,6 @@ class JsonDocument(TextDocument):
 		self.filePathForDisplay: str = ''
 		self.fileName: str = ''
 		self.fileLocationAbsolute: FilePath = ''
-		self.fileLocationInProject: FilePath = ''
 		self.fileChanged: bool = False
 		self.documentChanged: bool = False
 		self.encoding: str = 'utf-8'
@@ -35,7 +38,15 @@ class JsonDocument(TextDocument):
 	encoding: str = Serialized(default='utf-8')
 
 	def validate(self) -> Sequence[Error]:
-		return []
+		try:
+			tree, errors = parseJsonStr(self.content, True, None)
+			if tree is not None:
+				self.tree = tree
+				errors += validateJson(tree)
+		except Exception as e:
+			print(format_full_exc(e))
+			return [WrappedError(e)]
+		return errors
 
 
 @RegisterDocument('mcFunction', ext=['.mcFunction'], defaultLanguage='MCFunction')
@@ -51,7 +62,6 @@ class MCFunctionDocument(TextDocument):
 		self.filePathForDisplay: str = ''
 		self.fileName: str = ''
 		self.fileLocationAbsolute: FilePath = ''
-		self.fileLocationInProject: FilePath = ''
 		self.fileChanged: bool = False
 		self.documentChanged: bool = False
 		self.encoding: str = 'utf-8'
@@ -66,8 +76,10 @@ class MCFunctionDocument(TextDocument):
 	def validate(self) -> Sequence[Error]:
 		tree, errors = parseMCFunction(getSession().minecraftData.commands, self.content)
 		if tree is not None:
+			self.tree = tree
 			errors += checkMCFunction(tree)
 		return errors
+
 
 def init() -> None:
 	pass

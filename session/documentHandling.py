@@ -14,8 +14,7 @@ from Cat.utils.profiling import logInfo
 from Cat.utils.signals import CatSignal, CatBoundSignal
 from model.utils import Span
 from model.pathUtils import FilePath
-from session.documents import Document, DocumentTypeDescription, getDocumentTypeForFilePath, getDocTypeByName, getFilePathForDisplay
-
+from session.documents import Document, DocumentTypeDescription, getDocumentTypeForFilePath, getDocTypeByName, getFilePathForDisplay, loadDocument
 
 WindowId = NewType('WindowId', str)
 
@@ -273,6 +272,9 @@ class View(ViewBase):
 class DocumentsManager(SerializableContainer):
 	__slots__ = ()
 
+	__ALWAYS_TRUE = True
+	"""used in `DocumentsManager.safelyCloseDocument(...)` to overcome a bug with PyCharm 2021.2's type checker :'("""
+
 	def __typeCheckerInfo___(self):
 		# giving the type checker a helping hand...
 		pass
@@ -373,20 +375,17 @@ class DocumentsManager(SerializableContainer):
 
 	def _openDocument(self, filePath: FilePath, view: View = None) -> Document:  # throws OSError
 		logInfo("opening File from:{}".format(filePath))
-
-		docType = getDocumentTypeForFilePath(filePath, default=getDocTypeByName('text'))
-		doc = docType.newDocument()
-		doc.filePath = filePath
-
+		doc = loadDocument(filePath)
 		view = view or self.currentView
 		self._insertDocument(doc, view, None)
 
-		doc.loadFromFile()
 		return doc
 
 	def safelyCloseDocument(self, doc: Document) -> bool:
 		if doc.documentChanged:
-			cb = self.onCanCloseModifiedDocument
+			cb: Callable[[Document], bool] = lambda x: True
+			if self.__ALWAYS_TRUE:  # used to overcome a bug with PyCharm 2021.2's type checker :'(
+				cb: Callable[[Document], bool] = self.onCanCloseModifiedDocument
 			if cb(doc):
 				self.forceCloseDocument(doc)
 				return True

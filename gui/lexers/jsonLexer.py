@@ -10,11 +10,8 @@ from Cat.CatPythonGUI.GUI.codeEditor import MyQsciAPIs, AutoCompletionTree, Posi
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override, HTMLifyMarkDownSubSet
 from gui.lexers.documentLexer import DocumentLexerBase, StyleStyle, StyleFont, TokenType
-from model.data.v1_17.tags import TAGS_BLOCKS
 from model.json.core import *
-from model.json.parser import parseJsonStr
-from model.json.validator import validateJson
-from model.utils import GeneralParsingError, Position
+from model.utils import Position
 from session.session import getSession
 
 
