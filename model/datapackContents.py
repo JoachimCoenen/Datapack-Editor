@@ -1,11 +1,13 @@
 from __future__ import annotations
 import re
-from dataclasses import dataclass
-from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable
+from dataclasses import dataclass, field
+from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable, ClassVar, TYPE_CHECKING, Union
 
 from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
+from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, SerializedPropertyBaseBase
+from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
-from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute, CachedProperty
+from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute, CachedProperty, Deprecated
 from model.pathUtils import FilePathTpl, loadTextFile, ZipFilePool
 
 
@@ -174,49 +176,201 @@ class FunctionMeta(MetaInfo):
 		return HTMLifyMarkDownSubSet(doc)
 
 
-def buildMetaInfo(cls: Type[_TMetaInfo], filePath: FilePathTpl, resourceLocation: ResourceLocation) -> _TMetaInfo:
+@dataclass
+class JsonMeta(MetaInfo):
+	schemaId: str = ''
+
+
+@dataclass
+class NbtMeta(MetaInfo):
+	pass
+
+
+@RegisterContainer
+class TagInfos(SerializableContainer):
+	__slots__ = ()
+	blocks: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	entity_types: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	fluids: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	functions: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	game_events: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	items: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+
+
+@RegisterContainer
+class WorldGenInfos(SerializableContainer):
+	__slots__ = ()
+	biome: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	configured_carver: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	configured_feature: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	configured_structure_feature: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	configured_surface_builder: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	noise_settings: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	processor_list: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	template_pool: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+
+
+@RegisterContainer
+class DatapackContents(SerializableContainer):
+	__slots__ = ()
+	advancements: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	functions: OrderedDict[ResourceLocation, FunctionMeta] = Serialized(default_factory=OrderedDict)
+	item_modifiers: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	loot_tables: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	predicates: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	recipes: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	structures: OrderedDict[ResourceLocation, NbtMeta] = Serialized(default_factory=OrderedDict)
+	tags: TagInfos = Serialized(default_factory=TagInfos)
+	dimension: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	dimension_type: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+	worldGen: WorldGenInfos = Serialized(default_factory=WorldGenInfos)
+	# if TYPE_CHECKING:
+	# 	advancementsProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
+	# 	functionsProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, FunctionMeta]]] = Serialized()
+	# 	item_modifiersProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
+	# 	loot_tablesProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
+	# 	predicatesProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
+	# 	recipesProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
+	# 	structuresProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, NbtMeta]]] = Serialized()
+	# 	tagsProp: ClassVar[Serialized[ResourceLocation, TagInfos]] = Serialized()
+	# 	dimensionProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
+	# 	dimension_typeProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
+	# 	worldGenProp: ClassVar[Serialized[ResourceLocation, WorldGenInfos]] = Serialized()
+
+
+def createMetaInfo(cls: Type[_TMetaInfo], filePath: FilePathTpl, resourceLocation: ResourceLocation) -> _TMetaInfo:
 	return cls(filePath, resourceLocation)
 
 
+def buildDefaultMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation) -> _TMetaInfo:
+	return createMetaInfo(MetaInfo, filePath, resourceLocation)
+
+
 def buildFunctionMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation) -> FunctionMeta:
-	return buildMetaInfo(FunctionMeta, filePath, resourceLocation)
+	return createMetaInfo(FunctionMeta, filePath, resourceLocation)
 
 
-class EntryHandlerInfo(NamedTuple):
+def buildJsonMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation, *, schemaId: str) -> JsonMeta:
+	info = createMetaInfo(JsonMeta, filePath, resourceLocation)
+	info.schemaId = schemaId
+	return info
+
+
+def buildNbtMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation) -> NbtMeta:
+	return createMetaInfo(NbtMeta, filePath, resourceLocation)
+
+
+NAME_SPACE_VAR = '${namespace}'
+
+
+@dataclass(frozen=True)
+class DefaultFileInfo:
+	name: str
+	namespace: Optional[str]
+	contents: str
+
+
+@dataclass(frozen=True)
+class GenerationInfo:
+	initialFiles: list[DefaultFileInfo] = field(default_factory=list)
+
+
+if TYPE_CHECKING:
+	@dataclass(frozen=True)
+	class EntryHandlerInfo:
+		folder: str
+		extension: str
+		isTag: bool
+		buildMetaInfo: Callable[[FilePathTpl, ResourceLocation], MetaInfo]
+		contentsProp: Union[SerializedPropertyBaseBase[DatapackContents, OrderedDict[ResourceLocation, MetaInfo]], OrderedDict[ResourceLocation, MetaInfo]]
+		generation: GenerationInfo = field(default_factory=GenerationInfo)
+else:
+	@dataclass(frozen=True)
+	class EntryHandlerInfo:
+		folder: str
+		extension: str
+		isTag: bool
+		buildMetaInfo: Callable[[FilePathTpl, ResourceLocation], MetaInfo]
+		contentsProp: SerializedPropertyBaseBase[DatapackContents, OrderedDict[ResourceLocation, MetaInfo]]
+		generation: GenerationInfo = field(default_factory=GenerationInfo)
+
+
+class EntryHandlerKey(NamedTuple):
 	folder: str
 	extension: str
-	isTag: bool
-	buildMetaInfo: Callable[[FilePathTpl, ResourceLocation], None]
 
 
-def collectAllEntries(files: list[FilePathTpl], handlers: list[EntryHandlerInfo]) -> None:
-	handlersDict: dict[tuple[str, str], EntryHandlerInfo] = {(handler.folder, handler.extension): handler for handler in handlers}
+EntryHandlers = dict[EntryHandlerKey, EntryHandlerInfo]
 
-	for fullPath in files:
-		dpPath, filePath = fullPath
-		if filePath.startswith('data/'):
-			filePath = filePath.removeprefix('data/')
-		else:
-			continue
-		namespace, _, path = filePath.partition('/')
 
-		extIndex = path.rfind('.')
-		if extIndex >= 0:
-			extension = path[extIndex:]
-		else:
-			extension = ''
+def buildEntryHandlers(handlers: list[EntryHandlerInfo]) -> EntryHandlers:
+	handlersDict = {EntryHandlerKey(handler.folder, handler.extension): handler for handler in handlers}
+	return handlersDict
 
-		prefix = ''
-		rest = path
-		while rest:
-			p, _, rest = rest.partition('/')
-			prefix += p + '/'
-			handler = handlersDict.get((prefix, extension))
-			if handler is None:
-				continue
+
+def getEntryHandlerForFile(fullPath: FilePathTpl, handlers: EntryHandlers) -> Optional[tuple[ResourceLocation, EntryHandlerInfo]]:
+	dpPath, filePath = fullPath
+	if filePath.startswith('data/'):
+		filePath = filePath.removeprefix('data/')
+	else:
+		return None
+	namespace, _, path = filePath.partition('/')
+
+	extIndex = path.rfind('.')
+	if extIndex >= 0:
+		extension = path[extIndex:]
+	else:
+		extension = ''
+
+	prefix = ''
+	rest = path
+	while rest:
+		p, _, rest = rest.partition('/')
+		prefix += p + '/'
+		if (handler := handlers.get(EntryHandlerKey(prefix, extension))) is not None:
 			rest = rest[:len(rest) - len(extension)]
 			resourceLocation = ResourceLocation(namespace, rest, handler.isTag)
-			handler.buildMetaInfo(fullPath, resourceLocation)
+			return resourceLocation, handler
+		continue
+	return None
+
+
+def getEntryHandlersForFolder(fullPath: FilePathTpl, handlers: dict[str, list[EntryHandlerInfo]]) -> list[EntryHandlerInfo]:
+	dpPath, filePath = fullPath
+	if filePath.startswith('data/'):
+		filePath = filePath.removeprefix('data/')
+	else:
+		return []
+	namespace, _, path = filePath.partition('/')
+
+	prefix = ''
+	rest = path
+	while rest:
+		p, _, rest = rest.partition('/')
+		prefix += p + '/'
+		if (handlers := handlers.get(prefix)) is not None:
+			return handlers
+		continue
+	return []
+
+
+@Deprecated
+def getMetaInfo(fullPath: FilePathTpl, handlers: EntryHandlers) -> Optional[MetaInfo]:
+	resLocHandler = getEntryHandlerForFile(fullPath, handlers)
+	if resLocHandler is None:
+		return None
+	resLoc, handler = resLocHandler
+	return handler.buildMetaInfo(fullPath, resLoc)
+
+
+def collectAllEntries(files: list[FilePathTpl], handlers: EntryHandlers, contents: DatapackContents) -> None:
+	for fullPath in files:
+		resLocHandler = getEntryHandlerForFile(fullPath, handlers)
+		if resLocHandler is None:
+			continue
+		resLoc, handler = resLocHandler
+		metaInfo = handler.buildMetaInfo(fullPath, resLoc)
+		handler.contentsProp.get(contents)[resLoc] = metaInfo
 
 
 def autoCompletionTreeForResourceLocations(locations: Iterable[ResourceLocation]) -> AutoCompletionTree:

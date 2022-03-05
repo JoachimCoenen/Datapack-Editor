@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import QStyleFactory
 QFont.__deepcopy__ = lambda x, m: QFont(x)
 
 from model.data.mcVersions import ALL_MC_VERSIONS
+from model.datapack.dpVersion import ALL_DP_VERSIONS
 
 
 @RegisterContainer
@@ -117,6 +118,14 @@ class MinecraftSettings(SerializableContainer):
 		default='1.17',
 		decorators=[
 			pd.ComboBox(choices=ALL_MC_VERSIONS.keys()),
+		],
+		shouldSerialize=True
+	)
+	dpVersion: str = Serialized(
+		label='Datapack Version',
+		default='6',
+		decorators=[
+			pd.ComboBox(choices=ALL_DP_VERSIONS.keys()),
 		],
 		shouldSerialize=True
 	)

@@ -1,9 +1,16 @@
 ## Next Version
-### Fixes
- * reverted changes to resource location parsing
+### Features
+ * Added support for different data pack versions
+ * 
 
 ## Improvements
- * added `minecraft:predicate` type
+ * Improved create-new-file dialog
+
+### Fixes
+ * Reverted changes to resource location parsing
+
+## Improvements
+ * Added `minecraft:predicate` type
 
 ## Version 0.2.1-alpha
 ### Fixes

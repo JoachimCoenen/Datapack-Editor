@@ -11,8 +11,7 @@ from Cat.icons import icons
 from Cat.utils import DeferredCallOnceMethod, openOrCreate
 from gui.datapackEditorGUI import DatapackEditorGUI, LocalFilesPropInfo, ContextMenuEntries, FilesTreeItem, createNewFileGUI, createNewFolderGUI, createNewFolder
 from model.Model import World, Datapack
-from model.dataPackStructure import DATAPACK_FOLDERS, NAME_SPACE_VAR
-from model.datapackContents import isNamespaceValid
+from model.datapackContents import isNamespaceValid, NAME_SPACE_VAR
 from model.utils import Position
 from model.pathUtils import FilePath, normalizeDirSeparators
 from session.session import getSession
@@ -131,11 +130,11 @@ class DatapackFilesEditor(EditorBase[World]):
 					'	}\n'
 					'}')
 
-			for folder in DATAPACK_FOLDERS:
+			for folder in getSession().datapackData.structure.values():
 				folderPath = f"data/{context.namespace}/{folder.folder}"
 				createNewFolder(datapackPath, folderPath)
 
-				for file in folder.initialFiles:
+				for file in folder.generation.initialFiles:
 					fileNS = file.namespace.replace(NAME_SPACE_VAR, context.namespace)
 					filePath = f"{datapackPath}/data/{fileNS}/{folder.folder}{file.name}"
 					with openOrCreate(filePath, 'w') as f:

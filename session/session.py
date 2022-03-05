@@ -13,6 +13,7 @@ from Cat.utils.profiling import logError
 from Cat.utils.signals import CatSignal, CatBoundSignal
 from model.Model import World
 from model.data.mcVersions import MCVersion, getMCVersion
+from model.datapack.dpVersion import DPVersion, getDPVersion
 from session.documentHandling import DocumentsManager
 from settings import applicationSettings
 
@@ -34,6 +35,7 @@ class Session(SerializableContainer):
 	documents: DocumentsManager = Serialized(default_factory=DocumentsManager, decorators=[pd.NoUI()])
 
 	minecraftData: MCVersion = Computed(default_factory=lambda: getMCVersion(applicationSettings.minecraft.version))
+	datapackData: DPVersion = Computed(default_factory=lambda: getDPVersion(applicationSettings.minecraft.dpVersion))
 
 	def closeWorld(self) -> None:
 		world = self.world
