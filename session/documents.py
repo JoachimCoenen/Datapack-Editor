@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 from dataclasses import dataclass
-from typing import Optional, Type, Sequence, Callable, TypeVar, Collection
+from typing import Optional, Type, Sequence, Callable, TypeVar, Collection, Any
 
 from PyQt5.QtCore import QTimer
 
@@ -16,7 +16,8 @@ from Cat.utils import utils, Decorator
 from Cat.utils.profiling import logInfo, logError
 
 from Cat.utils.signals import CatSignal
-from model.pathUtils import fileNameFromFilePath, FilePath, getMTimeForFilePath, ZipFilePool, loadTextFile
+from model.datapackContents import getEntryHandlerForFile, EntryHandlerInfo, EntryHandlerKey
+from model.pathUtils import fileNameFromFilePath, FilePath, getMTimeForFilePath, ZipFilePool, loadTextFile, ArchiveFilePool
 
 TTarget = TypeVar("TTarget")
 
@@ -165,20 +166,24 @@ def getDocTypeByName(name: str, default: Optional[DocumentTypeDescription] = Non
 	return _documentTypesByName.get(name, default)
 
 
+def loadDocument(filePath: FilePath, archiveFilePool: ArchiveFilePool = None) -> Document:  # throws OSError
+	docType = getDocumentTypeForFilePath(filePath, default=getDocTypeByName('text'))
+	doc = docType.newDocument()
+	doc.filePath = filePath
+	doc.loadFromFile(archiveFilePool)
+	return doc
+
+
 @RegisterContainer
 class Document(SerializableContainer):
 	__slots__ = ('undoRedoStack', 'inUndoRedoMode')
 	"""docstring for Document"""
 	def __typeCheckerInfo___(self):
 		# giving the type checker a helping hand...
-		# self._l_project: Union[Project, None] = None
-		# self._session: Union[Session, None] = None
-		# self._project: Project = Project()
 		self.filePath: FilePath = ''
 		self.filePathForDisplay: str = ''
 		self.fileName: str = ''
 		self.fileLocationAbsolute: FilePath = ''
-		self.fileLocationInProject: FilePath = ''
 		self._lastFileMTime: float = 0.
 		self._currentFileMTime: float = 0.
 		self.fileChanged: bool = False
@@ -229,16 +234,6 @@ class Document(SerializableContainer):
 		if self.inUndoRedoMode:
 			return
 
-		# def asyncTakeSnapshotCall(forContentVersion=self._contentVersion, forDocument=weakref.ref(self)) -> None:
-		# 	document = forDocument()
-		# 	if document is None:
-		# 		return
-		#
-		# 	if document._contentVersion > forContentVersion:
-		# 		return
-		# 	document.undoRedoStack.takeSnapshotIfChanged(doDeepCopy=True)
-		#
-		# QTimer.singleShot(333, Qt.CoarseTimer, asyncTakeSnapshotCall)
 		self._asyncTakeSnapshot()
 
 		self._asyncValidate()
@@ -299,14 +294,6 @@ class Document(SerializableContainer):
 		else:
 			return filePath[0], os.path.split(filePath[1])[0] if filePath[1] else ''
 
-	@Computed()
-	def fileLocationInProject(self) -> FilePath:
-		"""The directory of the file relative to its project"""
-		# TODO: def fileLocationInProject(self) -> FilePath
-		filePath = self.filePath
-		projectPath = self._project.path
-		raise NotImplementedError()
-
 	_lastFileMTime: float = Serialized(default=0.)
 
 	@ComputedCached(dependencies_=[SingleFileChangedDependencyProperty(filePath.map(lambda fp: fp if isinstance(fp, str) else (os.path.join(*fp) if os.path.isdir(fp[0]) else fp[0]), str))])
@@ -364,12 +351,16 @@ class Document(SerializableContainer):
 		self._setDocumentChanged()
 		self.fromRepr(text)
 
-	def loadFromFile(self):
+	def loadFromFile(self, archiveFilePool: ArchiveFilePool = None):
 		assert(self.filePath)
 		logInfo("loading File from:{}".format(self.filePath))
 		self._resetFileSystemChanged()
-		with ZipFilePool() as zfp:
-			self.fromRepr(loadTextFile(self.filePath, zfp, encoding=self.encoding))
+
+		if archiveFilePool is None:
+			with ZipFilePool() as zfp:
+				self.fromRepr(loadTextFile(self.filePath, zfp, encoding=self.encoding))
+		else:
+			self.fromRepr(loadTextFile(self.filePath, archiveFilePool, encoding=self.encoding))
 		self._resetDocumentChanged()
 		return
 
@@ -391,7 +382,6 @@ class TextDocument(Document):
 		self.filePathForDisplay: str = ''
 		self.fileName: str = ''
 		self.fileLocationAbsolute: FilePath = ''
-		self.fileLocationInProject: FilePath = ''
 		self.fileChanged: bool = False
 		self.documentChanged: bool = False
 		self.encoding: str = 'utf-8'
@@ -402,10 +392,12 @@ class TextDocument(Document):
 		self._initUndoRedoStack(undoRedo.makesSnapshotMementoIfDiff)
 
 	filePath: FilePath = Serialized(default='', decorators=[
-		pd.FilePath(filters=[('Text','.txt')])
+		pd.FilePath(filters=[('Text', '.txt')])
 	])
 	content: str = Serialized(default='', decorators=[pd.NoUI()])
 	_originalContent: str = Serialized(getInitValue=lambda s: s.content, decorators=[pd.NoUI()])
+
+	tree: Optional[Any] = Serialized(default=None, shouldSerialize=False, shouldPrint=False, decorators=[pd.NoUI()])
 
 	@content.onSet
 	def content(self, newVal: str, oldVal: Optional[str]) -> str:

@@ -23,13 +23,14 @@ from Cat.Serializable import SerializedPropertyABC, SerializableContainer
 from Cat.icons import icons
 from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, openOrCreate
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
-from gui import mcFunctionLexer
+from gui.lexers import mcFunctionLexer, jsonLexer
 from session.documents import Document, ErrorCounts
 from model.Model import Datapack
 from model.pathUtils import FilePath
 from session.session import getSession
 
 mcFunctionLexer.init()  # don't delete!
+jsonLexer.init()  # don't delete!
 
 
 inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})
@@ -776,7 +777,6 @@ TPythonGUI = TypeVar('TPythonGUI', bound=DatapackEditorGUI)
 def drawCodeField(
 		gui: DatapackEditorGUI,
 		code: str,
-		language: str,
 		errors: list[Error],
 		forceLocateElement: bool,
 		highlightErrors: bool,
@@ -801,7 +801,6 @@ def drawCodeField(
 
 		code, cursorPos = gui.advancedCodeField(
 			code,
-			language=language,
 			braceMatching=braceMatching.value,
 			searchResults=searchResults,
 			prev=prevPressed,

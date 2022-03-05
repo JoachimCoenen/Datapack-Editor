@@ -1,7 +1,6 @@
-from dataclasses import dataclass, fields
-from typing import Optional, TypeVar, Union, Iterable, cast
+from typing import Optional, Iterable, cast
 
-from PyQt5.Qsci import QsciLexer, QsciLexerCustom, QsciScintilla
+from PyQt5.Qsci import QsciLexer, QsciScintilla
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QColor
 
@@ -9,68 +8,14 @@ from Cat.CatPythonGUI.GUI import PythonGUI
 from Cat.CatPythonGUI.GUI.codeEditor import MyQsciAPIs, AutoCompletionTree, Position as CEPosition, CodeEditorLexer
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override
+from gui.lexers.documentLexer import DocumentLexerBase, StyleStyle, StyleFont
 from model.commands.argumentHandlers import getArgumentHandler, defaultDocumentationProvider
 from model.commands.command import ArgumentInfo, Keyword, Switch, CommandNode, TERMINAL, COMMANDS_ROOT
 from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedComment, ParsedArgument
 from model.commands.parser import parseMCFunction
 from model.commands.tokenizer import TokenType, tokenizeMCFunction
-from model.commands.validator import checkMCFunction
-from model.utils import GeneralParsingError, Position
+from model.utils import Position
 from session.session import getSession
-
-TT = TypeVar('TT')
-
-
-#@dataclass
-class NotSet:
-	def __init__(self, default):
-		self.default: TT = default
-
-
-@dataclass
-class StyleFont:
-	family: Union[str, NotSet] = NotSet('Courier New')
-	styleHint: Union[QFont.StyleHint, NotSet] = NotSet(QFont.Monospace)
-	pointSize: Union[int, NotSet] = NotSet(8)
-	bold: Union[bool, NotSet] = NotSet(False)
-	italic: Union[bool, NotSet] = NotSet(False)
-	underline: Union[bool, NotSet] = NotSet(False)
-	overline: Union[bool, NotSet] = NotSet(False)
-	strikeOut: Union[bool, NotSet] = NotSet(False)
-
-	# family: Union[str, NotSet[str]] = NotSet('Courier New')
-	# styleHint: Union[QFont.StyleHint, NotSet[QFont.StyleHint]] = NotSet(QFont.Monospace)
-	# pointSize: Union[int, NotSet[int]] = NotSet(8)
-	# bold: Union[bool, NotSet[bool]] = NotSet(False)
-	# italic: Union[bool, NotSet[bool]] = NotSet(False)
-	# underline: Union[bool, NotSet[bool]] = NotSet(False)
-	# overline: Union[bool, NotSet[bool]] = NotSet(False)
-	# strikeOut: Union[bool, NotSet[bool]] = NotSet(False)
-
-
-def QFontFromStyleFont(styleFont: StyleFont, parentFont: Optional[QFont] = None):
-	qfont: QFont = QFont()
-	for filed in fields(styleFont):
-		propName: str = filed.name
-		setterName = f'set{propName[0].upper()}{propName[1:]}'
-
-		value = getattr(styleFont, propName)
-		if isinstance(value, NotSet):
-			if parentFont is not None:
-				value = getattr(parentFont, propName)()
-			else:
-				value = value.default
-		getattr(qfont, setterName)(value)
-
-	return qfont
-
-
-#@dataclass
-class StyleStyle:
-	def __init__(self, foreground: Optional[QColor] = None, background: Optional[QColor] = None, font: Optional[StyleFont] = None):
-		self.foreground: Optional[QColor] = foreground
-		self.background: Optional[QColor] = background
-		self.font: Optional[StyleFont] = font
 
 
 styles = {
@@ -80,14 +25,14 @@ styles = {
 		font=StyleFont("Consolas", QFont.Monospace, 8)
 	),
 	TokenType.Command       : StyleStyle(foreground=QColor(0x7f, 0x00, 0x7f)),
-	TokenType.String        : StyleStyle(foreground=QColor(0x7f, 0x7f, 0x00)),
+	TokenType.String        : StyleStyle(foreground=QColor(0x7f, 0x00, 0x00)),
 	TokenType.Number        : StyleStyle(foreground=QColor(0x00, 0x7f, 0x7f)),
 	TokenType.Constant      : StyleStyle(foreground=QColor(0x00, 0x00, 0xBf)),
 	TokenType.TargetSelector: StyleStyle(foreground=QColor(0x00, 0x7f, 0x7f)),
 	TokenType.Operator      : StyleStyle(foreground=QColor(0x00, 0x00, 0x00)),
 	TokenType.Keyword       : StyleStyle(foreground=QColor(0x00, 0x00, 0x00)),
 
-	TokenType.Complex       : StyleStyle(foreground=QColor(0x7f, 0x00, 0x00)),
+	TokenType.Complex       : StyleStyle(foreground=QColor(0x7f, 0x7f, 0x00)),
 
 	TokenType.Comment       : StyleStyle(foreground=QColor(0x7f, 0x7f, 0x7f)),
 	TokenType.Error         : StyleStyle(foreground=QColor(0xff, 0x00, 0x00)),
@@ -131,37 +76,40 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 				bestMatch = self._getBestMatch(child, bestMatch, pos)
 		return bestMatch
 
+	@override
 	def getHoverTip(self, cePosition: CEPosition) -> Optional[str]:
 		lexer: LexerMCFunction = cast(LexerMCFunction, self.lexer())
 		editor: QsciScintilla = lexer.editor()
 		position = Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
 
-		function, errors = lexer._function, lexer._errors
-		if function is None:
+		doc = lexer.document()
+		if doc is None:
 			return None
-		errors = errors + checkMCFunction(function)
+
+		errors = doc.errors
 
 		matchedErrors = [e for e in errors if e.position <= position <= e.end]
 		tips = [f'<div style="{PythonGUI.helpBoxStyles.get(e.style, "")}">{e.message}</div>' for e in matchedErrors]
 
-		match = self.getBestMatch(function, position)
-		if match is None:
-			return None
-		else:
-			info = match.info
-			if info is not None:
-				type_ = getattr(info, 'type', None)
-				handler = getArgumentHandler(type_) if type_ is not None else None
-				if handler is None:
-					documentationProvider = defaultDocumentationProvider
+		function = doc.tree
+		if isinstance(function, ParsedMCFunction):
+			match = self.getBestMatch(function, position)
+			if match is not None:
+				info = match.info
+				if info is not None:
+					type_ = getattr(info, 'type', None)
+					handler = getArgumentHandler(type_) if type_ is not None else None
+					if handler is None:
+						documentationProvider = defaultDocumentationProvider
+					else:
+						documentationProvider = handler.getDocumentation
+					tips.append(documentationProvider(match))
 				else:
-					documentationProvider = handler.getDocumentation
-				tips.append(documentationProvider(match))
-			else:
-				pass
-
-			tip = '<br/>'.join(tips)
-			return f"{tip}"
+					pass
+		if not tips:
+			return None
+		tip = '<br/>'.join(tips)
+		return f"{tip}"
 
 	def _getNextKeywords(self, nexts: Iterable[CommandNode], contextStr: str, cursorPos: int, replaceCtx: str) -> list[str]:
 		result = []
@@ -196,9 +144,15 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		cePosition = CEPosition(*editor.getCursorPosition())
 		position = Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
 
-		function, errors = parseMCFunction(getSession().minecraftData.commands, text)
-		if function is None:
+		doc = lexer.document()
+		if doc is None:
 			return super().updateAutoCompletionList(context, aList)
+		function = doc.tree
+		if not isinstance(function, ParsedMCFunction):
+			return super().updateAutoCompletionList(context, aList)
+		# function, errors = parseMCFunction(getSession().minecraftData.commands, text)
+		# if function is None:
+		# 	return super().updateAutoCompletionList(context, aList)
 
 		match = self.getBestMatch(function, position)
 		if match is None:
@@ -230,11 +184,12 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 	@override
 	def getClickableRanges(self) -> list[tuple[CEPosition, CEPosition]]:
 		lexer: LexerMCFunction = cast(LexerMCFunction, self.lexer())
-		editor: QsciScintilla = lexer.editor()
-		text: str = editor.text()
 
-		function, errors = parseMCFunction(getSession().minecraftData.commands, text)
-		if function is None:
+		doc = lexer.document()
+		if doc is None:
+			return []
+		function = doc.tree
+		if not isinstance(function, ParsedMCFunction):
 			return []
 
 		ranges: list[tuple[Position, Position]] = []
@@ -261,8 +216,11 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 		if state != Qt.ControlModifier:
 			return
 
-		function, errors = lexer._function, lexer._errors
-		if function is None:
+		doc = lexer.document()
+		if doc is None:
+			return
+		function = doc.tree
+		if not isinstance(function, ParsedMCFunction):
 			return
 
 		match = self.getBestMatch(function, position)
@@ -279,74 +237,26 @@ class McFunctionQsciAPIs(MyQsciAPIs):
 
 
 @CodeEditorLexer('MCFunction')
-class LexerMCFunction(QsciLexerCustom):
-	defaultStyles = {style[0]: style[1] for style in styles.items()}
-
+class LexerMCFunction(DocumentLexerBase):
 	# styleIndices: dict[str, int] = {name: i for i, name in enumerate(styles.keys())}
 
 	def __init__(self, parent=None):
 		# Initialize superclass
 		super().__init__(parent)
-		self._errorPos: Optional[tuple[int, int, int, int]] = None
-		# self.__errors: tuple[TLScriptSyntaxError, ...] = tuple( )
-		# self.errorsChanged: Optional[Callable[[tuple[TLScriptSyntaxError, ...]], None]] = None
-		self._function: Optional[ParsedMCFunction] = None
-		self._errors: list[GeneralParsingError] = []
-		# Initialize all style colors
-		self.initStyles(self.defaultStyles)
 
 		self._api = McFunctionQsciAPIs(self)
 		self._api.prepare()
 		self.setAPIs(self._api)
+
+	@override
+	def getStyles(self) -> dict[TokenType, StyleStyle]:
+		return {tk.value: s for tk, s in styles.items()}
 
 	def autoCompletionTree(self) -> AutoCompletionTree:
 		return self._api.autoCompletionTree
 
 	def setAutoCompletionTree(self, value: AutoCompletionTree):
 		self._api.autoCompletionTree = value
-
-	def initStyles(self, styles: dict[TokenType, StyleStyle], overwriteDefaultStyle: bool = False):
-		# handle default first:
-		if overwriteDefaultStyle:
-			defaultStyle = styles[TokenType.Default]
-			defaultFont = QFontFromStyleFont(defaultStyle.font)
-
-			self.setDefaultColor(defaultStyle.foreground)
-			self.setDefaultPaper(defaultStyle.background)
-			super(LexerMCFunction, self).setDefaultFont(defaultFont)
-
-		defaultForeground: QColor = self.defaultColor()
-		defaultBackground: QColor = self.defaultPaper()
-		defaultFont: QFont = self.defaultFont()
-
-		for tokenType, style in styles.items():
-
-			foreground = style.foreground
-			if foreground is None or tokenType == TokenType.Default:
-				foreground = defaultForeground
-
-			background = style.background
-			if background is None or tokenType == TokenType.Default:
-				background = defaultBackground
-
-			if style.font is None or tokenType == TokenType.Default:
-				font = defaultFont
-			else:
-				font = QFontFromStyleFont(style.font, defaultFont)
-
-			self.setColor(foreground, tokenType.value)
-			self.setPaper(background, tokenType.value)
-			self.setFont(font, tokenType.value)
-
-	def setDefaultFont(self, font: QFont):
-		super().setDefaultFont(font)
-		self.initStyles(self.defaultStyles)
-
-	def setFont(self, font: QFont, style=-1):
-		if style == -1:
-			self.setDefaultFont(font)
-		else:
-			super().setFont(font, style)
 
 	def language(self):
 		return "MCFunction"
@@ -361,29 +271,21 @@ class LexerMCFunction(QsciLexerCustom):
 	def wordCharacters(self) -> str:
 		return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
 
-	# def wseps(self) -> list[str]:
-	# 	editor: QsciScintilla = self.editor()
-	# 	pos: int = editor.SendScintilla(QsciScintilla.SCI_GETCURRENTPOS)
-	# 	return ['.']
-
 	def autoCompletionWordSeparators(self) -> list[str]:
 		# editor: QsciScintilla = self.editor()
 		# pos: int = editor.SendScintilla(QsciScintilla.SCI_GETCURRENTPOS)
 		return ['.']  # ':', '#', '.']
 
 	def styleText(self, start: int, end: int):
-		origStart, origEnd = start, end
 		start = 0
-		text: str = self.parent().text()
 
-		function, errors = parseMCFunction(getSession().minecraftData.commands, text)
-		if function is None:
-			self._function = None
-			self._errors = []
+		doc = self.document()
+		if doc is None:
 			return
-
-		self._function = function
-		self._errors = errors
+		text: str = self.document().content
+		function = doc.tree
+		if not isinstance(function, ParsedMCFunction):
+			return
 
 		tokens = tokenizeMCFunction(function)
 

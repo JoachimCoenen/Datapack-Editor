@@ -15,40 +15,41 @@ from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
 from Cat.utils.profiling import TimedMethod, logError
 from model.Model import Datapack
-from model.commands.parser import parseMCFunction
-from model.commands.validator import checkMCFunction
 from model.utils import WrappedError
-from session.documents import ErrorCounts, getErrorCounts
+from session.documents import ErrorCounts, getErrorCounts, loadDocument
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
-from model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool, loadTextFile
+from model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool
 from session.session import getSession
 
 
-class WrappedError:
-	"""
-	just a wrapper for any Exception
-	satisfies protocol `Error`
-	"""
-	def __init__(self, exception: Exception):
-		super(WrappedError, self).__init__()
-		self.wrappedEx = exception
-		self.message: str = str(exception)
-		self.position: Optional[Position] = None
-		self.end: Optional[Position] = None
-		self.style: str = 'error'
-
-
-def checkMcFunctionFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[Error]:
+def checkFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[Error]:
 	try:
-		sourceCode = loadTextFile(filePath, archiveFilePool)
-		tree, errors = parseMCFunction(getSession().minecraftData.commands, sourceCode)
-		if tree is not None:
-			errors += checkMCFunction(tree)
+		document = loadDocument(filePath, archiveFilePool)
+		errors = document.validate()
 		return errors
 	except Exception as e:
 		logError(f"filePath = {filePath!r}")
 		logError(format_full_exc())
 		return [WrappedError(e)]
+
+
+# def checkMcFunctionFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[Error]:
+# 	try:
+# 		sourceCode = loadTextFile(filePath, archiveFilePool)
+# 		tree, errors = parseMCFunction(getSession().minecraftData.commands, sourceCode)
+# 		if tree is not None:
+# 			errors += checkMCFunction(tree)
+# 		return errors
+# 	except Exception as e:
+# 		logError(f"filePath = {filePath!r}")
+# 		logError(format_full_exc())
+# 		return [WrappedError(e)]
+
+
+FILE_TYPES = [
+	'.mcfunction',
+	'.json',
+]
 
 
 class CheckAllDialog(CatFramelessWindowMixin, QDialog):
@@ -60,6 +61,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self.errorsByFile: OrderedDict[FilePath, Collection[Error]] = OrderedDict()
 
 		self._includedDatapacks: list[Datapack] = []
+		self._fileTypes: set[str] = set()
 		self._allFiles: list[FilePath] = []
 		self._filesCount: int = 100
 		self._filesChecked: int = 50
@@ -69,6 +71,11 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self.setWindowTitle('Validate Files')
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
+		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
+			self._fileTypes = {ft for ft in FILE_TYPES if gui.checkboxLeft(None, ft)}
+
+		gui.vSeparator()
+
 		includedDatapacks = []
 		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
 			for dp in getSession().world.datapacks:
@@ -151,7 +158,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 					fn = f[1]
 				else:
 					fn = f
-				if fn.endswith('.mcfunction'):
+				if fn.endswith(tuple(self._fileTypes)):
 					self._allFiles.append(f)
 
 		self._filesCount = len(self._allFiles)
@@ -175,10 +182,9 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 			allErrorCounts2 = {}
 			with ZipFilePool() as archiveFilePool:
 				for i, filePath in enumerate(self._allFiles):
-					self._filesChecked = i+1
-					self.progressSignal.emit(i+1)
+					self._filesChecked = i + 1
 
-					errors = checkMcFunctionFile(filePath, archiveFilePool)
+					errors = checkFile(filePath, archiveFilePool)
 
 					self.totalErrorCounts += getErrorCounts([], errors)
 					self.errorsByFile[filePath] = errors
@@ -189,7 +195,8 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 						allErrorCounts1.add(filePath, errorCounter)
 					allErrorCounts2[errorCounter] = allErrorCounts2.get(errorCounter, 0) + 1
 
-					if i % 10 == 0:
+					if i % 100 == 0:
+						self.progressSignal.emit(i + 1)
 						self.errorCountsUpdateSignal.emit()
 						QApplication.processEvents(QEventLoop.ExcludeUserInputEvents, 1)
 
@@ -209,4 +216,4 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		finally:
 			self.errorCountsUpdateSignal.emit()
 			self.setCursor(Qt.ArrowCursor)
-			gui.redrawGUI()
+			gui.redrawGUILater()

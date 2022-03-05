@@ -25,7 +25,11 @@ def wrongTypeError(expected: JsonSchema, got: JsonData):
 
 def validateJson(data: JsonData) -> list[JsonSemanticsError]:
 	errors: list[JsonSemanticsError] = list[JsonSemanticsError]()
-	_validateInternal(data, errorsIO=errors)
+	if data.schema is not None:
+		_validateInternal(data, errorsIO=errors)
+	else:
+		msg = NO_JSON_SCHEMA_MSG.format(data.typeName)
+		errors.append(JsonSemanticsError(msg, Span(data.span.start)))
 	return errors
 
 
