@@ -2,14 +2,15 @@ from __future__ import annotations
 import os
 import traceback
 from json import JSONDecodeError
-from typing import TypeVar
+from typing import TypeVar, Optional
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
-from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, Computed, ComputedCached
+from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, Computed, ComputedCached, SerializedPropertyABC
 from Cat.extensions import FilesChangedDependency, SingleFileChangedDependency
 from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
-from model.datapackContents import ResourceLocation, collectAllEntries, DatapackContents
+from model.datapackContents import ResourceLocation, collectAllEntries, DatapackContents, MetaInfo, choicesFromResourceLocations
+from model.parsing.contextProvider import Suggestions
 from model.pathUtils import getAllFilesFromSearchPath, fileNameFromFilePath, FilePathTpl
 from settings import applicationSettings
 
@@ -310,40 +311,16 @@ class World(SerializableContainer):
 		return datapacks
 
 
+def choicesForDatapackContents(text: str, prop: SerializedPropertyABC[Datapack, OrderedDict[ResourceLocation, MetaInfo]]) -> Suggestions:
+	from session.session import getSession
+	locations = [b for dp in getSession().world.datapacks for b in prop.get(dp)]
+	return choicesFromResourceLocations(text, locations)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def metaInfoFromDatapackContents(rl: ResourceLocation, prop: SerializedPropertyABC[Datapack, OrderedDict[ResourceLocation, MetaInfo]]) -> Optional[MetaInfo]:
+	from session.session import getSession
+	for dp in getSession().world.datapacks:
+		# TODO: show prompt, when there are multiple files this applies to.
+		if (file := prop.get(dp).get(rl)) is not None:
+			return file
+	return None

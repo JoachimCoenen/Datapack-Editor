@@ -155,6 +155,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 				lexer = None
 			else:
 				lexer = lexerCls(self)
+			self._currentLexer = lexer
 		if isinstance(lexer, DocumentLexerBase):
 			lexer.setDocument(document)
 

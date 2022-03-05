@@ -133,4 +133,5 @@ dmypy.json
 profiling/
 sessions/
 settings.json
-settings.json
+dist/
+releases/

@@ -1,8 +1,11 @@
 from typing import Protocol, Type
 
+from Cat.utils import escapeForXml
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclass
 from model.json.core import *
-from model.utils import GeneralParsingError, Message, Span
+from model.json.core import JsonInvalid, JsonSemanticsError
+from model.json.stringHandlers import getStringHandler
+from model.utils import GeneralError, Message, Span
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG = Message("Expected whitespace to end one argument, but found trailing data: `{0}`", 1)
 NO_JSON_SCHEMA_MSG = Message("No JSON Schema for {0}", 1)
@@ -14,12 +17,8 @@ UNKNOWN_PROPERTY_MSG = Message("Unknown property `{0}`", 1)
 MISSING_MANDATORY_PROPERTY_MSG = Message("Missing mandatory property `{0}`", 1)
 
 
-class JsonSemanticsError(GeneralParsingError):
-	pass
-
-
 def wrongTypeError(expected: JsonSchema, got: JsonData):
-	msg = EXPECTED_BUT_GOT_MSG.format(expected.typeName, got.typeName)
+	msg = EXPECTED_BUT_GOT_MSG.format(expected.asString, got.typeName)
 	return JsonSemanticsError(msg, got.span)
 
 
@@ -60,6 +59,12 @@ def getSchemaValidator(key: Type[JsonData], default):
 	return getIfKeyIssubclass(VALIDATORS_FOR_SCHEMAS, key, default)
 
 
+@schemaValidator(JsonInvalid)
+def validateJsonInvalid(data: JsonInvalid, *, errorsIO: list[JsonSemanticsError]) -> None:
+	errorsIO.append(wrongTypeError(data.schema, data))
+	return
+
+
 @schemaValidator(JsonNull)
 def validateJsonNull(data: JsonNull, *, errorsIO: list[JsonSemanticsError]) -> None:
 	if not isinstance(data.schema, JsonNullSchema):
@@ -95,13 +100,14 @@ def validateJsonString(data: JsonString, *, errorsIO: list[JsonSemanticsError]) 
 		errorsIO.append(wrongTypeError(data.schema, data))
 		return
 	# TODO: validation of JsonString using JsonStringSchema.type
-	# start = data.span.start
-	# sr = StringReader(data.data, start.index, start.line, data.data)
-	#
-	# if data.schema.type is not None:
-	# 	argumentHandler = getArgumentHandler(data.schema.type)
-	# 	if argumentHandler is None:
-	# 		pa = missingArgumentHandler(sr, data.schema.type, errorsIO=)
+
+	if data.schema.type is not None:
+		argumentHandler = getStringHandler(data.schema.type.name)
+		if argumentHandler is not None:
+			argumentHandler.parse(data, errorsIO)
+			argumentHandler.validate(data, errorsIO)
+		else:
+			errorsIO.append(JsonSemanticsError(f"Missing JsonStringHandler for type `{escapeForXml(data.schema.type.name)}`", data.span, style='info'))
 
 
 @schemaValidator(JsonArray)

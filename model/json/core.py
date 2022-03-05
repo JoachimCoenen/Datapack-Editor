@@ -1,70 +1,113 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from math import inf
-from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type
 
-from Cat.utils import abstract, CachedProperty, NoneType
+from abc import ABC
+from dataclasses import dataclass
+from math import inf
+from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator
+
+from Cat.utils import abstract, CachedProperty
 from Cat.utils.collections_ import OrderedMultiDict
-from model.commands.argumentTypes import ArgumentType
+from model.commandsV2.argumentTypes import ArgumentType
 from model.json.lexer import TokenType
-from model.utils import Span
+from model.parsing.tree import Node
+from model.utils import GeneralError
 
 Array = list['JsonData']
 Object = OrderedMultiDict[str, 'JsonProperty']
 
 JsonTypes = Union[None, bool, int, float, str, Array, Object]
 
-_TT = TypeVar('_TT', NoneType, bool, int, float, str, Array, Object)
+_TT = TypeVar('_TT')  # , NoneType, bool, int, float, str, Array, Object)
+_TT2 = TypeVar('_TT2')  # , NoneType, bool, int, float, str, Array, Object)
 _TN = TypeVar('_TN', int, float)
-
-
-@dataclass
-class JsonProperty:
-	key: JsonString
-	value: JsonData
-	schema: Optional[SwitchingPropertySchema]
-
-	typeName: ClassVar[str] = 'JsonProperty'
 
 
 @abstract
 @dataclass
-class JsonData(Generic[_TT]):
-	data: _TT
-	span: Span = field(hash=False, compare=False)
+class JsonData(Node['JsonData', 'JsonSchema'], ABC):
 	schema: Optional[JsonSchema]
 
 	typeName: ClassVar[str] = 'JsonData'
 
+	def walkTree(self) -> Iterator[JsonData]:
+		yield self
+		for child in self.children():
+			yield from child.walkTree()
+
 
 @dataclass
-class JsonNull(JsonData[None]):
+class JsonInvalid(JsonData):
+	typeName: ClassVar[str] = 'invalid'
+	data: str
+
+	def children(self) -> Collection[JsonData]:
+		return ()
+
+
+@dataclass
+class JsonNull(JsonData):
 	typeName: ClassVar[str] = 'null'
 
+	def children(self) -> Collection[JsonData]:
+		return ()
+
 
 @dataclass(unsafe_hash=True, order=True)
-class JsonBool(JsonData[bool]):
+class JsonBool(JsonData):
+	data: bool
 	typeName: ClassVar[str] = 'boolean'
 
+	def children(self) -> Collection[JsonData]:
+		return ()
+
 
 @dataclass(unsafe_hash=True, order=True)
-class JsonNumber(JsonData[Union[int, float]]):
+class JsonNumber(JsonData):
+	data: Union[int, float]
 	typeName: ClassVar[str] = 'number'
 
+	def children(self) -> Collection[JsonData]:
+		return ()
+
 
 @dataclass(unsafe_hash=True, order=True)
-class JsonString(JsonData[str]):
+class JsonString(JsonData):
+	data: str
+	parsedValue: Optional[Any] = None
 	typeName: ClassVar[str] = 'string'
 
+	def children(self) -> Collection[JsonData]:
+		return ()
+
 
 @dataclass
-class JsonArray(JsonData[Array]):
+class JsonArray(JsonData):
+	data: Array
 	typeName: ClassVar[str] = 'array'
 
+	def children(self) -> Collection[JsonData]:
+		return self.data
+
 
 @dataclass
-class JsonObject(JsonData[Object]):
+class JsonProperty(JsonData):
+	key: JsonString
+	value: JsonData
+	schema: Optional[SwitchingPropertySchema]
+
+	typeName: ClassVar[str] = 'property'
+
+	def children(self) -> Collection[JsonData]:
+		return self.key, self.value
+
+
+@dataclass
+class JsonObject(JsonData):
+	data: Object
 	typeName: ClassVar[str] = 'object'
+
+	def children(self) -> Collection[JsonData]:
+		return self.data.values()
 
 
 @abstract
@@ -75,28 +118,32 @@ class JsonSchema(Generic[_TT]):
 	"""
 	TOKEN: TokenType = TokenType.invalid
 	"""The parser tries to use a Schema of this Type if the parser encounters a token == TOKEN. (see also class JsonUnionSchema)"""
-	DATA_TYPE: ClassVar[Type[JsonData]] = JsonData
+	DATA_TYPE: ClassVar[Type[_TT]] = JsonData
 	typeName: ClassVar[str] = 'JsonData'
 
 	def __init__(self, *, description: str = '', deprecated: bool = False):
 		self.description: str = description
 		self.deprecated: bool = deprecated
 
+	@property
+	def asString(self) -> str:
+		return self.typeName
 
-class JsonNullSchema(JsonSchema[None]):
+
+class JsonNullSchema(JsonSchema[JsonNull]):
 	TOKEN = TokenType.null
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonNull
 	typeName: ClassVar[str] = 'null'
 
 
-class JsonBoolSchema(JsonSchema[bool]):
+class JsonBoolSchema(JsonSchema[JsonBool]):
 	TOKEN = TokenType.boolean
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonBool
 	typeName: ClassVar[str] = 'boolean'
 
 
 @abstract
-class JsonNumberSchema(JsonSchema[_TN], Generic[_TN]):
+class JsonNumberSchema(JsonSchema[JsonNumber]):
 	TOKEN = TokenType.number
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonNumber
 	typeName: ClassVar[str] = 'number'
@@ -107,15 +154,15 @@ class JsonNumberSchema(JsonSchema[_TN], Generic[_TN]):
 		self.max: _TN = maxVal
 
 
-class JsonIntSchema(JsonNumberSchema[int]):
+class JsonIntSchema(JsonNumberSchema):
 	typeName: ClassVar[str] = 'integer'
 
 
-class JsonFloatSchema(JsonNumberSchema[float]):
+class JsonFloatSchema(JsonNumberSchema):
 	typeName: ClassVar[str] = 'float'
 
 
-class JsonStringSchema(JsonSchema[str]):
+class JsonStringSchema(JsonSchema[JsonString]):
 	TOKEN = TokenType.string
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonString
 	typeName: ClassVar[str] = 'string'
@@ -125,7 +172,7 @@ class JsonStringSchema(JsonSchema[str]):
 		self.type: Optional[ArgumentType] = type
 
 
-class JsonArraySchema(JsonSchema[Array]):
+class JsonArraySchema(JsonSchema[JsonArray]):
 	TOKEN = TokenType.left_bracket
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonArray
 	typeName: ClassVar[str] = 'array'
@@ -135,27 +182,31 @@ class JsonArraySchema(JsonSchema[Array]):
 		self.element: JsonSchema = element
 
 
-class PropertySchema(Generic[_TT]):
-	def __init__(self, *, name: str, description: str = '', default: Optional[_TT] = None, value: JsonSchema[_TT]):
-		self.name: str = name
-		self.description: str = description
-		self.default: Optional[_TT] = default
-		self.value: JsonSchema[_TT] = value
+# class PropertySchema(Generic[_TT]):
+# 	def __init__(self, *, name: str, description: str = '', default: Optional[_TT] = None, value: JsonSchema[_TT]):
+# 		self.name: str = name
+# 		self.description: str = description
+# 		self.default: Optional[_TT] = default
+# 		self.value: JsonSchema[_TT] = value
+#
+# 	@property
+# 	def mandatory(self) -> bool:
+# 		return self.default is None
 
-	@property
-	def mandatory(self) -> bool:
-		return self.default is None
 
+class SwitchingPropertySchema(JsonSchema[JsonProperty]):
+	TOKEN = TokenType.invalid
+	DATA_TYPE: ClassVar[Type[JsonData]] = JsonProperty
+	typeName: ClassVar[str] = 'property'
 
-class SwitchingPropertySchema(Generic[_TT]):
-	def __init__(self, *, name: str, description: str = '', default: Optional[_TT] = None, value: JsonSchema[_TT], decidingProp: Optional[str] = None, values: dict[Union[str, int, bool], JsonSchema[_TT]] = None, deprecated: bool = False):
+	def __init__(self, *, name: str, description: str = '', value: JsonSchema[_TT], default: JsonTypes = None, decidingProp: Optional[str] = None, values: dict[Union[str, int, bool], JsonSchema[_TT]] = None, deprecated: bool = False):
 		self.name: str = name
 		self.description: str = description
 		self.deprecated: bool = deprecated
-		self.default: Optional[_TT] = default
-		self.value: JsonSchema[_TT] = value
+		self.default: Optional[_TT2] = default
+		self.value: JsonSchema[_TT2] = value
 		self.decidingProp: Optional[str] = decidingProp
-		self.values: dict[Union[str, int, bool], JsonSchema[_TT]] = values or {}
+		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = values or {}
 
 	@property
 	def mandatory(self) -> bool:
@@ -184,7 +235,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 		return propsDict
 
 
-class JsonUnionSchema(JsonSchema[JsonTypes]):
+class JsonUnionSchema(JsonSchema[JsonData]):
 	typeName: ClassVar[str] = 'union'
 
 	def __init__(self, *, description: str = '', options: Sequence[JsonSchema]):
@@ -211,9 +262,14 @@ class JsonUnionSchema(JsonSchema[JsonTypes]):
 				result[opt.DATA_TYPE] = opt
 		return result
 
-	@CachedProperty
-	def typeName(self) -> str:
-		return f"({'|'.join(o.typeName for o in self.optionsDict.values())})"
+	# @CachedProperty
+	@property
+	def asString(self) -> str:
+		return f"({'|'.join(o.asString for o in self.optionsDict2.values())})"
+
+
+class JsonSemanticsError(GeneralError):
+	pass
 
 
 __all__ = [

@@ -7,7 +7,6 @@ from PyQt5.QtCore import QTimer
 
 from Cat import undoRedo
 from Cat.CatPythonGUI.GUI import codeEditor
-from Cat.CatPythonGUI.GUI.codeEditor import Error, Position
 from Cat.Serializable import Computed, RegisterContainer, Serialized, SerializableContainer, ComputedCached
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.extensions.fileSystemChangedDependency import SingleFileChangedDependencyProperty
@@ -16,8 +15,8 @@ from Cat.utils import utils, Decorator
 from Cat.utils.profiling import logInfo, logError
 
 from Cat.utils.signals import CatSignal
-from model.datapackContents import getEntryHandlerForFile, EntryHandlerInfo, EntryHandlerKey
 from model.pathUtils import fileNameFromFilePath, FilePath, getMTimeForFilePath, ZipFilePool, loadTextFile, ArchiveFilePool
+from model.utils import GeneralError, Position
 
 TTarget = TypeVar("TTarget")
 
@@ -68,7 +67,7 @@ class ErrorCounts:
 		return self
 
 
-def getErrorCounts(parserErrors: Collection[Error], otherErrors: Collection[Error]) -> ErrorCounts:
+def getErrorCounts(parserErrors: Collection[GeneralError], otherErrors: Collection[GeneralError]) -> ErrorCounts:
 	errorCounts = ErrorCounts()
 
 	errorCounts.parserErrors = len(parserErrors)
@@ -191,7 +190,7 @@ class Document(SerializableContainer):
 		self.encoding: str = 'utf-8'
 		self.content: ~TTarget = None
 		self.highlightErrors: bool = True
-		self.errors: Sequence[Error] = []
+		self.errors: Sequence[GeneralError] = []
 
 	def __init__(self):
 		super().__init__()
@@ -236,7 +235,7 @@ class Document(SerializableContainer):
 
 		self._asyncTakeSnapshot()
 
-		self._asyncValidate()
+		self.asyncValidate()
 
 	@utils.DeferredCallOnceMethod(delay=333)
 	def _asyncTakeSnapshot(self) -> None:
@@ -245,18 +244,21 @@ class Document(SerializableContainer):
 
 	@utils.DeferredCallOnceMethod(delay=333)
 	@utils.BusyIndicator
-	def _asyncValidate(self) -> None:
+	def asyncValidate(self) -> None:
 		self.errors = self.validate()
 
-	def validate(self) -> Sequence[Error]:
+	def validate(self) -> Sequence[GeneralError]:
 		return []
+
+	# TODO: def parse(self) -> Sequence[GeneralError]:
+	# 	return []
 
 	highlightErrors: bool = Serialized(default=True)
 
-	errors: Sequence[Error] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
+	errors: Sequence[GeneralError] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
 
 	@errors.onSet
-	def errors(self, newVal: Sequence[Error], oldVal: Optional[Sequence[Error]]) -> Sequence[Error]:
+	def errors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
 		if newVal != oldVal:
 			QTimer.singleShot(0, lambda self=self: self.onErrorsChanged.emit(self))
 		return newVal

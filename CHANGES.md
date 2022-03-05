@@ -1,9 +1,11 @@
 ## Next Version
 ### Features
- * Added support for different data pack versions.
+ * Added support for different data pack versions (separate from the MC version).
  * Added syntax checking for JSON files.
- * Added validation support for JSON files. (#4)
- * Added basic validation for tag files (files in 'data/{namespace}/tags/'). (#6)
+ * Added basic code completion for JSON files.
+ * Added basic code insight (tooltips) for JSON files.
+ * Added validation support for JSON files. (issue #4)
+ * Added basic validation for tag files (files in 'data/{namespace}/tags/'). (issue #6)
  * Added validation for raw json text (`minecraft:component` type) in mcFunction files.
 
 ### Improvements
@@ -15,8 +17,8 @@
 
 ## Version 0.2.1-alpha
 ### Fixes
- * Fixed crash in `clickableRangesForFilterArgs(...)` (#19).
- * Fixed crash in `getBestFAMatch(...)` (#20).
+ * Fixed crash in `clickableRangesForFilterArgs(...)` (issue #19).
+ * Fixed crash in `getBestFAMatch(...)` (issue #20).
 
 ### Improvements
  * Slightly improved suggestions for coordinates

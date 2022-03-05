@@ -5,7 +5,7 @@ from enum import Enum
 from typing import NamedTuple
 from string import whitespace as WHITESPACE, ascii_letters
 
-from model.utils import Span, GeneralParsingError, Position, Message
+from model.utils import Span, GeneralError, Position, Message
 
 
 INCOMPLETE_ESCAPE_MSG = Message("Incomplete escape at end of string", 0)
@@ -36,6 +36,7 @@ class TokenType(Enum):
 	comma = 9
 	colon = 10
 	invalid = 11
+	eof = 12
 
 
 class Token(NamedTuple):
@@ -46,7 +47,7 @@ class Token(NamedTuple):
 	# isValid: bool = True
 
 
-class JsonTokenizeError(GeneralParsingError):
+class JsonTokenizeError(GeneralError):
 	pass
 
 
@@ -279,7 +280,7 @@ _TOKEN_EXTRACTORS_BY_CHAR = {
 }
 
 
-def tokenizeJson(source: str, allowMultilineStr: bool) -> tuple[deque[Token], list[GeneralParsingError]]:
+def tokenizeJson(source: str, allowMultilineStr: bool) -> tuple[deque[Token], list[GeneralError]]:
 	"""Converts a JSON string into a queue of tokens"""
 	tkz = JsonTokenizer(source, allowMultilineStr)
 
@@ -300,6 +301,7 @@ def tokenizeJson(source: str, allowMultilineStr: bool) -> tuple[deque[Token], li
 			extractor = _TOKEN_EXTRACTORS_BY_CHAR.get(char, extract_illegal)
 			extractor(tkz)
 		tkz.consumeWhitespace()
+	tkz.addToken2(tkz.position, '', TokenType.eof)
 
 		# if char in '[]{},:':
 		# 	start = tkz.position

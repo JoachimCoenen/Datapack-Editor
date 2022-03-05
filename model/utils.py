@@ -1,3 +1,4 @@
+from __future__ import annotations
 import builtins
 from dataclasses import dataclass, field
 from typing import final, Iterator, Optional
@@ -56,19 +57,28 @@ class Span:
 	def length(self) -> int:
 		return self.end.index - self.start.index
 
+	def overlaps(self, other: Span) -> bool:
+		return not (
+			other.end.index <= self.start.index or
+			self.end.index <= other.start.index
+		)
+
 	def __iter__(self) -> Iterator[Position]:
 		yield self.start
 		yield self.end
+
+	def __contains__(self, item):
+		return self.start.index <= item.index <= self.end.index
 
 	def __repr__(self):
 		return f' Span({self.start!r}, {self.end!r})'
 
 
-class GeneralParsingError:
+class GeneralError:  # TODO: find better & more descriptive name
 	def __init__(self, message: str, span: Span, style: str = 'error'):
-		super(GeneralParsingError, self).__init__()
-		if self.__class__ is GeneralParsingError:
-			raise RuntimeError("GeneralParsingError should not be instantiated directly")
+		super(GeneralError, self).__init__()
+		if self.__class__ is GeneralError:
+			raise RuntimeError("GeneralError should not be instantiated directly")
 		self.message: str = f"<font>{HTMLifyMarkDownSubSet(message)}</font>"
 		self.span: Span = span
 		self.style: str = style
@@ -83,6 +93,14 @@ class GeneralParsingError:
 	@property
 	def end(self) -> Position:
 		return self.span.end
+
+
+class ParsingError(GeneralError):
+	pass
+
+
+class SemanticsError(GeneralError):
+	pass
 
 
 class WrappedError:
@@ -103,6 +121,8 @@ __all__ = [
 	'Message',
 	'Position',
 	'Span',
-	'GeneralParsingError',
+	'GeneralError',
+	'ParsingError',
+	'SemanticsError',
 	'WrappedError',
 ]

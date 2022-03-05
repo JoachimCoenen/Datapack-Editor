@@ -6,16 +6,17 @@ from typing import Optional, AbstractSet
 
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import ProfiledFunction
+from model.json.core import JsonInvalid
 from model.json.lexer import Token, tokenizeJson, TokenType
 from model.json.core import *
 from model.json.schema import enrichWithSchema
-from model.utils import GeneralParsingError, Span, Message
+from model.utils import GeneralError, Span, Message
 
 EOF_MSG = Message("Unexpected end of file while parsing", 0)
 EXPECTED_BUT_GOT_MSG = Message("Expected `{0}` but got `{1}`", 2)
 
 
-class JsonParseError(GeneralParsingError):
+class JsonParseError(GeneralError):
 	pass
 
 
@@ -40,7 +41,7 @@ class ParserData:
 		if len(self.tokens) == 0:
 			span = self.lastToken.span if self.lastToken is not None else Span()
 			self.errors.append(JsonParseError(EOF_MSG.format(), span))
-			return None
+			return self.lastToken
 
 		token = self.tokens.popleft()
 		self.lastToken = token
@@ -53,7 +54,7 @@ class ParserData:
 		if len(self.tokens) == 0:
 			span = self.lastToken.span if self.lastToken is not None else Span()
 			self.errors.append(JsonParseError(EOF_MSG.format(), span))
-			return None
+			return self.lastToken
 
 		token = self.tokens.popleft()
 		self.lastToken = token
@@ -69,7 +70,7 @@ class ParserData:
 			return None
 		token = self.tokens.popleft()
 		self.lastToken = token
-		return token
+		return self.lastToken
 
 	def pop(self) -> Token:
 		token = self.tokens.popleft()
@@ -85,11 +86,11 @@ def parse_object(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonObje
 	start = psr.lastToken
 
 	token = psr.acceptAnyOf({TokenType.right_brace, TokenType.string})
-	if token is None:
-		return JsonObject(objData, start.span, schema)
+	if token.type is TokenType.eof:
+		return JsonObject(Span(start.span.start, token.span.end), schema, objData)
 	# special case:
 	if token.type is TokenType.right_brace:
-		return JsonObject(objData, Span(start.span.start, token.span.end), schema)
+		return JsonObject(Span(start.span.start, token.span.end), schema, objData)
 
 	while token is not None:
 		if token.type == TokenType.string:
@@ -100,44 +101,45 @@ def parse_object(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonObje
 				continue
 			if token.type == TokenType.right_brace:
 				break
-			key = JsonString('', token.span, None)
+			key = JsonString(token.span, None, '')
 
 		propertySchema = schema.propertiesDict.get(key.data) if isObjectSchema else None
 		valueSchema = propertySchema.value if propertySchema is not None else None
 
 		if token.type != TokenType.colon:
 			token = psr.accept(TokenType.colon)
-		if token is None:
-			value = JsonNull(None, Span(psr.lastToken.span.end), valueSchema)
-			objData.add(key.data, JsonProperty(key, value, propertySchema))
+		if token.type is TokenType.eof:
+			value = JsonInvalid(Span(psr.lastToken.span.end, token.span.end), valueSchema, '')
+			objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), propertySchema, key, value))
 			break
 		elif token.type != TokenType.colon:
 			if token.type == TokenType.comma:
-				value = JsonNull(None, psr.lastToken.span, valueSchema)
-				objData.add(key.data, JsonProperty(key, value, propertySchema))
+				value = JsonInvalid(psr.lastToken.span, valueSchema, '')
+				objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), propertySchema, key, value))
 				token = psr.accept(TokenType.string)
 				continue
 			if token.type == TokenType.right_brace:
-				value = JsonNull(None, psr.lastToken.span, valueSchema)
-				objData.add(key.data, JsonProperty(key, value, propertySchema))
+				value = JsonInvalid(psr.lastToken.span, valueSchema, '')
+				objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), propertySchema, key, value))
 				break
 			pass
 		psr.acceptAnyOf(_PARSERS.keys())
 		value = _internalParseTokens(psr, valueSchema)
-		objData.add(key.data, JsonProperty(key, value, propertySchema))
 
 		token = psr.acceptAnyOf({TokenType.comma, TokenType.right_brace})
-		if token is None:
+		if token.type is TokenType.eof:
+			objData.add(key.data, JsonProperty(Span(key.span.start, token.span.end), propertySchema, key, value))
 			break
+		objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), propertySchema, key, value))
 		if token.type is TokenType.comma:
 			token = psr.accept(TokenType.string)
 			continue
 		if token.type == TokenType.right_brace:
 			break
 
-	if token is None:
+	if token.type is TokenType.eof:
 		token = psr.lastToken
-	return JsonObject(objData, Span(start.span.start, token.span.end), schema)
+	return JsonObject(Span(start.span.start, token.span.end), schema, objData)
 
 
 def parse_array(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonArray:
@@ -149,11 +151,11 @@ def parse_array(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonArray
 	start = psr.lastToken
 
 	token = psr.acceptAnyOf({TokenType.right_bracket, *_PARSERS.keys()})
-	if token is None:
-		return JsonArray(arrayData, start.span, schema)
+	if token.type is TokenType.eof:
+		return JsonArray(Span(start.span.start, token.span.end), schema, arrayData)
 	# special case:
 	if token.type is TokenType.right_bracket:
-		return JsonArray(arrayData, Span(start.span.start, token.span.end), schema)
+		return JsonArray(Span(start.span.start, token.span.end), schema, arrayData)
 
 	while token is not None:
 
@@ -161,7 +163,7 @@ def parse_array(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonArray
 		arrayData.append(value)
 
 		token = psr.acceptAnyOf({TokenType.comma, TokenType.right_bracket})
-		if token is None:
+		if token.type is TokenType.eof:
 			break
 		if token.type is TokenType.comma:
 			token = psr.acceptAnyOf(_PARSERS.keys())
@@ -169,9 +171,9 @@ def parse_array(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonArray
 		if token.type == TokenType.right_bracket:
 			break
 
-	if token is None:
+	if token.type is TokenType.eof:
 		token = psr.lastToken
-	return JsonArray(arrayData, Span(start.span.start, token.span.end), schema)
+	return JsonArray(Span(start.span.start, token.span.end), schema, arrayData)
 
 
 def parse_string(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonString:
@@ -232,7 +234,7 @@ def parse_string(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonStri
 			string = string[1:].removesuffix('"')
 		elif string[0] == "'":
 			string = string[1:].removesuffix("'")
-	return JsonString(string, token.span, schema)
+	return JsonString(token.span, schema, string)
 
 
 def parse_number(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonNumber:
@@ -243,11 +245,11 @@ def parse_number(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonNumb
 			number = int(token.value)
 		else:
 			number = float(token.value)
-		return JsonNumber(number, token.span, schema)
+		return JsonNumber(token.span, schema, number)
 
 	except ValueError as err:
 		psr.errors.append(JsonParseError(f"Invalid number: `{token.value} ", token.span))
-	return JsonNumber(0, token.span, schema)
+	return JsonNumber(token.span, schema, 0)
 
 
 BOOLEAN_TOKENS = {
@@ -260,13 +262,13 @@ def parse_boolean(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonBoo
 	"""Parses a boolean out of a JSON token"""
 	token = psr.lastToken
 	value = BOOLEAN_TOKENS[token.value]
-	return JsonBool(value, token.span, schema)
+	return JsonBool(token.span, schema, value)
 
 
 def parse_null(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonNull:
 	"""Parses a boolean out of a JSON token"""
 	token = psr.lastToken
-	return JsonNull(None, token.span, schema)
+	return JsonNull(token.span, schema)
 
 
 _PARSERS = {
@@ -289,10 +291,10 @@ def _internalParseTokens(psr: ParserData, schema: Optional[JsonArraySchema]) -> 
 		value = parser(psr, schema)
 		return value
 	else:
-		return JsonNull(None, token.span, schema)
+		return JsonInvalid(token.span, schema, token.value)
 
 
-def parseJsonTokens(tokens: deque[Token], schema: Optional[JsonSchema]) -> tuple[Optional[JsonData], list[GeneralParsingError]]:
+def parseJsonTokens(tokens: deque[Token], schema: Optional[JsonSchema]) -> tuple[Optional[JsonData], list[GeneralError]]:
 	"""Recursive JSON parse implementation"""
 	psr = ParserData(tokens)
 	token = psr.acceptAnyOf(_PARSERS.keys())
@@ -305,12 +307,12 @@ def parseJsonTokens(tokens: deque[Token], schema: Optional[JsonSchema]) -> tuple
 
 
 @ProfiledFunction(enabled=False)
-def parseJsonStr(json_string: str, allowMultilineStr: bool, schema: Optional[JsonSchema]) -> tuple[Optional[JsonData], list[GeneralParsingError]]:
+def parseJsonStr(json_string: str, allowMultilineStr: bool, schema: Optional[JsonSchema]) -> tuple[Optional[JsonData], list[GeneralError]]:
 	"""Parses a JSON string into a Python object"""
 	tokens, errors = tokenizeJson(json_string, allowMultilineStr)
 	value, errors2 = parseJsonTokens(tokens, schema)
 	errors += errors2
-	if len(tokens) != 0:
+	if len(tokens) > 1:
 		errors.append(JsonParseError(
 			f"Invalid JSON at {tokens[0].value} ",
 			tokens[0].span

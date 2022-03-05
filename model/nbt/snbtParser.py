@@ -3,7 +3,7 @@ from typing import Optional, Type, Union, Callable
 from Cat.utils.collections_ import OrderedDict
 from model.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
 from model.nbt.tags import *
-from model.utils import Message, Position, GeneralParsingError, Span
+from model.utils import Message, Position, GeneralError, Span
 
 
 EXPECTED_BUT_GOT_MSG: Message = Message("Expected {}, but got: `{}`", 2)
@@ -11,7 +11,7 @@ VALUE_OUT_OF_RANGE_MSG: Message = Message("Value is out of range (min={}, max={}
 INVALID_NUMBER_MSG: Message = Message("Invalid {}: '`{}`'", 2)
 
 
-class SNBTError(GeneralParsingError):
+class SNBTError(GeneralError):
 	pass
 
 
