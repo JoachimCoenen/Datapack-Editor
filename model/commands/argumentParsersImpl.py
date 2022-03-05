@@ -1,20 +1,21 @@
 from typing import Optional
 
-from model.commands.argumentHandlers import makeParsedArgument, Suggestions
-from model.commands.command import ArgumentInfo
+from model.commands.command import ArgumentSchema
+from model.commands.commandContext import makeParsedArgument
 from model.commands.snbt import parseNBTTag
 from model.commands.utils import CommandSyntaxError
-from model.commands.parsedCommands import ParsedArgument
+from model.commands.command import ParsedArgument
 from model.commands.stringReader import StringReader
 from model.Model import ResourceLocation
 from model.nbt.tags import NBTTag, CompoundTag
+from model.parsing.contextProvider import Suggestions
 
 
 def _init():
 	pass  # do not remove!
 
 
-def _parse2dPos(sr: StringReader, ai: ArgumentInfo, *, useFloat: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+def _parse2dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 	if useFloat:
 		numberReader = sr.tryReadFloat
 	else:
@@ -39,11 +40,11 @@ def _parse2dPos(sr: StringReader, ai: ArgumentInfo, *, useFloat: bool, errorsIO:
 	return makeParsedArgument(sr, ai, value=blockPos)
 
 
-def _get2dPosSuggestions(ai: ArgumentInfo, contextStr: str, cursorPos: int, *, useFloat: bool) -> Suggestions:
+def _get2dPosSuggestions(ai: ArgumentSchema, contextStr: str, cursorPos: int, *, useFloat: bool) -> Suggestions:
 	return ['~ ~', '0 0']
 
 
-def _parse3dPos(sr: StringReader, ai: ArgumentInfo, *, useFloat: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+def _parse3dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 	if useFloat:
 		numberReader = sr.tryReadFloat
 	else:
@@ -77,11 +78,11 @@ def _parse3dPos(sr: StringReader, ai: ArgumentInfo, *, useFloat: bool, errorsIO:
 	return makeParsedArgument(sr, ai, value=blockPos)
 
 
-def _get3dPosSuggestions(ai: ArgumentInfo, contextStr: str, cursorPos: int, *, useFloat: bool) -> Suggestions:
+def _get3dPosSuggestions(ai: ArgumentSchema, contextStr: str, cursorPos: int, *, useFloat: bool) -> Suggestions:
 	return ['~ ~ ~', '^ ^ ^', '0 0 0']
 
 
-def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
+def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
 	tag = parseNBTTag(sr, errorsIO=errorsIO)
 	if tag is None:
 		return None
@@ -93,7 +94,7 @@ def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[
 		return None
 
 
-def _parseResourceLocation(sr: StringReader, ai: ArgumentInfo, *, allowTag: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+def _parseResourceLocation(sr: StringReader, ai: ArgumentSchema, *, allowTag: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 	location = sr.tryReadResourceLocation(allowTag=allowTag)
 	if location is None:
 		return None

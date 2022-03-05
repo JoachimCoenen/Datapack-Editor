@@ -5,7 +5,7 @@ from dataclasses import dataclass, Field, fields, is_dataclass
 from typing import Optional
 
 from model.commands.argumentTypes import ArgumentType
-from model.commands.command import CommandInfo
+from model.commands.command import CommandSchema
 from model.commands.filterArgs import FilterArgumentInfo
 from model.datapackContents import ResourceLocation
 
@@ -39,7 +39,7 @@ class MCVersion:
 	blockStates: dict[ResourceLocation, list[FilterArgumentInfo]]
 	gamerules: list[Gamerule]
 
-	commands: dict[str, CommandInfo]
+	commands: dict[str, CommandSchema]
 
 	def getBlockStatesDict(self, blockID: ResourceLocation) -> dict[str, FilterArgumentInfo]:
 		arguments = self.blockStates.get(blockID)

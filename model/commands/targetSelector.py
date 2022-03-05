@@ -2,11 +2,10 @@ import re
 from typing import Optional
 
 from Cat.utils.collections_ import OrderedMultiDict
-from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, argumentHandler, ArgumentHandler
 from model.commands.argumentTypes import *
-from model.commands.command import ArgumentInfo
+from model.commands.command import ArgumentSchema, ParsedArgument
+from model.commands.commandContext import argumentContext, ArgumentContext, getArgumentContext, makeParsedArgument
 from model.commands.filterArgs import FilterArgumentInfo
-from model.commands.parsedCommands import ParsedArgument
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
@@ -145,9 +144,9 @@ FALLBACK_TS_ARGUMENT_INFO = FilterArgumentInfo(
 _GOTO_NEXT_ARG_PATTERN = re.compile(r'[,}=]')
 
 
-@argumentHandler(DPE_TARGET_SELECTOR_SCORES.name)
-class TargetSelectorScoresArgumentHandler(ArgumentHandler):
-	def parse(self, sr: StringReader, ai: ArgumentInfo, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+@argumentContext(DPE_TARGET_SELECTOR_SCORES.name)
+class TargetSelectorScoresArgumentHandler(ArgumentContext):
+	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		if not sr.tryConsumeChar('{'):
 			return None
 
@@ -157,7 +156,7 @@ class TargetSelectorScoresArgumentHandler(ArgumentHandler):
 		while not sr.tryConsumeChar('}'):
 			sr.mergeLastSave()
 
-			handler = getArgumentHandler(MINECRAFT_OBJECTIVE)
+			handler = getArgumentContext(MINECRAFT_OBJECTIVE)
 			objective = handler.parse(sr, None, errorsIO=errorsIO)
 			if objective is None:
 				objective = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
@@ -173,7 +172,7 @@ class TargetSelectorScoresArgumentHandler(ArgumentHandler):
 			else:
 				sr.tryConsumeWhitespace()
 
-				handler = getArgumentHandler(MINECRAFT_INT_RANGE)
+				handler = getArgumentContext(MINECRAFT_INT_RANGE)
 				value = handler.parse(sr, None, errorsIO=errorsIO)
 				if value is None:
 					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)

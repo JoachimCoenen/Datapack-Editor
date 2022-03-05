@@ -123,8 +123,8 @@ def start(argv):
 		loadSessionFromFile()
 		showSetupDialogIfNecessary()
 
-		from model.commands import argumentHandlersImpl
-		argumentHandlersImpl._init()  # do not remove!
+		from model.commands import argumentContextsImpl
+		argumentContextsImpl._init()  # do not remove!
 
 		# if not getSession().selectedDocumentIds:
 		# 	getSession().selectedDocumentIds[WindowId('0')] = None

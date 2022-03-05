@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget
 
 from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, Decorator, override
 from Cat.utils.collections_ import AddToDictDecorator
-from model.commandsV2.stringReader import StringReader
+from model.commands.stringReader import StringReader
 from model.datapackContents import ResourceLocation
 from model.json.core import JsonString, JsonData, JsonSemanticsError
 from model.parsing.contextProvider import ContextProvider

@@ -7,7 +7,7 @@ from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVa
 
 from Cat.utils import abstract, CachedProperty
 from Cat.utils.collections_ import OrderedMultiDict
-from model.commandsV2.argumentTypes import ArgumentType
+from model.commands.argumentTypes import ArgumentType
 from model.json.lexer import TokenType
 from model.parsing.tree import Node
 from model.utils import GeneralError

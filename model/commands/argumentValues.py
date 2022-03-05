@@ -2,14 +2,14 @@ from dataclasses import dataclass
 from typing import Optional
 
 from Cat.utils.collections_ import OrderedMultiDict
-from model.commands.parsedCommands import ParsedArgument, ParsedNode
+from model.commands.command import ParsedArgument, CommandPart
 from model.datapackContents import ResourceLocation
 from model.nbt.tags import CompoundTag
 
 
 @dataclass
 class FilterArgument:
-	key: ParsedNode
+	key: CommandPart
 	value: Optional[ParsedArgument]
 	isNegated: bool
 

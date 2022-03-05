@@ -118,6 +118,10 @@ class MetaInfo:
 	filePath: FilePathTpl = FilePathTpl(('', ''))
 	resourceLocation: ResourceLocation = ResourceLocation(None, '', False)
 
+	@property
+	def documentation(self) -> HTMLStr:
+		return HTMLStr('')
+
 
 _TMetaInfo = TypeVar('_TMetaInfo', bound=MetaInfo)
 

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 
 from model.commands.argumentTypes import *
-from model.commands.command import Keyword, ArgumentInfo
-from model.commands.parsedCommands import ParsedComment, ParsedCommand, ParsedMCFunction
+from model.commands.command import KeywordSchema, ArgumentSchema
+from model.commands.command import ParsedComment, ParsedCommand, MCFunction
 from model.utils import Span
 
 
@@ -33,7 +33,7 @@ class Token:
 	style: TokenType
 
 
-def tokenizeMCFunction(function: ParsedMCFunction) -> list[Token]:
+def tokenizeMCFunction(function: MCFunction) -> list[Token]:
 	tokens: list[Token] = []
 	for child in function.children:
 		if child is None:
@@ -112,14 +112,14 @@ def tokenizeCommand(command: ParsedCommand) -> list[Token]:
 			text = argument.name
 		else:
 			text = argument.content
-			info = argument.info
-			if isinstance(info, Keyword):
+			schema = argument.schema
+			if isinstance(schema, KeywordSchema):
 				style = TokenType.Keyword
-			elif isinstance(info, ArgumentInfo):
-				if isinstance(info.type, LiteralsArgumentType):
+			elif isinstance(schema, ArgumentSchema):
+				if isinstance(schema.type, LiteralsArgumentType):
 					style = TokenType.Constant
 				else:
-					typeName = info.typeName
+					typeName = schema.typeName
 					style = _allArgumentTypeStyles.get(typeName, TokenType.Error)
 			else:
 				style = TokenType.Error

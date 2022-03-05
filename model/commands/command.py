@@ -1,45 +1,35 @@
 from __future__ import annotations
 
+from abc import ABCMeta
 from dataclasses import dataclass, field
-from typing import TypeVar, Union, Optional, Sequence
+from typing import TypeVar, Union, Optional, Sequence, Any, Generic
 
-from Cat.utils import Singleton, abstract
+from Cat.utils import Singleton
 from model.commands.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
+from model.parsing.tree import Schema, Node
+from model.utils import Position
 
-TS = TypeVar('TS')
-TT = TypeVar('TT')
 
-
-@abstract
 @dataclass
-class CommandNode:
-	name: str = field(default='')
+class Named(metaclass=ABCMeta):
+	name: str
+
+
+@dataclass
+class CommandPartSchema(Schema, Named, metaclass=ABCMeta):
 	description: str = field(default='')
-	next: Sequence[CommandNode] = field(default_factory=lambda: list[CommandNode]())
-
-	@abstract
-	def asCodeString(self) -> str:
-		...
+	next: list[CommandPartSchema] = field(default_factory=list)
 
 
 @dataclass
-class Keyword(CommandNode):
-	def asCodeString(self) -> str:
+class KeywordSchema(CommandPartSchema):
+	@property
+	def asString(self) -> str:
 		return f'{self.name}'
 
 
 @dataclass
-class LiteralsInfo(CommandNode):
-	options: list[str] = field(default_factory=list[str])
-	next: Sequence[CommandNode] = field(default_factory=lambda: list[CommandNode]())
-
-	def asCodeString(self) -> str:
-		options = '|'.join(self.options)
-		return f"({options})"
-
-
-@dataclass
-class ArgumentInfo(CommandNode):
+class ArgumentSchema(CommandPartSchema):
 	type: ArgumentType = field(default=BRIGADIER_STRING)
 
 	@property
@@ -48,52 +38,53 @@ class ArgumentInfo(CommandNode):
 
 	subType: Optional[ArgumentType] = field(default=None)
 	args: Optional[dict[str, Union[Any, None]]] = field(default=None)
-	next: Sequence[CommandNode] = field(default_factory=lambda: list[CommandNode]())
+	next: Sequence[CommandPartSchema] = field(default_factory=list)
 
-	def asCodeString(self) -> str:
+	@property
+	def asString(self) -> str:
 		if isinstance(self.type, LiteralsArgumentType):
 			return f"({'|'.join(opt for opt in self.type.options)})"
 		return f'<{self.name}: {self.typeName}>'
 
 
 @dataclass
-class Switch(CommandNode):
-	options: list[Union[Keyword, Terminal]] = field(default_factory=list[Keyword])
-	next: Sequence[CommandNode] = field(default_factory=lambda: list[CommandNode]())
+class SwitchSchema(CommandPartSchema):
+	options: list[Union[KeywordSchema, TerminalSchema]] = field(default_factory=list)
+	next: Sequence[CommandPartSchema] = field(default_factory=list)
 
-	def asCodeString(self) -> str:
-		options = '|'.join(opt.asCodeString() for opt in self.options)
+	@property
+	def asString(self) -> str:
+		options = '|'.join(opt.asString for opt in self.options)
 		return f"({options})"
 
 
 @dataclass
-class Terminal(Singleton, CommandNode):
-	pass
+class TerminalSchema(Singleton, CommandPartSchema):
+	@property
+	def asString(self) -> str:
+		return 'END'
 
 
-TERMINAL = Terminal()
+TERMINAL = TerminalSchema(name='Terminal')
 
 
 @dataclass
-class CommandsRoot(Singleton, CommandNode):
+class CommandsRoot(Singleton, CommandPartSchema):
 
-	def asCodeString(self) -> str:
+	@property
+	def asString(self) -> str:
 		return f'<execute: Command>'
 
 
-COMMANDS_ROOT = CommandsRoot()
+COMMANDS_ROOT = CommandsRoot(name='Command')
 
 
-def asCodeString(part) -> str:
-	return part.asCodeString()
-
-
-def formatPossibilities(possibilities: Sequence[CommandNode]) -> str:
+def formatPossibilities(possibilities: Sequence[CommandPartSchema]) -> str:
 	isOptional = TERMINAL in possibilities
 	possibilities2 = [p for p in possibilities if p is not TERMINAL]
 	isMany = len(possibilities2) > 1
 
-	result = '|'.join(asCodeString(p).strip('()') for p in possibilities2)
+	result = '|'.join(p.asString.strip('()') for p in possibilities2)
 
 	if isOptional:
 		return f"[{result}]"
@@ -104,9 +95,9 @@ def formatPossibilities(possibilities: Sequence[CommandNode]) -> str:
 
 
 @dataclass
-class CommandInfo(CommandNode):
-	name: str = field(default='')
-	description: str = field(default='')
+class CommandSchema(CommandPartSchema):
+	# name: str = field(default='')
+	# description: str = field(default='')
 	opLevel: Union[int, str] = field(default=0)
 	availableInSP: bool = field(default=True)
 	availableInMP: bool = field(default=True)
@@ -116,10 +107,95 @@ class CommandInfo(CommandNode):
 	removedComment: str = field(default='')
 
 	deprecated: bool = field(default=False)
-	deprecatedVersion: Optional[str] = field(default=None) #, doc="""the version this command was deprecated, if it has been deprecated""")
+	deprecatedVersion: Optional[str] = field(default=None)  # , doc="""the version this command was deprecated, if it has been deprecated""")
 	deprecatedComment: str = field(default='')
 
-	next: list[CommandNode] = field(default_factory=list[CommandNode])
+	next: list[CommandPartSchema] = field(default_factory=list[CommandPartSchema])
 
-	def asCodeString(self) -> str:
+	@property
+	def asString(self) -> str:
 		return f"{self.name} {formatPossibilities(self.next)}"
+
+
+@dataclass
+class CommentSchema(CommandPartSchema):
+
+	@property
+	def asString(self) -> str:
+		return f"<Comment>"
+
+
+@dataclass
+class MCFunctionSchema(Singleton, CommandPartSchema):
+
+	@property
+	def asString(self) -> str:
+		return f'<MCFunction>'
+
+
+_TCommandPartSchema = TypeVar('_TCommandPartSchema', bound=CommandPartSchema)
+
+
+@dataclass
+class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPartSchema]):
+	source: str = field(repr=False)
+
+	@property
+	def content(self) -> str:
+		return self.source[self.span.slice]
+
+	_next: Optional[CommandPart] = field(default=None, init=False)
+	_prev: Optional[CommandPart] = field(default=None, init=False, repr=False)
+
+	@property
+	def next(self) -> Optional[CommandPart]:
+		return self._next
+
+	@next.setter
+	def next(self, value: Optional[CommandPart]):
+		oldVal = self._next
+		if oldVal is not None:
+			oldVal._prev = None
+		if value is not None:
+			value._prev = self
+		self._next = value
+
+	@property
+	def prev(self) -> Optional[CommandPart]:
+		return self._prev
+
+	@property
+	def start(self) -> Position:
+		return self.span.start
+
+	@property
+	def end(self) -> Position:
+		return self.span.end
+
+
+@dataclass
+class ParsedComment(CommandPart[CommentSchema]):
+	pass
+
+
+@dataclass
+class ParsedCommand(CommandPart[CommandSchema]):
+	name: str
+
+
+@dataclass
+class ParsedArgument(CommandPart[ArgumentSchema]):
+	value: Any
+
+
+@dataclass
+class MCFunction(CommandPart[MCFunctionSchema]):
+	children: list[Union[ParsedCommand, ParsedComment]] = field(default_factory=list)
+
+	@property
+	def commands(self) -> list[ParsedCommand]:
+		return [c for c in self.children if isinstance(c, ParsedCommand)]
+
+	@property
+	def comments(self) -> list[ParsedComment]:
+		return [c for c in self.children if isinstance(c, ParsedComment)]

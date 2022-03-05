@@ -100,5 +100,4 @@ def saveSessionToFile(filePath: str = None) -> None:
 
 
 from model import commands
-
 commands.setGetSession(getSession)

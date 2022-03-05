@@ -8,19 +8,19 @@ from typing import Optional
 
 from PyQt5.QtWidgets import QWidget
 
-from model.commands.argumentHandlers import getArgumentHandler, makeParsedArgument, missingArgumentParser, Suggestions, makeParsedNode
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import FilterArguments, FilterArgument
-from model.commands.command import ArgumentInfo
-from model.commands.parsedCommands import ParsedArgument
+from model.commands.command import ArgumentSchema, ParsedArgument, CommandPart
+from model.commands.commandContext import getArgumentContext, missingArgumentParser, makeParsedArgument
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
+from model.parsing.contextProvider import Suggestions
 from model.utils import Span, Position
 
 
 @dataclass
-class FilterArgumentInfo(ArgumentInfo):
+class FilterArgumentInfo(ArgumentSchema):
 	multipleAllowed: bool = False
 	isNegatable: bool = False
 	canBeEmpty: bool = False
@@ -32,7 +32,17 @@ FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo(
 	multipleAllowed=True,
 	isNegatable=True,
 	canBeEmpty=True,
+	description=''
 )
+
+
+def makeCommandPart(sr: StringReader) -> CommandPart:
+	argument = CommandPart(
+		sr.currentSpan,
+		None,
+		sr.fullSource,
+	)
+	return argument
 
 
 def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *, errorsIO: list[CommandSyntaxError]) -> Optional[FilterArguments]:
@@ -56,7 +66,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 			else:
 				tsai = argsInfo[key]
 
-			keyNode = makeParsedNode(sr)
+			keyNode = makeCommandPart(sr)
 			assert keyNode.content == key, f"keyNode.content = {keyNode.content!r}, key = {key!r}"
 
 			# duplicate?:
@@ -75,7 +85,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 				if isNegated and not tsai.isNegatable:
 					errorsIO.append(CommandSyntaxError(f"Argument '`{key}`' cannot be negated.", sr.currentSpan, style='error'))
 
-				handler = getArgumentHandler(tsai.type)
+				handler = getArgumentContext(tsai.type)
 				if handler is None:
 					valueNode = missingArgumentParser(sr, tsai, errorsIO=errorsIO)
 				else:
@@ -180,11 +190,11 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, replaceCtx: str, a
 	if context.isValue:
 		if context.inside:
 			if (value := context.fa.value) is not None:
-				tsaInfo = value.info
-				if isinstance(tsaInfo, ArgumentInfo):
-					handler = getArgumentHandler(tsaInfo.type)
+				tsaInfo = value.schema
+				if isinstance(tsaInfo, ArgumentSchema):
+					handler = getArgumentContext(tsaInfo.type)
 					if handler is not None:
-						suggestions += handler.getSuggestions(tsaInfo, contextStr, cursorPos, replaceCtx)
+						suggestions += handler.getSuggestions2(tsaInfo, contextStr, cursorPos, replaceCtx)
 						# TODO: maybe log if no handler has been found...
 		if context.after:
 			suggestions.append(cursorTouchesWord + ', ')
@@ -203,9 +213,9 @@ def clickableRangesForFilterArgs(filterArgs: FilterArguments) -> list[Span]:
 	ranges = []
 	for fa in filterArgs.values():
 		if (value := fa.value) is not None:
-			argInfo = value.info
-			if isinstance(argInfo, ArgumentInfo):
-				if (handler := getArgumentHandler(argInfo.type)) is not None:
+			argInfo = value.schema
+			if isinstance(argInfo, ArgumentSchema):
+				if (handler := getArgumentContext(argInfo.type)) is not None:
 					if (rng := handler.getClickableRanges(value)) is not None:
 						ranges += rng
 					# TODO: maybe log if no handler has been found...
@@ -214,9 +224,9 @@ def clickableRangesForFilterArgs(filterArgs: FilterArguments) -> list[Span]:
 
 def onIndicatorClickedForFilterArgs(filterArgs: FilterArguments, position: Position, window: QWidget) -> None:
 	if (match := getBestFAMatch(filterArgs, position.index)) is not None:
-		argInfo = match.info
-		if isinstance(argInfo, ArgumentInfo):
-			if (handler := getArgumentHandler(argInfo.type)) is not None:
+		argInfo = match.schema
+		if isinstance(argInfo, ArgumentSchema):
+			if (handler := getArgumentContext(argInfo.type)) is not None:
 				handler.onIndicatorClicked(match, position, window)
 
 

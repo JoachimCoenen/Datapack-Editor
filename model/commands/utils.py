@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from model.utils import Message, GeneralParsingError
+from model.utils import Message, GeneralError
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG: Message = Message("Expected whitespace to end one argument, but found trailing data: `{}`", 1)
 
 
-class CommandSyntaxError(GeneralParsingError):
+class CommandSyntaxError(GeneralError):
 	pass
 
 
-class CommandSemanticsError(GeneralParsingError):
+class CommandSemanticsError(GeneralError):
 	pass
 
 

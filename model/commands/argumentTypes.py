@@ -151,8 +151,7 @@ BRIGADIER_LONG = ArgumentType(
 BRIGADIER_STRING = ArgumentType(
 	name='brigadier:string',
 	description="{{Arg desc|je=string}}",
-	description2="""
-	Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
+	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
 	examples="""
 	Single word
 	* {{cd|word}}
@@ -767,53 +766,12 @@ DPE_BIOME_ID = ArgumentType(
 # SubTypes:
 ###################################################
 
-ST_DPE_COMMAND = ArgumentType(
-	name='dpe:command',
-	description="{{Arg desc|je=string}}",
-	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
-	examples="""
-	Single word
-	* {{cd|word}}
-	* {{cd|word_with_underscores}}
-	Quotable phrase
-	* {{cd|"quoted phrase"}}
-	* {{cd|word}}
-	* {{cd|""}}
-	Greedy phrase
-	* {{cd|word}}
-	* {{cd|words with spaces}}
-	* {{cd|"and symbols"}}""",
-	jsonProperties="""
-	* {{nbt|compound|properties}}: The root properties object.
-	** {{nbt|string|type}}: The type of this string argument. Can be {{cd|word}}, {{cd|phrase}}, or {{cd|greedy}}""",
-)
-
 
 ST_DPE_DATAPACK = ArgumentType(
 	name='dpe:datapack',
 	description="{{Arg desc|je=string}}",
 	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
 	examples="""""",
-	jsonProperties="""""",
-)
-
-
-ST_DPE_GAME_RULE = ArgumentType(
-	name='dpe:game_rule',
-	description="{{Arg desc|je=string}}",
-	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
-	examples="""
-	* {{doDaylightCycle}}""",
-	jsonProperties="""""",
-)
-
-
-ST_DPE_RAW_JSON_TEXT = ArgumentType(
-	name='dpe:raw_json_text',
-	description="{{Arg desc|je=string}}",
-	description2="""Each string argument type can accept either a single word (no spaces), a quotable phrase (either single word or quoted string), or a greedy phrase (taking the rest of the command as the string argument).""",
-	examples="""
-	* {{doDaylightCycle}}""",
 	jsonProperties="""""",
 )
 
@@ -877,8 +835,5 @@ __all__ = [
 	'MINECRAFT_VEC3',
 	'DPE_COMPARE_OPERATION',
 	'DPE_BIOME_ID',
-	'ST_DPE_COMMAND',
 	'ST_DPE_DATAPACK',
-	'ST_DPE_GAME_RULE',
-	'ST_DPE_RAW_JSON_TEXT',
 ]

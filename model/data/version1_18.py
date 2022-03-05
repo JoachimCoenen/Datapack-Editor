@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from model.commands.command import Keyword
+from model.commands.command import KeywordSchema
 from model.data.mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
 from model.data.mcd import fillFromMinecraftData
 from model.data.v1_17.commands import fillCommandsFor1_17
@@ -16,7 +16,7 @@ def fillCommandsFor1_18(version: MCVersion) -> None:
 
 	# add 'block_marker' particle:
 	particles = version.commands['particle'].next
-	block_marker = replace(next(p for p in particles if p.name == 'block' and isinstance(p, Keyword)), name='block_marker')
+	block_marker = replace(next(p for p in particles if p.name == 'block' and isinstance(p, KeywordSchema)), name='block_marker')
 	version.commands['particle'].next.insert(-1, block_marker)
 
 

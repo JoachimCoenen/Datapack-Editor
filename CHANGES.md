@@ -1,6 +1,7 @@
 ## Next Version
 ### Features
  * Added support for different data pack versions (separate from the MC version).
+ * Added call tips for mcFunction files.
  * Added syntax checking for JSON files.
  * Added basic code completion for JSON files.
  * Added basic code insight (tooltips) for JSON files.
@@ -11,6 +12,8 @@
 ### Improvements
  * Improved create-new-file dialog.
  * Added `minecraft:predicate` type (for mcFunction validation).
+ * Improved code completion for mcFunction files.
+ * Improved code insight (tooltips) for mcFunction files.
 
 ### Fixes
  * Reverted changes to resource location parsing.

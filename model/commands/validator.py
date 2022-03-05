@@ -2,11 +2,11 @@ from dataclasses import replace
 from typing import Sequence, TYPE_CHECKING, Optional
 
 from Cat.utils import Maybe, escapeForXml
-from model.commands.argumentHandlers import getArgumentHandler
 from model.commands.argumentTypes import *
-from model.commands.command import formatPossibilities, CommandNode, TERMINAL, Keyword, Switch, ArgumentInfo, CommandInfo
+from model.commands.command import formatPossibilities, CommandPartSchema, TERMINAL, KeywordSchema, SwitchSchema, ArgumentSchema, CommandSchema
+from model.commands.commandContext import getArgumentContext
 from model.commands.utils import CommandSemanticsError
-from model.commands.parsedCommands import ParsedMCFunction, ParsedCommandPart, ParsedCommand
+from model.commands.command import MCFunction, CommandPart, ParsedCommand
 from model.utils import Span
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ else:
 		pass
 
 
-def checkMCFunction(mcFunction: ParsedMCFunction) -> list[CommandSemanticsError]:
+def checkMCFunction(mcFunction: MCFunction) -> list[CommandSemanticsError]:
 	errors: list[CommandSemanticsError] = []
 	for command in mcFunction.commands:
 		if command is None:
@@ -29,15 +29,15 @@ def checkMCFunction(mcFunction: ParsedMCFunction) -> list[CommandSemanticsError]
 
 
 def validateCommand(command: ParsedCommand, *, errorsIO: list[CommandSemanticsError]) -> None:
-	info = command.info
-	if info.removed:
-		errorsIO.append(CommandSemanticsError(f"Outdated Command `{command.value}`. (removed in version {info.removedVersion}; {info.removedComment}.", command.span))
-	elif info.deprecated:
-		errorsIO.append(CommandSemanticsError(f"Deprecated Command `{command.value}`. (deprecated in version {info.deprecatedVersion}; {info.deprecatedComment}.", command.span, style='warning'))
+	schema = command.schema
+	if schema.removed:
+		errorsIO.append(CommandSemanticsError(f"Outdated Command `{command.name}`. (removed in version {schema.removedVersion}; {schema.removedComment}.", command.span))
+	elif schema.deprecated:
+		errorsIO.append(CommandSemanticsError(f"Deprecated Command `{command.name}`. (deprecated in version {schema.deprecatedVersion}; {schema.deprecatedComment}.", command.span, style='warning'))
 
-	lastCommandPart: ParsedCommandPart = command
-	commandPart: Optional[ParsedCommandPart] = command.next
-	possibilities: Sequence[CommandNode] = command.info.next
+	lastCommandPart: CommandPart = command
+	commandPart: Optional[CommandPart] = command.next
+	possibilities: Sequence[CommandPartSchema] = command.schema.next
 	while commandPart is not None:
 		lastCommandPart = commandPart
 		commandPart, possibilities = validateArgument(commandPart, errorsIO=errorsIO)
@@ -46,17 +46,17 @@ def validateCommand(command: ParsedCommand, *, errorsIO: list[CommandSemanticsEr
 		errorsIO.append(_missingArgumentError(command, lastCommandPart, possibilities))
 
 
-def _unknownOrTooManyArgumentsError(commandPart: ParsedCommandPart, possibilities: Sequence[CommandNode]) -> CommandSemanticsError:
+def _unknownOrTooManyArgumentsError(commandPart: CommandPart, possibilities: Sequence[CommandPartSchema]) -> CommandSemanticsError:
 	if possibilities:
 		possibilitiesStr = escapeForXml(formatPossibilities(possibilities))
-		valueStr = escapeForXml(commandPart.value)
+		valueStr = escapeForXml(commandPart.content)
 		return CommandSemanticsError(f"unknown argument: expected `{possibilitiesStr}`, but got: `{valueStr}`", commandPart.span)
 	else:
-		valueStr = escapeForXml(commandPart.value)
+		valueStr = escapeForXml(commandPart.content)
 		return CommandSemanticsError(f"too many arguments: `{valueStr}`", commandPart.span)
 
 
-def _missingArgumentError(command: ParsedCommand, lastCommandPart: ParsedCommandPart, possibilities: Sequence[CommandNode]) -> CommandSemanticsError:
+def _missingArgumentError(command: ParsedCommand, lastCommandPart: CommandPart, possibilities: Sequence[CommandPartSchema]) -> CommandSemanticsError:
 	# lastArgEnd = Maybe(command.next).recursive(ParsedArgument.next.get).orElse(command).span.end
 	# if lastArgEnd.index >= command.span.end.index:
 	# 	lastArgEnd = lastArgEnd.copy()
@@ -76,41 +76,36 @@ def _missingArgumentError(command: ParsedCommand, lastCommandPart: ParsedCommand
 	return CommandSemanticsError(f"Missing argument: `{possibilitiesStr}`", Span(errorStart, errorEnd))
 
 
-def validateArgument(commandPart: ParsedCommandPart, *, errorsIO: list[CommandSemanticsError]) -> tuple[Optional[ParsedCommandPart], Sequence[CommandNode]]:
-	info = commandPart.info
+def validateArgument(commandPart: CommandPart, *, errorsIO: list[CommandSemanticsError]) -> tuple[Optional[CommandPart], Sequence[CommandPartSchema]]:
+	schema = commandPart.schema
 
-	if info is None:
-		remainingPossibilities = Maybe(commandPart.prev).getattr('info').getattr('next').get()
+	if schema is None:
+		remainingPossibilities = Maybe(commandPart.prev).getattr('schema').getattr('next').get()
 		errorsIO.append(_unknownOrTooManyArgumentsError(commandPart, remainingPossibilities))
 		return commandPart.next, []
 
-	if isinstance(info, Keyword):
-		return commandPart.next, commandPart.info.next
+	if isinstance(schema, KeywordSchema):
+		return commandPart.next, schema.next
 
-	if isinstance(info, Switch):
+	if isinstance(schema, SwitchSchema):
 		# TODO: validateArgument for Switch?
-		return commandPart.next, commandPart.info.next
+		return commandPart.next, schema.next
 
-	if isinstance(info, ArgumentInfo):
-		type_: ArgumentType = info.type
+	if isinstance(schema, ArgumentSchema):
+		type_: ArgumentType = schema.type
 		if isinstance(type_, LiteralsArgumentType):
 			pass
 		else:
-			handler = getArgumentHandler(type_)
+			handler = getArgumentContext(type_)
 			if handler is not None:
-				error = handler.validate(commandPart)
-				if error is not None:
-					if isinstance(error, list):
-						errorsIO.extend(error)
-					else:
-						errorsIO.append(error)
-		return commandPart.next, commandPart.info.next
+				handler.validate(commandPart, errorsIO)
+		return commandPart.next, schema.next
 
-	if isinstance(info, CommandInfo):
+	if isinstance(schema, CommandSchema):
 		# TODO: validateArgument for command. (i.e. deprecated, wrongVersion, etc...)
 		if isinstance(commandPart, ParsedCommand):
 			validateCommand(commandPart, errorsIO=errorsIO)
 			return None, []
 		else:
 			errorsIO.append(CommandSemanticsError(f"Internal Error: commandPart should be a `ParsedCommand`, but it was `{type(commandPart).__name__}`", commandPart.span))
-			return commandPart.next, commandPart.info.next
+			return commandPart.next, schema.next
