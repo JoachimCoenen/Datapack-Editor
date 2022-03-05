@@ -26,10 +26,11 @@ class DatapackDocument(Document):
 	@ComputedCached(shouldSerialize=False)
 	def metaInfo(self) -> Optional[MetaInfo]:
 		entryHandlers = getSession().datapackData.structure
-		if (resLocHandler := getEntryHandlerForFile(self.filePath, entryHandlers)) is not None:
-			rl, handler = resLocHandler
-			metaInfo = handler.buildMetaInfo(self.filePath, rl)
-			return metaInfo
+		if isinstance(self.filePath, tuple):
+			if (resLocHandler := getEntryHandlerForFile(self.filePath, entryHandlers)) is not None:
+				rl, handler = resLocHandler
+				metaInfo = handler.buildMetaInfo(self.filePath, rl)
+				return metaInfo
 
 
 @RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='MCJson')

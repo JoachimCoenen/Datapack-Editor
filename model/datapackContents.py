@@ -1,7 +1,7 @@
 from __future__ import annotations
 import re
-from dataclasses import dataclass, field
-from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable, ClassVar, TYPE_CHECKING, Union
+from dataclasses import dataclass, field, replace
+from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable, TYPE_CHECKING, Union, Mapping
 
 from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, SerializedPropertyBaseBase
@@ -386,3 +386,14 @@ def autoCompletionTreeForResourceLocations(locations: Iterable[ResourceLocation]
 def choicesFromResourceLocations(text: str, locations: Iterable[ResourceLocation]) -> list[str]:
 	tree = autoCompletionTreeForResourceLocations(locations)
 	return choicesFromAutoCompletionTree(tree, text)
+
+
+def containsResourceLocation(rl: ResourceLocation, container: Iterable[ResourceLocation]) -> bool:
+	if rl.namespace == 'minecraft':
+		rl = replace(rl, namespace=None)
+	return rl in container
+
+
+def metaInfoFromResourceLocation(rl: ResourceLocation, values: Mapping[ResourceLocation, MetaInfo]) -> Optional[MetaInfo]:
+	# TODO: show prompt, when there are multiple files this applies to.
+	return values.get(rl)
