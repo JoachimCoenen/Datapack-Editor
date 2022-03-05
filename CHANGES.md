@@ -3,7 +3,7 @@
  * Added support for different data pack versions (separate from the MC version).
  * Added call tips for mcFunction files.
  * Added syntax checking for JSON files.
- * Added basic code completion for JSON files.
+ * Added basic code suggestions for JSON files.
  * Added basic code insight (tooltips) for JSON files.
  * Added validation support for JSON files. (issue #4)
  * Added basic validation for tag files (files in 'data/{namespace}/tags/'). (issue #6)
@@ -12,7 +12,7 @@
 ### Improvements
  * Improved create-new-file dialog.
  * Added `minecraft:predicate` type (for mcFunction validation).
- * Improved code completion for mcFunction files.
+ * Improved code suggestions for mcFunction files.
  * Improved code insight (tooltips) for mcFunction files.
 
 ### Fixes
