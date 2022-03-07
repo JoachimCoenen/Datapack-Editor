@@ -304,9 +304,12 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			errors = sorted(errors, key=attrgetter('position'))
 		else:
 			errors: Sequence[Error] = []
-		with gui.scrollBox(preventVStretch=True, roundedCorners=roundedCorners, cornerRadius=cornerRadius):
-			gui.drawErrors(errors, onDoubleClicked=lambda e, d=document, s=self: (d.locatePosition(e.position, e.end) if e.position is not None else None) or s._gui.redrawGUI())
-			#gui.addVSpacer(0, SizePolicy.Expanding)
+		gui.errorsList(
+			errors,
+			onDoubleClicked=lambda e: (document.locatePosition(e.position, e.end) if e.position is not None else None) or self._gui.redrawGUI(),
+			roundedCorners=roundedCorners,
+			cornerRadius=cornerRadius
+		)
 
 	# Dialogs:
 

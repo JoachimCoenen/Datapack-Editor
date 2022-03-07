@@ -17,13 +17,13 @@ from model.datapackContents import getEntryHandlerForFile, getEntryHandlersForFo
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
-from Cat.CatPythonGUI.GUI.Widgets import CatTextField
+from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
 from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, Error
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
 from Cat.Serializable import SerializedPropertyABC, SerializableContainer
 from Cat.icons import icons
-from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, openOrCreate
+from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, openOrCreate, CachedProperty
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from gui.lexers import mcFunctionLexer, jsonLexer
 from session.documents import Document, ErrorCounts
@@ -744,20 +744,29 @@ class DatapackEditorGUI(AutoGUI):
 			searchGUI.customData['nextPressed'], \
 			searchGUI.customData['searchOptions']
 
+	@property
+	def _errorIcons(self) -> dict[str, QIcon]:
+		return {
+			'error': icons.errorColored,
+			'warning': icons.warningColored,
+			'info': icons.infoColored,
+		}
 
 	def errorsSummaryGUI(self: DatapackEditorGUI, errorCounts: documents.ErrorCounts, **kwargs):
 		errorsTip = 'errors'
 		warningsTip = 'warnings'
 		hintsTip = 'hints'
 
+		errorIcons = self._errorIcons
+
 		#self.hSeparator()  # parser & config errors:
-		self.label(icons.errorColored, tip=errorsTip, **kwargs)
+		self.label(errorIcons['error'], tip=errorsTip, **kwargs)
 		self.label(f'{errorCounts.parserErrors + errorCounts.configErrors}', tip=errorsTip, **kwargs)
 		#self.hSeparator()  # config warnings:
-		self.label(icons.warningColored, tip=warningsTip, **kwargs)
+		self.label(errorIcons['warning'], tip=warningsTip, **kwargs)
 		self.label(f'{errorCounts.configWarnings}', tip=warningsTip, **kwargs)
 		#self.hSeparator()  # config hints:
-		self.label(icons.infoColored, tip=hintsTip, **kwargs)
+		self.label(errorIcons['info'], tip=hintsTip, **kwargs)
 		self.label(f'{errorCounts.configHints}', tip=hintsTip, **kwargs)
 		#self.hSeparator()  # config hints:
 
@@ -786,6 +795,43 @@ class DatapackEditorGUI(AutoGUI):
 				self.vSeparator()
 		else:
 			self.helpBox(f"Everything's fine!", style='info')
+
+	@CachedProperty
+	def _htmlDelegate(self) -> HTMLDelegate:
+		return HTMLDelegate()
+
+	def errorsList(self: DatapackEditorGUI, errors: Collection[Error], onDoubleClicked: Callable[[Error], None], **kwargs):
+
+		def getLabel(error: Error, i: int) -> str:
+			if error.position is not None:
+				positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
+			else:
+				positionMsg = ''
+			errorMsg = error.message
+			return (errorMsg, positionMsg)[i]
+
+		errorIcons = self._errorIcons
+
+		def getIcon(error: Error, i: int) -> Optional[QIcon]:
+			if i == 0:
+				return errorIcons.get(error.style)
+			else:
+				return None
+
+		self.tree(
+			DataListBuilder(
+				errors,
+				labelMaker=getLabel,
+				iconMaker=getIcon,
+				toolTipMaker=None,
+				columnCount=2,
+				onDoubleClick=onDoubleClicked,  # lambda e: onDoubleClicked(e) or self.redrawGUI(),
+				getId=lambda e: e.message
+			),
+			headerVisible=True,
+			itemDelegate=self._htmlDelegate,
+			**kwargs
+		)
 
 
 TPythonGUI = TypeVar('TPythonGUI', bound=DatapackEditorGUI)
