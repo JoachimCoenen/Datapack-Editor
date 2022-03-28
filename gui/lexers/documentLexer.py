@@ -175,7 +175,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 	def contextProvider(self) -> Optional[ContextProvider]:
 		doc = self._document
 		if doc is not None and isinstance(doc.tree, Node):
-			return getContextProvider(doc.tree)
+			return getContextProvider(doc.tree, doc.content)
 		return None
 
 	@property
@@ -197,7 +197,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	def updateDocumentTree(self) -> None:
 		if (doc := self._document) is not None:
-			if doc.asyncValidate.pending:
+			if doc.asyncValidate.isPending:
 				doc.asyncValidate.callNow()
 
 	@override

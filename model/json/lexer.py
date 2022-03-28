@@ -38,6 +38,27 @@ class TokenType(Enum):
 	invalid = 11
 	eof = 12
 
+	@property
+	def asString(self) -> str:
+		return _TOKEN_TYPE_STR_REP[self]
+
+
+_TOKEN_TYPE_STR_REP = {
+	TokenType.default: "default",
+	TokenType.null: "null",
+	TokenType.boolean: "boolean",
+	TokenType.number: "number",
+	TokenType.string: "string",
+	TokenType.left_bracket: "'['",
+	TokenType.left_brace: "'{'",
+	TokenType.right_bracket: "']'",
+	TokenType.right_brace: "'}'",
+	TokenType.comma: "','",
+	TokenType.colon: "':'",
+	TokenType.invalid: "invalid",
+	TokenType.eof: "end of file",
+}
+
 
 class Token(NamedTuple):
 	"""Represents a Token extracted by the parser"""
@@ -271,6 +292,10 @@ _TOKEN_TYPE_FOR_OPERATOR = {
 	',': TokenType.comma,
 	':': TokenType.colon,
 }
+
+
+_OPERATOR_FOR_TOKEN_TYPE = {v: k for k, v in _TOKEN_TYPE_FOR_OPERATOR.items()}
+
 
 _TOKEN_EXTRACTORS_BY_CHAR = {
 	# **{c: extract_operator for c in '[]{},:'},

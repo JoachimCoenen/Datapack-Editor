@@ -2,7 +2,7 @@ from model.commands.argumentTypes import *
 from model.json.core import *
 
 
-def buildTagsSchema(idArgType: ArgumentType) -> JsonObjectSchema:  # choice of parameter is temorary
+def buildTagsSchema(idArgType: ArgumentType) -> JsonObjectSchema:  # choice of parameter is temporary
 	return JsonObjectSchema(
 		description='Allow grouping of items, blocks, fluids, entity types, or functions together using JSON files.',
 		properties=[

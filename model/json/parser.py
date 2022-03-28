@@ -2,7 +2,7 @@
 from ast import literal_eval
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Optional, AbstractSet
+from typing import Optional, AbstractSet, Union
 
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import ProfiledFunction
@@ -13,7 +13,7 @@ from model.json.schema import enrichWithSchema
 from model.utils import GeneralError, Span, Message
 
 EOF_MSG = Message("Unexpected end of file while parsing", 0)
-EXPECTED_BUT_GOT_MSG = Message("Expected `{0}` but got `{1}`", 2)
+EXPECTED_BUT_GOT_MSG = Message("Expected {0} but got `{1}`", 2)
 
 
 class JsonParseError(GeneralError):
@@ -46,11 +46,11 @@ class ParserData:
 		token = self.tokens.popleft()
 		self.lastToken = token
 		if token.type is not tokenType:
-			msg = EXPECTED_BUT_GOT_MSG.format(tokenType.name, token.value)
+			msg = EXPECTED_BUT_GOT_MSG.format(tokenType.asString, token.value)
 			self.errors.append(JsonParseError(msg, token.span))
 		return token
 
-	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType]) -> Optional[Token]:
+	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType], name: str = None) -> Optional[Token]:
 		if len(self.tokens) == 0:
 			span = self.lastToken.span if self.lastToken is not None else Span()
 			self.errors.append(JsonParseError(EOF_MSG.format(), span))
@@ -59,7 +59,9 @@ class ParserData:
 		token = self.tokens.popleft()
 		self.lastToken = token
 		if token.type not in tokenTypes:
-			msg = EXPECTED_BUT_GOT_MSG.format('|'.join(tk.name for tk in tokenTypes), token.value)
+			if name is None:
+				name = ' | '.join(tk.asString for tk in tokenTypes)
+			msg = EXPECTED_BUT_GOT_MSG.format(name, token.value)
 			self.errors.append(JsonParseError(msg, token.span))
 		return token
 
@@ -94,14 +96,14 @@ def parse_object(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonObje
 
 	while token is not None:
 		if token.type == TokenType.string:
-			key = parse_string(psr, None)
+			key = parse_string(psr, JSON_KEY_SCHEMA)
 		else:
 			if token.type == TokenType.comma:
 				token = psr.accept(TokenType.string)
 				continue
 			if token.type == TokenType.right_brace:
 				break
-			key = JsonString(token.span, None, '')
+			key = JsonString(token.span, JSON_KEY_SCHEMA, '')
 
 		propertySchema = schema.propertiesDict.get(key.data) if isObjectSchema else None
 		valueSchema = propertySchema.value if propertySchema is not None else None
@@ -130,7 +132,7 @@ def parse_object(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonObje
 		if token.type is TokenType.eof:
 			objData.add(key.data, JsonProperty(Span(key.span.start, token.span.end), propertySchema, key, value))
 			break
-		objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), propertySchema, key, value))
+		objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), propertySchema, key, value))
 		if token.type is TokenType.comma:
 			token = psr.accept(TokenType.string)
 			continue
@@ -176,7 +178,7 @@ def parse_array(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonArray
 	return JsonArray(Span(start.span.start, token.span.end), schema, arrayData)
 
 
-def parse_string(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonString:
+def parse_string(psr: ParserData, schema: Optional[Union[JsonStringSchema, JsonKeySchema]]) -> JsonString:
 	"""Parses a string out of a JSON token"""
 
 	token = psr.lastToken

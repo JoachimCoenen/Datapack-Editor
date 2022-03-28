@@ -4,8 +4,8 @@ from Cat.utils import escapeForXml
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclass
 from model.json.core import *
 from model.json.core import JsonInvalid, JsonSemanticsError
-from model.json.stringHandlers import getStringHandler
-from model.utils import GeneralError, Message, Span
+from model.json.jsonContext import getJsonStringContext
+from model.utils import Message, Span
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG = Message("Expected whitespace to end one argument, but found trailing data: `{0}`", 1)
 NO_JSON_SCHEMA_MSG = Message("No JSON Schema for {0}", 1)
@@ -102,9 +102,9 @@ def validateJsonString(data: JsonString, *, errorsIO: list[JsonSemanticsError]) 
 	# TODO: validation of JsonString using JsonStringSchema.type
 
 	if data.schema.type is not None:
-		argumentHandler = getStringHandler(data.schema.type.name)
+		argumentHandler = getJsonStringContext(data.schema.type.name)
 		if argumentHandler is not None:
-			argumentHandler.parse(data, errorsIO)
+			argumentHandler.prepare(data, errorsIO)
 			argumentHandler.validate(data, errorsIO)
 		else:
 			errorsIO.append(JsonSemanticsError(f"Missing JsonStringHandler for type `{escapeForXml(data.schema.type.name)}`", data.span, style='info'))

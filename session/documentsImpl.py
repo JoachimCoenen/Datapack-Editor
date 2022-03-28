@@ -68,7 +68,7 @@ class JsonDocument(TextDocument, DatapackDocument):
 	def validate(self) -> Sequence[Error]:
 		schema = self.schema
 		try:
-			tree, errors = parseJsonStr(self.content, True, schema)
+			tree, errors = parseJsonStr(self.content, False, schema)
 			if tree is not None:
 				self.tree = tree
 				errors += validateJson(tree)

@@ -22,7 +22,7 @@ _TT2 = TypeVar('_TT2')  # , NoneType, bool, int, float, str, Array, Object)
 _TN = TypeVar('_TN', int, float)
 
 
-@abstract
+# @abstract
 @dataclass
 class JsonData(Node['JsonData', 'JsonSchema'], ABC):
 	schema: Optional[JsonSchema]
@@ -110,8 +110,7 @@ class JsonObject(JsonData):
 		return self.data.values()
 
 
-@abstract
-class JsonSchema(Generic[_TT]):
+class JsonSchema(Generic[_TT], ABC):
 	"""
 	A schema description to contextualize and validate JSON files.
 	Note: This is NOT an implementation of the JSON Schema specification!
@@ -142,8 +141,7 @@ class JsonBoolSchema(JsonSchema[JsonBool]):
 	typeName: ClassVar[str] = 'boolean'
 
 
-@abstract
-class JsonNumberSchema(JsonSchema[JsonNumber]):
+class JsonNumberSchema(JsonSchema[JsonNumber], ABC):
 	TOKEN = TokenType.number
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonNumber
 	typeName: ClassVar[str] = 'number'
@@ -182,6 +180,14 @@ class JsonArraySchema(JsonSchema[JsonArray]):
 		self.element: JsonSchema = element
 
 
+class JsonKeySchema(JsonSchema[JsonString]):
+	DATA_TYPE: ClassVar[Type[JsonData]] = JsonString
+	typeName: ClassVar[str] = 'key'
+
+
+JSON_KEY_SCHEMA = JsonKeySchema()
+
+
 # class PropertySchema(Generic[_TT]):
 # 	def __init__(self, *, name: str, description: str = '', default: Optional[_TT] = None, value: JsonSchema[_TT]):
 # 		self.name: str = name
@@ -199,7 +205,7 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonProperty
 	typeName: ClassVar[str] = 'property'
 
-	def __init__(self, *, name: str, description: str = '', value: JsonSchema[_TT], default: JsonTypes = None, decidingProp: Optional[str] = None, values: dict[Union[str, int, bool], JsonSchema[_TT]] = None, deprecated: bool = False):
+	def __init__(self, *, name: str, description: str = '', value: JsonSchema[_TT2], default: JsonTypes = None, decidingProp: Optional[str] = None, values: dict[Union[str, int, bool], JsonSchema[_TT]] = None, deprecated: bool = False):
 		self.name: str = name
 		self.description: str = description
 		self.deprecated: bool = deprecated
@@ -294,6 +300,8 @@ __all__ = [
 	'JsonFloatSchema',
 	'JsonStringSchema',
 	'JsonArraySchema',
+	'JsonKeySchema',
+	'JSON_KEY_SCHEMA',
 	'PropertySchema',
 	'SwitchingPropertySchema',
 	'JsonObjectSchema',

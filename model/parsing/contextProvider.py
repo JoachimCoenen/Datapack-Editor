@@ -57,8 +57,9 @@ class Match(Generic[_TNode]):
 
 
 class ContextProvider(Generic[_TNode], metaclass=ABCMeta):
-	def __init__(self, tree: _TNode):
+	def __init__(self, tree: _TNode, text: str):
 		self.tree: _TNode = tree
+		self.text: str = text
 
 	@abstractmethod
 	def getBestMatch(self, pos: Position) -> Match[_TNode]:
@@ -122,9 +123,9 @@ registerContextProvider = Decorator(AddToDictDecorator(__contextProviders))
 getContextProviderCls = IfKeyIssubclassGetter(__contextProviders)
 
 
-def getContextProvider(node: _TNode) -> Optional[ContextProvider[_TNode]]:
+def getContextProvider(node: _TNode, text: str) -> Optional[ContextProvider[_TNode]]:
 	if (ctxProviderCls := getContextProviderCls(type(node))) is not None:
-		return ctxProviderCls(node)
+		return ctxProviderCls(node, text)
 	return None
 
 # def defaultDocumentationProvider(node: Node) -> HTMLStr:
