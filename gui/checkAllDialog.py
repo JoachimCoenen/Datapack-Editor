@@ -121,7 +121,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 
 				with gui.indentation():
 					if opened:
-						gui.drawErrors(errors, onDoubleClicked=lambda e, file=file, s=self: s.parent()._tryOpenOrSelectDocument(file, e.position))
+						gui.errorsList(errors, onDoubleClicked=lambda e, file=file, s=self: s.parent()._tryOpenOrSelectDocument(file, e.position))
 
 			gui.addVSpacer(0, SizePolicy.Expanding)
 

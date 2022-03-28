@@ -316,9 +316,8 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	def _showSettingsDialog(self, gui: DatapackEditorGUI) -> None:
 		oldStyle = applicationSettings.appearance.applicationStyle
 
-		gui.showOverlay()
-		self.settingsDialog.exec()
-		gui.hideOverlay()
+		with gui.overlay():
+			self.settingsDialog.exec()
 
 		newStyle = applicationSettings.appearance.applicationStyle
 		if oldStyle != newStyle:

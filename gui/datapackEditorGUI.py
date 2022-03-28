@@ -12,8 +12,8 @@ from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy
 
-from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
-from model.datapackContents import getEntryHandlerForFile, getEntryHandlersForFolder
+from Cat.CatPythonGUI.GUI.enums import ResizeMode
+from model.datapackContents import getEntryHandlersForFolder
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
@@ -807,7 +807,7 @@ class DatapackEditorGUI(AutoGUI):
 				positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
 			else:
 				positionMsg = ''
-			errorMsg = error.message
+			errorMsg = error.message.replace('\n', '')
 			return (errorMsg, positionMsg)[i]
 
 		errorIcons = self._errorIcons
@@ -823,12 +823,15 @@ class DatapackEditorGUI(AutoGUI):
 				errors,
 				labelMaker=getLabel,
 				iconMaker=getIcon,
-				toolTipMaker=None,
+				toolTipMaker=lambda e, i: getLabel(e, 0),
 				columnCount=2,
 				onDoubleClick=onDoubleClicked,  # lambda e: onDoubleClicked(e) or self.redrawGUI(),
-				getId=lambda e: e.message
+				onCopy=lambda e: e.message,
+				getId=lambda e: e.message,
 			),
-			headerVisible=True,
+			headerVisible=False,
+			stretchLastColumn=False,
+			columnResizeModes=(ResizeMode.Stretch, ResizeMode.ResizeToContents),
 			itemDelegate=self._htmlDelegate,
 			**kwargs
 		)
