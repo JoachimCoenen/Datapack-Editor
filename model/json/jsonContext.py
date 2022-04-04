@@ -1,15 +1,13 @@
 from abc import abstractmethod, ABC
+from itertools import chain
 from typing import Iterable, Optional, Type, Callable, cast
 
 from PyQt5.QtWidgets import QWidget
 
 from Cat.CatPythonGUI.GUI import PythonGUI
-from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, Decorator, flatmap, override
+from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, Decorator, flatmap
 from Cat.utils.collections_ import AddToDictDecorator
-from model.commands.stringReader import StringReader
-from model.datapackContents import ResourceLocation
 from model.json.core import *
-from model.json.core import JsonSemanticsError
 from model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, registerContextProvider
 from model.utils import Position, Span, GeneralError
 
@@ -82,12 +80,11 @@ def _getBestMatchInProperty(tree: JsonProperty, pos: Position, matches: Match) -
 	# 	return
 
 
-_BEST_MATCHERS: dict[str, Callable[[JsonData, Position, Match], None]] = {}
-_BEST_MATCHERS.update({
-	JsonObject.typeName: _getBestMatchInObject,
-	JsonArray.typeName: _getBestMatchInArray,
-	JsonProperty.typeName: _getBestMatchInProperty,
-})
+_BEST_MATCHERS: dict[str, Callable[[JsonData, Position, Match], None]] = {
+	JsonObject.typeName: cast(Callable[[JsonData, Position, Match], None], _getBestMatchInObject),
+	JsonArray.typeName: cast(Callable[[JsonData, Position, Match], None], _getBestMatchInArray),
+	JsonProperty.typeName: cast(Callable[[JsonData, Position, Match], None], _getBestMatchInProperty),
+}
 
 
 def _getBestMatch(tree: JsonData, pos: Position, matches: Match) -> None:
@@ -102,6 +99,25 @@ def _getBestMatch(tree: JsonData, pos: Position, matches: Match) -> None:
 	# 	_getBestMatchInArray(cast(JsonArray, tree), pos, matches)
 	# elif tree.typeName == JsonProperty.typeName:
 	# 	_getBestMatchInProperty(cast(JsonProperty, tree), pos, matches)
+
+
+def _suggestionsForUnionSchema(schema: JsonUnionSchema):
+	return list(flatmap(getSuggestionsForSchema, (s for s in schema.options)))
+
+
+_SCHEMA_SUGGESTIONS_PROVIDERS = {
+	JsonNull.typeName: lambda schema: ['null'],
+	JsonBool.typeName: lambda schema: ['true', 'false'],
+	JsonNumber.typeName: lambda schema: ['0'],
+	JsonString.typeName: lambda schema: ['"'],
+	JsonArray.typeName: lambda schema: ['['],
+	JsonObject.typeName: lambda schema: ['{'],
+	JsonUnionSchema.typeName: lambda schema: _suggestionsForUnionSchema(schema),
+}
+
+
+def getSuggestionsForSchema(schema: JsonSchema) -> list[str]:
+	return _SCHEMA_SUGGESTIONS_PROVIDERS[schema.typeName](schema)
 
 
 @registerContextProvider(JsonData)
@@ -131,18 +147,9 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 	def validateTree(self) -> list[GeneralError]:
 		pass
 
-	@classmethod
-	def _getSuggestionsForSchema(cls, schema: JsonSchema) -> list[str]:
-		values = {
-			JsonNull.typeName: lambda: ['null'],
-			JsonBool.typeName: lambda: ['true', 'false'],
-			JsonNumber.typeName: lambda: ['0'],
-			JsonString.typeName: lambda: ['"'],
-			JsonArray.typeName: lambda: ['['],
-			JsonObject.typeName: lambda: ['{'],
-			JsonUnionSchema.typeName: lambda: list(flatmap(cls._getSuggestionsForSchema, (s for s in schema.options))),
-		}
-		return values[schema.typeName]()
+	@staticmethod
+	def _getSuggestionsForSchema(schema: JsonSchema) -> list[str]:
+		return getSuggestionsForSchema(schema)
 
 	def getSuggestionsOLD(self, pos: Position, replaceCtx: str) -> Suggestions:
 		matches: Match = self.getBestMatch(pos)
@@ -266,7 +273,9 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 	def getDocumentation(self, pos: Position) -> HTMLStr:
 		tips = []
 		matches = self.getBestMatch(pos)
-		for match in reversed(matches.contained):
+		for match in chain((matches.hit,), reversed(matches.contained)):
+			if match is None:
+				continue
 			if (schema := match.schema) is not None:
 				if schema.description:
 					tips.append(HTMLifyMarkDownSubSet(schema.description))
@@ -277,9 +286,7 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 						if (strHandler := self.getContext(match)) is not None:
 							tips.append(strHandler.getDocumentation(match, pos))
 
-		if tips is not None:
-			tip = '<br/>'.join(tips)
-			return HTMLStr(f"{tip}")
+		return HTMLStr('<br/>'.join(tips))
 
 	def getCallTips(self, pos: Position) -> list[str]:
 		match = self.getBestMatch(pos)
@@ -363,32 +370,3 @@ def defaultDocumentationProvider2(data: JsonData) -> HTMLStr:
 
 
 
-
-@jsonStringContext('minecraft:resource_location')
-class ResourceLocationHandler(JsonStringContext):
-	@override
-	def prepare(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
-		sr = StringReader(node.data, 0, 0, node.data)
-
-		allowTag = True
-		location = sr.tryReadResourceLocation(allowTag=allowTag)
-		if location is None:
-			return
-		if len(location) != len(node.data):
-			return
-		location = ResourceLocation.fromString(location)
-		node.parsedValue = location
-
-	@override
-	def validate(self, data: JsonString, errorsIO: list[JsonSemanticsError]) -> None:
-		if data.parsedValue is None:
-			errorsIO.append(JsonSemanticsError(f"Expected a resource location, but got: \"`{data.data}`\"", data.span))
-
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
-		return []
-
-	def getClickableRanges(self, node: JsonString) -> Optional[Iterable[Span]]:
-		pass
-
-	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
-		pass

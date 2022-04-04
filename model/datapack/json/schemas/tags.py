@@ -1,4 +1,4 @@
-from model.commands.argumentTypes import *
+from model.datapack.json.argTypes import MINECRAFT_RESOURCE_LOCATION
 from model.json.core import *
 
 

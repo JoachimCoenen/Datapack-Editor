@@ -11,6 +11,8 @@ from model.json.core import JsonSchema
 
 def initPlugin() -> None:
 	registerDPVersion(version6)
+	from model.datapack.json import contexts
+	contexts.init()
 
 
 LOAD_JSON_CONTENTS = f"""{{

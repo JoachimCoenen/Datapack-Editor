@@ -5,9 +5,8 @@ from dataclasses import dataclass
 from math import inf
 from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator
 
-from Cat.utils.collections_ import OrderedMultiDict
-from model.commands.argumentTypes import ArgumentType
 from Cat.utils import CachedProperty
+from Cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
 from model.json.lexer import TokenType
 from model.parsing.tree import Node
 from model.utils import GeneralError
@@ -184,9 +183,19 @@ class JsonStringSchema(JsonSchema[JsonString]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonString
 	typeName: ClassVar[str] = 'string'
 
-	def __init__(self, *, type: Optional[ArgumentType] = None, description: str = '', deprecated: bool = False):
+	def __init__(
+			self,
+			*,
+			type: Optional[JsonArgType] = None,
+			subType: Optional[JsonArgType] = None,
+			args: Optional[dict[str, Union[Any, None]]] = None,
+			description: str = '',
+			deprecated: bool = False
+	):
 		super(JsonStringSchema, self).__init__(description=description, deprecated=deprecated)
-		self.type: Optional[ArgumentType] = type
+		self.type: Optional[JsonArgType] = type
+		self.subType: Optional[JsonArgType] = subType
+		self.args: Optional[dict[str, Union[Any, None]]] = args
 
 
 class JsonArraySchema(JsonSchema[JsonArray]):
@@ -301,6 +310,28 @@ class JsonSemanticsError(GeneralError):
 	pass
 
 
+@dataclass
+class JsonArgType:
+	def __post_init__(self):
+		if type(self) is JsonArgType:
+			registerNamedJsonArgType(self)
+
+	name: str
+	description: str = ''
+	description2: str = ''
+	example: str = ''
+	examples: str = ''
+	jsonProperties: str = ''
+
+
+ALL_NAMED_JSON_ARG_TYPES: OrderedDict[str, JsonArgType] = OrderedDict()
+_registerNamedJsonArgType: AddToDictDecorator[str, JsonArgType] = AddToDictDecorator(ALL_NAMED_JSON_ARG_TYPES)
+
+
+def registerNamedJsonArgType(jsonArgType: JsonArgType, forceOverride: bool = False) -> None:
+	_registerNamedJsonArgType(jsonArgType.name, forceOverride)(jsonArgType)
+
+
 __all__ = [
 	'Array',
 	'Object',
@@ -333,4 +364,6 @@ __all__ = [
 
 	'JsonParseError',
 	'JsonSemanticsError',
+
+	'JsonArgType',
 ]

@@ -14,6 +14,8 @@
  * Added `minecraft:predicate` type (for mcFunction validation).
  * Improved code suggestions for mcFunction files.
  * Improved code insight (tooltips) for mcFunction files.
+ * JsonStringContext implementations are now part of the datapack version.
+ * Added `JsonArgType` to replace the `commands.ArgumentType` for JsonSchemas.
 
 ### Fixes
  * Reverted changes to resource location parsing.
