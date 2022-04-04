@@ -1,11 +1,11 @@
 import re
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod, ABC
 from typing import Iterable, Optional, Type, Any
 
 from PyQt5.QtWidgets import QWidget
 
 from Cat.CatPythonGUI.GUI import PythonGUI
-from Cat.utils import HTMLStr, escapeForXml, HTMLifyMarkDownSubSet, Decorator, Maybe
+from Cat.utils import HTMLStr, escapeForXml, HTMLifyMarkDownSubSet, Decorator
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.profiling import logError
 from model.commands.argumentTypes import LiteralsArgumentType, ArgumentType
@@ -112,23 +112,6 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 	# def getDocumentation(self, pos: Position) -> HTMLStr:
 	# 	pass
 
-	def _getCallTipForSchema(self, schema: CommandPartSchema, cursorPos: int) -> list[str]:
-		if isinstance(schema, KeywordSchema):
-			result.append(schema.name + ' ')
-		elif isinstance(nx, SwitchSchema):
-			result += self._getNextKeywords(nx.options, contextStr, cursorPos, replaceCtx)
-			hasTerminal = TERMINAL in nx.options
-			if hasTerminal:
-				result += self._getNextKeywords(nx.next, contextStr, cursorPos, replaceCtx)
-		elif isinstance(nx, ArgumentSchema):
-			handler = getArgumentContext(nx.type)
-			if handler is not None:
-				result += handler.getSuggestions2(nx, contextStr, cursorPos, replaceCtx)
-		elif nx is COMMANDS_ROOT:
-			from session.session import getSession
-			result += [cmd + ' ' for cmd in getSession().minecraftData.commands.keys()]
-		return result
-
 	@staticmethod
 	def _getPossibilitiesFromHit(hit: CommandPart) -> Optional[list[CommandPartSchema]]:
 		if (prev := hit.prev) is not None:
@@ -183,7 +166,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 		return ranges
 
 
-class ArgumentContext(Context[ParsedArgument], metaclass=ABCMeta):
+class ArgumentContext(Context[ParsedArgument], ABC):
 	@abstractmethod
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)

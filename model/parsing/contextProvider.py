@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from typing import Generic, TypeVar, Iterable, Optional, Type, final
 
@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QWidget
 
 from Cat.utils import HTMLStr, Decorator
 from Cat.utils.collections_ import AddToDictDecorator
-from Cat.utils.collections_.collections_ import IfKeyIssubclassGetter, getIfKeyIssubclass
+from Cat.utils.collections_.collections_ import IfKeyIssubclassGetter
 from model.parsing.tree import Node
 from model.utils import Span, Position, GeneralError
 
@@ -56,7 +56,7 @@ class Match(Generic[_TNode]):
 	contained: list[_TNode]
 
 
-class ContextProvider(Generic[_TNode], metaclass=ABCMeta):
+class ContextProvider(Generic[_TNode], ABC):
 	def __init__(self, tree: _TNode, text: str):
 		self.tree: _TNode = tree
 		self.text: str = text

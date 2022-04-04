@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from math import inf
 from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator
 
-from Cat.utils import abstract, CachedProperty
 from Cat.utils.collections_ import OrderedMultiDict
 from model.commands.argumentTypes import ArgumentType
+from Cat.utils import CachedProperty
 from model.json.lexer import TokenType
 from model.parsing.tree import Node
 from model.utils import GeneralError
@@ -22,17 +22,28 @@ _TT2 = TypeVar('_TT2')  # , NoneType, bool, int, float, str, Array, Object)
 _TN = TypeVar('_TN', int, float)
 
 
-# @abstract
 @dataclass
 class JsonData(Node['JsonData', 'JsonSchema'], ABC):
 	schema: Optional[JsonSchema]
 
 	typeName: ClassVar[str] = 'JsonData'
 
+	@property
+	@abstractmethod
+	def children(self) -> Collection[JsonData]:
+		return ()
+
 	def walkTree(self) -> Iterator[JsonData]:
 		yield self
-		for child in self.children():
-			yield from child.walkTree()
+		_walkChildren(self.children)
+
+
+def _walkChildren(children: Collection[JsonData]) -> Iterator[JsonData]:
+	for child in children:
+		yield child
+		innerChildren = child.children
+		if innerChildren:
+			yield from _walkChildren(innerChildren)
 
 
 @dataclass
@@ -40,6 +51,7 @@ class JsonInvalid(JsonData):
 	typeName: ClassVar[str] = 'invalid'
 	data: str
 
+	@property
 	def children(self) -> Collection[JsonData]:
 		return ()
 
@@ -48,6 +60,7 @@ class JsonInvalid(JsonData):
 class JsonNull(JsonData):
 	typeName: ClassVar[str] = 'null'
 
+	@property
 	def children(self) -> Collection[JsonData]:
 		return ()
 
@@ -57,6 +70,7 @@ class JsonBool(JsonData):
 	data: bool
 	typeName: ClassVar[str] = 'boolean'
 
+	@property
 	def children(self) -> Collection[JsonData]:
 		return ()
 
@@ -66,6 +80,7 @@ class JsonNumber(JsonData):
 	data: Union[int, float]
 	typeName: ClassVar[str] = 'number'
 
+	@property
 	def children(self) -> Collection[JsonData]:
 		return ()
 
@@ -76,6 +91,7 @@ class JsonString(JsonData):
 	parsedValue: Optional[Any] = None
 	typeName: ClassVar[str] = 'string'
 
+	@property
 	def children(self) -> Collection[JsonData]:
 		return ()
 
@@ -85,6 +101,7 @@ class JsonArray(JsonData):
 	data: Array
 	typeName: ClassVar[str] = 'array'
 
+	@property
 	def children(self) -> Collection[JsonData]:
 		return self.data
 
@@ -97,6 +114,7 @@ class JsonProperty(JsonData):
 
 	typeName: ClassVar[str] = 'property'
 
+	@property
 	def children(self) -> Collection[JsonData]:
 		return self.key, self.value
 
@@ -106,6 +124,7 @@ class JsonObject(JsonData):
 	data: Object
 	typeName: ClassVar[str] = 'object'
 
+	@property
 	def children(self) -> Collection[JsonData]:
 		return self.data.values()
 
@@ -274,6 +293,10 @@ class JsonUnionSchema(JsonSchema[JsonData]):
 		return f"({'|'.join(o.asString for o in self.optionsDict2.values())})"
 
 
+class JsonParseError(GeneralError):
+	pass
+
+
 class JsonSemanticsError(GeneralError):
 	pass
 
@@ -285,6 +308,7 @@ __all__ = [
 
 	'JsonProperty',
 	'JsonData',
+	'JsonInvalid',
 	'JsonNull',
 	'JsonBool',
 	'JsonNumber',
@@ -306,4 +330,7 @@ __all__ = [
 	'SwitchingPropertySchema',
 	'JsonObjectSchema',
 	'JsonUnionSchema',
+
+	'JsonParseError',
+	'JsonSemanticsError',
 ]

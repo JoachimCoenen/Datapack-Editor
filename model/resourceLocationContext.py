@@ -1,9 +1,9 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from typing import Iterable, Mapping, Optional
 
 from PyQt5.QtWidgets import QWidget
 
-from Cat.utils import abstract, HTMLStr
+from Cat.utils import HTMLStr
 from model.Model import Datapack
 from model.data.mcVersions import MCVersion
 from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations, metaInfoFromResourceLocation, containsResourceLocation
@@ -12,8 +12,7 @@ from model.utils import Span, GeneralError, SemanticsError
 from session.session import getSession
 
 
-@abstract
-class ResourceLocationContext:
+class ResourceLocationContext(ABC):
 	@property
 	@abstractmethod
 	def name(self) -> str:
@@ -122,8 +121,7 @@ class DimensionContext(ResourceLocationContext):
 		return mc.dimensions
 
 
-@abstract
-class EntityTypeLikeContext(ResourceLocationContext):
+class EntityTypeLikeContext(ResourceLocationContext, ABC):
 
 	@property
 	def name(self) -> str:

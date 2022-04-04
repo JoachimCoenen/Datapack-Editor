@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABCMeta
+from abc import ABC
 from dataclasses import dataclass, field
 from typing import TypeVar, Union, Optional, Sequence, Any, Generic
 
@@ -11,12 +11,12 @@ from model.utils import Position
 
 
 @dataclass
-class Named(metaclass=ABCMeta):
+class Named(ABC):
 	name: str
 
 
 @dataclass
-class CommandPartSchema(Schema, Named, metaclass=ABCMeta):
+class CommandPartSchema(Schema, Named, ABC):
 	description: str = field(default='')
 	next: list[CommandPartSchema] = field(default_factory=list)
 

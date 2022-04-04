@@ -1,5 +1,5 @@
 import re
-from abc import abstractmethod, ABCMeta
+from abc import abstractmethod, ABC
 from dataclasses import replace
 from itertools import chain
 from json import JSONDecodeError
@@ -7,7 +7,7 @@ from typing import Optional, Iterable
 
 from PyQt5.QtWidgets import QWidget
 
-from Cat.utils import HTMLStr, abstract
+from Cat.utils import HTMLStr
 from model.Model import Datapack, choicesForDatapackContents, metaInfoFromDatapackContents
 from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
 from model.commands.argumentTypes import *
@@ -32,8 +32,7 @@ def _init():
 	pass  # do not remove!
 
 
-@abstract
-class ResourceLocationLikeHandler(ArgumentContext, metaclass=ABCMeta):
+class ResourceLocationLikeHandler(ArgumentContext, ABC):
 	# @property
 	# @abstractmethod
 	# def name(self) -> str:

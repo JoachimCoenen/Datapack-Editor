@@ -1,5 +1,5 @@
-from abc import ABCMeta, abstractmethod
-from typing import Iterable, Optional, Type, Callable
+from abc import abstractmethod, ABC
+from typing import Iterable, Optional, Type, Callable, cast
 
 from PyQt5.QtWidgets import QWidget
 
@@ -297,7 +297,7 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 		return ranges
 
 
-class JsonStringContext(Context[JsonString], metaclass=ABCMeta):
+class JsonStringContext(Context[JsonString], ABC):
 
 	@abstractmethod
 	def prepare(self, node: JsonString, errorsIO: list[GeneralError]) -> None:

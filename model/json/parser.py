@@ -6,7 +6,6 @@ from typing import Optional, AbstractSet, Union
 
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import ProfiledFunction
-from model.json.core import JsonInvalid
 from model.json.lexer import Token, tokenizeJson, TokenType
 from model.json.core import *
 from model.json.schema import enrichWithSchema
@@ -14,10 +13,6 @@ from model.utils import GeneralError, Span, Message
 
 EOF_MSG = Message("Unexpected end of file while parsing", 0)
 EXPECTED_BUT_GOT_MSG = Message("Expected {0} but got `{1}`", 2)
-
-
-class JsonParseError(GeneralError):
-	pass
 
 
 # class ParseError(Exception):
@@ -80,7 +75,7 @@ class ParserData:
 		return token
 
 
-def parse_object(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonObject:
+def parse_object(psr: ParserData, schema: Optional[JsonObjectSchema]) -> JsonObject:
 	"""Parses an object out of JSON tokens"""
 	objData: OrderedMultiDict[str, JsonProperty] = OrderedMultiDict()
 	isObjectSchema = isinstance(schema, JsonObjectSchema)
