@@ -324,7 +324,11 @@ class ComponentHandler(ArgumentContext):
 				nss.column + er.span.end.index,
 				nss.index + er.span.end.index
 			)
-			errorsIO.append(CommandSemanticsError(er.message, Span(s, e), er.style))
+			if isinstance(er, GeneralError):
+				er.span = Span(s, e)
+			else:
+				er = CommandSemanticsError(er.message, Span(s, e), er.style)
+			errorsIO.append(er)
 
 
 @argumentContext(MINECRAFT_DIMENSION.name)

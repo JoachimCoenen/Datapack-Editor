@@ -17,6 +17,7 @@
 
 ### Fixes
  * Reverted changes to resource location parsing.
+ * Fixed validation of `minecraft:component` command argument returning wrong error type.
 
 ## Version 0.2.1-alpha
 ### Fixes

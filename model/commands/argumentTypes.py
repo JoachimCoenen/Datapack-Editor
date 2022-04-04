@@ -18,7 +18,7 @@ class ArgumentType:
 	jsonProperties: str = ''
 
 
-ALL_NAMED_ARGUMENT_TYPES: OrderedDict[ArgumentType] = OrderedDict()
+ALL_NAMED_ARGUMENT_TYPES: OrderedDict[str, ArgumentType] = OrderedDict()
 _registerNamedArgumentType: AddToDictDecorator[str, ArgumentType] = AddToDictDecorator(ALL_NAMED_ARGUMENT_TYPES)
 
 
