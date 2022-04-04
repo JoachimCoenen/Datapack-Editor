@@ -6,7 +6,7 @@
  * Added basic code suggestions for JSON files.
  * Added basic code insight (tooltips) for JSON files.
  * Added validation support for JSON files. (issue #4)
- * Added basic validation for tag files (files in 'data/{namespace}/tags/'). (issue #6)
+ * Added file specific validation & suggestions for tag files (files in 'data/{namespace}/tags/'). (issue #6)
  * Added validation for raw json text (`minecraft:component` type) in mcFunction files.
 
 ### Improvements
@@ -16,6 +16,7 @@
  * Improved code insight (tooltips) for mcFunction files.
  * JsonStringContext implementations are now part of the datapack version.
  * Added `JsonArgType` to replace the `commands.ArgumentType` for JsonSchemas.
+ * Added `gameEvents` field to `MCVersion`.
 
 ### Fixes
  * Reverted changes to resource location parsing.

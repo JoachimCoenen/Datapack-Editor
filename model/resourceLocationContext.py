@@ -83,6 +83,8 @@ class ResourceLocationContext(ABC):
 		return HTMLStr('')
 
 	def getClickableRanges(self, value: ResourceLocation, span: Span) -> Optional[Iterable[Span]]:  # TODO: check for if not isinstance(value, ResourceLocation):
+		if not isinstance(value, ResourceLocation):
+			return None
 		if value.isTag:
 			isValid = any(containsResourceLocation(value, tags) for dp in getSession().world.datapacks for tags in self.tagsFromDP(dp))
 		else:
@@ -90,6 +92,8 @@ class ResourceLocationContext(ABC):
 		return [span] if isValid else []
 
 	def onIndicatorClicked(self, value: ResourceLocation, window: QWidget) -> None:
+		if not isinstance(value, ResourceLocation):
+			return None
 		for dp in getSession().world.datapacks:
 			for tags in self.tagsFromDP(dp):
 				if (metaInfo := metaInfoFromResourceLocation(value, tags)) is not None:
@@ -99,6 +103,26 @@ class ResourceLocationContext(ABC):
 				if (metaInfo := metaInfoFromResourceLocation(value, values)) is not None:
 					window._tryOpenOrSelectDocument(metaInfo.filePath)
 					return
+
+
+class BlockContext(ResourceLocationContext):
+
+	@property
+	def name(self) -> str:
+		return 'block'
+
+	@property
+	def allowTags(self) -> bool:
+		return True
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.tags.blocks,)
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.blocks
 
 
 class DimensionContext(ResourceLocationContext):
@@ -137,18 +161,38 @@ class EntityTypeLikeContext(ResourceLocationContext, ABC):
 		return mc.entities
 
 
-class EntitySummonHandler(EntityTypeLikeContext):
+class EntitySummonContext(EntityTypeLikeContext):
 
 	@property
 	def allowTags(self) -> bool:
 		return False
 
 
-class EntityTypeHandler(EntityTypeLikeContext):
+class EntityTypeContext(EntityTypeLikeContext):
 
 	@property
 	def allowTags(self) -> bool:
 		return True
+
+
+class FluidContext(ResourceLocationContext):
+
+	@property
+	def name(self) -> str:
+		return 'fluid'
+
+	@property
+	def allowTags(self) -> bool:
+		return True
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.tags.fluids,)
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.fluids
 
 
 class FunctionContext(ResourceLocationContext):
@@ -170,6 +214,25 @@ class FunctionContext(ResourceLocationContext):
 		return ()
 
 
+class GameEventsContext(ResourceLocationContext):
+	@property
+	def name(self) -> str:
+		return 'game_event'
+
+	@property
+	def allowTags(self) -> bool:
+		return True
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.tags.game_events,)
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.gameEvents
+
+
 class ItemEnchantmentContext(ResourceLocationContext):
 	@property
 	def name(self) -> str:
@@ -187,6 +250,25 @@ class ItemEnchantmentContext(ResourceLocationContext):
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
 		return mc.enchantments
+
+
+class ItemsContext(ResourceLocationContext):
+	@property
+	def name(self) -> str:
+		return 'item'
+
+	@property
+	def allowTags(self) -> bool:
+		return True
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.contents.tags.items,)
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.items
 
 
 class MobEffectContext(ResourceLocationContext):
@@ -264,4 +346,44 @@ class BiomeIdContext(ResourceLocationContext):
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
 		return mc.biomes
 
-# (?<=def |\.)(name|allowTags|tagsFromDP|valuesFromDP|valuesFromMC)\b
+
+class AnyContext(ResourceLocationContext):
+
+	@property
+	def name(self) -> str:
+		return 'resource_location'
+
+	@property
+	def allowTags(self) -> bool:
+		return True
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return ()
+
+	def validate(self, value: ResourceLocation, span: Span, errorsIO: list[GeneralError]) -> None:
+		if not isinstance(value, ResourceLocation):
+			errorsIO.append(SemanticsError(f"Internal Error! expected ResourceLocation , but got '{value}'.", span))
+
+
+__all__ = [
+	'ResourceLocationContext',
+	'BlockContext',
+	'DimensionContext',
+	'EntitySummonContext',
+	'EntityTypeContext',
+	'FluidContext',
+	'FunctionContext',
+	'ItemEnchantmentContext',
+	'ItemsContext',
+	'MobEffectContext',
+	'ParticleContext',
+	'PredicateContext',
+	'BiomeIdContext',
+	'AnyContext',
+]

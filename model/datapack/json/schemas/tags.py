@@ -1,8 +1,9 @@
 from model.datapack.json.argTypes import MINECRAFT_RESOURCE_LOCATION
 from model.json.core import *
+import model.resourceLocationContext as rlc
 
 
-def buildTagsSchema(idArgType: ArgumentType) -> JsonObjectSchema:  # choice of parameter is temporary
+def buildTagsSchema(context: rlc.ResourceLocationContext) -> JsonObjectSchema:
 	return JsonObjectSchema(
 		description='Allow grouping of items, blocks, fluids, entity types, or functions together using JSON files.',
 		properties=[
@@ -22,7 +23,8 @@ def buildTagsSchema(idArgType: ArgumentType) -> JsonObjectSchema:  # choice of p
 						options=[
 							JsonStringSchema(
 								description="An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`.",
-								type=idArgType,
+								type=MINECRAFT_RESOURCE_LOCATION,
+								args=dict(context=context)
 							),
 							JsonObjectSchema(
 								description="An entry with additional options. (1.16.2+) ",
@@ -30,7 +32,10 @@ def buildTagsSchema(idArgType: ArgumentType) -> JsonObjectSchema:  # choice of p
 									PropertySchema(
 										name='id',
 										description="A string in one of the string formats above.",
-										value=JsonStringSchema(type=idArgType),
+										value=JsonStringSchema(
+											type=MINECRAFT_RESOURCE_LOCATION,
+											args=dict(context=context)
+										),
 									),
 									PropertySchema(
 										name='required',
@@ -51,15 +56,14 @@ def buildTagsSchema(idArgType: ArgumentType) -> JsonObjectSchema:  # choice of p
 	)
 
 
-TAGS_BLOCKS = buildTagsSchema(MINECRAFT_RESOURCE_LOCATION)
-TAGS_ENTITY_TYPES = buildTagsSchema(MINECRAFT_RESOURCE_LOCATION)
-TAGS_FLUIDS = buildTagsSchema(MINECRAFT_RESOURCE_LOCATION)
-TAGS_FUNCTIONS = buildTagsSchema(MINECRAFT_RESOURCE_LOCATION)
-TAGS_GAME_EVENTS = buildTagsSchema(MINECRAFT_RESOURCE_LOCATION)
-TAGS_ITEMS = buildTagsSchema(MINECRAFT_RESOURCE_LOCATION)
+TAGS_BLOCKS = buildTagsSchema(rlc.BlockContext())
+TAGS_ENTITY_TYPES = buildTagsSchema(rlc.EntityTypeContext())
+TAGS_FLUIDS = buildTagsSchema(rlc.FluidContext())
+TAGS_FUNCTIONS = buildTagsSchema(rlc.FunctionContext())
+TAGS_GAME_EVENTS = buildTagsSchema(rlc.GameEventsContext())
+TAGS_ITEMS = buildTagsSchema(rlc.ItemsContext())
 
 __all__ = [
-	'buildTagsSchema',
 	'TAGS_BLOCKS',
 	'TAGS_ENTITY_TYPES',
 	'TAGS_FLUIDS',

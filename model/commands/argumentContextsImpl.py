@@ -379,7 +379,7 @@ class EntitySummonHandler(ResourceLocationLikeHandler):
 
 	@property
 	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.EntitySummonHandler()
+		return rlc.EntitySummonContext()
 
 
 @argumentContext(MINECRAFT_ENTITY_TYPE.name)
@@ -387,7 +387,7 @@ class EntityTypeHandler(ResourceLocationLikeHandler):
 
 	@property
 	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.EntityTypeHandler()
+		return rlc.EntityTypeContext()
 
 
 @argumentContext(MINECRAFT_FLOAT_RANGE.name)

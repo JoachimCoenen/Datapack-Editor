@@ -1962,6 +1962,8 @@ version1_17 = MCVersion(
 	particles=PARTICLES,
 	dimensions=DIMENSIONS,
 	structures=STRUCTURES,
+	gameEvents=set(),  # introduced in version 1.19
+
 	slots=SLOTS,
 
 	blockStates=BLOCK_STATES_BY_BLOCK,

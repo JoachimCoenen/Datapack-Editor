@@ -33,6 +33,8 @@ class MCVersion:
 	biomes: set[ResourceLocation]
 	particles: set[ResourceLocation]
 	dimensions: set[ResourceLocation]
+	gameEvents: set[ResourceLocation]  # introduced in version 1.19
+
 	structures: set[str]
 	slots: dict[str, int]
 
