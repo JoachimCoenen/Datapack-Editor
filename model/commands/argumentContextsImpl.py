@@ -28,7 +28,7 @@ from model.utils import Span, Position, GeneralError
 from session.session import getSession
 
 
-def _init():
+def init():
 	pass  # do not remove!
 
 

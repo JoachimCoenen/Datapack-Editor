@@ -38,7 +38,8 @@ class ResizableStyles(Styles):
 			'font-size': f'{applicationSettings.appearance.fontSize}pt',
 		})
 
-setStyles(ResizableStyles())  #.hostWidgetStyle._func, 'hostWidgetStyle'))
+
+setStyles(ResizableStyles())  # .hostWidgetStyle._func, 'hostWidgetStyle'))
 
 
 class SetupDialog(CatFramelessWindowMixin, QDialog):
@@ -97,6 +98,19 @@ def run():
 		app.exec_()
 
 
+def loadPlugins():
+	from model.commands import argumentContextsImpl
+	argumentContextsImpl.init()  # do not remove!
+
+	from model.data import version1_16, version1_17, version1_18
+	version1_16.initPlugin()
+	version1_17.initPlugin()
+	version1_18.initPlugin()
+
+	from model.datapack import version6
+	version6.initPlugin()
+
+
 def start(argv):
 
 	os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '0'
@@ -123,15 +137,7 @@ def start(argv):
 		loadSessionFromFile()
 		showSetupDialogIfNecessary()
 
-		from model.commands import argumentContextsImpl
-		argumentContextsImpl._init()  # do not remove!
-
-		# if not getSession().selectedDocumentIds:
-		# 	getSession().selectedDocumentIds[WindowId('0')] = None
-		# for id in getSession().selectedDocumentIds.keys():
-		# 	window = MainWindow(id)
-		# 	window.show()
-		# 	window._gui.redrawGUI()
+		loadPlugins()
 
 		window = MainWindow(WindowId('0'))
 		window.show()
