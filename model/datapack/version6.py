@@ -2,8 +2,8 @@
 for Minecraft version 1.17
 """
 from model.datapack.dpVersion import registerDPVersion, DPVersion
-from model.datapack.schemas.rawJsonText import RAW_JSON_TEXT_SCHEMA
-from model.datapack.schemas.tags import *
+from model.datapack.json.schemas.rawJsonText import RAW_JSON_TEXT_SCHEMA
+from model.datapack.json.schemas.tags import *
 from model.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, DatapackContents, GenerationInfo, DefaultFileInfo, \
 	buildFunctionMeta, buildEntryHandlers, buildJsonMeta, buildNbtMeta
 from model.json.core import JsonSchema
