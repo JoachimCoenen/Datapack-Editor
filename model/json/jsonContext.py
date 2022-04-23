@@ -1,15 +1,13 @@
 from abc import abstractmethod, ABC
 from itertools import chain
-from typing import Iterable, Optional, Type, Callable, cast
+from typing import Iterable, Optional, Callable, cast
 
 from PyQt5.QtWidgets import QWidget
 
-from Cat.CatPythonGUI.GUI import PythonGUI
-from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, Decorator, flatmap
-from Cat.utils.collections_ import AddToDictDecorator
+from Cat.utils import Decorator, flatmap
 from model.json.core import *
-from model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, registerContextProvider
-from model.utils import Position, Span, GeneralError
+from model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, registerContextProvider, AddContextToDictDecorator
+from model.utils import Position, Span, GeneralError, MDStr, formatAsError
 
 
 def _getBestMatchInArray(tree: JsonArray, pos: Position, matches: Match) -> None:
@@ -21,14 +19,14 @@ def _getBestMatchInArray(tree: JsonArray, pos: Position, matches: Match) -> None
 			matches.before = elem
 		# elif elem.span.start <= pos:
 		# 	matches.hit = elem
-		elif pos < elem.span.start:
-			matches.after = elem
-			break
-		else:
+		elif elem.span.start < pos:
 			_getBestMatch(elem, pos, matches)
 			break
+		else:
+			matches.after = elem
+			break
 
-		# if pos in elem.span:
+	# if pos in elem.span:
 		# 	_getBestMatch(elem, pos, matches)
 		# 	return
 		# if pos <= elem.span.start and elem.typeName == JsonInvalid.typeName:
@@ -44,11 +42,11 @@ def _getBestMatchInObject(tree: JsonObject, pos: Position, matches: Match) -> No
 			matches.before = elem
 		# elif elem.span.start <= pos:
 		# 	matches.hit = elem
-		elif pos < elem.span.start:
-			matches.after = elem
+		elif elem.span.start < pos:
+			_getBestMatch(elem, pos, matches)
 			break
 		else:
-			_getBestMatch(elem, pos, matches)
+			matches.after = elem
 			break
 		# if pos in prop.span:
 		# 	_getBestMatch(prop, pos, matches)
@@ -59,17 +57,19 @@ def _getBestMatchInProperty(tree: JsonProperty, pos: Position, matches: Match) -
 	matches.before = None
 	matches.hit = None
 	matches.after = None
-	if pos > tree.value.span.end:
+	valueSpan = tree.value.span
+	keySpan = tree.key.span
+	if valueSpan.end < pos:
 		matches.before = tree.value
-	elif pos > tree.value.span.start:
+	elif valueSpan.start < pos:
 		matches.before = tree.key
 		_getBestMatch(tree.value, pos, matches)
-	elif pos > tree.key.span.end:
+	elif keySpan.end < pos:
 		matches.before = tree.key
 		matches.after = tree.value
-	elif pos > tree.key.span.start:
+	elif keySpan.start < pos:
 		_getBestMatch(tree.key, pos, matches)
-		matches.after = tree.value
+		# matches.after = tree.value
 	else:
 		matches.after = tree.key
 	# if pos in tree.key.span:
@@ -106,12 +106,14 @@ def _suggestionsForUnionSchema(schema: JsonUnionSchema):
 
 
 _SCHEMA_SUGGESTIONS_PROVIDERS = {
-	JsonNull.typeName: lambda schema: ['null'],
-	JsonBool.typeName: lambda schema: ['true', 'false'],
-	JsonNumber.typeName: lambda schema: ['0'],
-	JsonString.typeName: lambda schema: ['"'],
-	JsonArray.typeName: lambda schema: ['['],
-	JsonObject.typeName: lambda schema: ['{'],
+	JsonNullSchema.typeName: lambda schema: ['null'],
+	JsonBoolSchema.typeName: lambda schema: ['true', 'false'],
+	JsonNumberSchema.typeName: lambda schema: ['0'],
+	JsonFloatSchema.typeName: lambda schema: ['0'],
+	JsonIntSchema.typeName: lambda schema: ['0'],
+	JsonStringSchema.typeName: lambda schema: ['"'],
+	JsonArraySchema.typeName: lambda schema: ['['],
+	JsonObjectSchema.typeName: lambda schema: ['{'],
 	JsonUnionSchema.typeName: lambda schema: _suggestionsForUnionSchema(schema),
 }
 
@@ -142,63 +144,150 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 		return None
 
 	def prepareTree(self) -> list[GeneralError]:
-		pass
+		errorsIO = []
+		for node in self.tree.walkTree():
+			if (ctx := self.getContext(node)) is not None:
+				ctx.prepare(node, errorsIO)
+		return errorsIO
 
-	def validateTree(self) -> list[GeneralError]:
-		pass
+	def validateTree(self, errorsIO: list[GeneralError]) -> None:
+		from model.json.validator import validateJson
+		errorsIO += validateJson(self.tree)
+		pass  # TODO: validateTree for json
 
 	@staticmethod
 	def _getSuggestionsForSchema(schema: JsonSchema) -> list[str]:
 		return getSuggestionsForSchema(schema)
 
-	def getSuggestionsOLD(self, pos: Position, replaceCtx: str) -> Suggestions:
-		matches: Match = self.getBestMatch(pos)
-		if not matches.contained:
+	# def getSuggestionsOLD(self, pos: Position, replaceCtx: str) -> Suggestions:
+	# 	matches: Match = self.getBestMatch(pos)
+	# 	if not matches.contained:
+	# 		return []
+	#
+	# 	matchesC = list(reversed(matches.contained))
+	#
+	# 	match = matchesC[0]
+	#
+	# 	if isinstance(match, JsonProperty):
+	# 		if pos > match.value.span.end:
+	# 			return [', ', '}']
+	# 		if match.schema is not None:
+	# 			return self._getSuggestionsForSchema(match.schema.value)
+	#
+	# 	if isinstance(match, JsonArray):
+	# 		if matches.before is None:
+	# 			result = [']']
+	# 			if isinstance(match.schema, JsonArraySchema):
+	# 				result += self._getSuggestionsForSchema(match.schema.element)
+	# 		elif ',' in self.text[matches.before.span.end.index:pos.index]:
+	# 			if isinstance(match.schema, JsonArraySchema):
+	# 				result = self._getSuggestionsForSchema(match.schema.element)
+	# 			else:
+	# 				result = [', ', ']']
+	# 		else:
+	# 			result = [', ', ']']
+	# 		return result
+	#
+	# 	if isinstance(match, JsonString):
+	#
+	# 		if match.schema is None:
+	# 			if len(matchesC) >= 3:
+	# 				match = matchesC[2]  # if matches[0] was a key, matches[2] is the object.
+	# 		else:
+	# 			if isinstance(match.schema, JsonStringSchema) and match.schema.type is not None:
+	# 				if (strHandler := self.getContext(match)) is not None:
+	# 					suggestions = strHandler.getSuggestions(match, pos, replaceCtx=replaceCtx)  # TODO: set correct replaceCtx
+	# 					return suggestions + ['"']
+	# 			return ['"']
+	#
+	# 	if isinstance(match, JsonObject):
+	# 		if isinstance(match.schema, JsonObjectSchema):
+	# 			return [f'"{p.name}": ' for p in match.schema.properties] + ['}']
+	#
+	# 	if match.schema is not None:
+	# 		return self._getSuggestionsForSchema(match.schema)
+	#
+	# 	return []
+
+	def _getSuggestionsForBefore(self, pos: Position, before: JsonData, contained: list[JsonData], replaceCtx: str) -> Suggestions:
+		if before.schema is JSON_KEY_SCHEMA:
+			needsColon = ':' not in self.text[before.span.end.index:pos.index]
+			if len(contained) >= 2:
+				prop = contained[-1]
+				if isinstance(prop, JsonProperty) and prop.schema is not None and contained:
+					parent = contained[-2]
+					if isinstance(parent, JsonObject):
+						valueSchema = prop.schema.valueForParent(parent)
+						suggestions = self._getSuggestionsForSchema(valueSchema)
+						return [f': {sg}' for sg in suggestions] if needsColon else suggestions
+			return [': '] if needsColon else []
+		elif not contained:
 			return []
+		else:
+			needsComma = ',' not in self.text[before.span.end.index:pos.index]
+			return self._getSuggestionsForContained(pos, contained, replaceCtx, needsComma=needsComma)
+		# 	container = contained[-1]
+		# 	if isinstance(container, JsonArray):
+		# 		if needsComma:
+		# 			return [', ', ']']
+		# 		elif isinstance(container.schema, JsonArraySchema):
+		# 			return self._getSuggestionsForSchema(container.schema.element)
+		# 		return []
+		#
+		# 	elif isinstance(container, JsonObject):
+		# 		if needsComma:
+		# 			return [', ', '}']
+		# 		elif isinstance(container.schema, JsonObjectSchema):
+		# 			return [f'"{p.name}": ' for p in container.schema.properties if p.name not in container.data]
+		# 		return []
+		# return []
 
-		matchesC = list(reversed(matches.contained))
+	def _getSuggestionsForContained(self, pos: Position, contained: list[JsonData], replaceCtx: str, *, needsComma: bool) -> Suggestions:
+		if not contained:
+			return []
+		container = contained[-1]
 
-		match = matchesC[0]
-
-		if isinstance(match, JsonProperty):
-			if pos > match.value.span.end:
-				return [', ', '}']
-			if match.schema is not None:
-				return self._getSuggestionsForSchema(match.schema.value)
-
-		if isinstance(match, JsonArray):
-			if matches.before is None:
-				result = [']']
-				if isinstance(match.schema, JsonArraySchema):
-					result += self._getSuggestionsForSchema(match.schema.element)
-			elif ',' in self.text[matches.before.span.end.index:pos.index]:
-				if isinstance(match.schema, JsonArraySchema):
-					result = self._getSuggestionsForSchema(match.schema.element)
-				else:
-					result = [', ', ']']
+		if isinstance(container, JsonProperty):
+			if len(contained) >= 2:
+				container = contained[-2]
 			else:
-				result = [', ', ']']
-			return result
+				return []
+		if isinstance(container, JsonArray):
+			if needsComma:
+				return [f'{replaceCtx}, ', f'{replaceCtx}]']
+			if isinstance(container.schema, JsonArraySchema):
+				return self._getSuggestionsForSchema(container.schema.element) + ([']'] if not container.data else [])
+		elif isinstance(container, JsonObject):
+			if needsComma:
+				return [f'{replaceCtx}, ', f'{replaceCtx}}}']
+			if isinstance(container.schema, JsonObjectSchema):
+				return [f'"{p.name}": ' for p in container.schema.properties if p.name not in container.data] + (['}'] if not container.data else [])
 
-		if isinstance(match, JsonString):
-			print(f"hello!")
-			if match.schema is None:
-				if len(matchesC) >= 3:
-					match = matchesC[2]  # if matches[0] was a key, matches[2] is the object.
+		return []
+
+	def _getSuggestionsForHit(self, pos: Position, hit: JsonData, contained: list[JsonData], replaceCtx: str) -> Suggestions:
+
+		if isinstance(hit, JsonString):
+			data = self.text[hit.span.slice]
+			if hit.span.end == pos and len(data) >= 2 and data.endswith('"') and data.startswith('"'):
+				return self._getSuggestionsForBefore(pos, hit, contained, replaceCtx)
+
+			elif hit.schema is JSON_KEY_SCHEMA:
+				if len(contained) >= 2:
+					container = contained[-2]  # if hit was a key, matches.contained[-2] is the object.
+					if isinstance(container, JsonObject) and isinstance(container.schema, JsonObjectSchema):
+						return [f'{p.name}": ' for p in container.schema.properties if p.name not in container.data]
 			else:
-				if isinstance(match.schema, JsonStringSchema) and match.schema.type is not None:
-					if (strHandler := self.getContext(match)) is not None:
-						suggestions = strHandler.getSuggestions(match, pos, replaceCtx=replaceCtx)  # TODO: set correct replaceCtx
-						return suggestions + ['"']
-				return ['"']
+				if isinstance(hit.schema, JsonStringSchema) and hit.schema.type is not None:
+					if (strHandler := self.getContext(hit)) is not None:
+						suggestions = strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx)  # TODO: set correct replaceCtx
+						return suggestions + [f'{replaceCtx}"']
+				return [f'{replaceCtx}"']
+		elif hit.schema is not None:
+			if hit.span.end == pos and not isinstance(hit, JsonInvalid):
+				return self._getSuggestionsForBefore(pos, hit, contained, replaceCtx)
 
-		if isinstance(match, JsonObject):
-			if isinstance(match.schema, JsonObjectSchema):
-				return [f'"{p.name}": ' for p in match.schema.properties] + ['}']
-
-		if match.schema is not None:
-			return self._getSuggestionsForSchema(match.schema)
-
+			return self._getSuggestionsForSchema(hit.schema)
 		return []
 
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
@@ -208,88 +297,115 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 
 		hit = matches.hit
 		if hit is not None:
-			if isinstance(hit, JsonString):
-				if hit.schema is JSON_KEY_SCHEMA:
-					if len(matches.contained) >= 2:
-						contained = matches.contained[-2]  # if hit was a key, matches.contained[-2] is the object.
-						if isinstance(contained, JsonObject) and isinstance(contained.schema, JsonObjectSchema):
-							return [f'{p.name}": ' for p in contained.schema.properties if p.name not in contained.data]
-				else:
-					if isinstance(hit.schema, JsonStringSchema) and hit.schema.type is not None:
-						if (strHandler := self.getContext(hit)) is not None:
-							suggestions = strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx)  # TODO: set correct replaceCtx
-							return suggestions + ['"']
-					return ['"']
-			elif hit.schema is not None:
-				return self._getSuggestionsForSchema(hit.schema)
-
-		elif matches.before is not None:
-			before = matches.before
-			if before.schema is JSON_KEY_SCHEMA:
-				needsColon = ':' not in self.text[before.span.end.index:pos.index]
-				if matches.contained:
-					prop = matches.contained[-1]
-					if isinstance(prop, JsonProperty) and prop.schema is not None:
-						suggestions = self._getSuggestionsForSchema(prop.schema.value)
-						return [f': {sg}' for sg in suggestions] if needsColon else suggestions
-				return [': '] if needsColon else []
-
-			if not matches.contained:
-				return []
-			contained = matches.contained[-1]
-
-			needsComma = ',' not in self.text[before.span.end.index:pos.index]
-			if isinstance(contained, JsonArray):
-				if needsComma:
-					return [', ', ']']
-				elif isinstance(contained.schema, JsonArraySchema):
-					return self._getSuggestionsForSchema(contained.schema.element)
-				return []
-
-			if isinstance(contained, JsonObject):
-				if needsComma:
-					return [', ', '}']
-				elif isinstance(contained.schema, JsonObjectSchema):
-					return [f'"{p.name}": ' for p in contained.schema.properties if p.name not in contained.data]
-				return []
-
+			return self._getSuggestionsForHit(pos, matches.hit, matches.contained, replaceCtx)
+		if matches.before is not None:
+			return self._getSuggestionsForBefore(pos, matches.before, matches.contained, replaceCtx)
 		else:
-			if not matches.contained:
-				return []
-			contained = matches.contained[-1]
+			return self._getSuggestionsForContained(pos, matches.contained, replaceCtx, needsComma=False)
 
-			if isinstance(contained, JsonArray):
-				if isinstance(contained.schema, JsonArraySchema):
-					return self._getSuggestionsForSchema(contained.schema.element) + [']']
-				return []
+	# def getSuggestions2(self, pos: Position, replaceCtx: str) -> Suggestions:
+	# 	matches = self.getBestMatch(pos)
+	# 	if not matches.contained:
+	# 		return []
+	#
+	# 	hit = matches.hit
+	# 	if hit is not None:
+	# 		if isinstance(hit, JsonString):
+	# 			if hit.schema is JSON_KEY_SCHEMA:
+	# 				if len(matches.contained) >= 2:
+	# 					contained = matches.contained[-2]  # if hit was a key, matches.contained[-2] is the object.
+	# 					if isinstance(contained, JsonObject) and isinstance(contained.schema, JsonObjectSchema):
+	# 						return [f'{p.name}": ' for p in contained.schema.properties if p.name not in contained.data]
+	# 			else:
+	# 				if isinstance(hit.schema, JsonStringSchema) and hit.schema.type is not None:
+	# 					if (strHandler := self.getContext(hit)) is not None:
+	# 						suggestions = strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx)  # TODO: set correct replaceCtx
+	# 						return suggestions + ['"']
+	# 				return ['"']
+	# 		elif hit.schema is not None:
+	# 			return self._getSuggestionsForSchema(hit.schema)
+	#
+	# 	elif matches.before is not None:
+	# 		before = matches.before
+	# 		if before.schema is JSON_KEY_SCHEMA:
+	# 			needsColon = ':' not in self.text[before.span.end.index:pos.index]
+	# 			if len(matches.contained) >= 2:
+	# 				prop = matches.contained[-1]
+	# 				if isinstance(prop, JsonProperty) and prop.schema is not None and matches.contained:
+	# 					parent = matches.contained[-2]
+	# 					if isinstance(parent, JsonObject):
+	# 						valueSchema = prop.schema.valueForParent(parent)
+	# 						suggestions = self._getSuggestionsForSchema(valueSchema)
+	# 						return [f': {sg}' for sg in suggestions] if needsColon else suggestions
+	# 			return [': '] if needsColon else []
+	# 		elif not matches.contained:
+	# 			return []
+	# 		else:
+	# 			contained = matches.contained[-1]
+	#
+	# 			needsComma = ',' not in self.text[before.span.end.index:pos.index]
+	# 			if isinstance(contained, JsonArray):
+	# 				if needsComma:
+	# 					return [', ', ']']
+	# 				elif isinstance(contained.schema, JsonArraySchema):
+	# 					return self._getSuggestionsForSchema(contained.schema.element)
+	# 				return []
+	#
+	# 			elif isinstance(contained, JsonObject):
+	# 				if needsComma:
+	# 					return [', ', '}']
+	# 				elif isinstance(contained.schema, JsonObjectSchema):
+	# 					return [f'"{p.name}": ' for p in contained.schema.properties if p.name not in contained.data]
+	# 				return []
+	#
+	# 	else:
+	# 		if not matches.contained:
+	# 			return []
+	# 		contained = matches.contained[-1]
+	#
+	# 		if isinstance(contained, JsonArray):
+	# 			if isinstance(contained.schema, JsonArraySchema):
+	# 				return self._getSuggestionsForSchema(contained.schema.element) + [']']
+	# 			return []
+	#
+	# 		if isinstance(contained, JsonObject):
+	# 			if isinstance(contained.schema, JsonObjectSchema):
+	# 				return [f'"{p.name}": ' for p in contained.schema.properties] + ['}']
+	# 			return []
+	#
+	# 	return []
 
-			if isinstance(contained, JsonObject):
-				if isinstance(contained.schema, JsonObjectSchema):
-					return [f'"{p.name}": ' for p in contained.schema.properties] + ['}']
-				return []
-
-		return []
-
-	def getDocumentation(self, pos: Position) -> HTMLStr:
+	def getDocumentation(self, pos: Position) -> MDStr:
 		tips = []
 		matches = self.getBestMatch(pos)
+
+		if matches.hit is None and matches.after is not None and matches.after.span.start == pos:
+			matches.hit = matches.after
+			matches.after = None
+
 		for match in chain((matches.hit,), reversed(matches.contained)):
 			if match is None:
 				continue
 			if (schema := match.schema) is not None:
-				if schema.description:
-					tips.append(HTMLifyMarkDownSubSet(schema.description))
-				if schema.typeName == PropertySchema.typeName:
-					break
+				tips.append(f'###{schema.asString}:')
 				if isinstance(schema, JsonStringSchema) and schema.type is not None:
 					if isinstance(match, JsonString):
 						if (strHandler := self.getContext(match)) is not None:
 							tips.append(strHandler.getDocumentation(match, pos))
+				elif schema.description:
+					tips.append(schema.description)
+				if schema.typeName == PropertySchema.typeName:
+					break
 
-		return HTMLStr('<br/>'.join(tips))
+		return MDStr('\n\n'.join(tips))  # '\n<br/>\n'.join(tips)
 
 	def getCallTips(self, pos: Position) -> list[str]:
-		match = self.getBestMatch(pos)
+		matches = self.getBestMatch(pos)
+
+		if matches.hit is None and matches.after is not None and matches.after.span.start == pos:
+			matches.hit = matches.after
+			matches.after = None
+
 		return ['?']
 
 	def getClickableRangesInternal(self, span: Span) -> Iterable[Span]:
@@ -318,7 +434,7 @@ class JsonStringContext(Context[JsonString], ABC):
 	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
 		pass
 
-	def getDocumentation(self, node: JsonString, pos: Position) -> HTMLStr:
+	def getDocumentation(self, node: JsonString, pos: Position) -> MDStr:
 		return defaultDocumentationProvider(node)
 
 	def getClickableRanges(self, node: JsonString) -> Optional[Iterable[Span]]:
@@ -328,45 +444,29 @@ class JsonStringContext(Context[JsonString], ABC):
 		pass
 
 
-class AddContextToDictDecorator(AddToDictDecorator[str, JsonStringContext]):
-	def __call__(self, key: str, forceOverride: bool = False):
-		addFormatterInner = super(AddContextToDictDecorator, self).__call__(key, forceOverride)
-
-		def addFormatter(func: Type[JsonStringContext]) -> Type[JsonStringContext]:
-			addFormatterInner(func())
-			return func
-		return addFormatter
-
-
 __jsonStringContexts: dict[str, JsonStringContext] = {}
-jsonStringContext = Decorator(AddContextToDictDecorator(__jsonStringContexts))
+jsonStringContext = Decorator(AddContextToDictDecorator[JsonStringContext](__jsonStringContexts))
 
 
 def getJsonStringContext(aType: str) -> Optional[JsonStringContext]:
 	return __jsonStringContexts.get(aType, None)
 
 
-def defaultDocumentationProvider(argument: JsonData) -> HTMLStr:
+def defaultDocumentationProvider(argument: JsonData) -> MDStr:
 	schema = argument.schema
 	if schema is not None:
 		if schema.description:
-			tip = HTMLifyMarkDownSubSet(schema.description)
+			tip = schema.description
 		else:
-			tip = ''
+			tip = MDStr('')
 	else:
 		message = 'no documentation available (most likely due to parsing errors)'
-		tip = f'<div style="{PythonGUI.helpBoxStyles["error"]}">{message}</div>'
+		tip = formatAsError(message)
 	return tip
 
 
-def defaultDocumentationProvider2(data: JsonData) -> HTMLStr:
+def defaultDocumentationProvider2(data: JsonData) -> MDStr:
 	if (schema := data.schema) is not None:
 		if schema.description:
-			return HTMLifyMarkDownSubSet(schema.description)
-	return HTMLStr('')
-
-
-
-
-
-
+			return schema.description
+	return MDStr('')

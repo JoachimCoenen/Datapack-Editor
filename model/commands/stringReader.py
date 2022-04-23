@@ -360,7 +360,7 @@ class StringReader:
 	# 		return string
 
 	@cy_final
-	def tryReadResourceLocation(self, *, allowTag: bool = False) -> Optional[str]:  # throws CommandSyntaxException
+	def readResourceLocation(self, *, allowTag: bool = False) -> str:
 		# The namespace and the path of a resource location should only contain the following symbols:
 		#     0123456789 Numbers
 		#     abcdefghijklmnopqrstuvwxyz Lowercase letters

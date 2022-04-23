@@ -1,14 +1,12 @@
 from typing import Optional, Type, Union, Callable
 
 from Cat.utils.collections_ import OrderedDict
+from model.messages import *
 from model.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
 from model.nbt.tags import *
-from model.utils import Message, Position, GeneralError, Span
+from model.utils import Message, Position, GeneralError, Span, MDStr
 
-
-EXPECTED_BUT_GOT_MSG: Message = Message("Expected {}, but got: `{}`", 2)
-VALUE_OUT_OF_RANGE_MSG: Message = Message("Value is out of range (min={}, max={})", 2)
-INVALID_NUMBER_MSG: Message = Message("Invalid {}: '`{}`'", 2)
+INVALID_NUMBER_MSG: Message = Message("Invalid {0}: '`{1}`'", 2)
 
 
 class SNBTError(GeneralError):
@@ -42,13 +40,13 @@ class SNBTParser:
 	def errors(self) -> list[SNBTError]:
 		return self._errors
 
-	def _error(self, message: str, token: Token, style: str = 'error') -> None:
+	def _error(self, message: MDStr, token: Token, style: str = 'error') -> None:
 		if token is not None:
 			self._error2(message, token.span, style)
 		else:
 			self._error2(message, Span(Position(0, 0, 0)), style)
 
-	def _error2(self, message: str, span: Span, style: str = 'error') -> None:
+	def _error2(self, message: MDStr, span: Span, style: str = 'error') -> None:
 		self._errors.append(SNBTError(message, span, style=style))
 
 	def _next(self) -> None:
@@ -111,23 +109,23 @@ class SNBTParser:
 		content = self._getContent(current)
 		if content in {'true'}:
 			self._next()
-			return BooleanTag(True, current.span)
+			return BooleanTag(current.span, None, True)
 		elif content in {'false'}:
 			self._next()
-			return BooleanTag(False, current.span)
+			return BooleanTag(current.span, None, False)
 		else:
 			self._next()
-			return StringTag(content, current.span)
+			return StringTag(current.span, None, content)
 		
 	def parseBooleanTag(self) -> Optional[BooleanTag]:
 		current = self._current
 		content = self._getContent(current)
 		if content in {'true', '1b'}:
 			self._next()
-			return BooleanTag(True, current.span)
+			return BooleanTag(current.span, None, True)
 		elif content in {'false', '0b'}:
 			self._next()
-			return BooleanTag(False, current.span)
+			return BooleanTag(current.span, None, False)
 		else:
 			self._error(EXPECTED_BUT_GOT_MSG.format('a boolean', content), current)
 
@@ -164,9 +162,9 @@ class SNBTParser:
 					self._error(INVALID_NUMBER_MSG.format(cls.__name__, content), current)
 					value = 0
 				if not minVal <= value <= maxVal:
-					self._error(VALUE_OUT_OF_RANGE_MSG.format(minVal, maxVal), current)
+					self._error(NUMBER_OUT_OF_BOUNDS_MSG.format(minVal, maxVal), current)
 				self._next()
-				return cls(value, current.span)
+				return cls(current.span, None, value)
 		self._error(EXPECTED_BUT_GOT_MSG.format(name, content), current)
 		return None
 
@@ -193,11 +191,11 @@ class SNBTParser:
 		content = self._getContent(current)
 		if current.type == TokenType.String:
 			self._next()
-			return StringTag(content, current.span)
+			return StringTag(current.span, None, content)
 		elif current.type == TokenType.QuotedString:
 			# TODO: unescape QuotedString:
 			self._next()
-			return StringTag(content, current.span)
+			return StringTag(current.span, None, content)
 		else:
 			self._error(EXPECTED_BUT_GOT_MSG.format('a String', content), current)
 			return None
@@ -235,7 +233,8 @@ class SNBTParser:
 			return True
 
 		self._parseListLike(TokenType.Comma, TokenType.CloseList, parseItem)
-		return ListTag(values, Span(openingToken.span.start, self._last.span.end))
+		span = Span(openingToken.span.start, self._last.span.end)
+		return ListTag(span, None, values)
 
 	def parseCompoundTag(self) -> Optional[CompoundTag]:
 		if not self._consumeToken(TokenType.Compound):
@@ -256,7 +255,8 @@ class SNBTParser:
 			return True
 
 		self._parseListLike(TokenType.Comma, TokenType.CloseCompound, parseItem)
-		return CompoundTag(values, Span(openingToken.span.start, self._last.span.end))
+		span = Span(openingToken.span.start, self._last.span.end)
+		return CompoundTag(span, None, values)
 
 	def _parseArrayTag(self, cls: Type[ArrayTag], opening: TokenType, parseTag: Callable[[], Optional[NBTTag]]) -> Optional[ArrayTag]:
 		if not self._consumeToken(opening):
@@ -272,7 +272,8 @@ class SNBTParser:
 			return True
 
 		self._parseListLike(TokenType.Comma, TokenType.CloseList, parseItem)
-		return cls(values, Span(openingToken.span.start, self._last.span.end))
+		span = Span(openingToken.span.start, self._last.span.end)
+		return cls(span, None, values)
 
 	def parseByteArrayTag(self) -> Optional[ByteArrayTag]:
 		return self._parseArrayTag(ByteArrayTag, TokenType.ByteArray, self.parseByteTag)

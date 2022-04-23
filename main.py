@@ -111,6 +111,11 @@ def loadPlugins():
 	version6.initPlugin()
 
 
+def loadColorSchemes():
+	from gui.themes.theme import loadAllColorSchemes
+	loadAllColorSchemes()
+
+
 def start(argv):
 
 	os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '0'
@@ -138,6 +143,7 @@ def start(argv):
 		showSetupDialogIfNecessary()
 
 		loadPlugins()
+		loadColorSchemes()
 
 		window = MainWindow(WindowId('0'))
 		window.show()

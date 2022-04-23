@@ -9,7 +9,7 @@ from Cat.utils import CachedProperty
 from Cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
 from model.json.lexer import TokenType
 from model.parsing.tree import Node
-from model.utils import GeneralError
+from model.utils import GeneralError, MDStr
 
 Array = list['JsonData']
 Object = OrderedMultiDict[str, 'JsonProperty']
@@ -27,6 +27,8 @@ class JsonData(Node['JsonData', 'JsonSchema'], ABC):
 
 	typeName: ClassVar[str] = 'JsonData'
 
+	language: ClassVar[str] = 'JSON'
+
 	@property
 	@abstractmethod
 	def children(self) -> Collection[JsonData]:
@@ -34,7 +36,7 @@ class JsonData(Node['JsonData', 'JsonSchema'], ABC):
 
 	def walkTree(self) -> Iterator[JsonData]:
 		yield self
-		_walkChildren(self.children)
+		yield from _walkChildren(self.children)
 
 
 def _walkChildren(children: Collection[JsonData]) -> Iterator[JsonData]:
@@ -138,8 +140,8 @@ class JsonSchema(Generic[_TT], ABC):
 	DATA_TYPE: ClassVar[Type[_TT]] = JsonData
 	typeName: ClassVar[str] = 'JsonData'
 
-	def __init__(self, *, description: str = '', deprecated: bool = False):
-		self.description: str = description
+	def __init__(self, *, description: MDStr = '', deprecated: bool = False):
+		self.description: MDStr = description
 		self.deprecated: bool = deprecated
 
 	@property
@@ -164,7 +166,7 @@ class JsonNumberSchema(JsonSchema[JsonNumber], ABC):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonNumber
 	typeName: ClassVar[str] = 'number'
 
-	def __init__(self, *, minVal: _TN = -inf, maxVal: _TN = inf, description: str = '', deprecated: bool = False):
+	def __init__(self, *, minVal: _TN = -inf, maxVal: _TN = inf, description: MDStr = '', deprecated: bool = False):
 		super(JsonNumberSchema, self).__init__(description=description, deprecated=deprecated)
 		self.min: _TN = minVal
 		self.max: _TN = maxVal
@@ -189,7 +191,7 @@ class JsonStringSchema(JsonSchema[JsonString]):
 			type: Optional[JsonArgType] = None,
 			subType: Optional[JsonArgType] = None,
 			args: Optional[dict[str, Union[Any, None]]] = None,
-			description: str = '',
+			description: MDStr = '',
 			deprecated: bool = False
 	):
 		super(JsonStringSchema, self).__init__(description=description, deprecated=deprecated)
@@ -203,7 +205,7 @@ class JsonArraySchema(JsonSchema[JsonArray]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonArray
 	typeName: ClassVar[str] = 'array'
 
-	def __init__(self, *, description: str = '', element: JsonSchema, deprecated: bool = False):
+	def __init__(self, *, description: MDStr = '', element: JsonSchema, deprecated: bool = False):
 		super(JsonArraySchema, self).__init__(description=description, deprecated=deprecated)
 		self.element: JsonSchema = element
 
@@ -217,9 +219,9 @@ JSON_KEY_SCHEMA = JsonKeySchema()
 
 
 # class PropertySchema(Generic[_TT]):
-# 	def __init__(self, *, name: str, description: str = '', default: Optional[_TT] = None, value: JsonSchema[_TT]):
+# 	def __init__(self, *, name: str, description: MDStr = '', default: Optional[_TT] = None, value: JsonSchema[_TT]):
 # 		self.name: str = name
-# 		self.description: str = description
+# 		self.description: MDStr = description
 # 		self.default: Optional[_TT] = default
 # 		self.value: JsonSchema[_TT] = value
 #
@@ -233,18 +235,33 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonProperty
 	typeName: ClassVar[str] = 'property'
 
-	def __init__(self, *, name: str, description: str = '', value: JsonSchema[_TT2], default: JsonTypes = None, decidingProp: Optional[str] = None, values: dict[Union[str, int, bool], JsonSchema[_TT]] = None, deprecated: bool = False):
+	def __init__(self, *, name: str, description: MDStr = '', value: Optional[JsonSchema[_TT2]], default: JsonTypes = None, decidingProp: Optional[str] = None, values: dict[Union[str, int, bool], JsonSchema[_TT]] = None, deprecated: bool = False):
+		super(SwitchingPropertySchema, self).__init__(description=description, deprecated=deprecated)
 		self.name: str = name
-		self.description: str = description
-		self.deprecated: bool = deprecated
 		self.default: Optional[_TT2] = default
-		self.value: JsonSchema[_TT2] = value
+		self.value: Optional[JsonSchema[_TT2]] = value
 		self.decidingProp: Optional[str] = decidingProp
 		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = values or {}
 
 	@property
 	def mandatory(self) -> bool:
 		return self.default is None
+
+	def valueForParent(self, parent: JsonObject) -> Optional[JsonSchema[_TT2]]:
+		# TODO find better name for .valueForParent(...)
+		# if self.value is not None:
+		# 	return self.value
+		decidingProp = self.decidingProp
+		if decidingProp is not None:
+			dp = parent.data.get(decidingProp)
+			if dp is not None:
+				dVal = getattr(dp.value, 'data')
+			else:
+				dVal = None
+			selectedSchema = self.values.get(dVal, self.value)
+		else:
+			selectedSchema = self.value
+		return selectedSchema
 
 
 PropertySchema = SwitchingPropertySchema
@@ -255,7 +272,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonObject
 	typeName: ClassVar[str] = 'object'
 
-	def __init__(self, *, description: str = '', properties: list[SwitchingPropertySchema], deprecated: bool = False):
+	def __init__(self, *, description: MDStr = '', properties: list[SwitchingPropertySchema], deprecated: bool = False):
 		super(JsonObjectSchema, self).__init__(description=description, deprecated=deprecated)
 		self.properties: tuple[SwitchingPropertySchema, ...] = tuple(properties)
 		self.propertiesDict: Mapping[str, SwitchingPropertySchema] = self._buildPropertiesDict()
@@ -272,7 +289,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 class JsonUnionSchema(JsonSchema[JsonData]):
 	typeName: ClassVar[str] = 'union'
 
-	def __init__(self, *, description: str = '', options: Sequence[JsonSchema]):
+	def __init__(self, *, description: MDStr = '', options: Sequence[JsonSchema]):
 		super(JsonUnionSchema, self).__init__(description=description)
 		self.options: Sequence[JsonSchema] = options
 
@@ -317,10 +334,10 @@ class JsonArgType:
 			registerNamedJsonArgType(self)
 
 	name: str
-	description: str = ''
-	description2: str = ''
-	example: str = ''
-	examples: str = ''
+	description: MDStr = ''
+	description2: MDStr = ''
+	example: MDStr = ''
+	examples: MDStr = ''
 	jsonProperties: str = ''
 
 

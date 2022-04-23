@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from dataclasses import dataclass, fields
-from typing import TypeVar, Optional, Union, cast, Sequence
+from typing import TypeVar, Optional, cast, Sequence, Protocol, NewType
 
 from PyQt5.Qsci import QsciLexerCustom, QsciLexer, QsciScintilla
 from PyQt5.QtCore import Qt, QTimer
@@ -9,40 +11,16 @@ from PyQt5.QtGui import QFont, QColor
 from Cat.CatPythonGUI.GUI.codeEditor import MyQsciAPIs, AutoCompletionTree, Position as CEPosition, CallTipInfo
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override, HTMLStr
+from gui.lexers.styler import getStyler
+from gui.themes import theme
+from gui.themes.theme import StyleFont, NotSet, StyleStyle, DEFAULT_STYLE_STYLE
 from model.parsing.contextProvider import ContextProvider, getContextProvider
 from model.parsing.tree import Node
-from model.utils import GeneralError, Position
+from model.utils import GeneralError, Position, addStyle, MDStr, formatMarkdown
 from session.documents import TextDocument
 
 TT = TypeVar('TT')
 TokenType = int
-
-
-# @dataclass
-class NotSet:
-	def __init__(self, default):
-		self.default: TT = default
-
-
-@dataclass
-class StyleFont:
-	family: Union[str, NotSet] = NotSet('Courier New')
-	styleHint: Union[QFont.StyleHint, NotSet] = NotSet(QFont.Monospace)
-	pointSize: Union[int, NotSet] = NotSet(8)
-	bold: Union[bool, NotSet] = NotSet(False)
-	italic: Union[bool, NotSet] = NotSet(False)
-	underline: Union[bool, NotSet] = NotSet(False)
-	overline: Union[bool, NotSet] = NotSet(False)
-	strikeOut: Union[bool, NotSet] = NotSet(False)
-
-	# family: Union[str, NotSet[str]] = NotSet('Courier New')
-	# styleHint: Union[QFont.StyleHint, NotSet[QFont.StyleHint]] = NotSet(QFont.Monospace)
-	# pointSize: Union[int, NotSet[int]] = NotSet(8)
-	# bold: Union[bool, NotSet[bool]] = NotSet(False)
-	# italic: Union[bool, NotSet[bool]] = NotSet(False)
-	# underline: Union[bool, NotSet[bool]] = NotSet(False)
-	# overline: Union[bool, NotSet[bool]] = NotSet(False)
-	# strikeOut: Union[bool, NotSet[bool]] = NotSet(False)
 
 
 def QFontFromStyleFont(styleFont: StyleFont, parentFont: Optional[QFont] = None):
@@ -62,13 +40,6 @@ def QFontFromStyleFont(styleFont: StyleFont, parentFont: Optional[QFont] = None)
 	return qFont
 
 
-@dataclass
-class StyleStyle:
-	foreground: Optional[QColor] = None
-	background: Optional[QColor] = None
-	font: Optional[StyleFont] = None
-
-
 DEFAULT_STYLE: TokenType = 0
 
 
@@ -78,8 +49,8 @@ class DocumentLexerBase(QsciLexerCustom):
 		# Initialize superclass
 		super().__init__(parent)
 		# Initialize all style colors
-		self.initStyles(self.getStyles())
 		self._document: Optional[TextDocument] = None
+		self.initStyles(self.getStyles())
 
 		self._api = DocumentQsciAPIs(self)
 		self._api.prepare()
@@ -135,11 +106,87 @@ class DocumentLexerBase(QsciLexerCustom):
 		else:
 			super().setFont(font, style)
 
+	def getTree(self) -> Optional[Node]:
+		doc = self.document()
+		if doc is None:
+			return
+		tree = doc.tree
+		if isinstance(tree, Node):
+			return tree
+		return None
+
+	def getText(self) -> Optional[str]:
+		doc = self.document()
+		if doc is None:
+			return
+		return doc.content
+
 	def document(self) -> Optional[TextDocument]:
 		return self._document
 
 	def setDocument(self, document: Optional[TextDocument]) -> None:
 		self._document = document
+
+
+class DocumentLexerBase2(DocumentLexerBase):
+	# styleIndices: dict[str, int] = {name: i for i, name in enumerate(styles.keys())}
+
+	def __init__(self, parent=None):
+		# Initialize superclass
+		super().__init__(parent)
+		self._lastStylePos: int = 0
+
+	# @override
+	# def setDocument(self, document: Optional[TextDocument]) -> None:
+	# 	super(LexerMCFunction, self).setDocument(document)
+	# 	self.initStyles(self.getStyles())
+
+	@override
+	def getStyles(self) -> dict[StyleId, StyleStyle]:
+		styles = {DEFAULT_STYLE_ID: DEFAULT_STYLE_STYLE}
+		tree = self.getTree()
+		if tree is not None:
+			styler = getStyler(tree.language, lambda x, y: None)
+			if styler is not None:
+				styleIds = styler.allStyles
+				scheme = theme.currentColorScheme()
+
+				for name, styleId in styleIds.items():
+					style = scheme.getStyle(*name.partition(':')[::2])
+					if style is None:
+						style = DEFAULT_STYLE_STYLE
+					styles[styleId] = style
+
+		return styles
+
+	def startStyling(self, pos: int, styleBits: int = ...) -> None:
+		self._lastStylePos = pos
+		super(DocumentLexerBase2, self).startStyling(pos)
+
+	def styleText(self, start: int, end: int):
+		start = 0
+		text: str = self.getText()
+		tree = self.getTree()
+		if tree is None or text is None:
+			return
+
+		def setStyling(span: slice, style: StyleId) -> None:
+			index = span.start
+			if index > self._lastStylePos:
+				interStr = text[self._lastStylePos:index]
+				interStrLength = len(bytearray(interStr, "utf-8"))
+				self.setStyling(interStrLength, 0)  # styler.offset)
+
+			token = text[index:span.stop]
+			self._lastStylePos = span.stop
+			length = len(bytearray(token, "utf-8"))
+
+			self.setStyling(length, style)
+
+		styler = getStyler(tree.language, setStyling)
+		if styler is not None:
+			self.startStyling(0)
+			styler.styleNode(tree)
 
 
 class DocumentQsciAPIs(MyQsciAPIs):
@@ -201,20 +248,20 @@ class DocumentQsciAPIs(MyQsciAPIs):
 				doc.asyncValidate.callNow()
 
 	@override
-	def getHoverTip(self, cePosition: CEPosition) -> Optional[str]:
+	def getHoverTip(self, cePosition: CEPosition) -> Optional[HTMLStr]:
 		position = self.posFromCEPos(cePosition)
 		errors = self._errors
 		matchedErrors = [e for e in errors if e.position <= position <= e.end]
-		from Cat.CatPythonGUI.GUI import PythonGUI
-		tips = [f'<div style="{PythonGUI.helpBoxStyles.get(e.style, "")}">{e.message}</div>' for e in matchedErrors]
+		tips = [addStyle(e.htmlMessage, style=e.style) for e in matchedErrors]
 
 		if (ctxProvider := self.contextProvider) is not None:
 			tips.append(ctxProvider.getDocumentation(position))
 
 		if not tips:
 			return None
-		tip = '<br/>'.join(tips)
-		return f"{tip}"
+		tip = MDStr('\n\n'.join(tips))  # '\n<br/>\n'.join(tips)
+		tip = formatMarkdown(tip)
+		return tip
 
 	@override
 	def getCallTips(self, cePosition: CEPosition) -> list[CallTipInfo]:
@@ -257,3 +304,78 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 		if (ctxProvider := self.contextProvider) is not None:
 			ctxProvider.onIndicatorClicked(position, editor.window())
+
+
+_TNode = TypeVar('_TNode', bound=Node)
+
+
+class StylingFunc(Protocol):
+	def __call__(self, length: int, style: int) -> None:
+		...
+
+
+StyleId = NewType('StyleId', int)
+
+DEFAULT_STYLE_ID: StyleId = StyleId(0)
+
+
+@dataclass
+class Styler:
+	pos: int
+	styleOffset: int
+
+	_encoding: Optional[str]
+	_text: str
+	_lexer: QsciLexerCustom
+
+	def setStyling(self, length: int, style: StyleId) -> None:
+		actualLength = length if self._encoding is None else len(bytearray(self._text[self.pos:length], self._encoding))
+		self._lexer.setStyling(actualLength, style + self.styleOffset)
+		self.pos += length
+
+
+# @dataclass
+# class CatLexerBase(Generic[_TNode], ABC):
+#
+# 	styleIdOffsets: dict[str, int] = field(default_factory=dict)
+#
+# 	@property
+# 	@abstractmethod
+# 	def language(self) -> str:
+# 		pass
+#
+# 	@property
+# 	@abstractmethod
+# 	def styles(self) -> list[StyleStyle]:
+# 		pass
+#
+# 	@property
+# 	def totalStylesCount(self) -> int:
+# 		return sum(map(lambda x: x.totalStylesCount, self.innerLexers), len(self.styles))
+#
+# 	@property
+# 	@abstractmethod
+# 	def innerStyler(self) -> list[CatLexerBase]:
+# 		pass
+#
+# 	def initStyleOffsets(self) -> None:
+# 		offset = len(self.styles)
+# 		for styler in self.innerStyler:
+# 			if styler.language in self.styleIdOffsets:
+# 				raise ValueError(f"innerLexer for language '{styler.language}' defined twice in lexer '{self.language}'")
+# 			self.styleIdOffsets[styler.language] = offset
+# 			styler.initStyleOffsets()
+#
+# 	@abstractmethod
+# 	def styleText(self, start: int, end: int, startStyling: Callable[[int], None], setStyle: StylingFunc):
+# 		pass
+#
+# 	def setStyling(self, length: int, style: int) -> None:
+# 		assert (length >= 0)
+# 		doc = self.document()
+# 		if doc is not None:
+# 			text = doc.content[self._lastStylePos:self._lastStylePos + length]
+# 			self._lastStylePos += length
+# 			length = len(bytearray(text, "utf-8"))
+#
+# 		super(LexerJson, self).setStyling(length, style)

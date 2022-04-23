@@ -1,17 +1,17 @@
+from dataclasses import replace
 from typing import Protocol, Type
 
-from Cat.utils import escapeForXml
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclass
 from model.json.core import *
 from model.json.core import JsonInvalid, JsonSemanticsError
 from model.json.jsonContext import getJsonStringContext
+from model.messages import *
 from model.utils import Message, Span
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG = Message("Expected whitespace to end one argument, but found trailing data: `{0}`", 1)
 NO_JSON_SCHEMA_MSG = Message("No JSON Schema for {0}", 1)
 NO_JSON_SCHEMA_VALIDATOR_MSG = Message("No JSON Schema validator for {0}", 1)
-EXPECTED_BUT_GOT_MSG = Message("Expected `{0}`, but got `{1}`", 2)
-NUMBER_OUT_OF_BOUNDS_MSG = Message("Number out of bounds (min = {0}, max = {1})", 2)
+MISSING_JSON_STRING_HANDLER_MSG = Message("Missing JsonStringHandler for type `{0}`", 1)
 DUPLICATE_PROPERTY_MSG = Message("Duplicate property `{0}`", 1)
 UNKNOWN_PROPERTY_MSG = Message("Unknown property `{0}`", 1)
 MISSING_MANDATORY_PROPERTY_MSG = Message("Missing mandatory property `{0}`", 1)
@@ -104,10 +104,9 @@ def validateJsonString(data: JsonString, *, errorsIO: list[JsonSemanticsError]) 
 	if data.schema.type is not None:
 		argumentHandler = getJsonStringContext(data.schema.type.name)
 		if argumentHandler is not None:
-			argumentHandler.prepare(data, errorsIO)
 			argumentHandler.validate(data, errorsIO)
 		else:
-			errorsIO.append(JsonSemanticsError(f"Missing JsonStringHandler for type `{escapeForXml(data.schema.type.name)}`", data.span, style='info'))
+			errorsIO.append(JsonSemanticsError(INTERNAL_ERROR_MSG.format(MISSING_JSON_STRING_HANDLER_MSG, data.schema.type.name), data.span, style='info'))
 
 
 @schemaValidator(JsonArray)
@@ -146,7 +145,6 @@ def validateJsonObject(data: JsonObject, *, errorsIO: list[JsonSemanticsError]) 
 	for propSchema in data.schema.properties:
 		if propSchema.name not in validatedProps and propSchema.mandatory:
 			msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(propSchema.name))
-			errorsIO.append(JsonSemanticsError(msg, Span(data.span.end)))
-
-
-
+			end = data.span.end
+			start = replace(end, column=end.column - 1, index=end.index - 1)
+			errorsIO.append(JsonSemanticsError(msg, Span(start, end)))

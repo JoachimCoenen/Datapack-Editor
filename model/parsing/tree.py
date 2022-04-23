@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import TypeVar, Collection, Generic, Iterator, Optional
+from typing import TypeVar, Collection, Generic, Iterator, Optional, ClassVar
 
 from model.utils import Span
 
@@ -13,6 +13,8 @@ _TSchema = TypeVar('_TSchema', bound='Schema')
 class Node(Generic[_TNode, _TSchema]):
 	span: Span = field(hash=False, compare=False)
 	schema: Optional[_TSchema] = field(hash=False, compare=False)
+
+	language: ClassVar[str] = ''
 
 	# @property
 	# @abstractmethod
@@ -44,6 +46,3 @@ class Schema:
 	@abstractmethod
 	def asString(self) -> str:
 		pass
-
-
-

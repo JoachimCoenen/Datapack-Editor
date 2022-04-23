@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TypeVar, Union, Optional, Sequence, Any, Generic
+from typing import TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar
 
 from Cat.utils import Singleton
 from model.commands.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
@@ -146,6 +146,8 @@ class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPar
 
 	_next: Optional[CommandPart] = field(default=None, init=False)
 	_prev: Optional[CommandPart] = field(default=None, init=False, repr=False)
+
+	language: ClassVar[str] = 'MCCommand'
 
 	@property
 	def next(self) -> Optional[CommandPart]:

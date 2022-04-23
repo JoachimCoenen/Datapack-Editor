@@ -1,18 +1,26 @@
-from dataclasses import dataclass, field
-from typing import TypeVar, Generic
+from dataclasses import dataclass
+from typing import TypeVar, Generic, ClassVar
 
 from Cat.utils.collections_ import OrderedDict
-from model.utils import Span
+from model.parsing.tree import Node, Schema
 
 TS = TypeVar('TS')
 TT = TypeVar('TT')
 TT2 = TypeVar('TT2')
 
 
+class NBTTagSchema(Schema):
+	def asString(self) -> str:
+		return 'NBTTagSchema'
+
+
 @dataclass
-class NBTTag(Generic[TT]):
+class NBTTag(Node['NBTTag', NBTTagSchema], Generic[TT]):
+	# span: Span = field(default_factory=Span)
+	# schema: Optional[Schema] = field(default=None, hash=False, compare=False)
 	data: TT
-	span: Span = field(default_factory=Span)
+
+	language: ClassVar[str] = 'SNBT'
 
 
 TTag = TypeVar('TTag', bound=NBTTag)
@@ -79,6 +87,7 @@ class LongArrayTag(ArrayTag[LongTag]):
 
 
 __all__ = [
+	'NBTTagSchema',
 	'NBTTag',
 	'BooleanTag',
 	'NumberTag',

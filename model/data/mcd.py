@@ -7,7 +7,7 @@ from model.datapackContents import ResourceLocation
 
 
 def rlsFromData(mcdList: list) -> set[ResourceLocation]:
-	return {ResourceLocation.fromString(d['name']) for d in mcdList}
+	return {ResourceLocation.fromString(f"minecraft:{d['name']}") for d in mcdList}
 
 
 def fillFromMinecraftData(version: MCVersion) -> None:

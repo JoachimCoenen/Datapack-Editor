@@ -1,35 +1,33 @@
 import re
 from abc import abstractmethod, ABC
-from dataclasses import replace
-from itertools import chain
-from json import JSONDecodeError
 from typing import Optional, Iterable
 
 from PyQt5.QtWidgets import QWidget
 
-from Cat.utils import HTMLStr
-from model.Model import Datapack, choicesForDatapackContents, metaInfoFromDatapackContents
 from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
-from model.commands.command import ArgumentSchema, ParsedArgument
+from model.commands.command import ArgumentSchema, ParsedArgument, CommandPart
 from model.commands.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser, getArgumentContext
-from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs
+from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, \
+	validateFilterArgs
 from model.commands.snbt import parseNBTPath, parseNBTTag
 from model.commands.stringReader import StringReader
 from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
-from model.datapackContents import ResourceLocation, choicesFromResourceLocations, containsResourceLocation
+from model.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from model.json.parser import parseJsonStr
-from model.json.validator import validateJson
-import model.resourceLocationContext as rlc
-from model.parsing.contextProvider import Suggestions
-from model.utils import Span, Position, GeneralError
+from model.messages import *
+from model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation
+from model.utils import Span, Position, GeneralError, MDStr, Message
 from session.session import getSession
 
 
 def init():
 	pass  # do not remove!
+
+
+OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
 
 
 class ResourceLocationLikeHandler(ArgumentContext, ABC):
@@ -56,26 +54,30 @@ class ResourceLocationLikeHandler(ArgumentContext, ABC):
 
 	@property
 	@abstractmethod
-	def context(self) -> rlc.ResourceLocationContext:
+	def schema(self) -> ResourceLocationSchema:
 		pass
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=self.context.allowTags)
+		return _parseResourceLocation(sr, ai, self.schema)
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		self.context.validate(node.value, node.span, errorsIO)
+		validateTree(node.value, node.source, errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return self.context.getSuggestions(contextStr, cursorPos, replaceCtx)
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		if node is None:
+			value = ResourceLocationNode.fromString('', Span(pos), self.schema)
+			return getSuggestions(value, '', pos, replaceCtx)
+		else:
+			return getSuggestions(node.value, node.source, pos, replaceCtx)
 
-	def getDocumentation(self, node: ParsedArgument, position: Position) -> HTMLStr:
-		return self.context.getDocumentation(node.value) or super(ResourceLocationLikeHandler, self).getDocumentation(node, position)
+	def getDocumentation(self, node: ParsedArgument, position: Position) -> MDStr:
+		return getDocumentation(node.value, node.source, position) or super(ResourceLocationLikeHandler, self).getDocumentation(node, position)
 
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		return self.context.getClickableRanges(node.value, node.span)
+		return getClickableRanges(node.value, node.source, node.span)
 
 	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
-		return self.context.onIndicatorClicked(node.value, window)
+		return onIndicatorClicked(node.value, node.source, position, window)
 
 
 @argumentContext(BRIGADIER_BOOL.name)
@@ -86,7 +88,7 @@ class BoolHandler(ArgumentContext):
 			return None
 		return makeParsedArgument(sr, ai, value=string)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
 		return ['true', 'false']
 
 
@@ -155,8 +157,8 @@ class BlockPosHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse3dPos(sr, ai, useFloat=self.useFloat(ai), errorsIO=errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return _get3dPosSuggestions(ai, contextStr, cursorPos, useFloat=self.useFloat(ai))
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
+		return _get3dPosSuggestions(ai, node, pos, replaceCtx, useFloat=self.useFloat(ai))
 
 
 @argumentContext(MINECRAFT_BLOCK_STATE.name)
@@ -165,14 +167,18 @@ class BlockStateHandler(ArgumentContext):
 		super().__init__()
 		self._allowTag: bool = allowTag
 
+	def _getBlockStatesDict(self, blockID: ResourceLocation) -> dict[str, FilterArgumentInfo]:
+		return getSession().minecraftData.getBlockStatesDict(blockID)
+
+	rlcSchema = ResourceLocationSchema('', 'block')
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# block_id[block_states]{data_tags}
-		blockID = sr.tryReadResourceLocation(allowTag=self._allowTag)
-		if blockID is None:
-			return None
-		blockID = ResourceLocation.fromString(blockID)
+		blockID = sr.readResourceLocation(allowTag=self._allowTag)
+		blockID = ResourceLocationNode.fromString(blockID, sr.currentSpan, self.rlcSchema)
+
 		# block states:
-		blockStatesDict = getSession().minecraftData.getBlockStatesDict(blockID)
+		blockStatesDict = self._getBlockStatesDict(blockID)
 		states: Optional[FilterArguments] = parseFilterArgs(sr, blockStatesDict, errorsIO=errorsIO)
 		if states is not None:
 			sr.mergeLastSave()
@@ -193,34 +199,38 @@ class BlockStateHandler(ArgumentContext):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		blockState: BlockState = node.value
 		if not isinstance(blockState, BlockState):
-			errorsIO.append(CommandSemanticsError(f"Internal Error! expected BlockState , but got'{blockState}'.", node.span))
+			errorsIO.append(CommandSemanticsError(INTERNAL_ERROR_MSG.format(EXPECTED_BUT_GOT_MSG, '`BlockState`', type(blockState).__name__), node.span))
 			return
 
-		blockId = blockState.blockId
-		if blockId.isTag:
-			isValid = any(blockId in dp.contents.tags.blocks for dp in getSession().world.datapacks)
-			if not isValid:
-				errorsIO.append(CommandSemanticsError(f"Unknown block tag '{blockId.asString}'.", node.span, style='error'))
-		else:
-			if not containsResourceLocation(blockId, getSession().minecraftData.blocks):
-				errorsIO.append(CommandSemanticsError(f"Unknown block id '{blockId.asString}'.", node.span, style='warning'))
+		validateTree(blockState.blockId, node.source, errorsIO)
+		blockStatesDict = self._getBlockStatesDict(blockState.blockId)
+		validateFilterArgs(blockState.states, blockStatesDict, errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
+		if blockState.nbt is not None:
+			validateTree(blockState.nbt, node.source, errorsIO)
+
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		if node is None:
+			return []
+		blockState: BlockState = node.value
+		if not isinstance(blockState, BlockState):
+			return []
+
 		suggestions: Suggestions = []
-		if '[' in contextStr or cursorPos == len(contextStr):
-			sr = StringReader(contextStr, 0, 0, contextStr)
-			blockID = sr.tryReadResourceLocation(allowTag=self._allowTag)
-			if blockID is not None:
-				if cursorPos >= len(blockID):
-					blockStatesDict = getSession().minecraftData.getBlockStatesDict(ResourceLocation.fromString(blockID))
-					argsStart = sr.currentPos.index
-					suggestions += suggestionsForFilterArgs(sr.tryReadRemaining() or '', cursorPos - argsStart, replaceCtx, blockStatesDict)
-					if cursorPos > len(blockID):  # we're inside the block states, so don't suggest blocks anymore.
-						return suggestions
-		suggestions += choicesFromResourceLocations(contextStr, getSession().minecraftData.blocks)
-		if self._allowTag:
-			tags = choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks)
-			suggestions += tags
+
+		blockID = blockState.blockId
+		argsStart = blockID.span.end
+		if pos.index >= argsStart.index:
+			blockStatesDict = self._getBlockStatesDict(blockID)
+			suggestions += suggestionsForFilterArgs(blockState.states, node.content[argsStart:], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
+
+		if pos in blockID.span:
+			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
+			# suggestions += rlc.BlockContext(self._allowTag).getSuggestions(contextStr, cursorPos, replaceCtx)
+
+		if blockState.nbt is not None and pos in blockState.nbt.span:
+			suggestions += getSuggestions(blockState.nbt, node.source, pos, replaceCtx)
+
 		return suggestions
 
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
@@ -228,29 +238,20 @@ class BlockStateHandler(ArgumentContext):
 		if not isinstance(blockState, BlockState):
 			return None
 
-		blockId = blockState.blockId
-		start = node.span.start
-		end = node.span.end
-		end = replace(
-			end,
-			column=min(end.column, start.column + len(blockId.asString)),
-			index=min(end.index, start.index + len(blockId.asString))
-		)
-
 		ranges = []
-		if blockId.isTag:
-			span = Span(start, end)
-			ranges.append(span)
-
+		ranges += getClickableRanges(blockState.blockId, node.source, node.span)
 		ranges += clickableRangesForFilterArgs(blockState.states)
+		if blockState.nbt is not None:
+			ranges += getClickableRanges(blockState.nbt, node.source, node.span)
 
 		return ranges
 
 	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
 		blockState: BlockState = node.value
-		if position.index <= node.start.index + len(blockState.blockId.asString):
-			if (metaInfo := metaInfoFromDatapackContents(blockState.blockId, Datapack.contents.tags.blocks)) is not None:
-				window._tryOpenOrSelectDocument(metaInfo.filePath)  # very bad...
+		if position in blockState.blockId.span:
+			onIndicatorClicked(blockState.blockId, node.source, position, window)
+		elif blockState.nbt is not None and position in blockState.nbt.span:
+			onIndicatorClicked(blockState.nbt, node.source, position, window)
 		else:
 			onIndicatorClickedForFilterArgs(blockState.states, position, window)
 
@@ -259,6 +260,8 @@ class BlockStateHandler(ArgumentContext):
 class BlockPredicateHandler(BlockStateHandler):
 	def __init__(self):
 		super().__init__(allowTag=True)
+
+	rlcSchema = ResourceLocationSchema('', 'block_type')
 
 
 @argumentContext(MINECRAFT_COLUMN_POS.name)
@@ -283,7 +286,7 @@ class ColumnPosHandler(ArgumentContext):
 		blockPos = f'{columnPos1} {columnPos2}'
 		return makeParsedArgument(sr, ai, value=blockPos)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return ['~ ~']
 
 
@@ -291,51 +294,73 @@ class ColumnPosHandler(ArgumentContext):
 class ComponentHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# TODO: parseComponent(...): Must be a raw JSON text.
-		remainder = sr.tryReadRemaining()
-		if remainder is None:
+		# remainder = sr.tryReadRemaining()
+		if sr.hasReachedEnd:
 			return None
-		try:
-			schema = getSession().datapackData.jsonSchemas.get('rawJsonText')
-			jsonData, errors = parseJsonStr(remainder, False, schema)
-			for e in errors:
-				position = sr.posFromColumn(sr.lastCursors.peek() + e.span.start.index)
-				end = sr.posFromColumn(sr.lastCursors.peek() + e.span.end.index)
-				errorsIO.append(CommandSyntaxError(e.message, Span(position, end), style=e.style))
-		except JSONDecodeError as e:
-			position = sr.posFromColumn(sr.lastCursors.peek() + e.colno)
-			end = sr.currentPos
-			errorsIO.append(CommandSyntaxError(e.msg, Span(position, end), style='error'))
-			return None
+		schema = getSession().datapackData.jsonSchemas.get('rawJsonText')
+		jsonData, errors = parseJsonStr(sr.fullSource, False, schema, cursor=sr.cursor + sr._lineStart, line=sr._lineNo, lineStart=sr._lineStart, totalLength=sr._lineStart + sr.totalLength)
+		sr.tryReadRemaining()
+
+		for e in errors:
+			errorsIO.append(e)
+			# position = sr.posFromColumn(sr.lastCursors.peek() + e.span.start.index)
+			# end = sr.posFromColumn(sr.lastCursors.peek() + e.span.end.index)
+			# errorsIO.append(CommandSyntaxError(e.message, Span(position, end), style=e.style))
 		else:
 			return makeParsedArgument(sr, ai, value=jsonData)
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		errors = validateJson(node.value)
-		nss = node.span.start
-		for er in errors:
-			s = Position(
-				nss.line,
-				nss.column + er.span.start.index,
-				nss.index + er.span.start.index
-			)
-			e = Position(
-				nss.line,
-				nss.column + er.span.end.index,
-				nss.index + er.span.end.index
-			)
-			if isinstance(er, GeneralError):
-				er.span = Span(s, e)
-			else:
-				er = CommandSemanticsError(er.message, Span(s, e), er.style)
-			errorsIO.append(er)
+		validateTree(node.value, node.source, errorsIO)
+		# errors = validateJson(node.value)
+		# nss = node.span.start
+		# for er in errors:
+		# 	s = Position(
+		# 		nss.line,
+		# 		nss.column + er.span.start.index,
+		# 		nss.index + er.span.start.index
+		# 	)
+		# 	e = Position(
+		# 		nss.line,
+		# 		nss.column + er.span.end.index,
+		# 		nss.index + er.span.end.index
+		# 	)
+		# 	if isinstance(er, GeneralError):
+		# 		er.span = Span(s, e)
+		# 	else:
+		# 		er = CommandSemanticsError(er.message, Span(s, e), er.style)
+		# 	errorsIO.append(er)
 
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		"""
+		:param ai:
+		:param node:
+		:param pos: cursor position
+		:param replaceCtx: the string that will be replaced
+		:return:
+		"""
+		if node is not None:
+			return getSuggestions(node.value, node.source, pos, replaceCtx)
+		return []
+
+	def getDocumentation(self, node: ParsedArgument, pos: Position) -> MDStr:
+		docs = [
+			super(ComponentHandler, self).getDocumentation(node, pos),
+			getDocumentation(node.value, node.source, pos)
+		]
+		return MDStr('\n\n'.join(docs))
+
+	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
+		return getClickableRanges(node.value, node.source)
+
+	def onIndicatorClicked(self, node: ParsedArgument, pos: Position, window: QWidget) -> None:
+		onIndicatorClicked(node.value, node.source, pos, window)
 
 @argumentContext(MINECRAFT_DIMENSION.name)
 class DimensionHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.DimensionContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'dimension')
 
 
 @argumentContext(MINECRAFT_ENTITY.name)
@@ -357,11 +382,13 @@ class EntityHandler(ArgumentContext):
 
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		if 0 <= cursorPos < 2:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		if node is None or pos.index - node.span.start.index < 2:
 			return ['@a', '@e', '@s', '@p', '@r', ]
-		else:
-			return suggestionsForFilterArgs(contextStr[2:], cursorPos - 2, replaceCtx, TARGET_SELECTOR_ARGUMENTS_DICT)
+		targetSelector: TargetSelector = node.value
+		if not isinstance(targetSelector, TargetSelector):
+			return []
+		return suggestionsForFilterArgs(targetSelector.arguments, node.content[2:], pos.index - node.span.start.index - 2, pos, replaceCtx, TARGET_SELECTOR_ARGUMENTS_DICT)
 
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		targetSelector: TargetSelector = node.value
@@ -378,16 +405,16 @@ class EntityHandler(ArgumentContext):
 class EntitySummonHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.EntitySummonContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'entity_summon')
 
 
 @argumentContext(MINECRAFT_ENTITY_TYPE.name)
 class EntityTypeHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.EntityTypeContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'entity_type')
 
 
 @argumentContext(MINECRAFT_FLOAT_RANGE.name)
@@ -402,7 +429,7 @@ class FloatRangeHandler(ArgumentContext):
 			return None
 		return makeParsedArgument(sr, ai, value=range_)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return ['0...']
 
 
@@ -410,8 +437,8 @@ class FloatRangeHandler(ArgumentContext):
 class FunctionHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.FunctionContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'function')
 
 
 @argumentContext(MINECRAFT_GAME_PROFILE.name)
@@ -432,7 +459,7 @@ class IntRangeHandler(ArgumentContext):
 			return None
 		return makeParsedArgument(sr, ai, value=range_)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return ['0...']
 
 
@@ -440,8 +467,8 @@ class IntRangeHandler(ArgumentContext):
 class ItemEnchantmentHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.ItemEnchantmentContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'enchantment')
 
 
 @argumentContext(MINECRAFT_ITEM_SLOT.name)
@@ -455,9 +482,9 @@ class ItemSlotHandler(ArgumentContext):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		slot: str = node.value
 		if slot not in getSession().minecraftData.slots:
-			errorsIO.append(CommandSemanticsError(f"Unknown item slot '{slot}'.", node.span, style='error'))
+			errorsIO.append(CommandSemanticsError(UNKNOWN_MSG.format("item slot",  slot), node.span, style='error'))
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return list(getSession().minecraftData.slots.keys())
 
 
@@ -467,12 +494,12 @@ class ItemStackHandler(ArgumentContext):
 		super().__init__()
 		self._allowTag: bool = allowTag
 
+	rlcSchema = ResourceLocationSchema('', 'item')
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# item_id{data_tags}
-		itemID = sr.tryReadResourceLocation(allowTag=self._allowTag)
-		if itemID is None:
-			return None
-		itemID = ResourceLocation.fromString(itemID)
+		itemID = sr.readResourceLocation(allowTag=self._allowTag)
+		itemID = ResourceLocationNode.fromString(itemID, sr.currentSpan, self.rlcSchema)
 
 		# data tags:
 		if sr.tryConsumeChar('{'):
@@ -489,50 +516,54 @@ class ItemStackHandler(ArgumentContext):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		itemStack: ItemStack = node.value
 		if not isinstance(itemStack, ItemStack):
-			errorsIO.append(CommandSemanticsError(f"Internal Error! expected ItemStack , but got '{itemStack}'.", node.span))
+			errorsIO.append(CommandSemanticsError(INTERNAL_ERROR_MSG.format(EXPECTED_BUT_GOT_MSG, '`ItemStack`', type(itemStack).__name__), node.span))
 			return
 
-		itemId = itemStack.itemId
-		if itemId.isTag:
-			isValid = any(itemId in dp.contents.tags.items for dp in getSession().world.datapacks) \
-					or any(itemId in dp.contents.tags.blocks for dp in getSession().world.datapacks)  # I think so...
-			if not isValid:
-				errorsIO.append(CommandSemanticsError(f"Unknown block tag '{itemId.asString}'.", node.span, style='error'))
-		else:
-			if not (containsResourceLocation(itemId, getSession().minecraftData.items) or containsResourceLocation(itemId, getSession().minecraftData.blocks)):
-				errorsIO.append(CommandSemanticsError(f"Unknown item id '{itemId.asString}'.", node.span, style='warning'))
+		validateTree(itemStack.itemId, node.source, errorsIO)
+		if itemStack.nbt is not None:
+			validateTree(itemStack.nbt, node.source, errorsIO)
 		return None
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		result = choicesFromResourceLocations(contextStr, chain(getSession().minecraftData.items, getSession().minecraftData.blocks))
-		if self._allowTag:
-			result.extend(choicesForDatapackContents(contextStr, Datapack.contents.tags.items))
-			result.extend(choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks))
-		return result
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		# result = choicesFromResourceLocations(contextStr, chain(getSession().minecraftData.items, getSession().minecraftData.blocks))
+		# if self._allowTag:
+		# 	result.extend(choicesForDatapackContents(contextStr, Datapack.contents.tags.items))
+		# 	# ?? result.extend(choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks))
+		# return result
+		if node is None:
+			return []
+		itemStack: ItemStack = node.value
+		if not isinstance(itemStack, ItemStack):
+			return []
+
+		suggestions = []
+		if pos in itemStack.itemId.span:
+			suggestions += getSuggestions(itemStack.itemId, node.source, pos, replaceCtx)
+
+		if itemStack.nbt is not None and pos in itemStack.nbt.span:
+			suggestions += getSuggestions(itemStack.nbt, node.source, pos, replaceCtx)
+
+		return getSuggestions(node, node.source, pos, replaceCtx)
 
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		itemStack: ItemStack = node.value
 		if not isinstance(itemStack, ItemStack):
 			return None
 
-		itemId = itemStack.itemId
-		if itemId.isTag:
-			start = node.span.start
-			end = node.span.end
-			end = replace(
-				end,
-				column=min(end.column, start.column + len(itemId.asString)),
-				index=min(end.index, start.index + len(itemId.asString))
-			)
-			span = Span(start, end)
-			return [span]
-		return None
+		ranges = []
+		ranges += getClickableRanges(itemStack.itemId, node.source)
+
+		if itemStack.nbt is not None:
+			ranges += getClickableRanges(itemStack.nbt, node.source)
+
+		return ranges
 
 	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
-		if (metaInfo := metaInfoFromDatapackContents(node.value.itemId, Datapack.contents.tags.items)) is not None:
-			window._tryOpenOrSelectDocument(metaInfo.filePath)  # very bad...
-		elif (metaInfo := metaInfoFromDatapackContents(node.value.itemId, Datapack.contents.tags.blocks)) is not None:
-			window._tryOpenOrSelectDocument(metaInfo.filePath)  # very bad...
+		itemStack: ItemStack = node.value
+		if position in itemStack.itemId.span:
+			onIndicatorClicked(itemStack.itemId, node.source, position, window)
+		elif itemStack.nbt is not None and position in itemStack.nbt.span:
+			onIndicatorClicked(itemStack.nbt, node.source, position, window)
 
 
 @argumentContext(MINECRAFT_ITEM_PREDICATE.name)
@@ -554,8 +585,8 @@ class MessageHandler(ArgumentContext):
 class MobEffectHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.MobEffectContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'mob_effect')
 
 
 @argumentContext(MINECRAFT_NBT_COMPOUND_TAG.name)
@@ -584,7 +615,6 @@ class NbtTagHandler(ArgumentContext):
 			return None
 		return makeParsedArgument(sr, ai, value=nbt)
 
-
 @argumentContext(MINECRAFT_OBJECTIVE.name)
 class ObjectiveHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
@@ -596,13 +626,15 @@ class ObjectiveHandler(ArgumentContext):
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		if len(node.value) > 16 and getSession().minecraftData.name < '1.18':
-			errorsIO.append(CommandSemanticsError(f"Objective names cannot be longer than 16 characters.", node.span, style='error'))
+			errorsIO.append(CommandSemanticsError(OBJECTIVE_NAME_LONGER_THAN_16_MSG.format(), node.span, style='error'))
 
 
 @argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name)
 class ObjectiveCriteriaHandler(ArgumentContext):
+	rlcSchema = ResourceLocationSchema('', 'any_no_tag')
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, allowTag=False, errorsIO=errorsIO)
+		return _parseResourceLocation(sr, ai, self.rlcSchema)
 		# TODO: add validation for objective_criteria
 
 
@@ -610,22 +642,32 @@ class ObjectiveCriteriaHandler(ArgumentContext):
 class ParticleHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.ParticleContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'particle')
 
 
 @argumentContext(MINECRAFT_PREDICATE.name)
 class PredicateHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.PredicateContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'predicate')
 
 
 @argumentContext(MINECRAFT_RESOURCE_LOCATION.name)
-class ResourceLocationHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, errorsIO=errorsIO, allowTag=False)
+class ResourceLocationHandler(ResourceLocationLikeHandler):
+
+	@property
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'any_no_tag')
+
+
+@argumentContext(DPE_ADVANCEMENT.name)
+class ResourceLocationHandler(ResourceLocationLikeHandler):
+
+	@property
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'advancement')
 
 
 @argumentContext(MINECRAFT_ROTATION.name)
@@ -669,9 +711,9 @@ class ScoreHolderHandler(EntityHandler):
 				return None
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		suggestions = super(ScoreHolderHandler, self).getSuggestions2(ai, contextStr, cursorPos, replaceCtx)
-		if cursorPos <= 2:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		suggestions = super(ScoreHolderHandler, self).getSuggestions2(ai, node, pos, replaceCtx)
+		if node is None or (node.start.index - pos.index) <= 2:
 			suggestions.append('*')
 		return suggestions
 
@@ -748,8 +790,8 @@ class Vec2Handler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse2dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return _get2dPosSuggestions(ai, contextStr, cursorPos, useFloat=True)
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		return _get2dPosSuggestions(ai, node, pos, replaceCtx, useFloat=True)
 
 
 @argumentContext(MINECRAFT_VEC3.name)
@@ -757,16 +799,16 @@ class Vec3Handler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse3dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, contextStr: str, cursorPos: int, replaceCtx: str) -> Suggestions:
-		return _get3dPosSuggestions(ai, contextStr, cursorPos, useFloat=True)
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		return _get3dPosSuggestions(ai, node, pos, replaceCtx, useFloat=True)
 
 
 @argumentContext(DPE_BIOME_ID.name)
 class BiomeIdHandler(ResourceLocationLikeHandler):
 
 	@property
-	def context(self) -> rlc.ResourceLocationContext:
-		return rlc.BiomeIdContext()
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'biome')
 
 
 @argumentContext(ST_DPE_DATAPACK.name)

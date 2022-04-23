@@ -92,6 +92,7 @@ _allArgumentTypeStyles: dict[str, TokenType] = {
 	MINECRAFT_UUID.name:               TokenType.String,
 	MINECRAFT_VEC2.name:               TokenType.Number,
 	MINECRAFT_VEC3.name:               TokenType.Number,
+	DPE_ADVANCEMENT.name:              TokenType.String,
 	DPE_COMPARE_OPERATION.name:        TokenType.Operator,
 	DPE_BIOME_ID.name:                 TokenType.String,
 }

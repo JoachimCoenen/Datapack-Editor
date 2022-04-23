@@ -3,7 +3,7 @@ from typing import Optional
 
 from Cat.utils.collections_ import OrderedMultiDict
 from model.commands.command import ParsedArgument, CommandPart
-from model.datapackContents import ResourceLocation
+from model.datapackContents import ResourceLocationNode
 from model.nbt.tags import CompoundTag
 
 
@@ -20,14 +20,14 @@ class FilterArguments(OrderedMultiDict[str, FilterArgument]):
 
 @dataclass
 class BlockState:
-	blockId: ResourceLocation
+	blockId: ResourceLocationNode
 	states: FilterArguments
 	nbt: Optional[CompoundTag]
 
 
 @dataclass
 class ItemStack:
-	itemId: ResourceLocation
+	itemId: ResourceLocationNode
 	nbt: Optional[CompoundTag]
 
 

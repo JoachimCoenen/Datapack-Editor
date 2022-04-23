@@ -87,13 +87,14 @@ class JsonTokenizer:
 	cursor: int = 0
 	line: int = 0
 	lineStart: int = 0
-	totalLength: int = field(init=False)
+	totalLength: int = field(default=-1)
 	tokens: deque[Token] = field(default_factory=deque)
 	errors: list[JsonTokenizeError] = field(default_factory=list)
 	_errorsNextToken: list[tuple[Message, tuple, str]] = field(default_factory=list, init=False)
 
 	def __post_init__(self):
-		self.totalLength = len(self.source)
+		if self.totalLength == -1:
+			self.totalLength = len(self.source)
 
 	@property
 	def position(self) -> Position:
@@ -305,9 +306,9 @@ _TOKEN_EXTRACTORS_BY_CHAR = {
 }
 
 
-def tokenizeJson(source: str, allowMultilineStr: bool) -> tuple[deque[Token], list[GeneralError]]:
+def tokenizeJson(source: str, allowMultilineStr: bool, *, cursor: int = 0, line: int = 0, lineStart: int = 0, totalLength: int = -1) -> tuple[deque[Token], list[GeneralError]]:
 	"""Converts a JSON string into a queue of tokens"""
-	tkz = JsonTokenizer(source, allowMultilineStr)
+	tkz = JsonTokenizer(source, allowMultilineStr, cursor, line, lineStart, totalLength)
 
 	tkz.consumeWhitespace()
 	while tkz.cursor < tkz.totalLength:

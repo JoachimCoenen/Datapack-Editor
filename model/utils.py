@@ -1,9 +1,19 @@
 from __future__ import annotations
 import builtins
 from dataclasses import dataclass, field
-from typing import final, Iterator, Optional
+from typing import final, Iterator, Optional, NewType, Protocol
 
-from Cat.utils import HTMLifyMarkDownSubSet
+import markdown
+
+from Cat.utils import strings
+
+
+LanguageId = NewType('LanguageId', str)
+
+
+class MessageLike(Protocol):
+	def format(self, *args) -> MDStr:
+		pass
 
 
 @dataclass(frozen=True)
@@ -11,13 +21,30 @@ class Message:
 	rawMessage: str
 	argsCount: int
 
-	def format(self, *args) -> str:
+	def format(self, *args) -> MDStr:
 		if len(args) > self.argsCount:
 			raise ValueError(f"too many arguments supplied. expected {self.argsCount}, but got {len(args)}")
 		elif len(args) < self.argsCount:
 			raise ValueError(f"too few arguments supplied. expected {self.argsCount}, but got {len(args)}")
 
-		return self.rawMessage.format(*args)
+		return MDStr(self.rawMessage.format(*args))
+
+
+@dataclass(frozen=True)
+class MessageAdapter:
+	rawMessage: str
+	argsCount: int
+
+	def format(self, msg: MessageLike, *args) -> MDStr:
+		if len(args) < self.argsCount:
+			raise ValueError(f"too few arguments supplied. expected at least {self.argsCount}, but got {len(args)}")
+
+		selfArgs = args[:self.argsCount]
+		innerArgs = args[self.argsCount:]
+
+		innerMsg = msg.format(*innerArgs)
+
+		return MDStr(self.rawMessage.format(*selfArgs, msg=innerMsg))
 
 
 @final
@@ -67,19 +94,50 @@ class Span:
 		yield self.start
 		yield self.end
 
-	def __contains__(self, item):
+	def __contains__(self, item: Position):
 		return self.start.index <= item.index <= self.end.index
 
 	def __repr__(self):
 		return f' Span({self.start!r}, {self.end!r})'
 
 
+HTMLStr = strings.HTMLStr
+"""A HTML string. (see: https://daringfireball.net/projects/markdown/)"""
+
+MDStr = NewType('MDStr', str)
+"""A Markdown string. (see: https://daringfireball.net/projects/markdown/)"""
+
+
+def formatMarkdown(text: str, /) -> HTMLStr:
+	html = markdown.markdown(text)
+	return HTMLStr(html)
+
+
+def addStyle(message: str, /, style: str) -> MDStr:
+	from Cat.CatPythonGUI.GUI import PythonGUI
+	md = f'<div style="{PythonGUI.helpBoxStyles[style]}">{message}</div>'
+	return MDStr(md)
+
+
+def formatAsHint(message: str, /) -> MDStr:
+	return addStyle(message, "hint")
+
+
+def formatAsWarning(message: str, /) -> MDStr:
+	return addStyle(message, "warning")
+
+
+def formatAsError(message: str, /) -> MDStr:
+	return addStyle(message, "error")
+
+
 class GeneralError:  # TODO: find better & more descriptive name
-	def __init__(self, message: str, span: Span, style: str = 'error'):
+	def __init__(self, message: MDStr, span: Span, style: str = 'error'):
 		super(GeneralError, self).__init__()
 		if self.__class__ is GeneralError:
 			raise RuntimeError("GeneralError should not be instantiated directly")
-		self.message: str = f"<font>{HTMLifyMarkDownSubSet(message)}</font>"
+		self.message: MDStr = message
+		self.htmlMessage: HTMLStr = formatMarkdown(message)
 		self.span: Span = span
 		self.style: str = style
 
@@ -103,24 +161,30 @@ class SemanticsError(GeneralError):
 	pass
 
 
-class WrappedError:
+class WrappedError(GeneralError):
 	"""
 	just a wrapper for any Exception
 	satisfies protocol `Error`
 	"""
 	def __init__(self, exception: Exception):
-		super(WrappedError, self).__init__()
+		message = MDStr(str(exception))
+		super(WrappedError, self).__init__(message, Span(), 'error')
 		self.wrappedEx = exception
-		self.message: str = str(exception)
-		self.position: Optional[Position] = None
-		self.end: Optional[Position] = None
-		self.style: str = 'error'
 
 
 __all__ = [
+	'LanguageId',
 	'Message',
+	'MessageAdapter',
 	'Position',
 	'Span',
+	'HTMLStr',
+	'MDStr',
+	'formatMarkdown',
+	'addStyle',
+	'formatAsHint',
+	'formatAsWarning',
+	'formatAsError',
 	'GeneralError',
 	'ParsingError',
 	'SemanticsError',

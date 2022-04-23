@@ -7,8 +7,10 @@ from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoC
 from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, SerializedPropertyBaseBase
 from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
-from Cat.utils import HTMLStr, HTMLifyMarkDownSubSet, unescapeFromXml, escapeForXmlAttribute, CachedProperty, Deprecated
+from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty, Deprecated
+from model.parsing.tree import Schema, Node
 from model.pathUtils import FilePathTpl, loadTextFile, ZipFilePool
+from model.utils import MDStr, Span
 
 
 def isNamespaceValid(namespace: str) -> bool:
@@ -61,7 +63,7 @@ class ResourceLocation:
 	@property
 	def asQualifiedString(self) -> str:
 		"""
-		Always the prepends the namespace, even if it could be omited.
+		Always prepends the namespace, even if it could be omitted.
 
 			ResourceLocation.fromString('end_rod').asString == 'minecraft:end_rod'
 			ResourceLocation.fromString('minecraft:end_rod').asString == 'minecraft:end_rod'
@@ -70,7 +72,7 @@ class ResourceLocation:
 		return f'{tag}{self.actualNamespace}:{self.path}'
 
 	@classmethod
-	def fromString(cls, value: str) -> ResourceLocation:
+	def splitString(cls, value: str) -> tuple[Optional[str], str, bool]:
 		namespace, _, path = value.partition(':')
 		isTag = namespace.startswith('#')
 		if isTag:
@@ -78,34 +80,38 @@ class ResourceLocation:
 		if not _:
 			path = namespace
 			namespace = None
-		return cls(namespace, path, isTag)
+		return namespace, path, isTag
+
+	@classmethod
+	def fromString(cls, value: str) -> ResourceLocation:
+		return cls(*cls.splitString(value))
 
 	@property
 	def _asTuple(self) -> tuple[bool, str, str]:
 		return self.isTag, self.actualNamespace, self.path,
 
 	def __eq__(self, other):
-		if other.__class__ is self.__class__:
+		if hasattr(other, '_asTuple'):
 			return self._asTuple == other._asTuple
 		return NotImplemented
 
 	def __lt__(self, other):
-		if other.__class__ is self.__class__:
+		if hasattr(other, '_asTuple'):
 			return self._asTuple < other._asTuple
 		return NotImplemented
 
 	def __le__(self, other):
-		if other.__class__ is self.__class__:
+		if hasattr(other, '_asTuple'):
 			return self._asTuple <= other._asTuple
 		return NotImplemented
 
 	def __gt__(self, other):
-		if other.__class__ is self.__class__:
+		if hasattr(other, '_asTuple'):
 			return self._asTuple > other._asTuple
 		return NotImplemented
 
 	def __ge__(self, other):
-		if other.__class__ is self.__class__:
+		if hasattr(other, '_asTuple'):
 			return self._asTuple >= other._asTuple
 		return NotImplemented
 
@@ -114,13 +120,38 @@ class ResourceLocation:
 
 
 @dataclass
+class ResourceLocationSchema(Schema):
+	name: str
+
+	def asString(self) -> str:
+		return self.name
+
+
+@dataclass(order=False, eq=False, unsafe_hash=False, frozen=True)
+class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema], ResourceLocation):
+	# TODO: maybe move to different module, or move ResourceLocationContext implementations?
+
+	@classmethod
+	def fromString(cls, value: str, span: Span, schema: Optional[ResourceLocationSchema]) -> ResourceLocationNode:
+		namespace, path, isTag = cls.splitString(value)
+		return cls(namespace, path, isTag, span, schema)
+
+	__eq__ = ResourceLocation.__eq__
+	__lt__ = ResourceLocation.__lt__
+	__le__ = ResourceLocation.__le__
+	__gt__ = ResourceLocation.__gt__
+	__ge__ = ResourceLocation.__ge__
+	__hash__ = ResourceLocation.__hash__
+
+
+@dataclass
 class MetaInfo:
 	filePath: FilePathTpl = FilePathTpl(('', ''))
 	resourceLocation: ResourceLocation = ResourceLocation(None, '', False)
 
 	@property
-	def documentation(self) -> HTMLStr:
-		return HTMLStr('')
+	def documentation(self) -> MDStr:
+		return MDStr('')
 
 
 _TMetaInfo = TypeVar('_TMetaInfo', bound=MetaInfo)
@@ -129,7 +160,7 @@ _TMetaInfo = TypeVar('_TMetaInfo', bound=MetaInfo)
 class FunctionMeta(MetaInfo):
 
 	@CachedProperty
-	def documentation(self) -> HTMLStr:
+	def documentation(self) -> MDStr:
 		"""
 		TODO: add documentation for Formatting of MCFunction Documentation
 		Special parameters:
@@ -145,8 +176,8 @@ class FunctionMeta(MetaInfo):
 		except OSError as e:
 			logError(e)
 
-		doc = ''
-		whiteSpaces = 999  # way to many
+		doc = []
+		whiteSpaces = 999  # way too many
 		for line in lines:
 			if not line.startswith('#'):
 				break
@@ -163,26 +194,47 @@ class FunctionMeta(MetaInfo):
 
 			# handle special parameters:
 			if line.startswith('Desc:'):
-				line = '<b>Description:</b>' + line[len('Desc:'):] + '\n'
+				doc.append('<b>Description:</b>' + line[len('Desc:'):])
 			elif line.startswith('Called by:'):
 				line2 = line[len('Called by:'):]
 				functions = line2.split(',')
 
-				line = '<b>Called by:</b><ul>'
+				doc.append('<b>Called by:</b>')
 				for f in functions:
 					f = f.strip()
 					f = unescapeFromXml(f)
 					f = escapeForXmlAttribute(f)
-					line += f'\n\t<li><a href="@dpe.function:{f}">`{f}`</a></li>'
-				line += '\n</ul>'
-			doc += f'\n{line}'
+					doc.append(f'* [`{f}`](@dpe.function:{f})')
+			else:
+				doc.append(line)
 
-		return HTMLifyMarkDownSubSet(doc)
+		return MDStr('\n'.join(doc))
 
 
 @dataclass
 class JsonMeta(MetaInfo):
 	schemaId: str = ''
+
+	@CachedProperty
+	def documentation(self) -> MDStr:
+		try:
+			with ZipFilePool() as pool:
+				file = loadTextFile(self.filePath, pool)
+		except OSError as e:
+			logError(e)
+			return MDStr('')
+
+		from model.json.parser import parseJsonStr
+		json, errors = parseJsonStr(file, True, None)
+
+		from model.json.core import JsonObject
+		if json is not None and isinstance(json, JsonObject):
+			description = json.data.get('description')
+			from model.json.core import JsonString
+			if description is not None and isinstance(description.value, JsonString):
+				return MDStr(description.value.data)
+
+		return MDStr('')
 
 
 @dataclass
@@ -352,8 +404,8 @@ def getEntryHandlersForFolder(fullPath: FilePathTpl, handlers: dict[str, list[En
 	while rest:
 		p, _, rest = rest.partition('/')
 		prefix += p + '/'
-		if (handlers := handlers.get(prefix)) is not None:
-			return handlers
+		if (handler := handlers.get(prefix)) is not None:
+			return handler
 		continue
 	return []
 

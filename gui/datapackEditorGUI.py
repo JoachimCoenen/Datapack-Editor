@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QApplication, QSizePolicy
 
 from Cat.CatPythonGUI.GUI.enums import ResizeMode
 from model.datapackContents import getEntryHandlersForFolder
+from model.utils import formatMarkdown
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
@@ -86,7 +87,7 @@ def createNewFile(folderPath: FilePath, name: str) -> FilePath:
 
 	with openOrCreate(joinedFilePath, 'a'):
 		pass  # creates the File
-	return joinedFilePath
+	return filePath
 
 
 def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
@@ -780,7 +781,7 @@ class DatapackEditorGUI(AutoGUI):
 			positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
 		else:
 			positionMsg = ''
-		errorMsg = error.message
+		errorMsg = error.htmlMessage
 		style = getattr(error, 'style', 'error')
 		with self.hLayout():
 			self.helpBox(errorMsg, style=style, hasLabel=False, hSizePolicy=QSizePolicy.Expanding, **kwargs)
@@ -807,7 +808,7 @@ class DatapackEditorGUI(AutoGUI):
 				positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
 			else:
 				positionMsg = ''
-			errorMsg = error.message.replace('\n', '')
+			errorMsg = error.htmlMessage.replace('\n', '')
 			return (errorMsg, positionMsg)[i]
 
 		errorIcons = self._errorIcons

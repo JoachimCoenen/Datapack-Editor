@@ -9,10 +9,8 @@ from Cat.utils.profiling import ProfiledFunction
 from model.json.lexer import Token, tokenizeJson, TokenType
 from model.json.core import *
 from model.json.schema import enrichWithSchema
-from model.utils import GeneralError, Span, Message
-
-EOF_MSG = Message("Unexpected end of file while parsing", 0)
-EXPECTED_BUT_GOT_MSG = Message("Expected {0} but got `{1}`", 2)
+from model.messages import *
+from model.utils import GeneralError, Span, MDStr
 
 
 # class ParseError(Exception):
@@ -35,7 +33,7 @@ class ParserData:
 	def accept(self, tokenType: TokenType) -> Optional[Token]:
 		if len(self.tokens) == 0:
 			span = self.lastToken.span if self.lastToken is not None else Span()
-			self.errors.append(JsonParseError(EOF_MSG.format(), span))
+			self.errors.append(JsonParseError(UNEXPECTED_EOF_MSG.format(), span))
 			return self.lastToken
 
 		token = self.tokens.popleft()
@@ -48,7 +46,7 @@ class ParserData:
 	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType], name: str = None) -> Optional[Token]:
 		if len(self.tokens) == 0:
 			span = self.lastToken.span if self.lastToken is not None else Span()
-			self.errors.append(JsonParseError(EOF_MSG.format(), span))
+			self.errors.append(JsonParseError(UNEXPECTED_EOF_MSG.format(), span))
 			return self.lastToken
 
 		token = self.tokens.popleft()
@@ -63,7 +61,7 @@ class ParserData:
 	def acceptAny(self) -> Optional[Token]:
 		if len(self.tokens) == 0:
 			span = self.lastToken.span if self.lastToken is not None else Span()
-			self.errors.append(JsonParseError(EOF_MSG.format(), span))
+			self.errors.append(JsonParseError(UNEXPECTED_EOF_MSG.format(), span))
 			return None
 		token = self.tokens.popleft()
 		self.lastToken = token
@@ -201,7 +199,7 @@ def parse_string(psr: ParserData, schema: Optional[Union[JsonStringSchema, JsonK
 				try:
 					unicode_char = literal_eval(f'"\\u{hex_string}"')
 				except SyntaxError as err:
-					psr.errors.append(JsonParseError(f"Invalid unicode escape: `\\u{hex_string}`", token.span))
+					psr.errors.append(JsonParseError(MDStr(f"Invalid unicode escape: `\\u{hex_string}`"), token.span))
 					unicode_char = '\\u{hex_string}'
 
 				chars.append(unicode_char)
@@ -221,7 +219,7 @@ def parse_string(psr: ParserData, schema: Optional[Union[JsonStringSchema, JsonK
 			elif next_char == 't':
 				chars.append('\t')
 			else:
-				psr.errors.append(JsonParseError(f"Unknown escape sequence: `{token.value}`", token.span))
+				psr.errors.append(JsonParseError(MDStr(f"Unknown escape sequence: `{token.value}`"), token.span))
 
 			index += 2
 
@@ -245,7 +243,7 @@ def parse_number(psr: ParserData, schema: Optional[JsonArraySchema]) -> JsonNumb
 		return JsonNumber(token.span, schema, number)
 
 	except ValueError as err:
-		psr.errors.append(JsonParseError(f"Invalid number: `{token.value} ", token.span))
+		psr.errors.append(JsonParseError(MDStr(f"Invalid number: `{token.value}`"), token.span))
 	return JsonNumber(token.span, schema, 0)
 
 
@@ -304,14 +302,14 @@ def parseJsonTokens(tokens: deque[Token], schema: Optional[JsonSchema]) -> tuple
 
 
 @ProfiledFunction(enabled=False)
-def parseJsonStr(json_string: str, allowMultilineStr: bool, schema: Optional[JsonSchema]) -> tuple[Optional[JsonData], list[GeneralError]]:
+def parseJsonStr(json_string: str, allowMultilineStr: bool, schema: Optional[JsonSchema], *, cursor: int = 0, line: int = 0, lineStart: int = 0, totalLength: int = -1) -> tuple[Optional[JsonData], list[GeneralError]]:
 	"""Parses a JSON string into a Python object"""
-	tokens, errors = tokenizeJson(json_string, allowMultilineStr)
+	tokens, errors = tokenizeJson(json_string, allowMultilineStr, cursor=cursor, line=line, lineStart=lineStart, totalLength=totalLength)
 	value, errors2 = parseJsonTokens(tokens, schema)
 	errors += errors2
 	if len(tokens) > 1:
 		errors.append(JsonParseError(
-			f"Invalid JSON at {tokens[0].value} ",
+			MDStr(f"Invalid JSON at `{tokens[0].value}`"),
 			tokens[0].span
 		))
 

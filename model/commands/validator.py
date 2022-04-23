@@ -7,6 +7,7 @@ from model.commands.command import formatPossibilities, CommandPartSchema, TERMI
 from model.commands.commandContext import getArgumentContext
 from model.commands.utils import CommandSemanticsError
 from model.commands.command import MCFunction, CommandPart, ParsedCommand
+from model.messages import *
 from model.utils import Span
 
 if TYPE_CHECKING:
@@ -107,5 +108,5 @@ def validateArgument(commandPart: CommandPart, *, errorsIO: list[CommandSemantic
 			validateCommand(commandPart, errorsIO=errorsIO)
 			return None, []
 		else:
-			errorsIO.append(CommandSemanticsError(f"Internal Error: commandPart should be a `ParsedCommand`, but it was `{type(commandPart).__name__}`", commandPart.span))
+			errorsIO.append(CommandSemanticsError(INTERNAL_ERROR_MSG.format(EXPECTED_BUT_GOT_MSG, '`ParsedCommand`', type(commandPart).__name__), commandPart.span))
 			return commandPart.next, schema.next

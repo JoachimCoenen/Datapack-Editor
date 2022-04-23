@@ -467,7 +467,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentSchema(
 									name='advancement',
-									type=MINECRAFT_RESOURCE_LOCATION,
+									type=DPE_ADVANCEMENT,
 									next=[
 										TERMINAL,
 										ArgumentSchema(
@@ -483,7 +483,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentSchema(
 									name='advancement',
-									type=MINECRAFT_RESOURCE_LOCATION,
+									type=DPE_ADVANCEMENT,
 								),
 							]
 						),
@@ -492,7 +492,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentSchema(
 									name='advancement',
-									type=MINECRAFT_RESOURCE_LOCATION,
+									type=DPE_ADVANCEMENT,
 								),
 							]
 						),
@@ -501,7 +501,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentSchema(
 									name='advancement',
-									type=MINECRAFT_RESOURCE_LOCATION,
+									type=DPE_ADVANCEMENT,
 								),
 							]
 						),

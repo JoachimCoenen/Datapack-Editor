@@ -742,6 +742,16 @@ MINECRAFT_VEC3 = ArgumentType(
 	* {{cd|~0.5 ~1 ~-5}}""",
 )
 
+DPE_ADVANCEMENT = ArgumentType(
+	name='dpe:advancement',
+	description="{{Arg desc|je=resource_location}}",
+	description2="""""",
+	examples="""
+	* {{cd|foo}}
+	* {{cd|foo:bar}}
+	* {{cd|012}}""",
+)
+
 
 DPE_COMPARE_OPERATION = LiteralsArgumentType(
 	name='dpe:compare_operation',
@@ -833,6 +843,7 @@ __all__ = [
 	'MINECRAFT_UUID',
 	'MINECRAFT_VEC2',
 	'MINECRAFT_VEC3',
+	'DPE_ADVANCEMENT',
 	'DPE_COMPARE_OPERATION',
 	'DPE_BIOME_ID',
 	'ST_DPE_DATAPACK',

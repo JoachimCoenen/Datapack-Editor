@@ -14,9 +14,9 @@ from model.commands.command import ArgumentSchema, ParsedArgument, CommandPart
 from model.commands.commandContext import getArgumentContext, missingArgumentParser, makeParsedArgument
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
-from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
+from model.messages import *
 from model.parsing.contextProvider import Suggestions
-from model.utils import Span, Position
+from model.utils import Span, Position, GeneralError
 
 
 @dataclass
@@ -112,6 +112,10 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 		return None
 
 
+def validateFilterArgs(fas: FilterArguments, argsInfo: dict[str, FilterArgumentInfo], errorsIO: list[GeneralError]) -> None:
+	pass  # TODO: implement validateFilterArgs(...)
+
+
 def getBestFAMatch(fas: FilterArguments, cursorPos: int) -> Optional[ParsedArgument]:
 	for fa in fas.values():
 		if (value := fa.value) is not None and value.span.start.index <= cursorPos <= value.span.end.index:
@@ -160,8 +164,8 @@ def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, Filter
 	return CursorCtx(None, isValue=False, inside=False, after=False)
 
 
-def suggestionsForFilterArgs(contextStr: str, cursorPos: int, replaceCtx: str, argsInfo: dict[str, FilterArgumentInfo]) -> Suggestions:
-	if cursorPos == 0:
+def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: str, cursorPos: int, pos: Position, replaceCtx: str, argsInfo: dict[str, FilterArgumentInfo]) -> Suggestions:
+	if node is None or cursorPos == 0:
 		# if len(contextStr) == 0:
 		if not argsInfo:
 			return [replaceCtx + '[]']
@@ -171,18 +175,15 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, replaceCtx: str, a
 	# 	if len(contextStr) >= 1:
 	# 		if contextStr[0] == '[':
 	#
-
 	if contextStr.startswith('[') and not contextStr.endswith(']'):
 		contextStr += ']'
-	sr = StringReader(contextStr, 0, 0, contextStr)
-	errors = []
-	ts = parseFilterArgs(sr, argsInfo, errorsIO=errors)
-	if ts is None:
+
+	if node is None:
 		return []
 
 	cursorTouchesWord = re.search(r'\w*$', contextStr[:cursorPos]).group()
 
-	context = getCursorContext(contextStr, cursorPos, argsInfo, ts)
+	context = getCursorContext(contextStr, cursorPos, argsInfo, node)
 	if context.fa is None:
 		return [cursorTouchesWord + ']'] + [f'{key}=' for key in argsInfo.keys()]
 
@@ -194,7 +195,7 @@ def suggestionsForFilterArgs(contextStr: str, cursorPos: int, replaceCtx: str, a
 				if isinstance(tsaInfo, ArgumentSchema):
 					handler = getArgumentContext(tsaInfo.type)
 					if handler is not None:
-						suggestions += handler.getSuggestions2(tsaInfo, contextStr, cursorPos, replaceCtx)
+						suggestions += handler.getSuggestions2(tsaInfo, value, pos, replaceCtx)
 						# TODO: maybe log if no handler has been found...
 		if context.after:
 			suggestions.append(cursorTouchesWord + ', ')
@@ -233,6 +234,7 @@ def onIndicatorClickedForFilterArgs(filterArgs: FilterArguments, position: Posit
 __all__ = [
 	'FilterArgumentInfo',
 	'parseFilterArgs',
+	'validateFilterArgs',
 	'suggestionsForFilterArgs',
 	'clickableRangesForFilterArgs',
 	'onIndicatorClickedForFilterArgs',

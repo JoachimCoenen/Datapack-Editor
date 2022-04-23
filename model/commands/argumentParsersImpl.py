@@ -6,9 +6,11 @@ from model.commands.snbt import parseNBTTag
 from model.commands.utils import CommandSyntaxError
 from model.commands.command import ParsedArgument
 from model.commands.stringReader import StringReader
-from model.Model import ResourceLocation
+from model.datapackContents import ResourceLocationSchema, ResourceLocationNode
 from model.nbt.tags import NBTTag, CompoundTag
 from model.parsing.contextProvider import Suggestions
+from model.resourceLocationContext import getResourceLocationContext
+from model.utils import Position
 
 
 def _init():
@@ -40,7 +42,7 @@ def _parse2dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsI
 	return makeParsedArgument(sr, ai, value=blockPos)
 
 
-def _get2dPosSuggestions(ai: ArgumentSchema, contextStr: str, cursorPos: int, *, useFloat: bool) -> Suggestions:
+def _get2dPosSuggestions(ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, *, useFloat: bool) -> Suggestions:
 	return ['~ ~', '0 0']
 
 
@@ -78,7 +80,7 @@ def _parse3dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsI
 	return makeParsedArgument(sr, ai, value=blockPos)
 
 
-def _get3dPosSuggestions(ai: ArgumentSchema, contextStr: str, cursorPos: int, *, useFloat: bool) -> Suggestions:
+def _get3dPosSuggestions(ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, *, useFloat: bool) -> Suggestions:
 	return ['~ ~ ~', '^ ^ ^', '0 0 0']
 
 
@@ -94,9 +96,9 @@ def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, *, errorsIO: lis
 		return None
 
 
-def _parseResourceLocation(sr: StringReader, ai: ArgumentSchema, *, allowTag: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-	location = sr.tryReadResourceLocation(allowTag=allowTag)
-	if location is None:
-		return None
-	location = ResourceLocation.fromString(location)
+def _parseResourceLocation(sr: StringReader, ai: ArgumentSchema, schema: ResourceLocationSchema) -> Optional[ParsedArgument]:
+	rlc = getResourceLocationContext(schema.name)
+	allowTag = rlc.allowTags
+	location = sr.readResourceLocation(allowTag=allowTag)
+	location = ResourceLocationNode.fromString(location, sr.currentSpan, schema)
 	return makeParsedArgument(sr, ai, value=location)

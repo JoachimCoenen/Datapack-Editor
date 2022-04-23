@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Sequence, Optional
 
 from Cat.CatPythonGUI.GUI.codeEditor import Error
@@ -10,8 +11,10 @@ from model.datapackContents import MetaInfo, getEntryHandlerForFile, JsonMeta
 from model.json.core import JsonSchema
 from model.json.parser import parseJsonStr
 from model.json.validator import validateJson
+from model.parsing.contextProvider import prepareTree, getContextProvider
+from model.parsing.tree import Node
 from model.pathUtils import FilePath
-from model.utils import WrappedError
+from model.utils import WrappedError, GeneralError
 from session.documents import RegisterDocument, TextDocument, Document
 
 
@@ -21,7 +24,10 @@ class DatapackDocument(Document):
 	def __typeCheckerInfo___(self):
 		# giving the type checker a helping hand...
 		super(DatapackDocument, self).__typeCheckerInfo___()
+		self.tree: Optional[Node] = None
 		self.metaInfo: Optional[MetaInfo] = None
+
+	tree: Optional[Node] = Serialized(default=None, shouldSerialize=False, shouldPrint=False, decorators=[pd.NoUI()])
 
 	@ComputedCached(shouldSerialize=False)
 	def metaInfo(self) -> Optional[MetaInfo]:
@@ -31,6 +37,24 @@ class DatapackDocument(Document):
 				rl, handler = resLocHandler
 				metaInfo = handler.buildMetaInfo(self.filePath, rl)
 				return metaInfo
+
+	@abstractmethod
+	def parseStr(self, text: str) -> tuple[Optional[Node], list[GeneralError]]:
+		pass
+
+	def validate(self) -> Sequence[GeneralError]:
+		try:
+			tree, errors = self.parseStr(self.content)
+			if tree is not None:
+				self.tree = tree
+				ctxProvider = getContextProvider(tree, self.content)
+				if ctxProvider is not None:
+					ctxProvider.prepareTree()
+					ctxProvider.validateTree(errors)
+		except Exception as e:
+			print(format_full_exc(e))
+			return [WrappedError(e)]
+		return errors
 
 
 @RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='MCJson')
@@ -65,17 +89,21 @@ class JsonDocument(TextDocument, DatapackDocument):
 		else:
 			return None
 
-	def validate(self) -> Sequence[Error]:
-		schema = self.schema
-		try:
-			tree, errors = parseJsonStr(self.content, False, schema)
-			if tree is not None:
-				self.tree = tree
-				errors += validateJson(tree)
-		except Exception as e:
-			print(format_full_exc(e))
-			return [WrappedError(e)]
-		return errors
+	def parseStr(self, text: str) -> tuple[Optional[Node], list[GeneralError]]:
+		return parseJsonStr(self.content, True, self.schema)
+
+	# def validate(self) -> Sequence[Error]:
+	# 	schema = self.schema
+	# 	try:
+	# 		tree, errors = parseJsonStr(self.content, True, schema)
+	# 		if tree is not None:
+	# 			self.tree = tree
+	# 			prepareTree(tree, self.content)
+	# 			errors += validateJson(tree)
+	# 	except Exception as e:
+	# 		print(format_full_exc(e))
+	# 		return [WrappedError(e)]
+	# 	return errors
 
 
 @RegisterDocument('mcFunction', ext=['.mcFunction'], defaultLanguage='MCFunction')
@@ -102,12 +130,16 @@ class MCFunctionDocument(TextDocument, DatapackDocument):
 
 	encoding: str = Serialized(default='utf-8')
 
-	def validate(self) -> Sequence[Error]:
+	def parseStr(self, text: str) -> tuple[Optional[Node], list[GeneralError]]:
 		tree, errors = parseMCFunction(getSession().minecraftData.commands, self.content)
-		if tree is not None:
-			self.tree = tree
-			errors += checkMCFunction(tree)
-		return errors
+		return tree, errors
+
+	# def validate(self) -> Sequence[Error]:
+	# 	tree, errors = parseMCFunction(getSession().minecraftData.commands, self.content)
+	# 	if tree is not None:
+	# 		self.tree = tree
+	# 		errors += checkMCFunction(tree)
+	# 	return errors
 
 
 def init() -> None:

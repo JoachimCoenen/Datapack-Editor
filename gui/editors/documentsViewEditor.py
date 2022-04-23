@@ -68,7 +68,6 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			roundedCorners=roundedCorners,
 			movable=True,
 			tabsClosable=True,
-			closeIcon=icons.closeTab,
 			onTabMoved=self._tabMoved,
 			onTabCloseRequested=self._tabCloseRequested,
 			onContextMenuRequested=self._showFileContextMenu,
@@ -182,7 +181,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		gui.addVSpacer(int(50 * gui.scale), SizePolicy.Fixed)
 		with gui.hLayout():
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
-			if gui.button("close View", icon=icons.close2, hSizePolicy=SizePolicy.Fixed.value):
+			if gui.button("close View", icon=icons.close, hSizePolicy=SizePolicy.Fixed.value):
 				self.model().manager.safelyCloseView(self.model())
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
 

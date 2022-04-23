@@ -8,8 +8,7 @@ from model.commands.commandContext import argumentContext, ArgumentContext, getA
 from model.commands.filterArgs import FilterArgumentInfo
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
-from model.nbt.snbtParser import EXPECTED_BUT_GOT_MSG
-
+from model.messages import *
 
 DPE_TARGET_SELECTOR_SCORES = ArgumentType(
 	name='dpe:target_selector_scores',
@@ -160,14 +159,14 @@ class TargetSelectorScoresArgumentHandler(ArgumentContext):
 			objective = handler.parse(sr, None, errorsIO=errorsIO)
 			if objective is None:
 				objective = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
-				errorsIO.append(CommandSyntaxError(f"Expected an objective.", sr.currentSpan, style='error'))
+				errorsIO.append(CommandSyntaxError(EXPECTED_MSG.format("an objective"), sr.currentSpan, style='error'))
 			else:
 				objective = objective.value
 
 			sr.tryConsumeWhitespace()
 			if not sr.tryConsumeChar('='):
 				sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
-				errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", sr.currentSpan, style='error'))
+				errorsIO.append(CommandSyntaxError(EXPECTED_MSG.format("'='"), sr.currentSpan, style='error'))
 				sr.mergeLastSave()
 			else:
 				sr.tryConsumeWhitespace()
@@ -177,7 +176,7 @@ class TargetSelectorScoresArgumentHandler(ArgumentContext):
 				if value is None:
 					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
 					value = makeParsedArgument(sr, None, value=remainig)
-					errorsIO.append(CommandSyntaxError(f"Expected {MINECRAFT_INT_RANGE.name}.", sr.currentSpan, style='error'))
+					errorsIO.append(CommandSyntaxError(EXPECTED_MSG.format(MINECRAFT_INT_RANGE.name), sr.currentSpan, style='error'))
 				sr.mergeLastSave()
 				scores.add(objective, value)
 
