@@ -1,20 +1,24 @@
+from __future__ import annotations
 import os
 from math import log10
 from operator import itemgetter
-from typing import Optional, Tuple, Collection
+from typing import Optional, Tuple, Collection, Union
 
 from PyQt5.QtCore import pyqtSignal, QEventLoop, QObject, Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QDialog, QSizePolicy, QWidget
 
 from Cat.CatPythonGUI.GUI import SizePolicy
 from Cat.CatPythonGUI.GUI.codeEditor import Error
+from Cat.CatPythonGUI.GUI.enums import ToggleCheckState
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from Cat.CatPythonGUI.GUI.pythonGUI import BoolOrCheckState
 from Cat.CatPythonGUI.utilities import connect
-from Cat.utils import format_full_exc
+from Cat.utils import format_full_exc, first
 from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
 from Cat.utils.profiling import TimedMethod, logError
 from model.Model import Datapack
+from model.datapackContents import EntryHandlerInfo
 from model.utils import WrappedError
 from session.documents import ErrorCounts, getErrorCounts, loadDocument
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
@@ -52,6 +56,77 @@ FILE_TYPES = [
 ]
 
 
+_DPStructure = dict[str, Union[EntryHandlerInfo, '_DPStructure']]
+
+
+def _getKey(value: EntryHandlerInfo) -> str:
+	key = f'{value.folder}/*{value.extension}'
+	return key
+
+
+def _getAllInnerKeys(structure: _DPStructure) -> dict[str, EntryHandlerInfo]:
+	result = {}
+	for value in structure.values():
+		if isinstance(value, EntryHandlerInfo):
+			result[_getKey(value)] = value
+		else:
+			result.update(_getAllInnerKeys(value))
+	return result
+
+
+def _chb(gui: DatapackEditorGUI, isChecked: Optional[BoolOrCheckState], label: Optional[str], returnTristate: bool, showSpoiler: bool, **kwargs) -> tuple[bool, BoolOrCheckState]:
+	with gui.hLayout(preventHStretch=True, horizontalSpacing=0):
+		isOpen = gui.spoiler(drawDisabled=not showSpoiler)
+		checkState = gui.checkboxLeft(isChecked, label, returnTristate=returnTristate, **kwargs)
+	return isOpen, checkState
+
+
+def _innerFileTypesSelectionGUI(gui: DatapackEditorGUI, structure: _DPStructure, oldVals: dict[str, EntryHandlerInfo]) -> dict[str, EntryHandlerInfo]:
+	result: dict[str, EntryHandlerInfo] = {}
+	for name, value in structure.items():
+		# merge if only one subCategory:
+		isSingleEHF = isinstance(value, EntryHandlerInfo)
+		while not isSingleEHF and len(value) == 1:
+			suffix, value = first(value.items())
+			isSingleEHF = isinstance(value, EntryHandlerInfo)
+			if isSingleEHF:
+				name = f'{name} ({suffix})'
+			else:
+				name = f'{name}/{suffix}'
+
+		if isSingleEHF:
+			key = _getKey(value)
+			if _chb(gui, key in oldVals, name, returnTristate=False, showSpoiler=False)[1]:
+				result[key] = value
+		else:
+			allInnerKeys = _getAllInnerKeys(value)
+			innerSelection = {key: iValue for key, iValue in allInnerKeys.items() if key in oldVals}
+
+			if len(innerSelection) == len(allInnerKeys):
+				innerCheckState = ToggleCheckState.Checked
+			elif not innerSelection:
+				innerCheckState = ToggleCheckState.Unchecked
+			else:
+				innerCheckState = ToggleCheckState.PartiallyChecked
+
+			isOpen, innerCheckState = _chb(gui, innerCheckState, name, returnTristate=True, showSpoiler=True)
+
+			if innerCheckState is ToggleCheckState.Checked:
+				innerSelection = allInnerKeys
+			elif innerCheckState is ToggleCheckState.Unchecked:
+				innerSelection = {}
+
+			with gui.indentation():
+				if isOpen:
+					innerSelection = _innerFileTypesSelectionGUI(gui, value, innerSelection)
+				else:
+					pass
+				result.update(innerSelection)
+
+
+	return result
+
+
 class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 
 	def __init__(self, parent: Optional[QWidget] = None):
@@ -61,7 +136,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self.errorsByFile: OrderedDict[FilePath, Collection[Error]] = OrderedDict()
 
 		self._includedDatapacks: list[Datapack] = []
-		self._fileTypes: set[str] = set()
+		self._fileTypes: dict[str, EntryHandlerInfo] = {}
 		self._allFiles: list[FilePath] = []
 		self._filesCount: int = 100
 		self._filesChecked: int = 50
@@ -71,8 +146,17 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self.setWindowTitle('Validate Files')
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
-			self._fileTypes = {ft for ft in FILE_TYPES if gui.checkboxLeft(None, ft)}
+		self._fileTypes = self.fileTypesSelectionGUI(gui, self._fileTypes)
+
+		# print("FileTypes:")
+		# for ft in self._oldVals:
+		# 	print(f"    {ft}")  # {ft.folder}*{ft.extension}")
+		# print("--------------------------------")
+		#
+		# gui.vSeparator()
+		#
+		# with gui.vLayout(preventVStretch=False, verticalSpacing=0):
+		# 	self._fileTypes = {ft for ft in FILE_TYPES if gui.checkboxLeft(None, ft)}
 
 		gui.vSeparator()
 
@@ -142,6 +226,22 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 			self.errorCountsUpdateSignal.disconnect()
 		connect(self.errorCountsUpdateSignal, lambda es=errorsSummary: es.redrawGUI())
 
+	def fileTypesSelectionGUI(self, gui: DatapackEditorGUI, oldVals: dict[str, EntryHandlerInfo]) -> dict[str, EntryHandlerInfo]:
+		# build Folder Structure:
+		structure: _DPStructure = {}
+		for path, infos in getSession().datapackData.byFolder.items():
+			pathParts = path.strip('/').split('/')
+			folder = structure
+			for pathPart in pathParts:
+				folder = folder.setdefault(pathPart, {})
+			for info in infos:
+				folder[info.extension] = info
+
+		# gui:
+		with gui.vLayout(preventVStretch=False, verticalSpacing=0):
+			return _innerFileTypesSelectionGUI(gui, structure, oldVals)
+
+
 	progressSignal = pyqtSignal(int)
 	errorCountsUpdateSignal = pyqtSignal()
 
@@ -153,13 +253,16 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		# allFiles = [f for dp in self._includedDatapacks for f in dp.files]
 		self._allFiles = []
 		for dp in self._includedDatapacks:
-			for f in dp.files:
-				if isinstance(f, tuple):
-					fn = f[1]
-				else:
-					fn = f
-				if fn.endswith(tuple(self._fileTypes)):
-					self._allFiles.append(f)
+			for ft in self._fileTypes.values():
+				cnts = ft.contentsProp.get(dp.contents)
+				self._allFiles.extend(cnt.filePath for cnt in cnts.values())
+			# for f in dp.files:
+			# 	if isinstance(f, tuple):
+			# 		fn = f[1]
+			# 	else:
+			# 		fn = f
+			# 	if fn.endswith(tuple(self._fileTypes)):
+			# 		self._allFiles.append(f)
 
 		self._filesCount = len(self._allFiles)
 		self._filesChecked = -1

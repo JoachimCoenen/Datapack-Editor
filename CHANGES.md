@@ -8,7 +8,7 @@
  * Added validation support for JSON files. (issue #4)
  * Added file specific validation & suggestions for tag files (files in 'data/{namespace}/tags/'). (issue #6)
  * Added validation for raw json text (`minecraft:component` type) in mcFunction files.
- * Added custom Styler support, including muli language support for a single file.
+ * Added custom Styler support, including multi-language support for a single file.
  * Added color scheme support
 
 ### Improvements

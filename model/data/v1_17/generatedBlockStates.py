@@ -58,19 +58,19 @@ ATTACHED_1 = FilterArgumentInfo(
 ATTACHMENT_1 = FilterArgumentInfo(
 	name='attachment',
 	description='How this block is attached to the block it is on.',
-	type=makeLiteralsArgumentType(['ceiling', 'double_wall', 'floor', 'single_wall']),
+	type=makeLiteralsArgumentType([b'ceiling', b'double_wall', b'floor', b'single_wall']),
 )
 
 AXIS_1 = FilterArgumentInfo(
 	name='axis',
 	description='What axis the block is oriented to.',
-	type=makeLiteralsArgumentType(['x', 'y', 'z']),
+	type=makeLiteralsArgumentType([b'x', b'y', b'z']),
 )
 
 AXIS_2 = FilterArgumentInfo(
 	name='axis',
 	description='What axis the block is oriented to.',
-	type=makeLiteralsArgumentType(['x', 'z']),
+	type=makeLiteralsArgumentType([b'x', b'z']),
 )
 
 BITES_1 = FilterArgumentInfo(
@@ -142,13 +142,13 @@ EAST_1 = FilterArgumentInfo(
 EAST_2 = FilterArgumentInfo(
 	name='east',
 	description='Determines whether something is on the east side of the block.',
-	type=makeLiteralsArgumentType(['low', 'none', 'tall']),
+	type=makeLiteralsArgumentType([b'low', b'none', b'tall']),
 )
 
 EAST_3 = FilterArgumentInfo(
 	name='east',
 	description='Determines whether something is on the east side of the block.',
-	type=makeLiteralsArgumentType(['none', 'side', 'up']),
+	type=makeLiteralsArgumentType([b'none', b'side', b'up']),
 )
 
 EGGS_1 = FilterArgumentInfo(
@@ -178,37 +178,37 @@ EYE_1 = FilterArgumentInfo(
 FACE_1 = FilterArgumentInfo(
 	name='face',
 	description='What side of a block the attached block is on.',
-	type=makeLiteralsArgumentType(['ceiling', 'floor', 'wall']),
+	type=makeLiteralsArgumentType([b'ceiling', b'floor', b'wall']),
 )
 
 FACING_1 = FilterArgumentInfo(
 	name='facing',
 	description='For most blocks, what direction the block faces.\nFor wall-attached [[bell]]s as well as [[cocoa]], the opposite is true.<ref>{{bug|MC-193943}}</ref>',
-	type=makeLiteralsArgumentType(['down', 'east', 'north', 'south', 'west', 'up']),
+	type=makeLiteralsArgumentType([b'down', b'east', b'north', b'south', b'west', b'up']),
 )
 
 FACING_2 = FilterArgumentInfo(
 	name='facing',
 	description='For most blocks, what direction the block faces.\nFor wall-attached [[bell]]s as well as [[cocoa]], the opposite is true.<ref>{{bug|MC-193943}}</ref>',
-	type=makeLiteralsArgumentType(['east', 'north', 'south', 'west']),
+	type=makeLiteralsArgumentType([b'east', b'north', b'south', b'west']),
 )
 
 FACING_3 = FilterArgumentInfo(
 	name='facing',
 	description='For most blocks, what direction the block faces.\nFor wall-attached [[bell]]s as well as [[cocoa]], the opposite is true.<ref>{{bug|MC-193943}}</ref>',
-	type=makeLiteralsArgumentType(['down', 'east', 'north', 'south', 'west']),
+	type=makeLiteralsArgumentType([b'down', b'east', b'north', b'south', b'west']),
 )
 
 HALF_1 = FilterArgumentInfo(
 	name='half',
 	description='For tall plants and doors, which half of the door or plant occupies the block space. For trapdoors and stairs, what part of the block space they are in.',
-	type=makeLiteralsArgumentType(['lower', 'upper']),
+	type=makeLiteralsArgumentType([b'lower', b'upper']),
 )
 
 HALF_2 = FilterArgumentInfo(
 	name='half',
 	description='For tall plants and doors, which half of the door or plant occupies the block space. For trapdoors and stairs, what part of the block space they are in.',
-	type=makeLiteralsArgumentType(['bottom', 'top']),
+	type=makeLiteralsArgumentType([b'bottom', b'top']),
 )
 
 HANGING_1 = FilterArgumentInfo(
@@ -262,7 +262,7 @@ HONEY_LEVEL_1 = FilterArgumentInfo(
 HINGE_1 = FilterArgumentInfo(
 	name='hinge',
 	description="Identifies the side the hinge is on (when facing the same direction as the door's inside).",
-	type=makeLiteralsArgumentType(['left', 'right']),
+	type=makeLiteralsArgumentType([b'left', b'right']),
 )
 
 IN_WALL_1 = FilterArgumentInfo(
@@ -274,7 +274,7 @@ IN_WALL_1 = FilterArgumentInfo(
 INSTRUMENT_1 = FilterArgumentInfo(
 	name='instrument',
 	description='The instrument sound the note block makes when it gets powered or used.',
-	type=makeLiteralsArgumentType(['banjo', 'basedrum', 'bass', 'bell', 'bit', 'chime', 'cow_bell', 'digeridoo', 'flute', 'guitar', 'harp', 'hat', 'iron_xylophone', 'snare', 'xylophone']),
+	type=makeLiteralsArgumentType([b'banjo', b'basedrum', b'bass', b'bell', b'bit', b'chime', b'cow_bell', b'digeridoo', b'flute', b'guitar', b'harp', b'hat', b'iron_xylophone', b'snare', b'xylophone']),
 )
 
 INVERTED_1 = FilterArgumentInfo(
@@ -292,7 +292,7 @@ LAYERS_1 = FilterArgumentInfo(
 LEAVES_1 = FilterArgumentInfo(
 	name='leaves',
 	description='How big the leaves are on this bamboo.',
-	type=makeLiteralsArgumentType(['large', 'none', 'small']),
+	type=makeLiteralsArgumentType([b'large', b'none', b'small']),
 )
 
 LEVEL_1 = FilterArgumentInfo(
@@ -328,13 +328,13 @@ LOCKED_1 = FilterArgumentInfo(
 MODE_1 = FilterArgumentInfo(
 	name='mode',
 	description='The mode the comparator or structure block is in.',
-	type=makeLiteralsArgumentType(['compare', 'subtract']),
+	type=makeLiteralsArgumentType([b'compare', b'subtract']),
 )
 
 MODE_2 = FilterArgumentInfo(
 	name='mode',
 	description='The mode the comparator or structure block is in.',
-	type=makeLiteralsArgumentType(['corner', 'data', 'load', 'save']),
+	type=makeLiteralsArgumentType([b'corner', b'data', b'load', b'save']),
 )
 
 MOISTURE_1 = FilterArgumentInfo(
@@ -352,13 +352,13 @@ NORTH_1 = FilterArgumentInfo(
 NORTH_2 = FilterArgumentInfo(
 	name='north',
 	description='Determines whether something is on the north side of the block.',
-	type=makeLiteralsArgumentType(['low', 'none', 'tall']),
+	type=makeLiteralsArgumentType([b'low', b'none', b'tall']),
 )
 
 NORTH_3 = FilterArgumentInfo(
 	name='north',
 	description='Determines whether something is on the north side of the block.',
-	type=makeLiteralsArgumentType(['up', 'side', 'none']),
+	type=makeLiteralsArgumentType([b'up', b'side', b'none']),
 )
 
 NOTE_1 = FilterArgumentInfo(
@@ -382,13 +382,13 @@ OPEN_1 = FilterArgumentInfo(
 ORIENTATION_1 = FilterArgumentInfo(
 	name='orientation',
 	description='Direction the arrows point, followed by the position of the line face.',
-	type=makeLiteralsArgumentType(['down_east', 'down_north', 'down_south', 'down_west', 'east_up', 'north_up', 'south_up', 'up_east', 'up_north', 'up_south', 'up_west', 'west_up']),
+	type=makeLiteralsArgumentType([b'down_east', b'down_north', b'down_south', b'down_west', b'east_up', b'north_up', b'south_up', b'up_east', b'up_north', b'up_south', b'up_west', b'west_up']),
 )
 
 PART_1 = FilterArgumentInfo(
 	name='part',
 	description='Whether this is the foot or head end of the bed.',
-	type=makeLiteralsArgumentType(['foot', 'head']),
+	type=makeLiteralsArgumentType([b'foot', b'head']),
 )
 
 PERSISTENT_1 = FilterArgumentInfo(
@@ -424,19 +424,19 @@ ROTATION_1 = FilterArgumentInfo(
 SHAPE_1 = FilterArgumentInfo(
 	name='shape',
 	description='The way this block connects to its neighbors.',
-	type=makeLiteralsArgumentType(['ascending_east', 'ascending_north', 'ascending_south', 'ascending_west', 'east_west', 'north_south']),
+	type=makeLiteralsArgumentType([b'ascending_east', b'ascending_north', b'ascending_south', b'ascending_west', b'east_west', b'north_south']),
 )
 
 SHAPE_2 = FilterArgumentInfo(
 	name='shape',
 	description='The way this block connects to its neighbors.',
-	type=makeLiteralsArgumentType(['inner_left', 'inner_right', 'outer_left', 'outer_right', 'straight']),
+	type=makeLiteralsArgumentType([b'inner_left', b'inner_right', b'outer_left', b'outer_right', b'straight']),
 )
 
 SHAPE_3 = FilterArgumentInfo(
 	name='shape',
 	description='The way this block connects to its neighbors.',
-	type=makeLiteralsArgumentType(['ascending_east', 'ascending_north', 'ascending_south', 'ascending_west', 'east_west', 'north_south', 'north_east', 'north_west', 'south_east', 'south_west']),
+	type=makeLiteralsArgumentType([b'ascending_east', b'ascending_north', b'ascending_south', b'ascending_west', b'east_west', b'north_south', b'north_east', b'north_west', b'south_east', b'south_west']),
 )
 
 SHORT_1 = FilterArgumentInfo(
@@ -466,13 +466,13 @@ SOUTH_1 = FilterArgumentInfo(
 SOUTH_2 = FilterArgumentInfo(
 	name='south',
 	description='Determines whether something is on the south side of the block.',
-	type=makeLiteralsArgumentType(['low', 'none', 'tall']),
+	type=makeLiteralsArgumentType([b'low', b'none', b'tall']),
 )
 
 SOUTH_3 = FilterArgumentInfo(
 	name='south',
 	description='Determines whether something is on the south side of the block.',
-	type=makeLiteralsArgumentType(['none', 'side', 'up']),
+	type=makeLiteralsArgumentType([b'none', b'side', b'up']),
 )
 
 STAGE_1 = FilterArgumentInfo(
@@ -490,19 +490,19 @@ TRIGGERED_1 = FilterArgumentInfo(
 TYPE_1 = FilterArgumentInfo(
 	name='type',
 	description='Determines the variant of this block.',
-	type=makeLiteralsArgumentType(['normal', 'sticky']),
+	type=makeLiteralsArgumentType([b'normal', b'sticky']),
 )
 
 TYPE_2 = FilterArgumentInfo(
 	name='type',
 	description='Determines the variant of this block.',
-	type=makeLiteralsArgumentType(['left', 'right', 'single']),
+	type=makeLiteralsArgumentType([b'left', b'right', b'single']),
 )
 
 TYPE_3 = FilterArgumentInfo(
 	name='type',
 	description='Determines the variant of this block.',
-	type=makeLiteralsArgumentType(['bottom', 'double', 'top']),
+	type=makeLiteralsArgumentType([b'bottom', b'double', b'top']),
 )
 
 UNSTABLE_1 = FilterArgumentInfo(
@@ -532,13 +532,13 @@ WEST_1 = FilterArgumentInfo(
 WEST_2 = FilterArgumentInfo(
 	name='west',
 	description='Determines whether something is on the west side of the block.',
-	type=makeLiteralsArgumentType(['low', 'none', 'tall']),
+	type=makeLiteralsArgumentType([b'low', b'none', b'tall']),
 )
 
 WEST_3 = FilterArgumentInfo(
 	name='west',
 	description='Determines whether something is on the west side of the block.',
-	type=makeLiteralsArgumentType(['none', 'side', 'up']),
+	type=makeLiteralsArgumentType([b'none', b'side', b'up']),
 )
 
 # Arguments by block:

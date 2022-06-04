@@ -26,6 +26,10 @@ from model.data.mcVersions import ALL_MC_VERSIONS
 from model.datapack.dpVersion import ALL_DP_VERSIONS
 
 
+class ColorSchemePD(pd.PropertyDecorator):
+	pass
+
+
 @RegisterContainer
 class AppearanceSettings(SerializableContainer):
 	__slots__ = ()
@@ -77,6 +81,11 @@ class AppearanceSettings(SerializableContainer):
 		font.setPointSizeF(self.fontSize)
 		return font
 
+	colorScheme: str = Serialized(
+		default='Default',
+		label='Color Scheme',
+		decorators=[ColorSchemePD()],
+	)
 
 def folderPathValidator(path: str) -> Optional[ValidatorResult]:
 	if not os.path.lexists(path):

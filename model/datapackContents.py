@@ -8,6 +8,7 @@ from Cat.Serializable import RegisterContainer, SerializableContainer, Serialize
 from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
 from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty, Deprecated
+from model.parsing.bytesUtils import bytesToStr
 from model.parsing.tree import Schema, Node
 from model.pathUtils import FilePathTpl, loadTextFile, ZipFilePool
 from model.utils import MDStr, Span
@@ -132,7 +133,9 @@ class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema],
 	# TODO: maybe move to different module, or move ResourceLocationContext implementations?
 
 	@classmethod
-	def fromString(cls, value: str, span: Span, schema: Optional[ResourceLocationSchema]) -> ResourceLocationNode:
+	def fromString(cls, value: bytes, span: Span, schema: Optional[ResourceLocationSchema]) -> ResourceLocationNode:
+		assert isinstance(value, bytes)
+		value = bytesToStr(value)
 		namespace, path, isTag = cls.splitString(value)
 		return cls(namespace, path, isTag, span, schema)
 

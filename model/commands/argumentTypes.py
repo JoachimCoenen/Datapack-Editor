@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from Cat.utils.collections_ import OrderedDict, AddToDictDecorator
+from model.parsing.bytesUtils import bytesToStr
 
 
 @dataclass
@@ -31,42 +32,43 @@ class LiteralsArgumentType(ArgumentType):
 	def __post_init__(self):
 		if not self.options:
 			raise ValueError("options must be set for a LiteralsArgumentType.")
+		assert all(isinstance(o, bytes) for o in self.options)
 
-	options: list[str] = None
+	options: list[bytes] = None
 
 
-def makeLiteralsArgumentType(options: list[str], description: str = '', description2: str = '', example: str = '', examples: str = '', jsonProperties: str = '') -> LiteralsArgumentType:
-	name = f"({'|'.join(options)})"
+def makeLiteralsArgumentType(options: list[bytes], description: str = '', description2: str = '', example: str = '', examples: str = '', jsonProperties: str = '') -> LiteralsArgumentType:
+	name = f"({bytesToStr(b'|'.join(options))})"
 	return LiteralsArgumentType(name, description, description2, example, examples, jsonProperties, options)
 
 
-CHAT_COLORS: set[str] = {
-	'black',
-	'dark_blue',
-	'dark_green',
-	'dark_aqua',
-	'dark_red',
-	'dark_purple',
-	'gold',
-	'gray',
-	'dark_gray',
-	'blue',
-	'green',
-	'aqua',
-	'red',
-	'light_purple',
-	'yellow',
-	'white',
+CHAT_COLORS: set[bytes] = {
+	b'black',
+	b'dark_blue',
+	b'dark_green',
+	b'dark_aqua',
+	b'dark_red',
+	b'dark_purple',
+	b'gold',
+	b'gray',
+	b'dark_gray',
+	b'blue',
+	b'green',
+	b'aqua',
+	b'red',
+	b'light_purple',
+	b'yellow',
+	b'white',
 }
 
-TEAM_COLORS: set[str] = {
-	'reset',
+TEAM_COLORS: set[bytes] = {
+	b'reset',
 	*CHAT_COLORS,
 }
 
-ENTITY_ANCHORS: set[str] = {'eyes', 'feet'}
+ENTITY_ANCHORS: set[bytes] = {b'eyes', b'feet'}
 
-GAME_MODES: list[str] = ['adventure', 'creative', 'spectator', 'survival']
+GAME_MODES: list[bytes] = [b'adventure', b'creative', b'spectator', b'survival']
 
 BRIGADIER_BOOL = ArgumentType(
 	name='brigadier:bool',
@@ -608,7 +610,7 @@ MINECRAFT_OBJECTIVE_CRITERIA = ArgumentType(
 
 MINECRAFT_OPERATION = LiteralsArgumentType(
 	name='minecraft:operation',
-	options=['=', '+=', '-=', '*=', '/=', '%=', '><', '<', '>'],
+	options=[b'=', b'+=', b'-=', b'*=', b'/=', b'%=', b'><', b'<', b'>'],
 	description="Must be an arithmetic operator for `/scoreboard`.\n"
 				"Valid values include = (assignment), += (addition), -= (subtraction), *= (multiplication), /= (floor division), %= (modulus), >< (swapping), < (choosing minimum) and > (choosing maximum).",
 	description2="""""",
@@ -755,7 +757,7 @@ DPE_ADVANCEMENT = ArgumentType(
 
 DPE_COMPARE_OPERATION = LiteralsArgumentType(
 	name='dpe:compare_operation',
-	options=['<=', '<', '=', '>=', '>'],
+	options=[b'<=', b'<', b'=', b'>=', b'>'],
 	description="(<|<=|=|>=|>)",
 	description2="""""",
 	examples="""""",

@@ -18,8 +18,8 @@ from Cat.icons import icons
 from Cat.utils import openOrCreate
 from Cat.utils.formatters import formatVal, FW
 from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
+from gui.themes import theme
 from keySequences import KEY_SEQUENCES
-from model.commands.parser import parseMCFunction
 from model.utils import Span
 from session.session import getSession, WindowId, saveSessionToFile
 from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
@@ -98,7 +98,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		self.setAcceptDrops(True)
 
 		getSession().documents.onCanCloseModifiedDocument = self._canCloseModifiedDocument
-		getSession().onError.connect('showError', lambda e, title: self._gui.showWarningDialog(title, str(e)))
+		getSession().onError.reconnect('showError', lambda e, title: self._gui.showWarningDialog(title, str(e)))
 
 		# close document as shortcut:
 		# self.closeDocumentShortcut = QShortcut(KEY_SEQUENCES.CLOSE_DOCUMENT, self, lambda d=document, s=self: self._safelyCloseDocument(gui, getSession().selectedDocument),
@@ -142,7 +142,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			with splitter.addArea(stretchFactor=0, id_='bottomPanel', verticalSpacing=0):
 				bottomPanel = gui.subGUI(type(gui), lambda gui: self.bottomPanelGUI(gui, roundedCorners=(True,  False,  True, False), cornerRadius=self.windowCornerRadius))
 				bottomPanel.redrawGUI()
-		# getSession().documents.onSelectedDocumentChanged.connect('mainWindowGUI', self.redraw)
+		# getSession().documents.onSelectedDocumentChanged.reconnect('mainWindowGUI', self.redraw)
 		self._saveSession()
 
 	def OnToolbarGUI(self, gui: DatapackEditorGUI):
@@ -192,13 +192,14 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 					document.undoRedoStack.redoOnce()
 
 			if button(icon=icons.camera, tip='parse MCFunction', **btnKwArgs, enabled=document is not None):
-				if self.selectedDocument is not None:
-					text = self.selectedDocument.content
-					func, errors = parseMCFunction(getSession().minecraftData.commands, text)
-					filePath = "D:/Programming/Python/MinecraftDataPackEditor/sessions/mcFunction.ast"
-					with openOrCreate(filePath, "w") as outFfile:
-						formatVal((func, errors), s=FW(outFfile))
-					self._tryOpenOrSelectDocument(filePath)
+				gui.showErrorDialog('parse MCFunction', 'This feature ha not been implemented yet')
+				# if self.selectedDocument is not None:
+				# 	text = self.selectedDocument.strContent
+				# 	func, errors = parseMCFunction(getSession().minecraftData.commands, text)
+				# 	filePath = "D:/Programming/Python/MinecraftDataPackEditor/sessions/mcFunction.ast"
+				# 	with openOrCreate(filePath, "w") as outFfile:
+				# 		formatVal((func, errors), s=FW(outFfile))
+				# 	self._tryOpenOrSelectDocument(filePath)
 
 	def toolBarGUI2(self, gui: DatapackEditorGUI):
 		# TODO: INVESTIGATE calculation of hSpacing:
@@ -219,8 +220,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				self._loadWorldDialog(gui)
 
 			docToolBarGUI = gui.subGUI(type(gui), lambda g: self.documentToolBarGUI(g, button=button, btnCorners=btnCorners, btnOverlap=btnOverlap, btnMargins=btnMargins), hSizePolicy=SizePolicy.Fixed.value)
-			getSession().documents.onSelectedDocumentChanged.disconnect('documentToolBarGUI')
-			getSession().documents.onSelectedDocumentChanged.connect('documentToolBarGUI', docToolBarGUI.host.redraw)
+			getSession().documents.onSelectedDocumentChanged.reconnect('documentToolBarGUI', docToolBarGUI.host.redraw)
 			docToolBarGUI.redrawGUI()
 			docToolBarGUI._name = 'docToolBarGUI'
 
@@ -236,6 +236,9 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 
 			if button(icon=icons.spellCheck, tip='Check all Files', **btnKwArgs, enabled=True):
 				self.checkAllDialog.show()
+
+			if button(icon=icons.color, tip='Reload Color Scheme', **btnKwArgs, enabled=True):
+				theme.reloadAllColorSchemes()
 
 			if button(icon=icons.settings, tip='Settings', **btnKwArgs, windowShortcut=QKeySequence.Preferences):
 				self._showSettingsDialog(gui)
@@ -255,7 +258,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		Document.onErrorsChanged.disconnectFromAllInstances(key='bottomPanelGUI')
 		if document is not None:
 			document.onErrorsChanged.connect('bottomPanelGUI', lambda d: gui.host.redrawLater('onErrorsChanged'))
-		getSession().documents.onSelectedDocumentChanged.connect('bottomPanelGUI', lambda: gui.host.redrawLater('onSelectedDocumentChanged'))
+		getSession().documents.onSelectedDocumentChanged.reconnect('bottomPanelGUI', lambda: gui.host.redrawLater('onSelectedDocumentChanged'))
 
 		tabs = [
 			(('Errors', TabOptions(icon=icons.error)),     (

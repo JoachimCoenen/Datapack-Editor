@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import deque, OrderedDict
-from dataclasses import dataclass
-from typing import TypeVar, NewType, Protocol, Generic, Type, Optional
+from dataclasses import dataclass, field
+from typing import TypeVar, NewType, Protocol, Generic, Type, Optional, NamedTuple
 
 from Cat.utils.graphs import semiTopologicalSort
 from Cat.utils.logging_ import logError
+from Cat.utils.profiling import TimedFunction
 from model.parsing.tree import Node
 from model.utils import LanguageId
 
@@ -25,10 +26,14 @@ class StylingFunc(Protocol):
 
 @dataclass
 class CatStyler(Generic[_TNode], ABC):
-	setStyling: StylingFunc
-	# innerStylers: dict[Type[Node], CatStyler]
-	innerStylers: dict[str, CatStyler]
-	offset: int
+	ctx: StylerCtx
+	innerStylers: dict[LanguageId, CatStyler]
+	offset: StyleId
+
+	setStyling: StylingFunc = field(init=False)
+
+	def __post_init__(self):
+		self.setStyling = self.ctx.setStylingUtf8
 
 	@classmethod
 	@abstractmethod
@@ -137,7 +142,7 @@ class CatStyler(Generic[_TNode], ABC):
 		return sortedLanguages
 
 	@classmethod
-	def createStyler(cls: Type[_TStyler], setStyling: StylingFunc) -> _TStyler:
+	def createStyler(cls: Type[_TStyler], stylerCtx: StylerCtx) -> _TStyler:
 		sortedLanguages = cls._allInnerLanguages()
 		allStylers: OrderedDict[LanguageId, CatStyler] = OrderedDict()
 
@@ -147,7 +152,7 @@ class CatStyler(Generic[_TNode], ABC):
 			if stylerCls is None:
 				logError(f"CatStyler: No Styler found for language {language!r} while creating inner stylers for {cls}")
 			styler = stylerCls(
-				setStyling,
+				stylerCtx,
 				allStylers,
 				offset
 			)
@@ -163,7 +168,11 @@ class CatStyler(Generic[_TNode], ABC):
 	def styleForeignNode(self, node: Node) -> int:
 		styler = self.innerStylers.get(type(node).language)
 		if styler is not None:
-			return styler.styleNode(node)
+			self.setStyling(slice(node.span.start.index, node.span.start.index), self.offset)
+			with styler:
+				result = styler.styleNode(node)
+				self.setStyling(slice(result, node.span.end.index), styler.offset)
+				return node.span.end.index
 		else:
 			return node.span.start.index
 
@@ -173,14 +182,20 @@ class CatStyler(Generic[_TNode], ABC):
 		pass
 
 	@property
-	def allStyles(self) -> dict[str, StyleId]:
-		allStyles = {}
+	def allStylesIds(self) -> dict[str, StyleId]:
+		allStylesIds = {}
 		for language, styler in self.innerStylers.items():
 			innerStyles = styler.localStyles
 			for name, styleId in innerStyles.items():
-				allStyles[f'{language}:{name}'] = styleId
-		return allStyles
+				allStylesIds[f'{language}:{name}'] = styleId
+		return allStylesIds
 
+	def __enter__(self):
+		self.ctx.defaultStyles.append(self.ctx.defaultStyle)
+		self.ctx.defaultStyle = self.offset
+
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		self.ctx.defaultStyle = self.ctx.defaultStyles.pop()
 
 	# def setStyling(self, length: int, style: int) -> None:
 	# 	assert (length >= 0)
@@ -205,10 +220,19 @@ def getStylerCls(language: LanguageId) -> Optional[Type[CatStyler]]:
 	return __allCatStylers.get(language)
 
 
-def getStyler(language: LanguageId, setStyling: StylingFunc) -> Optional[CatStyler]:
+def getStyler(language: LanguageId, stylerCtx: StylerCtx) -> Optional[CatStyler]:
 	stylerCls = getStylerCls(language)
 	if stylerCls is None:
 		return None
-	styler = stylerCls.createStyler(setStyling)
+	styler = stylerCls.createStyler(stylerCtx)
 	return styler
 
+
+@dataclass
+class StylerCtx(ABC):
+	defaultStyle: StyleId
+	defaultStyles: list[StyleId] = field(init=False, default_factory=list)
+
+	@abstractmethod
+	def setStylingUtf8(self, span: slice, style: StyleId) -> None:
+		pass

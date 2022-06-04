@@ -7,13 +7,14 @@ from typing import Type, Optional, ClassVar
 
 from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
-from gui.lexers.styler import DEFAULT_STYLE_ID, StyleId, CatStyler, registerStyler
+from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler
 from model.commands.argumentTypes import *
+from model.commands.argumentValues import ItemStack
 from model.commands.command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
 from model.utils import LanguageId
 
 
-class Style(enum.Enum):
+class StyleId(enum.IntEnum):
 	Default = DEFAULT_STYLE_ID
 	Command = DEFAULT_STYLE_ID + 1
 	String = DEFAULT_STYLE_ID + 2
@@ -32,55 +33,55 @@ class Style(enum.Enum):
 	# BuiltinFunction = 17
 
 
-_allArgumentTypeStyles: dict[str, Optional[Style]] = {
-	BRIGADIER_BOOL.name:               Style.Constant,
-	BRIGADIER_DOUBLE.name:             Style.Number,
-	BRIGADIER_FLOAT.name:              Style.Number,
-	BRIGADIER_INTEGER.name:            Style.Number,
-	BRIGADIER_LONG.name:               Style.Number,
-	BRIGADIER_STRING.name:             Style.String,
-	MINECRAFT_ANGLE.name:              Style.Number,
-	MINECRAFT_BLOCK_POS.name:          Style.Number,
-	MINECRAFT_BLOCK_PREDICATE.name:    Style.Complex,
-	MINECRAFT_BLOCK_STATE.name:        Style.Complex,
-	MINECRAFT_COLOR.name:              Style.Constant,
-	MINECRAFT_COLUMN_POS.name:         Style.Number,
-	MINECRAFT_COMPONENT.name:          Style.Complex,
-	MINECRAFT_DIMENSION.name:          Style.String,
-	MINECRAFT_ENTITY.name:             Style.TargetSelector,
-	MINECRAFT_ENTITY_ANCHOR.name:      Style.Constant,
-	MINECRAFT_ENTITY_SUMMON.name:      Style.String,
-	MINECRAFT_FLOAT_RANGE.name:        Style.Number,
-	MINECRAFT_FUNCTION.name:           Style.String,
-	MINECRAFT_GAME_PROFILE.name:       Style.TargetSelector,
-	MINECRAFT_INT_RANGE.name:          Style.Number,
-	MINECRAFT_ITEM_ENCHANTMENT.name:   Style.String,
-	MINECRAFT_ITEM_PREDICATE.name:     Style.Complex,
-	MINECRAFT_ITEM_SLOT.name:          Style.Constant,
-	MINECRAFT_ITEM_STACK.name:         Style.Complex,
-	MINECRAFT_MESSAGE.name:            Style.String,
-	MINECRAFT_MOB_EFFECT.name:         Style.String,
-	MINECRAFT_NBT_COMPOUND_TAG.name:   Style.Complex,
-	MINECRAFT_NBT_PATH.name:           Style.Complex,
-	MINECRAFT_NBT_TAG.name:            Style.Complex,
-	MINECRAFT_OBJECTIVE.name:          Style.String,
-	MINECRAFT_OBJECTIVE_CRITERIA.name: Style.String,
-	MINECRAFT_OPERATION.name:          Style.Operator,
-	MINECRAFT_PARTICLE.name:           Style.Complex,
-	MINECRAFT_PREDICATE.name:          Style.String,
-	MINECRAFT_RESOURCE_LOCATION.name:  Style.String,
-	MINECRAFT_ROTATION.name:           Style.Number,
-	MINECRAFT_SCORE_HOLDER.name:       Style.TargetSelector,
-	MINECRAFT_SCOREBOARD_SLOT.name:    Style.Constant,
-	MINECRAFT_SWIZZLE.name:            Style.Constant,
-	MINECRAFT_TEAM.name:               Style.Constant,
-	MINECRAFT_TIME.name:               Style.Number,
-	MINECRAFT_UUID.name:               Style.String,
-	MINECRAFT_VEC2.name:               Style.Number,
-	MINECRAFT_VEC3.name:               Style.Number,
-	DPE_ADVANCEMENT.name:              Style.String,
-	DPE_COMPARE_OPERATION.name:        Style.Operator,
-	DPE_BIOME_ID.name:                 Style.String,
+_allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
+	BRIGADIER_BOOL.name:               StyleId.Constant,
+	BRIGADIER_DOUBLE.name:             StyleId.Number,
+	BRIGADIER_FLOAT.name:              StyleId.Number,
+	BRIGADIER_INTEGER.name:            StyleId.Number,
+	BRIGADIER_LONG.name:               StyleId.Number,
+	BRIGADIER_STRING.name:             StyleId.String,
+	MINECRAFT_ANGLE.name:              StyleId.Number,
+	MINECRAFT_BLOCK_POS.name:          StyleId.Number,
+	MINECRAFT_BLOCK_PREDICATE.name:    StyleId.Complex,
+	MINECRAFT_BLOCK_STATE.name:        StyleId.Complex,
+	MINECRAFT_COLOR.name:              StyleId.Constant,
+	MINECRAFT_COLUMN_POS.name:         StyleId.Number,
+	MINECRAFT_COMPONENT.name:          StyleId.Complex,
+	MINECRAFT_DIMENSION.name:          StyleId.String,
+	MINECRAFT_ENTITY.name:             StyleId.TargetSelector,
+	MINECRAFT_ENTITY_ANCHOR.name:      StyleId.Constant,
+	MINECRAFT_ENTITY_SUMMON.name:      StyleId.String,
+	MINECRAFT_FLOAT_RANGE.name:        StyleId.Number,
+	MINECRAFT_FUNCTION.name:           StyleId.String,
+	MINECRAFT_GAME_PROFILE.name:       StyleId.TargetSelector,
+	MINECRAFT_INT_RANGE.name:          StyleId.Number,
+	MINECRAFT_ITEM_ENCHANTMENT.name:   StyleId.String,
+	MINECRAFT_ITEM_PREDICATE.name:     StyleId.Complex,
+	MINECRAFT_ITEM_SLOT.name:          StyleId.Constant,
+	MINECRAFT_ITEM_STACK.name:         StyleId.Complex,
+	MINECRAFT_MESSAGE.name:            StyleId.String,
+	MINECRAFT_MOB_EFFECT.name:         StyleId.String,
+	MINECRAFT_NBT_COMPOUND_TAG.name:   StyleId.Complex,
+	MINECRAFT_NBT_PATH.name:           StyleId.Complex,
+	MINECRAFT_NBT_TAG.name:            StyleId.Complex,
+	MINECRAFT_OBJECTIVE.name:          StyleId.String,
+	MINECRAFT_OBJECTIVE_CRITERIA.name: StyleId.String,
+	MINECRAFT_OPERATION.name:          StyleId.Operator,
+	MINECRAFT_PARTICLE.name:           StyleId.Complex,
+	MINECRAFT_PREDICATE.name:          StyleId.String,
+	MINECRAFT_RESOURCE_LOCATION.name:  StyleId.String,
+	MINECRAFT_ROTATION.name:           StyleId.Number,
+	MINECRAFT_SCORE_HOLDER.name:       StyleId.TargetSelector,
+	MINECRAFT_SCOREBOARD_SLOT.name:    StyleId.Constant,
+	MINECRAFT_SWIZZLE.name:            StyleId.Constant,
+	MINECRAFT_TEAM.name:               StyleId.Constant,
+	MINECRAFT_TIME.name:               StyleId.Number,
+	MINECRAFT_UUID.name:               StyleId.String,
+	MINECRAFT_VEC2.name:               StyleId.Number,
+	MINECRAFT_VEC3.name:               StyleId.Number,
+	DPE_ADVANCEMENT.name:              StyleId.String,
+	DPE_COMPARE_OPERATION.name:        StyleId.Operator,
+	DPE_BIOME_ID.name:                 StyleId.String,
 }
 
 
@@ -112,19 +113,19 @@ class MCCommandStyler(CatStyler[CommandPart]):
 	@property
 	def localStyles(self) -> dict[str, StyleId]:
 		styles = {
-			Style.Default.name:  self.offset + Style.Default.value,
-			Style.Command.name:  self.offset + Style.Command.value,
-			Style.String.name:   self.offset + Style.String.value,
-			Style.Number.name:   self.offset + Style.Number.value,
-			Style.Constant.name: self.offset + Style.Constant.value,
-			Style.TargetSelector.name: self.offset + Style.TargetSelector.value,
-			Style.Operator.name: self.offset + Style.Operator.value,
-			Style.Keyword.name:  self.offset + Style.Keyword.value,
+			StyleId.Default.name:  self.offset + StyleId.Default.value,
+			StyleId.Command.name:  self.offset + StyleId.Command.value,
+			StyleId.String.name:   self.offset + StyleId.String.value,
+			StyleId.Number.name:   self.offset + StyleId.Number.value,
+			StyleId.Constant.name: self.offset + StyleId.Constant.value,
+			StyleId.TargetSelector.name: self.offset + StyleId.TargetSelector.value,
+			StyleId.Operator.name: self.offset + StyleId.Operator.value,
+			StyleId.Keyword.name:  self.offset + StyleId.Keyword.value,
 
-			Style.Complex.name:  self.offset + Style.Complex.value,
+			StyleId.Complex.name:  self.offset + StyleId.Complex.value,
 
-			Style.Comment.name:  self.offset + Style.Comment.value,
-			Style.Error.name:    self.offset + Style.Error.value,
+			StyleId.Comment.name:  self.offset + StyleId.Comment.value,
+			StyleId.Error.name:    self.offset + StyleId.Error.value,
 		}
 		return styles
 
@@ -132,26 +133,22 @@ class MCCommandStyler(CatStyler[CommandPart]):
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('JSON')]
+		localInnerLanguages = []
+		for argS in _argumentStylers.values():
+			localInnerLanguages.extend(argS.localLanguages())
+		return list(set(localInnerLanguages))
+		# return [LanguageId('JSON')]
 
 	@property
 	def localStylesCount(self) -> int:
-		return self._localStylesCount
+		return len(StyleId)
 
 	@classmethod
 	def language(cls) -> LanguageId:
 		return LanguageId('MCCommand')
 
 	def __post_init__(self):
-		self.DEFAULT_STYLE: StyleId = self.offset + Style.Default.value
-		# self.NULL_STYLE:    StyleId = self.offset + Style.sabotage.null.value
-		# self.BOOLEAN_STYLE: StyleId = self.offset + Style.boolean.value
-		# self.NUMBER_STYLE:  StyleId = self.offset + Style.number.value
-		# self.STRING_STYLE:  StyleId = self.offset + Style.string.value
-		# self.KEY_STYLE:     StyleId = self.offset + Style.key.value
-		# self.INVALID_STYLE: StyleId = self.offset + Style.invalid.value
-		self._localStylesCount = 11
-
+		super(MCCommandStyler, self).__post_init__()
 		self.argumentStylers = {
 			name: argStylerCls(self) for name, argStylerCls in _argumentStylers.items()
 		}
@@ -165,7 +162,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 			return self.styleCommand(data)
 
 	def styleMCFunction(self, function: MCFunction) -> int:
-		end = function.span.start
+		end = function.span.start.index
 		for child in function.children:
 			if child is None:
 				continue
@@ -176,7 +173,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		return end
 
 	def styleComment(self, comment: ParsedComment) -> int:
-		self.setStyling(comment.span.slice, Style.Comment.value)
+		self.setStyling(comment.span.slice, StyleId.Comment.value)
 		return comment.span.end.index
 
 	def styleCommand(self, command: ParsedCommand) -> int:
@@ -184,36 +181,36 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		span = command.span.slice
 		while argument is not None:
 			if isinstance(argument, ParsedCommand):
-				style = Style.Command
+				style = StyleId.Command
 				span = slice(argument.start.index, argument.start.index + len(argument.name))
 			else:
 				argument: ParsedArgument
 				span = argument.span.slice
 				schema = argument.schema
 				if isinstance(schema, KeywordSchema):
-					style = Style.Keyword
+					style = StyleId.Keyword
 				elif isinstance(schema, ArgumentSchema):
 					if isinstance(schema.type, LiteralsArgumentType):
-						style = Style.Constant
+						style = StyleId.Constant
 					else:
 						typeName = schema.typeName
-						# style = _allArgumentTypeStyles.get(typeName, Style.Error)
+						# style = _allArgumentTypeStyles.get(typeName, StyleId.Error)
 						styler = self.argumentStylers.get(typeName, None)
 						if styler is None:
-							style = Style.Error
+							style = StyleId.Error
 						else:
 							styler.style(argument)
 							argument = argument.next
 							continue
 				else:
-					style = Style.Error
+					style = StyleId.Error
 			self.setStyling(span, style.value)
 
 			argument = argument.next
 		return span.stop
 
 
-def addSimpleArgumentStyler(style: Style, *, forArgTypes: list[ArgumentType]) -> None:
+def addSimpleArgumentStyler(style: StyleId, *, forArgTypes: list[ArgumentType]) -> None:
 	styleId = style.value
 
 	class SimpleArgumentStyler(ArgumentStyler):
@@ -230,7 +227,7 @@ def addSimpleArgumentStyler(style: Style, *, forArgTypes: list[ArgumentType]) ->
 		argumentStyler(argType.name)(SimpleArgumentStyler)
 
 
-addSimpleArgumentStyler(Style.Complex, forArgTypes=[
+addSimpleArgumentStyler(StyleId.Complex, forArgTypes=[
 	MINECRAFT_BLOCK_PREDICATE,
 	MINECRAFT_BLOCK_STATE,
 	MINECRAFT_COMPONENT,
@@ -242,7 +239,7 @@ addSimpleArgumentStyler(Style.Complex, forArgTypes=[
 	MINECRAFT_PARTICLE,
 ])
 
-addSimpleArgumentStyler(Style.Constant, forArgTypes=[
+addSimpleArgumentStyler(StyleId.Constant, forArgTypes=[
 	BRIGADIER_BOOL,
 	MINECRAFT_COLOR,
 	MINECRAFT_ENTITY_ANCHOR,
@@ -252,7 +249,7 @@ addSimpleArgumentStyler(Style.Constant, forArgTypes=[
 	MINECRAFT_TEAM,
 ])
 
-addSimpleArgumentStyler(Style.Number, forArgTypes=[
+addSimpleArgumentStyler(StyleId.Number, forArgTypes=[
 	BRIGADIER_DOUBLE,
 	BRIGADIER_FLOAT,
 	BRIGADIER_INTEGER,
@@ -268,12 +265,12 @@ addSimpleArgumentStyler(Style.Number, forArgTypes=[
 	MINECRAFT_VEC3,
 ])
 
-addSimpleArgumentStyler(Style.Operator, forArgTypes=[
+addSimpleArgumentStyler(StyleId.Operator, forArgTypes=[
 	MINECRAFT_OPERATION,
 	DPE_COMPARE_OPERATION,
 ])
 
-addSimpleArgumentStyler(Style.String, forArgTypes=[
+addSimpleArgumentStyler(StyleId.String, forArgTypes=[
 	BRIGADIER_STRING,
 	MINECRAFT_DIMENSION,
 	MINECRAFT_ENTITY_SUMMON,
@@ -290,7 +287,7 @@ addSimpleArgumentStyler(Style.String, forArgTypes=[
 	DPE_BIOME_ID,
 ])
 
-addSimpleArgumentStyler(Style.TargetSelector, forArgTypes=[
+addSimpleArgumentStyler(StyleId.TargetSelector, forArgTypes=[
 	MINECRAFT_ENTITY,
 	MINECRAFT_GAME_PROFILE,
 	MINECRAFT_SCORE_HOLDER,
@@ -305,5 +302,44 @@ class ComponentStyler(ArgumentStyler):
 
 	def style(self, argument: ParsedArgument) -> None:
 		idx = self.commandStyler.styleForeignNode(argument.value)
-		if idx == argument.value.span.start:
-			self.commandStyler.setStyling(argument.span.slice, Style.Complex.value)
+		if idx == argument.value.span.start.index:
+			self.commandStyler.setStyling(argument.span.slice, StyleId.Complex.value)
+
+
+@argumentStyler(MINECRAFT_NBT_COMPOUND_TAG.name, forceOverride=True)
+@argumentStyler(MINECRAFT_NBT_TAG.name, forceOverride=True)
+class SNBTStyler(ArgumentStyler):
+	@classmethod
+	def localLanguages(cls) -> list[LanguageId]:
+		return [LanguageId('SNBT')]
+
+	def style(self, argument: ParsedArgument) -> None:
+		idx = self.commandStyler.styleForeignNode(argument.value)
+		if idx == argument.value.span.start.index:
+			self.commandStyler.setStyling(argument.span.slice, StyleId.Complex.value)
+
+
+@argumentStyler(MINECRAFT_ITEM_STACK.name, forceOverride=True)
+class ItemStackStyler(ArgumentStyler):
+	@classmethod
+	def localLanguages(cls) -> list[LanguageId]:
+		return [LanguageId('SNBT')]
+
+	def style(self, argument: ParsedArgument) -> None:
+		value: ItemStack = argument.value
+		if not isinstance(value, ItemStack):
+			self.commandStyler.setStyling(argument.span.slice, StyleId.Complex)
+			return
+
+		idx = self.commandStyler.styleForeignNode(value.itemId)
+		if idx == value.itemId.span.start.index:
+			self.commandStyler.setStyling(value.itemId.span.slice, StyleId.Complex.value)
+		if value.nbt is not None:
+			idx = self.commandStyler.styleForeignNode(value.nbt)
+			if idx == value.nbt.span.start.index:
+				self.commandStyler.setStyling(value.nbt.span.slice, StyleId.Complex.value)
+
+
+
+
+

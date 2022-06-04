@@ -1,55 +1,69 @@
+from dataclasses import dataclass, field
 from typing import Optional, Sequence, Union
 
 from Cat.utils import escapeForXml
 from Cat.utils.collections_ import Stack
-from Cat.utils.profiling import ProfiledFunction
 from model.commands.command import CommandSchema, KeywordSchema, ArgumentSchema, CommandPartSchema, TERMINAL, COMMANDS_ROOT, SwitchSchema, MCFunctionSchema
 from model.commands.utils import CommandSyntaxError, EXPECTED_ARGUMENT_SEPARATOR_MSG
 from model.commands.command import MCFunction, ParsedComment, ParsedCommand, ParsedArgument
 from model.commands.stringReader import StringReader
-from model.utils import Span, Position
+from model.utils import Span, Position, LanguageId
 
 from . import argumentParsersImpl
 from .commandContext import makeCommandSyntaxError, makeParsedArgument, getArgumentContext, missingArgumentContext
+from ..parsing.bytesUtils import bytesToStr
+from ..parsing.parser import ParserBase, registerParser
 
 argumentParsersImpl._init()  # do not remove!
 
 
-@ProfiledFunction(enabled=False, colourNodesBySelftime=False)
-def parseMCFunction(commands: dict[str, CommandSchema], source: str) -> tuple[Optional[MCFunction], list[CommandSyntaxError]]:
-	parser = Parser(commands, source)
-	mcFunction = parser.parseMCFunction()
-	return mcFunction, parser.errors
+# @ProfiledFunction(enabled=False, colourNodesBySelftime=False)
+# def parseMCFunction(commands: dict[str, CommandSchema], source: str) -> tuple[Optional[MCFunction], list[CommandSyntaxError]]:
+# 	parser = MCFunctionParser(commands, source)
+# 	mcFunction = parser.parseMCFunction()
+# 	return mcFunction, parser.errors
 
 
-class Parser:
-	def __init__(self, commands: dict[str, CommandSchema], source: str):
-		self._commands: dict[str, CommandSchema] = commands
-		self._lines: list[str] = source.splitlines()
-		self._source: str = '\n'.join(self._lines)
-		self.errors: list[CommandSyntaxError] = []
+@registerParser(LanguageId('MCCommand'))
+@registerParser(LanguageId('MCFunction'))
+@dataclass
+class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
+	# def __init__(self, commands: dict[str, CommandSchema], source: str):
+	# 	self._commands: dict[str, CommandSchema] = commands
+	# 	self._lines: list[str] = source.splitlines()
+	# 	self._source: str = '\n'.join(self._lines)
+	# 	self.errors: list[CommandSyntaxError] = []
+
+	_lines: list[bytes] = field(init=False)
+
+	def __post_init__(self):
+		self._lines = self.text.splitlines()
 
 	def parseMCFunction(self) -> Optional[MCFunction]:
+		children = []
+		lineStart: int = 0
+		for lineNo, line in enumerate(self._lines):
+			sr = StringReader(line, lineStart, lineNo, 0, self.text)
+			if (node := self.parseLine(sr)) is not None:
+				children.append(node)
+			lineStart += len(line) + 1
+
 		result: MCFunction = MCFunction(
 			Span(
 				Position(0, 0, 0),
-				Position(len(self._lines)-1, len(self._lines[-1])-1 if self._lines else 0, len(self._source))
+				Position(len(self._lines)-1, len(self._lines[-1])-1 if self._lines else 0, len(self.text))
 			),
 			MCFunctionSchema(name=''),
-			self._source
+			self.text,
+			children,
+
 		)
-		lineStart: int = 0
-		for lineNo, line in enumerate(self._lines):
-			sr = StringReader(line, lineStart, lineNo, self._source)
-			if (node := self.parseLine(sr)) is not None:
-				result.children.append(node)
-			lineStart += len(line) + 1
 
 		return result
 
 	def parseLine(self, sr: StringReader) -> Union[None, ParsedCommand, ParsedComment]:
 		sr.tryConsumeWhitespace()
-		if sr.tryPeek() == '#':
+		if sr.tryPeek() == ord('#'):
 			return self.parseComment(sr)
 		elif not sr.hasReachedEnd:
 			return self.parseCommand(sr)
@@ -66,16 +80,16 @@ class Parser:
 		)
 
 	def parseCommand(self, sr: StringReader) -> Optional[ParsedCommand]:
-		commandName: Optional[str] = sr.tryReadLiteral()
+		commandName: Optional[bytes] = sr.tryReadLiteral()
 		if commandName is None:
 			return None
 		commandSpan = sr.currentSpan
 
-		commandSchema: Optional[CommandSchema] = self._commands.get(commandName)
+		commandSchema: Optional[CommandSchema] = self.schema.commands.get(commandName)
 		if commandSchema is None:
 			if sr.tryReadRemaining():  # move cursor to end
 				sr.mergeLastSave()
-			self.errors.append(CommandSyntaxError(f"Unknown Command '`{escapeForXml(commandName)}`'", sr.currentSpan))
+			self.errors.append(CommandSyntaxError(f"Unknown Command '`{escapeForXml(bytesToStr(commandName))}`'", sr.currentSpan))
 			return None
 
 		argument: Optional[ParsedArgument] = None
@@ -83,8 +97,8 @@ class Parser:
 			argument = self.parseArguments(sr, commandSchema)
 		else:
 			if not sr.hasReachedEnd:
-				trailingData: str = escapeForXml(sr.readUntilEndOrWhitespace())
-				errorMsg: str = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
+				trailingData: str = escapeForXml(bytesToStr(sr.readUntilEndOrWhitespace()))
+				errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
 				self.errors.append(makeCommandSyntaxError(sr, errorMsg))
 
 		sr.tryReadRemaining()
@@ -97,7 +111,7 @@ class Parser:
 
 	@staticmethod
 	def parseKeyword(sr: StringReader, ai: KeywordSchema) -> Optional[ParsedArgument]:
-		literal: Optional[str] = sr.tryReadLiteral()
+		literal: Optional[bytes] = sr.tryReadLiteral()
 		if literal is None:
 			return None
 		if ai.name == literal:
@@ -113,7 +127,7 @@ class Parser:
 		if not keywords:
 			return None
 
-		literal: Optional[str] = sr.tryReadLiteral()
+		literal: Optional[bytes] = sr.tryReadLiteral()
 		if literal is None:
 			return None
 		if literal not in keywords:
@@ -185,13 +199,14 @@ class Parser:
 				if sr.tryConsumeWhitespace() or sr.hasReachedEnd:
 					continue
 				else:
-					trailingData: str = sr.readUntilEndOrWhitespace()
-					errorMsg: str = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
+					trailingData = sr.readUntilEndOrWhitespace()
+					trailingData = bytesToStr(trailingData)
+					errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
 					self.errors.append(makeCommandSyntaxError(sr, errorMsg))
 					sr.rollback()
 					break
 
-		remaining: Optional[str] = sr.tryReadRemaining()
+		remaining: Optional[bytes] = sr.tryReadRemaining()
 		if remaining is not None:
 			argument = makeParsedArgument(sr, None, value=remaining)
 			if lastArg is None:
@@ -200,3 +215,10 @@ class Parser:
 				lastArg.next = argument
 
 		return firstArg
+
+	def parse(self) -> Optional[MCFunction]:
+		return self.parseMCFunction()
+
+
+def init():
+	pass

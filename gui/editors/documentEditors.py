@@ -29,8 +29,7 @@ class DocumentEditorBase(EditorBase[TDoc], Generic[TDoc]):
 		self._gui._name = f"'<{type(new).__name__} at {{{new.fileName}}}>'"
 		if old is not None:
 			old.onErrorsChanged.disconnect('editorRedraw')
-		new.onErrorsChanged.disconnect('editorRedraw')
-		new.onErrorsChanged.connect('editorRedraw', lambda d: self.redrawLater('onErrorsChanged'))
+		new.onErrorsChanged.reconnect('editorRedraw', lambda d: self.redrawLater('onErrorsChanged'))
 
 
 	@final
@@ -159,9 +158,9 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		if isinstance(lexer, DocumentLexerBase):
 			lexer.setDocument(document)
 
-		document.content, document.highlightErrors, document.cursorPosition, document.forceLocate = drawCodeField(
+		document.strContent, document.highlightErrors, document.cursorPosition, document.forceLocate = drawCodeField(
 			gui,
-			document.content,
+			document.strContent,
 			lexer=lexer,
 			errors=errors,
 			forceLocateElement=True,

@@ -25,12 +25,9 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		if old is not None:
 			old.onDocumentsChanged.disconnect('editorRedraw')
 			old.onMadeCurrent.disconnect('editor')
-		new.onDocumentsChanged.disconnect('editorRedraw')
-		new.onDocumentsChanged.connect('editorRedraw', lambda: self.redraw('onDocumentsChanged'))
-		new.onMadeCurrent.disconnect('editor')
-		new.onMadeCurrent.connect('editor', self._forceFocus)
-		new.onSelectedDocumentChanged.disconnect('editor')
-		new.onSelectedDocumentChanged.connect('editor', self._forceFocus)
+		new.onDocumentsChanged.reconnect('editorRedraw', lambda: self.redraw('onDocumentsChanged'))
+		new.onMadeCurrent.reconnect('editor', self._forceFocus)
+		new.onSelectedDocumentChanged.reconnect('editor', self._forceFocus)
 		self._shouldForceFocus = self.model().isCurrent
 
 

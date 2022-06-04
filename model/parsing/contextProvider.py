@@ -1,14 +1,15 @@
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
-from typing import Generic, TypeVar, Iterable, Optional, Type, final, Protocol, Callable
+from typing import Generic, TypeVar, Iterable, Optional, Type, final, Protocol
 
 from PyQt5.QtWidgets import QWidget
 
 from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.collections_.collections_ import IfKeyIssubclassGetter
-from model.parsing.tree import Node
-from model.utils import Span, Position, GeneralError, MDStr
+from model.parsing.parser import parse, IndexMapper
+from model.parsing.tree import Node, Schema
+from model.utils import Span, Position, GeneralError, MDStr, LanguageId
 
 _TNode = TypeVar('_TNode', bound=Node)
 
@@ -83,9 +84,9 @@ class StylingFunc(Protocol):
 
 
 class ContextProvider(Generic[_TNode], ABC):
-	def __init__(self, tree: _TNode, text: str):
+	def __init__(self, tree: _TNode, text: bytes):
 		self.tree: _TNode = tree
-		self.text: str = text
+		self.text: bytes = text
 
 	# @classmethod
 	# @abstractmethod
@@ -166,30 +167,59 @@ registerContextProvider = Decorator(AddToDictDecorator(__contextProviders))
 getContextProviderCls = IfKeyIssubclassGetter(__contextProviders)
 
 
-def getContextProvider(node: _TNode, text: str) -> Optional[ContextProvider[_TNode]]:
+def getContextProvider(node: _TNode, text: bytes) -> Optional[ContextProvider[_TNode]]:
 	if (ctxProviderCls := getContextProviderCls(type(node))) is not None:
 		return ctxProviderCls(node, text)
 	return None
 
 
-def getContext(node: _TNode, text: str) -> Optional[Context[_TNode]]:
+def getContext(node: _TNode, text: bytes) -> Optional[Context[_TNode]]:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
 		return ctxProvider.getContext(node)
 	return None
 
 
-def prepareTree(node: Node, text: str) -> list[GeneralError]:
+def prepareTree(node: Node, text: bytes) -> list[GeneralError]:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
 		return ctxProvider.prepareTree()
 	return []
 
 
-def validateTree(node: Node, text: str, errorsIO: list[GeneralError]) -> None:
+def parseNPrepare(
+		text: bytes,
+		*,
+		language: LanguageId,
+		schema: Optional[Schema],
+		line: int = 0,
+		lineStart: int = 0,
+		cursor: int = 0,
+		cursorOffset: int = 0,
+		indexMapper: IndexMapper = None,
+		**kwargs
+) -> tuple[Optional[Node], list[GeneralError]]:
+	node, errors = parse(
+		text,
+		language=language,
+		schema=schema,
+		line=line,
+		lineStart=lineStart,
+		cursor=cursor,
+		cursorOffset=cursorOffset,
+		indexMapper=indexMapper,
+		**kwargs
+	)
+	if node is not None and (ctxProvider := getContextProvider(node, text)) is not None:
+		errors2 = ctxProvider.prepareTree()
+		errors.extend(errors2)
+	return node, errors
+
+
+def validateTree(node: Node, text: bytes, errorsIO: list[GeneralError]) -> None:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
 		ctxProvider.validateTree(errorsIO)
 
 
-def getSuggestions(node: Node, text: str, pos: Position, replaceCtx: str) -> Suggestions:
+def getSuggestions(node: Node, text: bytes, pos: Position, replaceCtx: str) -> Suggestions:
 	"""
 	:param node:
 	:param text:
@@ -202,25 +232,25 @@ def getSuggestions(node: Node, text: str, pos: Position, replaceCtx: str) -> Sug
 	return []
 
 
-def getDocumentation(node: Node, text: str, pos: Position) -> MDStr:
+def getDocumentation(node: Node, text: bytes, pos: Position) -> MDStr:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
 		return ctxProvider.getDocumentation(pos)
 	return MDStr('')
 
 
-def getCallTips(node: Node, text: str, pos: Position) -> list[str]:
+def getCallTips(node: Node, text: bytes, pos: Position) -> list[str]:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
 		return ctxProvider.getCallTips(pos)
 	return []
 
 
-def getClickableRanges(node: Node, text: str, span: Span = ...) -> Iterable[Span]:
+def getClickableRanges(node: Node, text: bytes, span: Span = ...) -> Iterable[Span]:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
 		return ctxProvider.getClickableRanges(span)
 	return []
 
 
-def onIndicatorClicked(node: Node, text: str, pos: Position, window: QWidget) -> None:
+def onIndicatorClicked(node: Node, text: bytes, pos: Position, window: QWidget) -> None:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
 		return ctxProvider.onIndicatorClicked(pos, window)
 
@@ -238,6 +268,7 @@ __all__ = [
 	'getContextProvider',
 	'getContext',
 	'prepareTree',
+	'parseNPrepare',
 	'validateTree',
 	'getSuggestions',
 	'getDocumentation',

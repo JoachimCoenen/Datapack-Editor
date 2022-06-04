@@ -386,6 +386,22 @@ class BiomeIdContext(ResourceLocationContext):
 		return mc.biomes
 
 
+@resourceLocationContext('condition', allowTags=False)
+class ConditionIdContext(ResourceLocationContext):
+	@property
+	def name(self) -> str:
+		return 'condition'
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.predicateConditions
+
+
 @resourceLocationContext('any_no_tag', allowTags=False)
 @resourceLocationContext('any', allowTags=True)
 class AnyContext(ResourceLocationContext):

@@ -1,16 +1,17 @@
 import re
-from string import ascii_letters, digits
 from typing import Optional, TYPE_CHECKING, final
 
 from Cython import final as cy_final
 
 from Cat.utils.collections_ import Stack
+from model.parsing.bytesUtils import *
 from model.utils import Position, Span
 
 if TYPE_CHECKING:
 	def cy_final(x): x
 
-Char = str
+Char = bytes
+Byte = int
 
 
 SYNTAX_ESCAPE = '\\'
@@ -18,61 +19,25 @@ SYNTAX_DOUBLE_QUOTE = '"'
 SYNTAX_SINGLE_QUOTE = '\''
 
 
-# A character is a Java whitespace character if and only if it satisfies one of the following criteria:
-JAVA_WHITESPACES = {
-# It is a Unicode space character (SPACE_SEPARATOR, LINE_SEPARATOR, or PARAGRAPH_SEPARATOR) but is not also a non-breaking space ('\u00A0', '\u2007', '\u202F'):
-# SPACE_SEPARATORs:
-	'\u0020',  # Space
-	# '\u00A0', (excluded) # No-Break Space
-	'\u1680',  # Ogham Space Mark
-	'\u2000',  # En Quad
-	'\u2001',  # Em Quad
-	'\u2002',  # En Space
-	'\u2003',  # Em Space
-	'\u2004',  # Three-Per-Em Space
-	'\u2005',  # Four-Per-Em Space
-	'\u2006',  # Six-Per-Em Space
-	# '\u2007', (excluded)  # Figure Space
-	'\u2008',  # Punctuation Space
-	'\u2009',  # Thin Space
-	'\u200A',  # Hair Space
-	# '\u202F',  (excluded) # Narrow No-Break Space
-	'\u205F',  # Medium Mathematical Space
-	'\u3000',  # Ideographic Space
-# LINE_SEPARATORs:
-	'\u2028',  # Line Separator
-# PARAGRAPH_SEPARATORs:
-	'\u2029',  # Paragraph Separator
-# Explicitly named Characters:
-	'\t',      # It is '\t', U+0009 HORIZONTAL TABULATION.
-	'\n',      # It is '\n', U+000A LINE FEED.
-	'\u000B',  # It is '\u000B', U+000B VERTICAL TABULATION.
-	'\f',      # It is '\f', U+000C FORM FEED.
-	'\r',      # It is '\r', U+000D CARRIAGE RETURN.
-	'\u001C',  # It is '\u001C', U+001C FILE SEPARATOR.
-	'\u001D',  # It is '\u001D', U+001D GROUP SEPARATOR.
-	'\u001E',  # It is '\u001E', U+001E RECORD SEPARATOR.
-	'\u001F',  # It is '\u001F', U+001F UNIT SEPARATOR.
-}
-DIGITS = set(digits)
-DOT_OR_MINUS = set('.-')
-QUOTES = set('\'"')
-UNQUOTED_STRING_CHARS = set(digits + ascii_letters + '_-.+')
-BOOLEAN_VALUES = {'true', 'false'}
+DOT_OR_MINUS = set(b'.-')
+QUOTES = set(b'\'"')
+UNQUOTED_STRING_CHARS = set(DIGITS + ASCII_LETTERS + b'_-.+')
+BOOLEAN_VALUES = {b'true', b'false'}
 
-NOT_JAVA_WHITESPACES_REGEX = f"[^{''.join(JAVA_WHITESPACES)}]"
+NOT_JAVA_WHITESPACES_REGEX: bytes = b"(?:" + b'|'.join(JAVA_WHITESPACES) + b")*"
 
 
 @final
 class StringReader:
-	def __init__(self, source: str, lineStart: int, lineNo: int, fullSource: str):
+	def __init__(self, source: bytes, lineStart: int, lineNo: int, cursorOffset: int, fullSource: bytes):
 		self._lineStart: int = lineStart
 		self._lineNo: int = lineNo
-		self.source: str = source
+		self.source: bytes = source
 		self.totalLength = len(source)
 		self.cursor: int = 0
+		self.cursorOffset: int = cursorOffset
 		self.lastCursors: Stack[int] = Stack()
-		self.fullSource: str = fullSource
+		self.fullSource: bytes = fullSource
 
 	@property
 	@cy_final
@@ -81,7 +46,9 @@ class StringReader:
 
 	@cy_final
 	def posFromColumn(self, cursor: int) -> Position:
-		return Position(self._lineNo, cursor, self._lineStart + cursor)
+		actualCursor = (cursor + self._lineStart) + self.cursorOffset
+		return Position(self._lineNo, actualCursor - self._lineStart, actualCursor)
+		# return Position(self._lineNo, cursor, self._lineStart + cursor)
 
 	@property
 	@cy_final
@@ -128,10 +95,16 @@ class StringReader:
 	@cy_final
 	def tryConsumeWhitespace(self) -> bool:
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
-		while cursor < length and source[cursor] in JAVA_WHITESPACES:
-			cursor += 1
+		# beware of unicode utf-8:
+		while cursor < length:
+			if source[cursor] in JAVA_WHITESPACES_SINGLE_BYTE:
+				cursor += 1
+			elif cursor + 3 <= length and source[cursor:cursor + 3] in JAVA_WHITESPACES_THREE_BYTES:
+				cursor += 3
+			else:
+				break
 		# do not update lastCursor!: self.lastCursors = self.cursor
 		if self.cursor != cursor:
 			self.cursor = cursor
@@ -139,22 +112,29 @@ class StringReader:
 		else:
 			return False
 
+	# @cy_final
+	# def tryConsumeChar(self, char: Char) -> bool:
+	# 	if self.cursor < self.totalLength and self.source[self.cursor] == char:
+	# 		self.cursor += 1
+	# 		return True
+	# 	return False
+
 	@cy_final
-	def tryConsumeChar(self, char: Char) -> bool:
-		if self.cursor < self.totalLength and self.source[self.cursor] == char:
+	def tryConsumeByte(self, byte: Byte) -> bool:
+		if self.cursor < self.totalLength and self.source[self.cursor] == byte:
 			self.cursor += 1
 			return True
 		return False
 
 	@cy_final
-	def tryPeek(self) -> Optional[Char]:
+	def tryPeek(self) -> Optional[Byte]:
 		if self.cursor < self.totalLength:
 			return self.source[self.cursor]
 		else:
 			return None
 
 	@cy_final
-	def tryReadRemaining(self) -> Optional[str]:
+	def tryReadRemaining(self) -> Optional[bytes]:
 		if self.hasReachedEnd:
 			return None
 		start: int = self.cursor
@@ -163,10 +143,10 @@ class StringReader:
 		return self.source[start:]
 
 	@cy_final
-	def readUntilEndOr(self, sub: str, *, includeTerminator: bool = False) -> str:
+	def readUntilEndOr(self, sub: bytes, *, includeTerminator: bool = False) -> bytes:
 		start: int = self.cursor
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
 
 		cursor = source.find(sub, cursor)
@@ -179,10 +159,10 @@ class StringReader:
 		return source[start:cursor]
 
 	@cy_final
-	def readUntilEndOrRegex(self, sub: re.Pattern, *, includeTerminator: bool = False) -> str:
+	def readUntilEndOrRegex(self, sub: re.Pattern[bytes], *, includeTerminator: bool = False) -> bytes:
 		start: int = self.cursor
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
 
 		findIter = sub.finditer(source, cursor)
@@ -199,13 +179,13 @@ class StringReader:
 		return source[start:cursor]
 
 	@cy_final
-	def readUntilEndOrWhitespace(self) -> str:
+	def readUntilEndOrWhitespace(self) -> bytes:
 		result = self.tryReadRegex(re.compile(NOT_JAVA_WHITESPACES_REGEX))
 		assert result is not None
 		return result
 
 	@cy_final
-	def tryReadRegex(self, pattern: re.Pattern) -> Optional[str]:  # throws CommandSyntaxException
+	def tryReadRegex(self, pattern: re.Pattern[bytes]) -> Optional[bytes]:  # throws CommandSyntaxException
 		match = pattern.match(self.source, self.cursor)
 		if match is None:
 			return None
@@ -215,19 +195,19 @@ class StringReader:
 		return text
 
 	@cy_final
-	def tryReadInt(self) -> Optional[str]:
+	def tryReadInt(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
 
-		if cursor < length and source[cursor] == '-':
+		if cursor < length and source[cursor] == ord('-'):
 			cursor += 1
-		if cursor < length and source[cursor] in DIGITS:
+		if cursor < length and source[cursor] in DIGITS_RANGE:
 			cursor += 1
 		else:
 			return None
-		while cursor < length and source[cursor] in DIGITS:
+		while cursor < length and source[cursor] in DIGITS_RANGE:
 			cursor += 1
 		if cursor < length and source[cursor] in DOT_OR_MINUS:
 			return None  # TODO: Lexer Errors
@@ -236,31 +216,31 @@ class StringReader:
 		return source[start:cursor]
 
 	@cy_final
-	def tryReadFloat(self) -> Optional[str]:
+	def tryReadFloat(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
 		hasHadDot: bool = False
 
-		if cursor < length and source[cursor] == '-':
+		if cursor < length and source[cursor] == ord('-'):
 			cursor += 1
 
-		if cursor < length and source[cursor] == '.':
+		if cursor < length and source[cursor] == ord('.'):
 			hasHadDot = True
 			cursor += 1
 
-		if cursor < length and source[cursor] in DIGITS:
+		if cursor < length and source[cursor] in DIGITS_RANGE:
 			cursor += 1
 		else:
 			return None
-		while cursor < length and source[cursor] in DIGITS:
+		while cursor < length and source[cursor] in DIGITS_RANGE:
 			cursor += 1
-		if cursor < length and source[cursor] == '.':
+		if cursor < length and source[cursor] == ord('.'):
 			cursor += 1
 			if hasHadDot:
 				return None  # TODO: Lexer Errors
-		while cursor < length and source[cursor] in DIGITS:
+		while cursor < length and source[cursor] in DIGITS_RANGE:
 			cursor += 1
 		if cursor < length and source[cursor] in DOT_OR_MINUS:
 			return None  # TODO: Lexer Errors
@@ -269,38 +249,45 @@ class StringReader:
 		return source[start:cursor]
 
 	@cy_final
-	def tryReadString(self) -> Optional[str]:
+	def tryReadString(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
 		if cursor >= length:
 			return None
-		terminator: Char = source[cursor]
-		TERMINATOR_OR_ESCAPE: set[Char] = {terminator, SYNTAX_ESCAPE}
-		if terminator in QUOTES: # quoted string
+		terminator: Byte = source[cursor]
+		TERMINATOR_OR_ESCAPE: set[Byte] = {terminator, ord(SYNTAX_ESCAPE)}
+
+		if terminator in QUOTES:  # quoted string
 			cursor += 1
-			result: str = ''
-			escaped: bool = False
+			strStreakStart = cursor
+			result: bytes = b''
 			while cursor < length:
-				c: Char = source[cursor]
-				cursor += 1
-				if escaped:
-					if c in TERMINATOR_OR_ESCAPE:
-						result += c
-						escaped = False
+				c: Byte = source[cursor]
+
+				if c == ord(SYNTAX_ESCAPE):
+					result += source[strStreakStart:cursor]
+					cursor += 1
+					if not cursor < length:
+						return None
+					c2 = source[cursor]
+					if c2 in TERMINATOR_OR_ESCAPE:
+						strStreakStart = cursor
+						cursor += 1
 					else:
 						return None  # TODO: Lexer Errors
-				elif c == SYNTAX_ESCAPE:
-					escaped = True
 				elif c == terminator:
+					result += source[strStreakStart:cursor]
+					cursor += 1
 					self.save()
 					self.cursor = cursor
 					return result
 				else:
-					result += c
+					cursor += 1
+
 			return None  # TODO: Lexer Errors
-		else: # unquoted string
+		else:  # unquoted string
 			while cursor < length and source[cursor] in UNQUOTED_STRING_CHARS:
 				cursor += 1
 			if start == cursor:
@@ -309,9 +296,50 @@ class StringReader:
 			self.cursor = cursor
 			return source[start:cursor]
 
+	# @cy_final
+	# def tryReadString(self) -> Optional[bytes]:
+	# 	start: int = self.cursor
+	# 	cursor: int = self.cursor
+	# 	source: bytes = self.source
+	# 	length: int = self.totalLength
+	# 	if cursor >= length:
+	# 		return None
+	# 	terminator: Byte = source[cursor]
+	# 	TERMINATOR_OR_ESCAPE: set[Byte] = {terminator, ord(SYNTAX_ESCAPE)}
+	# 	if terminator in QUOTES:  # quoted string
+	# 		cursor += 1
+	# 		result: bytes = b''
+	# 		escaped: bool = False
+	# 		while cursor < length:
+	# 			c: Byte = source[cursor]
+	# 			cursor += 1
+	# 			if escaped:
+	# 				if c in TERMINATOR_OR_ESCAPE:
+	# 					result += c
+	# 					escaped = False
+	# 				else:
+	# 					return None  # TODO: Lexer Errors
+	# 			elif c == ord(SYNTAX_ESCAPE):
+	# 				escaped = True
+	# 			elif c == terminator:
+	# 				self.save()
+	# 				self.cursor = cursor
+	# 				return result
+	# 			else:
+	# 				result += c
+	# 		return None  # TODO: Lexer Errors
+	# 	else: # unquoted string
+	# 		while cursor < length and source[cursor] in UNQUOTED_STRING_CHARS:
+	# 			cursor += 1
+	# 		if start == cursor:
+	# 			return None
+	# 		self.save()
+	# 		self.cursor = cursor
+	# 		return source[start:cursor]
+
 	@cy_final
-	def tryReadBoolean(self) -> Optional[str]:  # throws CommandSyntaxException
-		value: Optional[str] = self.tryReadString()
+	def tryReadBoolean(self) -> Optional[bytes]:  # throws CommandSyntaxException
+		value: Optional[bytes] = self.tryReadString()
 		if not value:
 			return None  # TODO: Lexer Errors
 		if value in BOOLEAN_VALUES:
@@ -321,14 +349,14 @@ class StringReader:
 			return None  # TODO: Lexer Errors
 
 	@cy_final
-	def tryReadLiteral(self) -> Optional[str]:  # throws CommandSyntaxException
+	def tryReadLiteral(self) -> Optional[bytes]:  # throws CommandSyntaxException
 		start: int = self.cursor
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
-		if cursor >= length or source[cursor] == ' ':
+		if cursor >= length or source[cursor] == ord(' '):
 			return None
-		while cursor < length and source[cursor] != ' ':
+		while cursor < length and source[cursor] != ord(' '):
 			cursor += 1
 		self.save()
 		self.cursor = cursor
@@ -360,7 +388,7 @@ class StringReader:
 	# 		return string
 
 	@cy_final
-	def readResourceLocation(self, *, allowTag: bool = False) -> str:
+	def readResourceLocation(self, *, allowTag: bool = False) -> bytes:
 		# The namespace and the path of a resource location should only contain the following symbols:
 		#     0123456789 Numbers
 		#     abcdefghijklmnopqrstuvwxyz Lowercase letters
@@ -370,19 +398,19 @@ class StringReader:
 		# The following characters are illegal in the namespace, but acceptable in the path:
 		#     / Forward slash (directory separator)
 		# The preferred naming convention for either namespace or path is snake_case.
-		pattern = r'(?:[0-9a-zA-Z._-]+:)?[0-9a-zA-Z._/-]*'
+		pattern = rb'(?:[0-9a-zA-Z._-]+:)?[0-9a-zA-Z._/-]*'
 		if allowTag:
-			pattern = f'#?{pattern}'
+			pattern = b'#?' + pattern
 		literal = self.tryReadRegex(re.compile(pattern))
 		return literal
 
 	@cy_final
-	def tryReadTildeNotation(self) -> Optional[str]:
+	def tryReadTildeNotation(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
-		if cursor < length and source[cursor] == '~':
+		if cursor < length and source[cursor] == ord('~'):
 			cursor += 1
 			self.save()
 			self.cursor = cursor
@@ -398,12 +426,12 @@ class StringReader:
 			return None
 
 	@cy_final
-	def tryReadCaretNotation(self) -> Optional[str]:
+	def tryReadCaretNotation(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
-		source: str = self.source
+		source: bytes = self.source
 		length: int = self.totalLength
-		if cursor < length and source[cursor] == '^':
+		if cursor < length and source[cursor] == ord('^'):
 			cursor += 1
 			self.save()
 			self.cursor = cursor

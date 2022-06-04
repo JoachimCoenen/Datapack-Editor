@@ -7,7 +7,7 @@ from PyQt5.QtCore import QTimer
 
 from Cat import undoRedo
 from Cat.CatPythonGUI.GUI import codeEditor
-from Cat.Serializable import Computed, RegisterContainer, Serialized, SerializableContainer, ComputedCached
+from Cat.Serializable import Computed, RegisterContainer, Serialized, SerializableContainer, ComputedCached, Transient
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.extensions.fileSystemChangedDependency import SingleFileChangedDependencyProperty
 from Cat.undoRedo import UndoRedoStack2, MakeMementoIfDiffFunc
@@ -15,6 +15,7 @@ from Cat.utils import utils, Decorator
 from Cat.utils.profiling import logInfo, logError
 
 from Cat.utils.signals import CatSignal
+from model.parsing.tree import Node
 from model.pathUtils import fileNameFromFilePath, FilePath, getMTimeForFilePath, ZipFilePool, loadTextFile, ArchiveFilePool
 from model.utils import GeneralError, Position
 
@@ -210,60 +211,58 @@ class Document(SerializableContainer):
 		return self.content != self._originalContent
 
 	encoding: str = Serialized(default='utf-8')
-	_contentVersion: int = Serialized(default=0, shouldSerialize=False, decorators=[pd.NoUI()])
+	_undoRedoStackInitialized: bool = Serialized(default=False, shouldSerialize=False)
 	content: TTarget = Serialized(default=None, decorators=[pd.NoUI()])
 	_originalContent: TTarget = Serialized(getInitValue=lambda s: s.content, decorators=[pd.NoUI()])
 
+	# tree: Optional[Node] = Serialized(default=None, shouldSerialize=False, shouldPrint=False, decorators=[pd.NoUI()])
+	@Serialized(shouldSerialize=False)
+	def tree(self) -> Optional[Node]:
+		tree, self.parserErrors = self.parse(self.content)
+		return tree
+
 	@content.onSet
-	def content(self, newVal: str, oldVal: Optional[str]) -> str:
+	def content(self, newVal: bytes, oldVal: Optional[bytes]) -> bytes:
 		self.contentOnSet(newVal, oldVal)
 		return newVal
 
-	def contentOnSet(self, newVal: str, oldVal: Optional[str]) -> None:
-		if self._contentVersion == 0:
+	def contentOnSet(self, newVal: bytes, oldVal: Optional[bytes]) -> None:
+		if not self._undoRedoStackInitialized:
 			# do take a snapshot to initialize the undoRedoStack:
 			self.undoRedoStack.takeSnapshotIfChanged(doDeepCopy=True)
+			self._undoRedoStackInitialized = True
 
 		if newVal == oldVal:
 			return
+		self.asyncParse.callNow(newVal)
+		self.asyncValidate()
+		# self.asyncParseNValidate()
 
 		self._setDocumentChanged()
-		self._contentVersion += 1
 
 		if self.inUndoRedoMode:
+			self._asyncTakeSnapshot.cancelPending()
 			return
 
 		self._asyncTakeSnapshot()
 
-		self.asyncValidate()
-
-	@utils.DeferredCallOnceMethod(delay=333)
-	def _asyncTakeSnapshot(self) -> None:
-		# MUST be deferred with a delay > 0!
-		self.undoRedoStack.takeSnapshotIfChanged(doDeepCopy=True)
-
-	@utils.DeferredCallOnceMethod(delay=333)
-	@utils.BusyIndicator
-	def asyncValidate(self) -> None:
-		self.errors = self.validate()
-
-	def validate(self) -> Sequence[GeneralError]:
-		return []
-
-	# TODO: def parse(self) -> Sequence[GeneralError]:
-	# 	return []
-
 	highlightErrors: bool = Serialized(default=True)
+	onErrorsChanged: CatSignal[Callable[[Document], None]] = CatSignal('onErrorsChanged')
+	parserErrors: Sequence[GeneralError] = Serialized(getInitValue=list, shouldSerialize=False)
+	validationErrors: Sequence[GeneralError] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
+	errors: Sequence[GeneralError] = Computed(getInitValue=lambda s: s.parserErrors + s.validationErrors, shouldSerialize=False)
 
-	errors: Sequence[GeneralError] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
-
-	@errors.onSet
+	@parserErrors.onSet
 	def errors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
 		if newVal != oldVal:
 			QTimer.singleShot(0, lambda self=self: self.onErrorsChanged.emit(self))
 		return newVal
 
-	onErrorsChanged: CatSignal[Callable[[Document], None]] = CatSignal('onErrorsChanged')
+	@validationErrors.onSet
+	def errors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
+		if newVal != oldVal:
+			QTimer.singleShot(0, lambda self=self: self.onErrorsChanged.emit(self))
+		return newVal
 
 	cursorPosition: tuple[int, int] = Serialized(default=(0, 0))
 	selection: tuple[int, int, int, int] = Serialized(default=(-1, -1, -1, -1))
@@ -334,6 +333,35 @@ class Document(SerializableContainer):
 		# self.documentChanged = True
 		pass
 
+	def parse(self, text: bytes) -> tuple[Optional[Node], Sequence[GeneralError]]:
+		return None, []
+
+	def validate(self) -> Sequence[GeneralError]:
+		return []
+
+	@utils.DeferredCallOnceMethod(delay=333)
+	@utils.BusyIndicator
+	def asyncParse(self, text: bytes = None) -> None:
+		if text is None:
+			text = self.content
+		self.tree, self.parserErrors = self.parse(text)
+
+	@utils.DeferredCallOnceMethod(delay=333)
+	@utils.BusyIndicator
+	def asyncValidate(self) -> None:
+		self.validationErrors = self.validate()
+
+	@utils.DeferredCallOnceMethod(delay=333)
+	@utils.BusyIndicator
+	def asyncParseNValidate(self) -> None:
+		self.asyncParse.callNow()
+		self.asyncValidate.callNow()
+
+	@utils.DeferredCallOnceMethod(delay=333)
+	def _asyncTakeSnapshot(self) -> None:
+		# MUST be deferred with a delay > 0!
+		self.undoRedoStack.takeSnapshotIfChanged(doDeepCopy=True)
+
 	def toRepr(self):
 		raise NotImplemented()
 
@@ -387,7 +415,8 @@ class TextDocument(Document):
 		self.fileChanged: bool = False
 		self.documentChanged: bool = False
 		self.encoding: str = 'utf-8'
-		self.content: str = ''
+		self.content: bytes = b''
+		self.strContent: str = ''
 
 	def __init__(self):
 		super().__init__()
@@ -396,18 +425,33 @@ class TextDocument(Document):
 	filePath: FilePath = Serialized(default='', decorators=[
 		pd.FilePath(filters=[('Text', '.txt')])
 	])
-	content: str = Serialized(default='', decorators=[pd.NoUI()])
-	_originalContent: str = Serialized(getInitValue=lambda s: s.content, decorators=[pd.NoUI()])
-
-	tree: Optional[Any] = Serialized(default=None, shouldSerialize=False, shouldPrint=False, decorators=[pd.NoUI()])
+	content: bytes = Serialized(
+		default=b'',
+		decode=lambda s, v: bytes(v, encoding=s.encoding, errors='replace'),
+		encode=lambda s, v: str(v, encoding=s.encoding, errors='replace'),
+		shouldSerialize=True,
+		decorators=[pd.NoUI()]
+	)
+	_originalContent: bytes = Serialized(
+		getInitValue=lambda s: s.content,
+		decode=lambda s, v: bytes(v, encoding=s.encoding, errors='replace') if isinstance(v, str) else v,
+		encode=lambda s, v: str(v, encoding=s.encoding, errors='replace'),
+		decorators=[pd.NoUI()]
+	)
 
 	@content.onSet
-	def content(self, newVal: str, oldVal: Optional[str]) -> str:
+	def content(self, newVal: bytes, oldVal: Optional[bytes]) -> bytes:
 		self.contentOnSet(newVal, oldVal)
 		return newVal
 
-	def toRepr(self) -> str:
-		return self.content
+	strContent: str = Transient(
+		getter=lambda s: str(s.content, encoding=s.encoding, errors='replace'),
+		setter=lambda s, v: s.contentProp.set(s, bytes(v, encoding=s.encoding, errors='replace')),
+		shouldSerialize=False,
+		decorators=[pd.NoUI()])
 
-	def fromRepr(self, string):
-		self.content = string
+	def toRepr(self) -> str:
+		return self.strContent
+
+	def fromRepr(self, string: str):
+		self.strContent = string

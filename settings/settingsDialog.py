@@ -5,6 +5,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.CatPythonGUI.AutoGUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
 from Cat.CatPythonGUI.GUI import CORNERS, Overlap, RoundedCorners
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
@@ -13,8 +14,7 @@ from Cat.Serializable import SerializableContainer
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
 from settings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings
-from settings._applicationSettings import AboutQt
-
+from settings._applicationSettings import AboutQt, ColorSchemePD
 
 _qtIcon: Optional[QIcon] = None
 

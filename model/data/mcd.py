@@ -4,6 +4,7 @@ from model.commands.argumentTypes import *
 from model.commands.filterArgs import FilterArgumentInfo
 from model.data.mcVersions import MCVersion
 from model.datapackContents import ResourceLocation
+from model.parsing.bytesUtils import strToBytes
 
 
 def rlsFromData(mcdList: list) -> set[ResourceLocation]:
@@ -38,7 +39,7 @@ def buildBlockState(state: dict) -> FilterArgumentInfo:
 	elif state['type'] == 'bool':
 		type_ = BRIGADIER_BOOL
 	elif state['type'] == 'enum':
-		type_ = makeLiteralsArgumentType(state['values'])
+		type_ = makeLiteralsArgumentType([strToBytes(st) for st in state['values']])
 	else:
 		assert False
 

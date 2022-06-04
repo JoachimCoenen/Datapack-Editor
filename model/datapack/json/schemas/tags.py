@@ -12,7 +12,7 @@ def buildTagsSchema(schema: ResourceLocationSchema) -> JsonObjectSchema:
 				name='description',
 				description=MDStr("A textual description of the contents of this file. Will be ignored by Minecraft."),
 				value=JsonStringSchema(),
-				default="",
+				optional=True,
 			),
 			PropertySchema(
 				name='replace',
@@ -20,6 +20,7 @@ def buildTagsSchema(schema: ResourceLocationSchema) -> JsonObjectSchema:
 					"Whether or not contents of this tag should completely replace tag contents from different lower priority data packs with the same resource location. "
 					"When `false` the tag's content is appended to the contents of the higher priority data packs, instead."),
 				value=JsonBoolSchema(),
+				optional=True,
 				default=False,
 			),
 			PropertySchema(
@@ -51,6 +52,7 @@ def buildTagsSchema(schema: ResourceLocationSchema) -> JsonObjectSchema:
 											"A tag that fails to load can still be referenced in any data pack and be (re)defined in other data packs. "
 											"In other words, only the entries in this JSON file is ignored if this entry cannot be found."),
 										value=JsonBoolSchema(),
+										optional=True,
 										default=True,
 									),
 								],

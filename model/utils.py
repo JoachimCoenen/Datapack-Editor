@@ -100,6 +100,14 @@ class Span:
 	def __repr__(self):
 		return f' Span({self.start!r}, {self.end!r})'
 
+	@staticmethod
+	def between(start: Span, end: Span) -> Span:
+		return Span(start.end, end.start)
+
+	@staticmethod
+	def encompassing(start: Span, end: Span) -> Span:
+		return Span(start.start, end.end)
+
 
 HTMLStr = strings.HTMLStr
 """A HTML string. (see: https://daringfireball.net/projects/markdown/)"""

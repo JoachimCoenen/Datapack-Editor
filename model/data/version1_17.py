@@ -7,6 +7,7 @@ from model.data.mcd import fillFromMinecraftData
 from model.data.v1_17.commands import fillCommandsFor1_17
 from model.data.v1_17.generatedBlockStates import BLOCK_STATES_BY_BLOCK
 from model.datapackContents import ResourceLocation
+from model.parsing.bytesUtils import strToBytes
 
 
 def initPlugin() -> None:
@@ -1682,46 +1683,68 @@ DIMENSIONS: set[ResourceLocation] = {
 
 
 # compiled from the Minecraft wiki:
-STRUCTURES: set[str] = {
-	'jungle_pyramid',
-	'village',
-	'endcity',
-	'ruined_portal',
-	'igloo',
-	'stronghold',
-	'bastion_remnant',
-	'desert_pyramid',
-	'nether_fossil',
-	'buried_treasure',
-	'mansion',
-	'shipwreck',
-	'monument',
-	'swamp_hut',
-	'fortress',
-	'pillager_outpost',
-	'ocean_ruin',
-	'mineshaft',
+PREDICATE_CONDITIONS: set[ResourceLocation] = {
+	ResourceLocation.fromString('inverted'),
+	ResourceLocation.fromString('alternative'),
+	ResourceLocation.fromString('random_chance'),
+	ResourceLocation.fromString('random_chance_with_looting'),
+	ResourceLocation.fromString('entity_properties'),
+	ResourceLocation.fromString('killed_by_player'),
+	ResourceLocation.fromString('entity_scores'),
+	ResourceLocation.fromString('block_state_property'),
+	ResourceLocation.fromString('match_tool'),
+	ResourceLocation.fromString('table_bonus'),
+	ResourceLocation.fromString('survives_explosion'),
+	ResourceLocation.fromString('damage_source_properties'),
+	ResourceLocation.fromString('location_check'),
+	ResourceLocation.fromString('weather_check'),
+	ResourceLocation.fromString('reference'),
+	ResourceLocation.fromString('time_check'),
+	ResourceLocation.fromString('value_check'),
 }
 
 
 # compiled from the Minecraft wiki:
-SLOTS: dict[str, int] = {
-	'armor.chest':     102,
-	'armor.feet':      100,
-	'armor.head':      103,
-	'armor.legs':      101,
-	'weapon':           98,
-	'weapon.mainhand':  98,
-	'weapon.offhand':   99,
-	**{f'container.{sn}':    0 + sn for sn in range(0, 53 + 1)},  # 0-53 	0-53
-	**{f'enderchest.{sn}': 200 + sn for sn in range(0, 26 + 1)},  # 0-26 	200-226
-	**{f'hotbar.{sn}':       0 + sn for sn in range(0, 8 + 1)},   # 0-8 	0-8
-	**{f'inventory.{sn}':    9 + sn for sn in range(0, 26 + 1)},  # 0-26 	9-35
-	'horse.saddle':    400,
-	'horse.chest':     499,
-	'horse.armor':     401,
-	**{f'horse.{sn}':      500 + sn for sn in range(0, 14 + 1)},  # 0-14 	500-514
-	**{f'villager.{sn}':   300 + sn for sn in range(0, 7 + 1)},   # 0-7 	300-307
+STRUCTURES: set[bytes] = {
+	b'jungle_pyramid',
+	b'village',
+	b'endcity',
+	b'ruined_portal',
+	b'igloo',
+	b'stronghold',
+	b'bastion_remnant',
+	b'desert_pyramid',
+	b'nether_fossil',
+	b'buried_treasure',
+	b'mansion',
+	b'shipwreck',
+	b'monument',
+	b'swamp_hut',
+	b'fortress',
+	b'pillager_outpost',
+	b'ocean_ruin',
+	b'mineshaft',
+}
+
+
+# compiled from the Minecraft wiki:
+SLOTS: dict[bytes, int] = {
+	b'armor.chest':     102,
+	b'armor.feet':      100,
+	b'armor.head':      103,
+	b'armor.legs':      101,
+	b'weapon':           98,
+	b'weapon.mainhand':  98,
+	b'weapon.offhand':   99,
+	**{b'container.' + strToBytes(f'{sn}'):    0 + sn for sn in range(0, 53 + 1)},  # 0-53 	0-53
+	**{b'enderchest.' + strToBytes(f'{sn}'): 200 + sn for sn in range(0, 26 + 1)},  # 0-26 	200-226
+	**{b'hotbar.' + strToBytes(f'{sn}'):       0 + sn for sn in range(0, 8 + 1)},   # 0-8 	0-8
+	**{b'inventory.' + strToBytes(f'{sn}'):    9 + sn for sn in range(0, 26 + 1)},  # 0-26 	9-35
+	b'horse.saddle':    400,
+	b'horse.chest':     499,
+	b'horse.armor':     401,
+	**{b'horse.' + strToBytes(f'{sn}'):      500 + sn for sn in range(0, 14 + 1)},  # 0-14 	500-514
+	**{b'villager.' + strToBytes(f'{sn}'):   300 + sn for sn in range(0, 7 + 1)},   # 0-7 	300-307
 }
 
 
@@ -1962,6 +1985,7 @@ version1_17 = MCVersion(
 	particles=PARTICLES,
 	dimensions=DIMENSIONS,
 	structures=STRUCTURES,
+	predicateConditions=PREDICATE_CONDITIONS,
 	gameEvents=set(),  # introduced in version 1.19
 
 	slots=SLOTS,

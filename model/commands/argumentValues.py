@@ -14,7 +14,7 @@ class FilterArgument:
 	isNegated: bool
 
 
-class FilterArguments(OrderedMultiDict[str, FilterArgument]):
+class FilterArguments(OrderedMultiDict[bytes, FilterArgument]):
 	__slots__ = ()
 
 

@@ -13,8 +13,7 @@ class DocumentsViewsContainerEditor(EditorBase[ViewContainer], CatFramedWidgetMi
 		super(DocumentsViewsContainerEditor, self).onSetModel(new, old)
 		if old is not None:
 			old.onViewsChanged.disconnect('editorRedraw')
-		new.onViewsChanged.disconnect('editorRedraw')
-		new.onViewsChanged.connect('editorRedraw', lambda: self.redraw('onViewsChanged'))
+		new.onViewsChanged.reconnect('editorRedraw', lambda: self.redraw('onViewsChanged'))
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		viewContainer = self.model()

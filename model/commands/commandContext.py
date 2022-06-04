@@ -11,6 +11,7 @@ from model.commands.command import CommandPart, MCFunction, ParsedComment, Parse
 	SwitchSchema, formatPossibilities, ParsedCommand
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
+from model.parsing.bytesUtils import bytesToStr
 from model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, registerContextProvider, AddContextToDictDecorator
 from model.utils import Position, Span, GeneralError, MDStr, formatAsError
 
@@ -46,10 +47,13 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 					match.before = child
 					self._getBestMatch(child, pos, match)
 					# correct some special cases:
-					# if match.before is match.hit:
-					# 	match.before = None
+					if match.before is match.hit and isinstance(match.hit, ParsedCommand):
+						if match.hit.start.index + len(match.hit.name) < pos.index:
+							match.hit = None
+						else:
+							match.before = None
 					if match.before is not None and match.hit is not None:
-						if match.before.span.end > match.hit.span.start:
+						if match.before.span.end > match.hit.span.start and not isinstance(match.before, ParsedCommand):
 							match.contained.append(match.hit)
 							match.hit = None
 		else:
@@ -64,7 +68,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 		return None
 
 	def prepareTree(self) -> list[GeneralError]:
-		pass
+		return []
 
 	def validateTree(self, errorsIO: list[GeneralError]) -> None:
 		if isinstance(self.tree, MCFunction):
@@ -88,8 +92,8 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			elif before is not None:
 				contextStr = hit.content
 				posInContextStr = pos.index - hit.span.start.index
-				if isinstance(hit, ParsedCommand):
-					before = hit
+				# if isinstance(hit, ParsedCommand):
+				# 	before = hit
 		if before is not None:
 			if (schema := before.schema) is not None:
 				result = self._getNextKeywords(schema.next, hit, pos, replaceCtx)
@@ -98,7 +102,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			return []
 
 		from session.session import getSession
-		return [cmd + ' ' for cmd in getSession().minecraftData.commands.keys()]
+		return [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
 
 	def _getNextKeywords(self, nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position, replaceCtx: str) -> list[str]:
 		result = []
@@ -116,7 +120,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 					result += handler.getSuggestions2(nx, node, pos, replaceCtx)
 			elif nx is COMMANDS_ROOT:
 				from session.session import getSession
-				result += [cmd + ' ' for cmd in getSession().minecraftData.commands.keys()]
+				result += [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
 		return result
 
 	# def getDocumentation(self, pos: Position) -> MDStr:
@@ -178,7 +182,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 
 class ArgumentContext(Context[ParsedArgument], ABC):
 	@abstractmethod
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
@@ -249,7 +253,7 @@ def makeCommandSyntaxError(sr: StringReader, message: MDStr, *, style: str = 'er
 	return CommandSyntaxError(message, sr.currentSpan, style=style)
 
 
-def missingArgumentContext(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+def missingArgumentContext(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 	errorMsg = MDStr(f"missing ArgumentContext for type `{escapeForXml(ai.typeName)}`")
 	logError(errorMsg)
 
@@ -259,7 +263,7 @@ def missingArgumentContext(sr: StringReader, ai: ArgumentSchema, *, errorsIO: li
 	return None
 
 
-def missingArgumentParser(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+def missingArgumentParser(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 	errorMsg = MDStr(f"missing parse(...) implementation in ArgumentContext for type `{escapeForXml(ai.typeName)}`")
 	logError(errorMsg)
 
@@ -279,13 +283,13 @@ def makeParsedArgument(sr: StringReader, schema: Optional[CommandPartSchema], va
 
 
 def parseLiteral(sr: StringReader, ai: ArgumentSchema) -> Optional[ParsedArgument]:
-	literal = sr.tryReadRegex(re.compile(r'\w+'))
+	literal = sr.tryReadRegex(re.compile(rb'\w+'))
 	if literal is None:
 		literal = sr.tryReadLiteral()
 	if literal is None:
 		return None
 	assert isinstance(ai.type, LiteralsArgumentType)
-	options: set[str] = set(ai.type.options)
+	options: set[bytes] = set(ai.type.options)
 	if literal not in options:
 		sr.rollback()
 		return None
@@ -299,6 +303,6 @@ class LiteralArgumentHandler(ArgumentContext):
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
 		if isinstance(ai.type, LiteralsArgumentType):
-			return [option + ' ' for option in ai.type.options]
+			return [bytesToStr(option) + ' ' for option in ai.type.options]
 		else:
 			return []

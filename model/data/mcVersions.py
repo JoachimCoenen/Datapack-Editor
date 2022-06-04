@@ -8,6 +8,7 @@ from model.commands.argumentTypes import ArgumentType
 from model.commands.command import CommandSchema
 from model.commands.filterArgs import FilterArgumentInfo
 from model.datapackContents import ResourceLocation
+from model.parsing.bytesUtils import strToBytes
 
 
 @dataclass
@@ -33,22 +34,23 @@ class MCVersion:
 	biomes: set[ResourceLocation]
 	particles: set[ResourceLocation]
 	dimensions: set[ResourceLocation]
+	predicateConditions: set[ResourceLocation]
 	gameEvents: set[ResourceLocation]  # introduced in version 1.19
 
-	structures: set[str]
-	slots: dict[str, int]
+	structures: set[bytes]
+	slots: dict[bytes, int]
 
 	blockStates: dict[ResourceLocation, list[FilterArgumentInfo]]
 	gamerules: list[Gamerule]
 
-	commands: dict[str, CommandSchema]
+	commands: dict[bytes, CommandSchema]
 
-	def getBlockStatesDict(self, blockID: ResourceLocation) -> dict[str, FilterArgumentInfo]:
+	def getBlockStatesDict(self, blockID: ResourceLocation) -> dict[bytes, FilterArgumentInfo]:
 		arguments = self.blockStates.get(blockID)
 		if arguments is None:
 			return {}
 		else:
-			return {argument.name: argument for argument in arguments}
+			return {strToBytes(argument.name): argument for argument in arguments}
 
 
 def _copyRecursive(data):

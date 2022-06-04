@@ -8,6 +8,7 @@ from model.commands.commandContext import getArgumentContext
 from model.commands.utils import CommandSemanticsError
 from model.commands.command import MCFunction, CommandPart, ParsedCommand
 from model.messages import *
+from model.parsing.bytesUtils import bytesToStr
 from model.utils import Span
 
 if TYPE_CHECKING:
@@ -50,10 +51,10 @@ def validateCommand(command: ParsedCommand, *, errorsIO: list[CommandSemanticsEr
 def _unknownOrTooManyArgumentsError(commandPart: CommandPart, possibilities: Sequence[CommandPartSchema]) -> CommandSemanticsError:
 	if possibilities:
 		possibilitiesStr = escapeForXml(formatPossibilities(possibilities))
-		valueStr = escapeForXml(commandPart.content)
+		valueStr = escapeForXml(bytesToStr(commandPart.content))
 		return CommandSemanticsError(f"unknown argument: expected `{possibilitiesStr}`, but got: `{valueStr}`", commandPart.span)
 	else:
-		valueStr = escapeForXml(commandPart.content)
+		valueStr = escapeForXml(bytesToStr(commandPart.content))
 		return CommandSemanticsError(f"too many arguments: `{valueStr}`", commandPart.span)
 
 

@@ -15,6 +15,7 @@ from model.commands.commandContext import getArgumentContext, missingArgumentPar
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.messages import *
+from model.parsing.bytesUtils import bytesToStr
 from model.parsing.contextProvider import Suggestions
 from model.utils import Span, Position, GeneralError
 
@@ -45,45 +46,45 @@ def makeCommandPart(sr: StringReader) -> CommandPart:
 	return argument
 
 
-def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *, errorsIO: list[CommandSyntaxError]) -> Optional[FilterArguments]:
-	if sr.tryConsumeChar('['):
+def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], *, errorsIO: list[CommandSyntaxError]) -> Optional[FilterArguments]:
+	if sr.tryConsumeByte(ord('[')):
 		# block states:
 		arguments: FilterArguments = FilterArguments()
 		sr.tryConsumeWhitespace()
 		sr.save()
-		while not sr.tryConsumeChar(']'):
+		while not sr.tryConsumeByte(ord(']')):
 			sr.mergeLastSave()
 
-			key = sr.tryReadString()
+			key: bytes = sr.tryReadString()
 			if key is None:
 				sr.save()
 				errorsIO.append(CommandSyntaxError(f"Expected a String.", Span(sr.currentPos), style='error'))
-				key = ''
+				key = b''
 				tsai = FALLBACK_FILTER_ARGUMENT_INFO
 			elif key not in argsInfo:
-				errorsIO.append(CommandSyntaxError(f"Unknown argument '`{key}`'.", sr.currentSpan, style='error'))
+				errorsIO.append(CommandSyntaxError(f"Unknown argument '`{bytesToStr(key)}`'.", sr.currentSpan, style='error'))
 				tsai = FALLBACK_FILTER_ARGUMENT_INFO
 			else:
 				tsai = argsInfo[key]
 
 			keyNode = makeCommandPart(sr)
-			assert keyNode.content == key, f"keyNode.content = {keyNode.content!r}, key = {key!r}"
+			assert keyNode.content == key, f"keyNode.content = {keyNode.content!r}, key = {bytesToStr(key)!r}"
 
 			# duplicate?:
 			if key in arguments and not tsai.multipleAllowed:
-				errorsIO.append(CommandSyntaxError(f"Argument '`{key}`' cannot be duplicated.", sr.currentSpan, style='error'))
+				errorsIO.append(CommandSyntaxError(f"Argument '`{bytesToStr(key)}`' cannot be duplicated.", sr.currentSpan, style='error'))
 
 			sr.tryConsumeWhitespace()
-			if not sr.tryConsumeChar('='):
+			if not sr.tryConsumeByte(ord('=')):
 				errorsIO.append(CommandSyntaxError(f"Expected '`=`'.", Span(sr.currentPos), style='error'))
 				isNegated = False
-				sr.readUntilEndOrRegex(re.compile(r'[],]'))
+				sr.readUntilEndOrRegex(re.compile(rb'[],]'))
 				valueNode = None
 			else:
 				sr.tryConsumeWhitespace()
-				isNegated = sr.tryConsumeChar('!')
+				isNegated = sr.tryConsumeByte(ord('!'))
 				if isNegated and not tsai.isNegatable:
-					errorsIO.append(CommandSyntaxError(f"Argument '`{key}`' cannot be negated.", sr.currentSpan, style='error'))
+					errorsIO.append(CommandSyntaxError(f"Argument '`{bytesToStr(key)}`' cannot be negated.", sr.currentSpan, style='error'))
 
 				handler = getArgumentContext(tsai.type)
 				if handler is None:
@@ -91,16 +92,16 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 				else:
 					valueNode = handler.parse(sr, tsai, errorsIO=errorsIO)
 				if valueNode is None:
-					remaining = sr.readUntilEndOrRegex(re.compile(r'[],]'))
+					remaining = sr.readUntilEndOrRegex(re.compile(rb'[],]'))
 					valueNode = makeParsedArgument(sr, tsai, value=remaining)
 					errorsIO.append(CommandSyntaxError(f"Expected {tsai.type.name}.", sr.currentSpan, style='error'))
 			sr.mergeLastSave()
 			arguments.add(key, FilterArgument(keyNode, valueNode, isNegated))
 
 			sr.tryConsumeWhitespace()
-			if sr.tryConsumeChar(']'):
+			if sr.tryConsumeByte(ord(']')):
 				break
-			if sr.tryConsumeChar(','):
+			if sr.tryConsumeByte(ord(',')):
 				sr.tryConsumeWhitespace()
 				continue
 			if sr.hasReachedEnd:
@@ -112,7 +113,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[str, FilterArgumentInfo], *
 		return None
 
 
-def validateFilterArgs(fas: FilterArguments, argsInfo: dict[str, FilterArgumentInfo], errorsIO: list[GeneralError]) -> None:
+def validateFilterArgs(fas: FilterArguments, argsInfo: dict[bytes, FilterArgumentInfo], errorsIO: list[GeneralError]) -> None:
 	pass  # TODO: implement validateFilterArgs(...)
 
 
@@ -131,9 +132,9 @@ class CursorCtx:
 	after: bool = False
 
 
-def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, FilterArgumentInfo], fas: FilterArguments) -> CursorCtx:
+def getCursorContext(contextStr: bytes, cursorPos: int, argsInfo: dict[bytes, FilterArgumentInfo], fas: FilterArguments) -> CursorCtx:
 	assert contextStr
-	assert contextStr[0] == '['
+	assert contextStr[0] == ord('[')
 	if cursorPos == 1:
 		return CursorCtx(None, isValue=False, inside=False, after=False)
 
@@ -142,7 +143,7 @@ def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, Filter
 		if (value := fa.value) is not None:
 			valSpan = value.span
 			if valSpan.end.index < cursorPos:
-				if re.search(r', *$', contextStr[:cursorPos]) is not None:
+				if re.search(rb', *$', contextStr[:cursorPos]) is not None:
 					return CursorCtx(fa, isValue=False, inside=True)
 				else:
 					return CursorCtx(fa, isValue=True, after=True)
@@ -151,12 +152,12 @@ def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, Filter
 				return CursorCtx(fa, isValue=True, inside=True, after=False)
 
 		if keySpan.end.index < cursorPos:
-			if re.search(r'= *$', contextStr[:cursorPos]) is not None:
+			if re.search(rb'= *$', contextStr[:cursorPos]) is not None:
 				return CursorCtx(fa, isValue=True, inside=True)
 			else:
 				return CursorCtx(fa, isValue=False, after=True)
 		elif keySpan.start.index <= cursorPos:
-			if (keyMatch := re.search(r'\w+$', contextStr[:cursorPos])) is not None:
+			if (keyMatch := re.search(rb'\w+$', contextStr[:cursorPos])) is not None:
 				keyStr = keyMatch.group(0)
 				return CursorCtx(fa, isValue=False, inside=True, after=keyStr in argsInfo)
 			return CursorCtx(fa, isValue=False, inside=True)
@@ -164,7 +165,7 @@ def getCursorContext(contextStr: str, cursorPos: int, argsInfo: dict[str, Filter
 	return CursorCtx(None, isValue=False, inside=False, after=False)
 
 
-def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: str, cursorPos: int, pos: Position, replaceCtx: str, argsInfo: dict[str, FilterArgumentInfo]) -> Suggestions:
+def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes, cursorPos: int, pos: Position, replaceCtx: str, argsInfo: dict[bytes, FilterArgumentInfo]) -> Suggestions:
 	if node is None or cursorPos == 0:
 		# if len(contextStr) == 0:
 		if not argsInfo:
@@ -175,17 +176,18 @@ def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: str, c
 	# 	if len(contextStr) >= 1:
 	# 		if contextStr[0] == '[':
 	#
-	if contextStr.startswith('[') and not contextStr.endswith(']'):
+	if contextStr.startswith(b'[') and not contextStr.endswith(b']'):
 		contextStr += ']'
 
 	if node is None:
 		return []
 
-	cursorTouchesWord = re.search(r'\w*$', contextStr[:cursorPos]).group()
+	cursorTouchesWord = re.search(rb'\w*$', contextStr[:cursorPos]).group()
+	cursorTouchesWord = bytesToStr(cursorTouchesWord)
 
 	context = getCursorContext(contextStr, cursorPos, argsInfo, node)
 	if context.fa is None:
-		return [cursorTouchesWord + ']'] + [f'{key}=' for key in argsInfo.keys()]
+		return [cursorTouchesWord + ']'] + [f'{bytesToStr(key)}=' for key in argsInfo.keys()]
 
 	suggestions: Suggestions = []
 	if context.isValue:

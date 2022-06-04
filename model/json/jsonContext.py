@@ -211,20 +211,21 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 
 	def _getSuggestionsForBefore(self, pos: Position, before: JsonData, contained: list[JsonData], replaceCtx: str) -> Suggestions:
 		if before.schema is JSON_KEY_SCHEMA:
-			needsColon = ':' not in self.text[before.span.end.index:pos.index]
+			needsColon = b':' not in self.text[before.span.end.index:pos.index]
 			if len(contained) >= 2:
 				prop = contained[-1]
 				if isinstance(prop, JsonProperty) and prop.schema is not None and contained:
 					parent = contained[-2]
 					if isinstance(parent, JsonObject):
 						valueSchema = prop.schema.valueForParent(parent)
-						suggestions = self._getSuggestionsForSchema(valueSchema)
-						return [f': {sg}' for sg in suggestions] if needsColon else suggestions
+						if valueSchema is not None:
+							suggestions = self._getSuggestionsForSchema(valueSchema)
+							return [f': {sg}' for sg in suggestions] if needsColon else suggestions
 			return [': '] if needsColon else []
 		elif not contained:
 			return []
 		else:
-			needsComma = ',' not in self.text[before.span.end.index:pos.index]
+			needsComma = b',' not in self.text[before.span.end.index:pos.index]
 			return self._getSuggestionsForContained(pos, contained, replaceCtx, needsComma=needsComma)
 		# 	container = contained[-1]
 		# 	if isinstance(container, JsonArray):
@@ -241,6 +242,9 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 		# 			return [f'"{p.name}": ' for p in container.schema.properties if p.name not in container.data]
 		# 		return []
 		# return []
+
+	def _getPropsForObject(self, container: JsonObject, schema: JsonObjectSchema) -> list[str]:
+		return [p.name for p in schema.propertiesDict.values() if p.name not in container.data and p.valueForParent(container) is not None]
 
 	def _getSuggestionsForContained(self, pos: Position, contained: list[JsonData], replaceCtx: str, *, needsComma: bool) -> Suggestions:
 		if not contained:
@@ -261,7 +265,7 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 			if needsComma:
 				return [f'{replaceCtx}, ', f'{replaceCtx}}}']
 			if isinstance(container.schema, JsonObjectSchema):
-				return [f'"{p.name}": ' for p in container.schema.properties if p.name not in container.data] + (['}'] if not container.data else [])
+				return [f'"{p}": ' for p in self._getPropsForObject(container, container.schema)] + (['}'] if not container.data else [])
 
 		return []
 
@@ -269,14 +273,14 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 
 		if isinstance(hit, JsonString):
 			data = self.text[hit.span.slice]
-			if hit.span.end == pos and len(data) >= 2 and data.endswith('"') and data.startswith('"'):
+			if hit.span.end == pos and len(data) >= 2 and data.endswith(b'"') and data.startswith(b'"'):
 				return self._getSuggestionsForBefore(pos, hit, contained, replaceCtx)
 
 			elif hit.schema is JSON_KEY_SCHEMA:
 				if len(contained) >= 2:
 					container = contained[-2]  # if hit was a key, matches.contained[-2] is the object.
 					if isinstance(container, JsonObject) and isinstance(container.schema, JsonObjectSchema):
-						return [f'{p.name}": ' for p in container.schema.properties if p.name not in container.data]
+						return [f'{p}": ' for p in self._getPropsForObject(container, container.schema)]
 			else:
 				if isinstance(hit.schema, JsonStringSchema) and hit.schema.type is not None:
 					if (strHandler := self.getContext(hit)) is not None:

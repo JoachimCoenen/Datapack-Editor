@@ -26,14 +26,13 @@ from Cat.Serializable import SerializedPropertyABC, SerializableContainer
 from Cat.icons import icons
 from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, openOrCreate, CachedProperty
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
-from gui.lexers import mcFunctionLexer, jsonLexer
+from gui import lexers
 from session.documents import Document, ErrorCounts
 from model.Model import Datapack
 from model.pathUtils import FilePath
 from session.session import getSession
 
-mcFunctionLexer.init()  # don't delete!
-jsonLexer.init()  # don't delete!
+lexers.init()  # don't delete!
 
 
 inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})

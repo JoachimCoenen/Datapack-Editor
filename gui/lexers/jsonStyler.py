@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from Cat.utils.collections_ import AddToDictDecorator
-from gui.lexers.styler import DEFAULT_STYLE_ID, StyleId, CatStyler, registerStyler
+from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler
 from model.json.core import *
 from model.parsing.tree import Node
 from model.utils import LanguageId
 
 
-class Style(enum.Enum):
+class StyleId(enum.IntEnum):
 	default = DEFAULT_STYLE_ID
 	null    = DEFAULT_STYLE_ID + 1
 	boolean = DEFAULT_STYLE_ID + 2
@@ -29,46 +29,47 @@ class JsonStyler(CatStyler[JsonData]):
 	@property
 	def localStyles(self) -> dict[str, StyleId]:
 		styles = {
-			Style.default.name: self.offset + Style.default.value,
-			Style.null.name:    self.offset + Style.null.value,
-			Style.boolean.name: self.offset + Style.boolean.value,
-			Style.number.name:  self.offset + Style.number.value,
-			Style.string.name:  self.offset + Style.string.value,
-			Style.key.name:     self.offset + Style.key.value,
-			Style.invalid.name: self.offset + Style.invalid.value,
+			StyleId.default.name: self.offset + StyleId.default.value,
+			StyleId.null.name:    self.offset + StyleId.null.value,
+			StyleId.boolean.name: self.offset + StyleId.boolean.value,
+			StyleId.number.name:  self.offset + StyleId.number.value,
+			StyleId.string.name:  self.offset + StyleId.string.value,
+			StyleId.key.name:     self.offset + StyleId.key.value,
+			StyleId.invalid.name: self.offset + StyleId.invalid.value,
 		}
 		return styles
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
-		return []
+		return [LanguageId('SNBT'), LanguageId('MCCommand')]
 
 	@property
 	def localStylesCount(self) -> int:
 		return self._localStylesCount
 
 	@classmethod
-	def language(cls) -> str:
-		return 'JSON'
+	def language(cls) -> LanguageId:
+		return LanguageId('JSON')
 
 	_STYLERS: ClassVar[dict[str, Callable[[JsonStyler, JsonData], int]]] = {}
 	_Styler: ClassVar = AddToDictDecorator(_STYLERS)
 
 	def __post_init__(self):
-		self.DEFAULT_STYLE: StyleId = self.offset + Style.default.value
-		self.NULL_STYLE:    StyleId = self.offset + Style.null.value
-		self.BOOLEAN_STYLE: StyleId = self.offset + Style.boolean.value
-		self.NUMBER_STYLE:  StyleId = self.offset + Style.number.value
-		self.STRING_STYLE:  StyleId = self.offset + Style.string.value
-		self.KEY_STYLE:     StyleId = self.offset + Style.key.value
-		self.INVALID_STYLE: StyleId = self.offset + Style.invalid.value
+		super(JsonStyler, self).__post_init__()
+		self.DEFAULT_STYLE: StyleId = self.offset + StyleId.default.value
+		self.NULL_STYLE:    StyleId = self.offset + StyleId.null.value
+		self.BOOLEAN_STYLE: StyleId = self.offset + StyleId.boolean.value
+		self.NUMBER_STYLE:  StyleId = self.offset + StyleId.number.value
+		self.STRING_STYLE:  StyleId = self.offset + StyleId.string.value
+		self.KEY_STYLE:     StyleId = self.offset + StyleId.key.value
+		self.INVALID_STYLE: StyleId = self.offset + StyleId.invalid.value
 		self._localStylesCount = 7
 
 	def styleNode(self, data: JsonData) -> int:
 		return self._STYLERS[data.typeName](self, data)
 
 	@_Styler(JsonInvalid.typeName)
-	def styleNull(self, data: JsonInvalid) -> int:
+	def styleInvalid(self, data: JsonInvalid) -> int:
 		self.setStyling(data.span.slice, self.INVALID_STYLE)
 		return data.span.end.index
 
@@ -93,7 +94,7 @@ class JsonStyler(CatStyler[JsonData]):
 			beforeLen = slice(data.span.start.index, data.parsedValue.span.start.index)
 			self.setStyling(beforeLen, self.STRING_STYLE)
 			after = self.styleForeignNode(data.parsedValue)
-			afterLen = slice(after, data.parsedValue.span.end.index)
+			afterLen = slice(after, data.span.end.index)
 			self.setStyling(afterLen, self.STRING_STYLE)
 		else:
 			self.setStyling(data.span.slice, self.STRING_STYLE)

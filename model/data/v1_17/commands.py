@@ -4,6 +4,7 @@ from Cat.utils.collections_ import ChainedList
 from model.commands.argumentTypes import *
 from model.commands.command import CommandSchema, KeywordSchema, ArgumentSchema, TERMINAL, COMMANDS_ROOT, SwitchSchema
 from model.data.mcVersions import MCVersion
+from model.parsing.bytesUtils import strToBytes
 
 
 def fillCommandsFor1_17(version: MCVersion) -> None:
@@ -445,15 +446,15 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		)
 	]
 
-	BASIC_COMMAND_INFO: dict[str, CommandSchema] = {c.name: c for c in _BASIC_COMMAND_INFO_LIST}
+	BASIC_COMMAND_INFO: dict[bytes, CommandSchema] = {strToBytes(c.name): c for c in _BASIC_COMMAND_INFO_LIST}
 	version.commands = BASIC_COMMAND_INFO
 
-	BASIC_COMMAND_INFO['?'].next = []
+	BASIC_COMMAND_INFO[b'?'].next = []
 
-	BASIC_COMMAND_INFO['advancement'].next = [
+	BASIC_COMMAND_INFO[b'advancement'].next = [
 		ArgumentSchema(
 			name='__action',
-			type=makeLiteralsArgumentType(['grant', 'revoke']),
+			type=makeLiteralsArgumentType([b'grant', b'revoke']),
 			next=[
 				ArgumentSchema(
 					name='targets',
@@ -511,7 +512,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['attribute'].next = [
+	BASIC_COMMAND_INFO[b'attribute'].next = [
 		ArgumentSchema(
 			name='target',
 			type=MINECRAFT_ENTITY,
@@ -574,7 +575,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 															next=[
 																ArgumentSchema(
 																	name='uuid',
-																	type=makeLiteralsArgumentType(['add', 'multiply', 'multiply_base']),
+																	type=makeLiteralsArgumentType([b'add', b'multiply', b'multiply_base']),
 																),
 															]
 														),
@@ -623,7 +624,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['ban'].next = [
+	BASIC_COMMAND_INFO[b'ban'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
@@ -637,7 +638,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['ban-ip'].next = [
+	BASIC_COMMAND_INFO[b'ban-ip'].next = [
 		ArgumentSchema(
 			name='target',
 			type=BRIGADIER_STRING,
@@ -651,7 +652,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['banlist'].next = [
+	BASIC_COMMAND_INFO[b'banlist'].next = [
 		TERMINAL,
 		KeywordSchema(
 			name='ips',
@@ -661,7 +662,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['bossbar'].next = [
+	BASIC_COMMAND_INFO[b'bossbar'].next = [
 		KeywordSchema(
 			name='add',
 			next=[
@@ -686,7 +687,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 					next=[
 						ArgumentSchema(
 							name='__setting',
-							type=makeLiteralsArgumentType(['max', 'players', 'value', 'visible']),
+							type=makeLiteralsArgumentType([b'max', b'players', b'value', b'visible']),
 						),
 					]
 				),
@@ -716,7 +717,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentSchema(
 									name='color',
-									type=makeLiteralsArgumentType(['blue', 'green', 'pink', 'purple', 'red', 'white', 'yellow']),
+									type=makeLiteralsArgumentType([b'blue', b'green', b'pink', b'purple', b'red', b'white', b'yellow']),
 								),
 							],
 						),
@@ -753,7 +754,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentSchema(
 									name='style',
-									type=makeLiteralsArgumentType(['notched_6', 'notched_10', 'notched_12', 'notched_20', 'progress']),
+									type=makeLiteralsArgumentType([b'notched_6', b'notched_10', b'notched_12', b'notched_20', b'progress']),
 								),
 							],
 						),
@@ -781,7 +782,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['clear'].next = [
+	BASIC_COMMAND_INFO[b'clear'].next = [
 		TERMINAL,
 		ArgumentSchema(
 			name='targets',
@@ -803,7 +804,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['clone'].next = [
+	BASIC_COMMAND_INFO[b'clone'].next = [
 		ArgumentSchema(
 			name='begin',
 			type=MINECRAFT_BLOCK_POS,
@@ -819,12 +820,12 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								TERMINAL,
 								ArgumentSchema(
 									name='maskMode',
-									type=makeLiteralsArgumentType(['replace', 'masked']),
+									type=makeLiteralsArgumentType([b'replace', b'masked']),
 									next=[
 										TERMINAL,
 										ArgumentSchema(
 											name='cloneMode',
-											type=makeLiteralsArgumentType(['force', 'move', 'normal']),
+											type=makeLiteralsArgumentType([b'force', b'move', b'normal']),
 										),
 									],
 								),
@@ -838,7 +839,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 												TERMINAL,
 												ArgumentSchema(
 													name='cloneMode',
-													type=makeLiteralsArgumentType(['force', 'move', 'normal']),
+													type=makeLiteralsArgumentType([b'force', b'move', b'normal']),
 												),
 											],
 										),
@@ -938,7 +939,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['data'].next = [
+	BASIC_COMMAND_INFO[b'data'].next = [
 		KeywordSchema(
 			name='get',
 			next=[
@@ -1043,7 +1044,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['datapack'].next = [
+	BASIC_COMMAND_INFO[b'datapack'].next = [
 		KeywordSchema(
 			name='disable',
 			next=[
@@ -1110,7 +1111,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['debug'].next = [
+	BASIC_COMMAND_INFO[b'debug'].next = [
 		KeywordSchema(
 			name='start',
 		),
@@ -1129,29 +1130,29 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 
-	BASIC_COMMAND_INFO['defaultgamemode'].next = [
+	BASIC_COMMAND_INFO[b'defaultgamemode'].next = [
 		ArgumentSchema(
 			name='mode',
-			type=makeLiteralsArgumentType(['survival', 'creative', 'adventure', 'spectator']),
+			type=makeLiteralsArgumentType([b'survival', b'creative', b'adventure', b'spectator']),
 		),
 	]
 
-	BASIC_COMMAND_INFO['deop'].next = [
+	BASIC_COMMAND_INFO[b'deop'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
 		),
 	]
 
-	BASIC_COMMAND_INFO['difficulty'].next = [
+	BASIC_COMMAND_INFO[b'difficulty'].next = [
 		TERMINAL,
 		ArgumentSchema(
 			name='difficulty',
-			type=makeLiteralsArgumentType(['peaceful', 'easy', 'normal', 'hard']),
+			type=makeLiteralsArgumentType([b'peaceful', b'easy', b'normal', b'hard']),
 		),
 	]
 
-	BASIC_COMMAND_INFO['effect'].next = [
+	BASIC_COMMAND_INFO[b'effect'].next = [
 		KeywordSchema(
 			name='give',
 			next=[
@@ -1209,7 +1210,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['enchant'].next = [
+	BASIC_COMMAND_INFO[b'enchant'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_ENTITY,
@@ -1487,7 +1488,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							),
 							ArgumentSchema(
 								name='__compare',
-								type=makeLiteralsArgumentType(['<=', '<', '=', '>=', '>']),
+								type=makeLiteralsArgumentType([b'<=', b'<', b'=', b'>=', b'>']),
 								next=[
 									ArgumentSchema(
 										name='source',
@@ -1532,7 +1533,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						next=[
 							ArgumentSchema(
 								name='type',
-								type=makeLiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
+								type=makeLiteralsArgumentType([b'byte', b'short', b'int', b'long', b'float', b'double']),
 								next=[
 									ArgumentSchema(
 										name='scale',
@@ -1557,7 +1558,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				next=[
 					ArgumentSchema(
 						name='value',
-						type=makeLiteralsArgumentType(['value', 'max']),
+						type=makeLiteralsArgumentType([b'value', b'max']),
 						next=EXECUTE_INSTRUCTIONS,
 					),
 				],
@@ -1577,7 +1578,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						next=[
 							ArgumentSchema(
 								name='type',
-								type=makeLiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
+								type=makeLiteralsArgumentType([b'byte', b'short', b'int', b'long', b'float', b'double']),
 								next=[
 									ArgumentSchema(
 										name='scale',
@@ -1624,7 +1625,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						next=[
 							ArgumentSchema(
 								name='type',
-								type=makeLiteralsArgumentType(['byte', 'short', 'int', 'long', 'float', 'double']),
+								type=makeLiteralsArgumentType([b'byte', b'short', b'int', b'long', b'float', b'double']),
 								next=[
 									ArgumentSchema(
 										name='scale',
@@ -1658,9 +1659,9 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		next=[COMMANDS_ROOT],
 	))
 
-	BASIC_COMMAND_INFO['execute'].next = EXECUTE_INSTRUCTIONS
+	BASIC_COMMAND_INFO[b'execute'].next = EXECUTE_INSTRUCTIONS
 
-	BASIC_COMMAND_INFO['experience'].next = [
+	BASIC_COMMAND_INFO[b'experience'].next = [
 		KeywordSchema(
 			name='add',
 			next=[
@@ -1674,7 +1675,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentSchema(
 									name='__levels',
-									type=makeLiteralsArgumentType(['levels', 'points']),
+									type=makeLiteralsArgumentType([b'levels', b'points']),
 								),
 							]
 						),
@@ -1695,7 +1696,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 							next=[
 								ArgumentSchema(
 									name='__levels',
-									type=makeLiteralsArgumentType(['levels', 'points']),
+									type=makeLiteralsArgumentType([b'levels', b'points']),
 								),
 							]
 						),
@@ -1712,7 +1713,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 					next=[
 						ArgumentSchema(
 							name='__levels',
-							type=makeLiteralsArgumentType(['levels', 'points']),
+							type=makeLiteralsArgumentType([b'levels', b'points']),
 						),
 					]
 				),
@@ -1722,7 +1723,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 	# fill <from> <to> <block> [destroy|hollow|keep|outline]
 	# fill <from> <to> <block> replace [<filter>]
-	BASIC_COMMAND_INFO['fill'].next = [
+	BASIC_COMMAND_INFO[b'fill'].next = [
 		ArgumentSchema(
 			name='from',
 			type=MINECRAFT_BLOCK_POS,
@@ -1738,7 +1739,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								TERMINAL,
 								ArgumentSchema(
 									name='option',
-									type=makeLiteralsArgumentType(['destroy', 'hollow', 'keep', 'outline']),
+									type=makeLiteralsArgumentType([b'destroy', b'hollow', b'keep', b'outline']),
 								),
 								KeywordSchema(
 									name='replace',
@@ -1770,7 +1771,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		]
 	)
 
-	BASIC_COMMAND_INFO['forceload'].next = [
+	BASIC_COMMAND_INFO[b'forceload'].next = [
 		KeywordSchema(
 			name='add',
 			next=[
@@ -1796,14 +1797,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['function'].next = [
+	BASIC_COMMAND_INFO[b'function'].next = [
 		ArgumentSchema(
 			name='name',
 			type=MINECRAFT_FUNCTION,
 		),
 	]
 
-	BASIC_COMMAND_INFO['gamemode'].next = [
+	BASIC_COMMAND_INFO[b'gamemode'].next = [
 		ArgumentSchema(
 			name='gamemode',
 			type=MINECRAFT_GAME_MODE,
@@ -1817,7 +1818,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['gamerule'].next = [
+	BASIC_COMMAND_INFO[b'gamerule'].next = [
 		KeywordSchema(
 			name=gr.name,
 			description=gr.description,
@@ -1831,7 +1832,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		) for gr in version.gamerules
 	]
 
-	BASIC_COMMAND_INFO['give'].next = [
+	BASIC_COMMAND_INFO[b'give'].next = [
 		ArgumentSchema(
 			name='target',
 			type=MINECRAFT_ENTITY,
@@ -1851,7 +1852,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['help'].next = []
+	BASIC_COMMAND_INFO[b'help'].next = []
 
 	ITEM_TARGET = [
 		KeywordSchema(
@@ -1902,7 +1903,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['item'].next = [
+	BASIC_COMMAND_INFO[b'item'].next = [
 		KeywordSchema(
 			name='modify',
 			next=[
@@ -1974,7 +1975,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['kick'].next = [
+	BASIC_COMMAND_INFO[b'kick'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
@@ -1988,7 +1989,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['kill'].next = [
+	BASIC_COMMAND_INFO[b'kill'].next = [
 		TERMINAL,  # An entity is required to run the command without args
 		ArgumentSchema(
 			name='targets',
@@ -1996,19 +1997,19 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['list'].next = [
+	BASIC_COMMAND_INFO[b'list'].next = [
 		TERMINAL,
 		KeywordSchema('uuids'),
 	]
 
-	BASIC_COMMAND_INFO['locate'].next = [
+	BASIC_COMMAND_INFO[b'locate'].next = [
 		ArgumentSchema(
 			name='StructureType',
 			type=makeLiteralsArgumentType(list(version.structures)),
 		),
 	]
 
-	BASIC_COMMAND_INFO['locatebiome'].next = [
+	BASIC_COMMAND_INFO[b'locatebiome'].next = [
 		ArgumentSchema(
 			name='biome',
 			type=DPE_BIOME_ID,
@@ -2103,7 +2104,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								TERMINAL,
 								ArgumentSchema(
 									name='hand',
-									type=makeLiteralsArgumentType(['mainhand', 'offhand']),
+									type=makeLiteralsArgumentType([b'mainhand', b'offhand']),
 								),
 								ArgumentSchema(
 									name='tool',
@@ -2143,7 +2144,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						TERMINAL,
 						ArgumentSchema(
 							name='hand',
-							type=makeLiteralsArgumentType(['mainhand', 'offhand']),
+							type=makeLiteralsArgumentType([b'mainhand', b'offhand']),
 						),
 						ArgumentSchema(
 							name='tool',
@@ -2155,7 +2156,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['loot'].next = [
+	BASIC_COMMAND_INFO[b'loot'].next = [
 		SwitchSchema(
 			name='TARGET',
 			options=LOOT_TARGETS,
@@ -2168,14 +2169,14 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['me'].next = [
+	BASIC_COMMAND_INFO[b'me'].next = [
 		ArgumentSchema(
 			name='action',
 			type=MINECRAFT_MESSAGE,
 		)
 	]
 
-	BASIC_COMMAND_INFO['msg'].next = [
+	BASIC_COMMAND_INFO[b'msg'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_ENTITY,
@@ -2188,21 +2189,21 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['op'].next = [
+	BASIC_COMMAND_INFO[b'op'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
 		),
 	]
 
-	BASIC_COMMAND_INFO['pardon'].next = [
+	BASIC_COMMAND_INFO[b'pardon'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_GAME_PROFILE,
 		),
 	]
 
-	BASIC_COMMAND_INFO['pardon-ip'].next = [
+	BASIC_COMMAND_INFO[b'pardon-ip'].next = [
 		ArgumentSchema(
 			name='target',
 			type=BRIGADIER_STRING,
@@ -2233,7 +2234,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 										TERMINAL,
 										ArgumentSchema(
 											name='display_mode',
-											type=makeLiteralsArgumentType(['force', 'normal']),
+											type=makeLiteralsArgumentType([b'force', b'normal']),
 											next=[
 												TERMINAL,
 												ArgumentSchema(
@@ -2416,7 +2417,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 	del _SPECIAL_PARTICLES_tmp
 
-	BASIC_COMMAND_INFO['particle'].next = [
+	BASIC_COMMAND_INFO[b'particle'].next = [
 		*_SPECIAL_PARTICLES,
 		ArgumentSchema(
 			name='name',
@@ -2425,20 +2426,20 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['perf'].next = [
+	BASIC_COMMAND_INFO[b'perf'].next = [
 		KeywordSchema('start'),
 		KeywordSchema('stop'),
 	]
 
 	# playsound <sound> <source> <targets> [<pos>] [<volume>] [<pitch>] [<minVolume>]
-	BASIC_COMMAND_INFO['playsound'].next = [
+	BASIC_COMMAND_INFO[b'playsound'].next = [
 		ArgumentSchema(
 			name='sound',
 			type=MINECRAFT_RESOURCE_LOCATION,
 			next=[
 				ArgumentSchema(
 					name='source',
-					type=makeLiteralsArgumentType(['master', 'music', 'record', 'weather', 'block', 'hostile', 'neutral', 'player', 'ambient', 'voice']),
+					type=makeLiteralsArgumentType([b'master', b'music', b'record', b'weather', b'block', b'hostile', b'neutral', b'player', b'ambient', b'voice']),
 					next=[
 						ArgumentSchema(
 							name='targets',
@@ -2478,7 +2479,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['publish'].next = [
+	BASIC_COMMAND_INFO[b'publish'].next = [
 		TERMINAL,
 		ArgumentSchema(
 			name='port',
@@ -2487,10 +2488,10 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	# recipe (give|take) <targets> (*|<recipe>)
-	BASIC_COMMAND_INFO['recipe'].next = [
+	BASIC_COMMAND_INFO[b'recipe'].next = [
 		ArgumentSchema(
 			name='action',
-			type=makeLiteralsArgumentType(['give', 'take']),
+			type=makeLiteralsArgumentType([b'give', b'take']),
 			next=[
 				ArgumentSchema(
 					name='target',
@@ -2507,25 +2508,25 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['reload'].next = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO[b'reload'].next = [TERMINAL]  # has no arguments!
 
-	BASIC_COMMAND_INFO['replaceitem'].next = [
+	BASIC_COMMAND_INFO[b'replaceitem'].next = [
 		ArgumentSchema(
 			name='OUTDATED!',
 			type=MINECRAFT_MESSAGE,
 		),
 	]  # This command was superseded by the /item command in Java Edition 1.17.
 
-	BASIC_COMMAND_INFO['save-all'].next = [
+	BASIC_COMMAND_INFO[b'save-all'].next = [
 		TERMINAL,
 		KeywordSchema('flush'),
 	]
 
-	BASIC_COMMAND_INFO['save-off'].next = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO[b'save-off'].next = [TERMINAL]  # has no arguments!
 
-	BASIC_COMMAND_INFO['save-on'].next = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO[b'save-on'].next = [TERMINAL]  # has no arguments!
 
-	BASIC_COMMAND_INFO['say'].next = [
+	BASIC_COMMAND_INFO[b'say'].next = [
 		ArgumentSchema(
 			name='message',
 			type=MINECRAFT_MESSAGE,
@@ -2534,7 +2535,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 
 	# schedule function <function> <time> [append|replace]
 	# schedule clear <function>
-	BASIC_COMMAND_INFO['schedule'].next = [
+	BASIC_COMMAND_INFO[b'schedule'].next = [
 		KeywordSchema(
 			name='function',
 			next=[
@@ -2549,7 +2550,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 								TERMINAL,
 								ArgumentSchema(
 									name='replace_behaviour',
-									type=makeLiteralsArgumentType(['append', 'replace']),
+									type=makeLiteralsArgumentType([b'append', b'replace']),
 								),
 							]
 						),
@@ -2646,7 +2647,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						next=[
 							ArgumentSchema(
 								name='rendertype',
-								type=makeLiteralsArgumentType(['hearts', 'integer']),
+								type=makeLiteralsArgumentType([b'hearts', b'integer']),
 							),
 						]
 					),
@@ -2818,7 +2819,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		]
 	))
 
-	BASIC_COMMAND_INFO['scoreboard'].next = [
+	BASIC_COMMAND_INFO[b'scoreboard'].next = [
 		KeywordSchema(
 			name='objectives',
 			next=SCOREBOARD_OBJECTIVES
@@ -2829,10 +2830,10 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['seed'].next = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO[b'seed'].next = [TERMINAL]  # has no arguments!
 
 	# setblock <pos> <block> [destroy|keep|replace]
-	BASIC_COMMAND_INFO['setblock'].next = [
+	BASIC_COMMAND_INFO[b'setblock'].next = [
 		ArgumentSchema(
 			name='pos',
 			type=MINECRAFT_BLOCK_POS,
@@ -2844,7 +2845,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 						TERMINAL,
 						ArgumentSchema(
 							name='operation',
-							type=makeLiteralsArgumentType(['destroy', 'keep', 'replace']),
+							type=makeLiteralsArgumentType([b'destroy', b'keep', b'replace']),
 						),
 					]
 				),
@@ -2852,7 +2853,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['setidletimeout'].next = [
+	BASIC_COMMAND_INFO[b'setidletimeout'].next = [
 		ArgumentSchema(
 			name='minutes',
 			type=BRIGADIER_INTEGER,
@@ -2860,7 +2861,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	# setworldspawn [<pos>] [<angle>]
-	BASIC_COMMAND_INFO['setworldspawn'].next = [
+	BASIC_COMMAND_INFO[b'setworldspawn'].next = [
 		TERMINAL,
 		ArgumentSchema(
 			name='pos',
@@ -2876,7 +2877,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	# spawnpoint [<targets>] [<pos>] [<angle>]
-	BASIC_COMMAND_INFO['spawnpoint'].next = [
+	BASIC_COMMAND_INFO[b'spawnpoint'].next = [
 		TERMINAL,
 		ArgumentSchema(
 			name='targets',
@@ -2899,7 +2900,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	# spectate <target> [<player>]
-	BASIC_COMMAND_INFO['spectate'].next = [
+	BASIC_COMMAND_INFO[b'spectate'].next = [
 		ArgumentSchema(
 			name='target',
 			type=MINECRAFT_ENTITY,
@@ -2928,7 +2929,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['spreadplayers'].next = [
+	BASIC_COMMAND_INFO[b'spreadplayers'].next = [
 		ArgumentSchema(
 			name='center',
 			type=MINECRAFT_VEC2,
@@ -2960,10 +2961,10 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['stop'].next = [TERMINAL]  # has no arguments!
+	BASIC_COMMAND_INFO[b'stop'].next = [TERMINAL]  # has no arguments!
 
 	# stopsound <targets> [<source>] [<sound>]
-	BASIC_COMMAND_INFO['stopsound'].next = [
+	BASIC_COMMAND_INFO[b'stopsound'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_ENTITY,
@@ -2971,7 +2972,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 				TERMINAL,
 				ArgumentSchema(
 					name='source',
-					type=makeLiteralsArgumentType(['*', 'master', 'music', 'record', 'weather', 'block', 'hostile', 'neutral', 'player', 'ambient', 'voice']),
+					type=makeLiteralsArgumentType([b'*', b'master', b'music', b'record', b'weather', b'block', b'hostile', b'neutral', b'player', b'ambient', b'voice']),
 					next=[
 						TERMINAL,
 						ArgumentSchema(
@@ -2986,7 +2987,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	]
 
 	#  summon <entity> [<pos>] [<nbt>]
-	BASIC_COMMAND_INFO['summon'].next = [
+	BASIC_COMMAND_INFO[b'summon'].next = [
 		ArgumentSchema(
 			name='entity',
 			type=MINECRAFT_ENTITY_SUMMON,
@@ -3010,7 +3011,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# tag <targets> add <name>
 	# tag <targets> list
 	# tag <targets> remove <name>
-	BASIC_COMMAND_INFO['tag'].next = [
+	BASIC_COMMAND_INFO[b'tag'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_ENTITY,
@@ -3058,7 +3059,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	#
 	# team modify <team> <option> <value>
 	# 	Modifies the options of the specified team.
-	BASIC_COMMAND_INFO['team'].next = [
+	BASIC_COMMAND_INFO[b'team'].next = [
 		KeywordSchema(
 			name='list',
 			description="Lists all teams, with their display names and the amount of entities in them. The optional `<team>` can be used to specify a particular team.",
@@ -3285,7 +3286,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['teammsg'].next = [
+	BASIC_COMMAND_INFO[b'teammsg'].next = [
 		ArgumentSchema(
 			name='message',
 			type=MINECRAFT_MESSAGE,
@@ -3300,7 +3301,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# teleport <targets> <location> <rotation>
 	# teleport <targets> <location> facing <facingLocation>
 	# teleport <targets> <location> facing entity <facingEntity> [<facingAnchor>]
-	BASIC_COMMAND_INFO['teleport'].next = [
+	BASIC_COMMAND_INFO[b'teleport'].next = [
 		# ArgumentSchema(
 		# 	name='destination',
 		# 	type=MINECRAFT_ENTITY,
@@ -3358,10 +3359,10 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['tell'].next = BASIC_COMMAND_INFO['msg'].next
+	BASIC_COMMAND_INFO[b'tell'].next = BASIC_COMMAND_INFO[b'msg'].next
 
 	# tellraw <targets> <message>
-	BASIC_COMMAND_INFO['tellraw'].next = [
+	BASIC_COMMAND_INFO[b'tellraw'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_ENTITY,
@@ -3374,13 +3375,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['testfor'].next = []  # This command has been removed
+	BASIC_COMMAND_INFO[b'testfor'].next = []  # This command has been removed
 
-	BASIC_COMMAND_INFO['testforblock'].next = []  # This command has been removed
+	BASIC_COMMAND_INFO[b'testforblock'].next = []  # This command has been removed
 
-	BASIC_COMMAND_INFO['testforblocks'].next = []  # This command has been removed
+	BASIC_COMMAND_INFO[b'testforblocks'].next = []  # This command has been removed
 
-	BASIC_COMMAND_INFO['time'].next = [
+	BASIC_COMMAND_INFO[b'time'].next = [
 		KeywordSchema(
 			name='add',
 			description="Adds `<time>` to the in-game daytime.",
@@ -3397,7 +3398,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			next=[
 				ArgumentSchema(
 					name='daytime|gametime|day',
-					type=makeLiteralsArgumentType(['daytime', 'gametime', 'day']),
+					type=makeLiteralsArgumentType([b'daytime', b'gametime', b'day']),
 				),
 			]
 		),
@@ -3406,7 +3407,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 			next=[
 				ArgumentSchema(
 					name='timeSpec',
-					type=makeLiteralsArgumentType(['day', 'night', 'noon', 'midnight']),
+					type=makeLiteralsArgumentType([b'day', b'night', b'noon', b'midnight']),
 				),
 			]
 		),
@@ -3424,18 +3425,18 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	# title <targets> (clear|reset)
 	# title <targets> (title|subtitle|actionbar) <title>
 	# title <targets> times <fadeIn> <stay> <fadeOut>
-	BASIC_COMMAND_INFO['title'].next = [
+	BASIC_COMMAND_INFO[b'title'].next = [
 		ArgumentSchema(
 			name='targets',
 			type=MINECRAFT_ENTITY,
 			next=[
 				ArgumentSchema(
 					name='clear|reset',
-					type=makeLiteralsArgumentType(['clear', 'reset']),
+					type=makeLiteralsArgumentType([b'clear', b'reset']),
 				),
 				ArgumentSchema(
 					name='title|subtitle|actionbar',
-					type=makeLiteralsArgumentType(['title', 'subtitle', 'actionbar']),
+					type=makeLiteralsArgumentType([b'title', b'subtitle', b'actionbar']),
 					next=[
 						ArgumentSchema(
 							name='title',
@@ -3468,16 +3469,16 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['tm'].next = BASIC_COMMAND_INFO['teammsg'].next
+	BASIC_COMMAND_INFO[b'tm'].next = BASIC_COMMAND_INFO[b'teammsg'].next
 
-	# BASIC_COMMAND_INFO['toggledownfall'].next = []  has been removed
+	# BASIC_COMMAND_INFO[b'toggledownfall'].next = []  has been removed
 
-	BASIC_COMMAND_INFO['tp'].next = BASIC_COMMAND_INFO['teleport'].next
+	BASIC_COMMAND_INFO[b'tp'].next = BASIC_COMMAND_INFO[b'teleport'].next
 
 	# trigger <objective>
 	# trigger <objective> add <value>
 	# trigger <objective> set <value>
-	BASIC_COMMAND_INFO['trigger'].next = [
+	BASIC_COMMAND_INFO[b'trigger'].next = [
 		ArgumentSchema(
 			name='objective',
 			type=MINECRAFT_OBJECTIVE,
@@ -3505,13 +3506,13 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['w'].next = BASIC_COMMAND_INFO['msg'].next
+	BASIC_COMMAND_INFO[b'w'].next = BASIC_COMMAND_INFO[b'msg'].next
 
 	# weather (clear|rain|thunder) [<duration>]
-	BASIC_COMMAND_INFO['weather'].next = [
+	BASIC_COMMAND_INFO[b'weather'].next = [
 		ArgumentSchema(
 			name='objective',
-			type=makeLiteralsArgumentType(['clear', 'rain', 'thunder']),
+			type=makeLiteralsArgumentType([b'clear', b'rain', b'thunder']),
 			next=[
 				TERMINAL,
 				ArgumentSchema(
@@ -3522,8 +3523,8 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 		),
 	]
 
-	BASIC_COMMAND_INFO['whitelist'].next = []  # TODO: BASIC_COMMAND_INFO['whitelist'].next
+	BASIC_COMMAND_INFO[b'whitelist'].next = []  # TODO: BASIC_COMMAND_INFO[b'whitelist'].next
 
-	BASIC_COMMAND_INFO['worldborder'].next = []  # TODO: BASIC_COMMAND_INFO['worldborder'].next
+	BASIC_COMMAND_INFO[b'worldborder'].next = []  # TODO: BASIC_COMMAND_INFO[b'worldborder'].next
 
-	BASIC_COMMAND_INFO['xp'].next = BASIC_COMMAND_INFO['experience'].next
+	BASIC_COMMAND_INFO[b'xp'].next = BASIC_COMMAND_INFO[b'experience'].next

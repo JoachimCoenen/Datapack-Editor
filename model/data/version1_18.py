@@ -15,9 +15,9 @@ def fillCommandsFor1_18(version: MCVersion) -> None:
 	fillCommandsFor1_17(version)
 
 	# add 'block_marker' particle:
-	particles = version.commands['particle'].next
+	particles = version.commands[b'particle'].next
 	block_marker = replace(next(p for p in particles if p.name == 'block' and isinstance(p, KeywordSchema)), name='block_marker')
-	version.commands['particle'].next.insert(-1, block_marker)
+	version.commands[b'particle'].next.insert(-1, block_marker)
 
 
 version1_18: MCVersion = newVersionFrom(getMCVersion('1.17'), name='1.18')

@@ -3,13 +3,14 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from math import inf
-from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator
+from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable
 
-from Cat.utils import CachedProperty
+from Cat.utils import CachedProperty, Anything
 from Cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
 from model.json.lexer import TokenType
-from model.parsing.tree import Node
-from model.utils import GeneralError, MDStr
+from model.parsing.parser import IndexMapper
+from model.parsing.tree import Node, Schema
+from model.utils import GeneralError, MDStr, LanguageId
 
 Array = list['JsonData']
 Object = OrderedMultiDict[str, 'JsonProperty']
@@ -27,7 +28,7 @@ class JsonData(Node['JsonData', 'JsonSchema'], ABC):
 
 	typeName: ClassVar[str] = 'JsonData'
 
-	language: ClassVar[str] = 'JSON'
+	language: ClassVar[LanguageId] = 'JSON'
 
 	@property
 	@abstractmethod
@@ -89,6 +90,7 @@ class JsonNumber(JsonData):
 @dataclass(unsafe_hash=True, order=True)
 class JsonString(JsonData):
 	data: str
+	indexMapper: IndexMapper
 	parsedValue: Optional[Any] = None
 	typeName: ClassVar[str] = 'string'
 
@@ -130,7 +132,7 @@ class JsonObject(JsonData):
 		return self.data.values()
 
 
-class JsonSchema(Generic[_TT], ABC):
+class JsonSchema(Schema, Generic[_TT], ABC):
 	"""
 	A schema description to contextualize and validate JSON files.
 	Note: This is NOT an implementation of the JSON Schema specification!
@@ -139,6 +141,7 @@ class JsonSchema(Generic[_TT], ABC):
 	"""The parser tries to use a Schema of this Type if the parser encounters a token == TOKEN. (see also class JsonUnionSchema)"""
 	DATA_TYPE: ClassVar[Type[_TT]] = JsonData
 	typeName: ClassVar[str] = 'JsonData'
+	language: ClassVar[LanguageId] = 'JSON'
 
 	def __init__(self, *, description: MDStr = '', deprecated: bool = False):
 		self.description: MDStr = description
@@ -197,7 +200,23 @@ class JsonStringSchema(JsonSchema[JsonString]):
 		super(JsonStringSchema, self).__init__(description=description, deprecated=deprecated)
 		self.type: Optional[JsonArgType] = type
 		self.subType: Optional[JsonArgType] = subType
-		self.args: Optional[dict[str, Union[Any, None]]] = args
+		self.args: Optional[dict[str, Union[Any, None]]] = args or {}
+
+
+class JsonStringOptionsSchema(JsonStringSchema):
+	def __init__(
+			self,
+			*,
+			options: dict[str, MDStr],
+			description: MDStr = '',
+			deprecated: bool = False
+	):
+		super(JsonStringOptionsSchema, self).__init__(
+			type=OPTIONS_JSON_ARG_TYPE,
+			args=dict(values=options),
+			description=description,
+			deprecated=deprecated
+		)
 
 
 class JsonArraySchema(JsonSchema[JsonArray]):
@@ -235,17 +254,35 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonProperty
 	typeName: ClassVar[str] = 'property'
 
-	def __init__(self, *, name: str, description: MDStr = '', value: Optional[JsonSchema[_TT2]], default: JsonTypes = None, decidingProp: Optional[str] = None, values: dict[Union[str, int, bool], JsonSchema[_TT]] = None, deprecated: bool = False):
+	def __init__(
+			self,
+			*,
+			name: Union[str, Anything],
+			description: MDStr = '',
+			value: Optional[JsonSchema[_TT2]],
+			optional: bool = False,
+			default: JsonTypes = None,
+			decidingProp: Optional[str] = None,
+			values: dict[Union[tuple[Union[str, int, bool], ...], Union[str, int, bool]], JsonSchema[_TT2]] = None,
+			deprecated: bool = False):
 		super(SwitchingPropertySchema, self).__init__(description=description, deprecated=deprecated)
-		self.name: str = name
+		self.name: Union[str, Anything] = name
+		self.isOptional: bool = optional
 		self.default: Optional[_TT2] = default
 		self.value: Optional[JsonSchema[_TT2]] = value
 		self.decidingProp: Optional[str] = decidingProp
-		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = values or {}
+		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = {}
+		if values is not None:
+			for key, val in values.items():
+				if isinstance(key, tuple):
+					for k in key:
+						self.values[k] = val
+				else:
+					self.values[key] = val
 
 	@property
-	def mandatory(self) -> bool:
-		return self.default is None
+	def isMandatory(self) -> bool:
+		return self.isOptional
 
 	def valueForParent(self, parent: JsonObject) -> Optional[JsonSchema[_TT2]]:
 		# TODO find better name for .valueForParent(...)
@@ -261,6 +298,9 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 			selectedSchema = self.values.get(dVal, self.value)
 		else:
 			selectedSchema = self.value
+
+		if isinstance(selectedSchema, JsonCalculatedValueSchema):
+			selectedSchema = selectedSchema.func(parent)
 		return selectedSchema
 
 
@@ -275,15 +315,26 @@ class JsonObjectSchema(JsonSchema[Object]):
 	def __init__(self, *, description: MDStr = '', properties: list[SwitchingPropertySchema], deprecated: bool = False):
 		super(JsonObjectSchema, self).__init__(description=description, deprecated=deprecated)
 		self.properties: tuple[SwitchingPropertySchema, ...] = tuple(properties)
-		self.propertiesDict: Mapping[str, SwitchingPropertySchema] = self._buildPropertiesDict()
+		self.propertiesDict: Mapping[str, SwitchingPropertySchema] = {}
+		self.anythingProp: Optional[SwitchingPropertySchema] = None
+		self.buildPropertiesDict()
 
-	def _buildPropertiesDict(self) -> Mapping[str, SwitchingPropertySchema]:
+	def buildPropertiesDict(self) -> None:
+		self.propertiesDict, self.anythingProp = self._buildPropertiesDict()
+
+	def _buildPropertiesDict(self) -> tuple[Mapping[str, SwitchingPropertySchema], Optional[SwitchingPropertySchema]]:
 		propsDict: dict[str, SwitchingPropertySchema] = dict[str, SwitchingPropertySchema]()
+		anythingProp = None
 		for prop in self.properties:
-			if prop.name in propsDict:
-				raise ValueError(f"JsonObjectSchema.properties contains duplicate names {prop.name!r}")
-			propsDict[prop.name] = prop
-		return propsDict
+			if prop.name is Anything:
+				if anythingProp is not None:
+					raise ValueError(f"JsonObjectSchema.properties contains duplicate anything Property")
+				anythingProp = prop
+			else:
+				if prop.name in propsDict:
+					raise ValueError(f"JsonObjectSchema.properties contains duplicate names {prop.name!r}")
+				propsDict[prop.name] = prop
+		return propsDict, anythingProp
 
 
 class JsonUnionSchema(JsonSchema[JsonData]):
@@ -319,6 +370,19 @@ class JsonUnionSchema(JsonSchema[JsonData]):
 		return f"({'|'.join(o.asString for o in self.optionsDict2.values())})"
 
 
+class JsonCalculatedValueSchema(JsonSchema[JsonData]):
+	typeName: ClassVar[str] = 'calculated'
+
+	def __init__(self, *, description: MDStr = '', func: Callable[[JsonObject], Optional[JsonSchema]]):
+		super(JsonCalculatedValueSchema, self).__init__(description=description)
+		self.func: Callable[[JsonObject], Optional[JsonSchema]] = func
+
+	# @CachedProperty
+	@property
+	def asString(self) -> str:
+		return f"(...)"
+
+
 class JsonParseError(GeneralError):
 	pass
 
@@ -349,6 +413,14 @@ def registerNamedJsonArgType(jsonArgType: JsonArgType, forceOverride: bool = Fal
 	_registerNamedJsonArgType(jsonArgType.name, forceOverride)(jsonArgType)
 
 
+OPTIONS_JSON_ARG_TYPE = JsonArgType(
+	name='options',
+	description=MDStr(""),
+	description2=MDStr(""),
+	examples=MDStr(""),
+)
+
+
 __all__ = [
 	'Array',
 	'Object',
@@ -371,6 +443,7 @@ __all__ = [
 	'JsonIntSchema',
 	'JsonFloatSchema',
 	'JsonStringSchema',
+	'JsonStringOptionsSchema',
 	'JsonArraySchema',
 	'JsonKeySchema',
 	'JSON_KEY_SCHEMA',
@@ -378,6 +451,7 @@ __all__ = [
 	'SwitchingPropertySchema',
 	'JsonObjectSchema',
 	'JsonUnionSchema',
+	'JsonCalculatedValueSchema',
 
 	'JsonParseError',
 	'JsonSemanticsError',

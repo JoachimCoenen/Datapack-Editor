@@ -1,6 +1,5 @@
 import re
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Optional, Sequence, Union
 
 from PyQt5.QtCore import QEventLoop, pyqtSignal, QTimer
@@ -17,6 +16,7 @@ from Cat.icons import icons
 from Cat.utils import escapeForXml
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import TimedMethod
+from gui.checkAllDialog import FILE_TYPES
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
 from model.Model import Datapack
 from model.pathUtils import FilePath, ZipFilePool, loadTextFile
@@ -51,6 +51,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 			isMultiLine=False,
 		)
 
+		self._fileTypes: tuple[str, ...] = ()
 		self._searchResult: SearchResult = SearchResult()
 		self.htmlDelegate = HTMLDelegate()
 
@@ -63,6 +64,10 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 		self._searchResult = SearchResult(allFilePaths)
 
 	def OnSidebarGUI(self, gui: PythonGUI):
+		with gui.vLayout(preventVStretch=False, verticalSpacing=0):
+			self._fileTypes = tuple(ft for ft in FILE_TYPES if gui.checkboxLeft(None, ft))
+
+		gui.vSeparator()
 		includedDatapacks = []
 		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
 			for dp in getSession().world.datapacks:
@@ -164,7 +169,14 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	def filePathsToSearch(self) -> list[FilePath]:
 		filePathsToSearch: list[FilePath] = []
 		for datapack in self._includedDatapacks:
-			filePathsToSearch.extend(datapack.files)
+			for f in datapack.files:
+				if isinstance(f, tuple):
+					fn = f[1]
+				else:
+					fn = f
+				if fn.endswith(tuple(self._fileTypes)):
+					filePathsToSearch.append(f)
+
 		return filePathsToSearch
 
 	@TimedMethod()

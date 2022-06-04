@@ -1,6 +1,10 @@
 from model.commands.argumentTypes import *
+from model.datapackContents import ResourceLocationSchema
+from ..argTypes import *
 from model.json.core import *
 from model.utils import MDStr
+
+# see: https://minecraft.fandom.com/wiki/Raw_JSON_text_format#Plain_Text
 
 BOOL_STR_SCHEMA = JsonUnionSchema(
 	options=[
@@ -40,13 +44,13 @@ RAW_JSON_TEXT_SCHEMA.options = [
 				name="text",
 				description=MDStr("A string containing plain text to display directly. Can also be a number or boolean that is displayed directly."),
 				value=_STR_NUM_BOOL,
-				default=''
+				optional=True,
 			),
 			PropertySchema(
 				name="translate",
 				description=MDStr("A translation identifier, corresponding to the identifiers found in loaded language files. Displayed as the corresponding text in the player's selected language. If no corresponding translation can be found, the identifier itself is used as the translated text."),
 				value=JsonStringSchema(),
-				default=''
+				optional=True,
 			),
 			PropertySchema(
 				name="with",
@@ -55,7 +59,7 @@ RAW_JSON_TEXT_SCHEMA.options = [
 					description=MDStr("A raw JSON text component. If no component is provided for a slot, the slot is displayed as no text."),
 					element=RAW_JSON_TEXT_SCHEMA
 				),
-				default=[]
+				optional=True
 			),
 			PropertySchema(
 				name="score",
@@ -77,35 +81,35 @@ RAW_JSON_TEXT_SCHEMA.options = [
 							name="value",
 							description=MDStr("If present, this value is displayed regardless of what the score would have been."),
 							value=JsonStringSchema(),
-							default=''  # this property is optional
+							optional=True,
 						),
 					]
 				),
-				default=''
+				optional=True
 			),
 			PropertySchema(
 				name="selector",
 				description=MDStr("Displays the name of one or more entities found by a selector. "),
 				value=JsonStringSchema(type=MINECRAFT_ENTITY),  # TODO fix: replace MINECRAFT_ENTITY with target selector
-				default=''
+				optional=True
 			),
 			PropertySchema(
 				name="separator",
 				description=MDStr("Defaults to `{\"color\": \"gray\", \"text\": \", \"}`. A raw JSON text component. Used as the separator between different names, if the component selects multiple entities."),
 				value=RAW_JSON_TEXT_SCHEMA,
-				default=''  # this property is optional
+				optional=True
 			),
 			PropertySchema(
 				name="keybind",
 				description=MDStr("A keybind identifier, to be displayed as the name of the button that is currently bound to that action. For example, `{\"keybind\": \"key.inventory\"}` displays `\"e\"` if the player is using the default control scheme."),
 				value=JsonStringSchema(),  # TODO fix: use DPE_KEYBIND_IDENTIFIER
-				default=''
+				optional=True
 			),
 			PropertySchema(
 				name="nbt",
-				description=MDStr("TO BE DONE"),
-				value=JsonNullSchema(),  # TODO nbt in raw JSON text
-				default=''
+				description=MDStr("TO BE DONE"),  # TODO description for nbt in raw JSON text
+				value=JsonStringSchema(type=MINECRAFT_NBT_COMPOUND_TAG),
+				optional=True
 			),
 
 
@@ -114,7 +118,7 @@ RAW_JSON_TEXT_SCHEMA.options = [
 				name="extra",
 				description=MDStr("A list of additional raw JSON text components to be displayed after this one. \nChild text components inherit all formatting and interactivity from the parent component, unless they explicitly override them."),
 				value=JsonArraySchema(element=RAW_JSON_TEXT_SCHEMA),
-				default=[]
+				optional=True
 			),
 
 
@@ -123,42 +127,48 @@ RAW_JSON_TEXT_SCHEMA.options = [
 				name="color",
 				description=MDStr("The color to render the content in. Valid values are `\"black\"`, `\"dark_blue\"`, `\"dark_green\"`, `\"dark_aqua\"`, `\"dark_red\"`, `\"dark_purple\"`, `\"gold\"`, `\"gray\"`, `\"dark_gray\"`, `\"blue\"`, `\"green\"`, `\"aqua\"`, `\"red\"`, `\"light_purple\"`, `\"yellow\"`, `\"white\"`, and `\"reset\"` (cancels out the effects of colors used by parent objects). \nSet to `\"#<hex>\"` to insert any color in the hexadecimal color format. Example: Using `\"#FF0000\"` makes the component red. Must be a full 6-digit value, not 3-digit."),
 				value=JsonStringSchema(),
-				default=''  # this property is optional
+				optional=True
 			),
 			PropertySchema(
 				name="font",
 				description=MDStr("The resource location of the font for this component in the resource pack within `assets/<namespace>/font`. Defaults to `\"minecraft:default\"`."),
 				value=JsonStringSchema(),
+				optional=True,
 				default='minecraft:default'
 			),
 			PropertySchema(
 				name="bold",
 				description=MDStr("Whether to render the content in bold."),
 				value=BOOL_STR_SCHEMA,
+				optional=True,
 				default=False
 			),
 			PropertySchema(
 				name="italic",
 				description=MDStr("Whether to render the content in italics. Note that text that is italicized by default, such as custom item names, can be unitalicized by setting this to false."),
 				value=BOOL_STR_SCHEMA,
+				optional=True,
 				default=False
 			),
 			PropertySchema(
 				name="underlined",
 				description=MDStr("Whether to underline the content."),
 				value=BOOL_STR_SCHEMA,
+				optional=True,
 				default=False
 			),
 			PropertySchema(
 				name="strikethrough",
 				description=MDStr("Whether to strikethrough the content."),
 				value=BOOL_STR_SCHEMA,
+				optional=True,
 				default=False
 			),
 			PropertySchema(
 				name="obfuscated",
 				description=MDStr("Whether to render the content obfuscated."),
 				value=BOOL_STR_SCHEMA,
+				optional=True,
 				default=False
 			),
 
@@ -168,6 +178,7 @@ RAW_JSON_TEXT_SCHEMA.options = [
 				name="insertion",
 				description=MDStr("When the text is shift-clicked by a player, this string is inserted in their chat input. It does not overwrite any existing text the player was writing. This only works in chat messages."),
 				value=BOOL_STR_SCHEMA,
+				optional=True,
 				default=False
 			),
 			PropertySchema(
@@ -177,17 +188,34 @@ RAW_JSON_TEXT_SCHEMA.options = [
 					properties=[
 						PropertySchema(
 							name="action",
-							description=MDStr("The action to perform when clicked. Valid values are: TBD..."),  # TODO: add list of valid values!
-							value=JsonStringSchema(type=None)  # TODO: add type for clickEvent->action!
+							description=MDStr("The action to perform when clicked."),
+							value=JsonStringOptionsSchema(
+								options={
+									"open_url": MDStr("Opens  value as a URL in the user's default web browser."),
+									# ... and cannot be used by players for security reasons. "open_file": MDStr("Opens the file at  value on the user's computer. This is used in messages automatically generated by the game (e.g., on taking a screenshot) and cannot be used by players for security reasons."),
+									"run_command": MDStr("Works in signs, but only on the root text component, not on any children. Activated by using the sign. In chat and written books, this has  value entered in chat as though the player typed it themselves and pressed enter. This can be used to run commands, provided the player has the required permissions. Since they are being run from chat, commands must be prefixed with the usual \"/\" slash. In signs, the command is run by the server at the sign's location, with the player who used the sign as @s. Since they are run by the server, sign commands have the same permission level as a command block instead of using the player's permission level, are not restricted by chat length limits, and do not need to be prefixed with a \"/\" slash."),
+									"suggest_command": MDStr("Opens chat and fills in the command given in value. If a chat message was already being composed, it is overwritten. This does not work in books."),
+									"change_page": MDStr("Can only be used in written books. Changes to page  value if that page exists."),
+									"copy_to_clipboard": MDStr("Copies  value to the clipboard."),
+								}
+							)
 						),
 						PropertySchema(
 							name="value",
 							description=MDStr("The URL, file path, chat, command or book page used by the specified action."),
-							value=JsonStringSchema()
+							decidingProp='action',
+							values={
+								'open_url': JsonStringSchema(type=DPE_URL),
+								'run_command': JsonStringSchema(type=MINECRAFT_CHAT_COMMAND),
+								'suggest_command': JsonStringSchema(type=MINECRAFT_CHAT_COMMAND, args=dict(incomplete=True)),
+								'change_page': NUMBER_STR_SCHEMA,
+								'copy_to_clipboard': JsonStringSchema(),
+							},
+							value=None,
 						),
 					]
 				),
-				default=''  # this property is optional
+				optional=True
 			),
 			PropertySchema(
 				name="hoverEvent",
@@ -196,21 +224,33 @@ RAW_JSON_TEXT_SCHEMA.options = [
 					properties=[
 						PropertySchema(
 							name="action",
-							description=MDStr("The type of tooltip to show. Valid values are: TBD..."),  # TODO: add list of valid values!
-							value=JsonStringSchema(type=None)  # TODO: add type for hoverEvent->action!
+							description=MDStr("The type of tooltip to show."),
+							value=JsonStringOptionsSchema(
+								options={
+									"show_text": MDStr("Shows a raw JSON text component."),
+									"show_item": MDStr("Shows the tooltip of an item as if it was being hovering over it in an inventory."),
+									"show_entity": MDStr("Shows an entity's name, type, and UUID. Used by  selector."),
+								}
+
+							)
 						),
-						PropertySchema(
+						PropertySchema(  # DEPRECATED!
 							name="value",
-							description=MDStr("The formatting and type of this tag varies depending on the action. Deprecated, use  contents instead. "),
+							description=MDStr("The formatting and type of this tag varies depending on the action. Deprecated, use  contents instead."),
 							decidingProp='action',
 							values={
 								'show_text': RAW_JSON_TEXT_SCHEMA,
-								'show_item': JsonStringSchema(description=MDStr("A string containing the SNBT for an item stack. See Player.dat format#Item structure.")),
-								'show_entity': JsonStringSchema(description=MDStr("A string containing SNBT. The SNBT does not represent the full entity data, but only stores the name, type, and UUID of the entity. ")),
-								# TODO: add name, type, and id SNBT subelements for 'show_entity'
+								'show_item': JsonStringSchema(
+									type=MINECRAFT_NBT_COMPOUND_TAG,
+									description=MDStr("A string containing the SNBT for an item stack. See Player.dat format#Item structure."),
+								),
+								'show_entity': JsonStringSchema(
+									type=MINECRAFT_NBT_COMPOUND_TAG,
+									description=MDStr("A string containing SNBT. The SNBT does not represent the full entity data, but only stores the name, type, and UUID of the entity. "),
+								),
 							},
 							value=None,
-							default='',
+							optional=True,
 							deprecated=True
 						),
 						PropertySchema(
@@ -222,9 +262,24 @@ RAW_JSON_TEXT_SCHEMA.options = [
 								'show_item': JsonObjectSchema(
 									description=MDStr("The item that should be displayed."),
 									properties=[
-										PropertySchema(name='id', description=MDStr("The namespaced item ID. Preset `minecraft:air` if invalid."), value=JsonStringSchema(type=MINECRAFT_RESOURCE_LOCATION)),  # TODO: type=ITEM_ID)),
-										PropertySchema(name='count', description=MDStr("Size of the item stack."), value=NUMBER_STR_SCHEMA, default=1),
-										PropertySchema(name='tag', description=MDStr("A string containing the serialized NBT of the additional information about the item, discussed more in the subsections of the player format page."), value=JsonStringSchema(type=MINECRAFT_NBT_TAG), default=''),
+										PropertySchema(
+											name='id',
+											description=MDStr("The namespaced item ID. Preset `minecraft:air` if invalid."),
+											value=JsonStringSchema(type=MINECRAFT_RESOURCE_LOCATION, args=dict(schema=ResourceLocationSchema('', 'item')))
+										),
+										PropertySchema(
+											name='count',
+											description=MDStr("Size of the item stack."),
+											value=NUMBER_STR_SCHEMA,
+											optional=True,
+											default=1
+										),
+										PropertySchema(
+											name='tag',
+											description=MDStr("A string containing the serialized NBT of the additional information about the item, discussed more in the subsections of the player format page."),
+											value=JsonStringSchema(type=MINECRAFT_NBT_TAG),
+											optional=True,
+										),
 									]
 								),
 								'show_entity': JsonObjectSchema(
@@ -232,7 +287,7 @@ RAW_JSON_TEXT_SCHEMA.options = [
 									properties=[
 										PropertySchema(name='id', description=MDStr("A string containing the UUID of the entity in the hyphenated hexadecimal format. Should be a valid UUID."), value=JsonStringSchema(type=MINECRAFT_UUID)),
 										PropertySchema(name='type', description=MDStr("A string containing the type of the entity. Should be a namespaced entity ID. Present `minecraft:pig` if invalid."), value=JsonStringSchema()),
-										PropertySchema(name='name', description=MDStr("Hidden if not present. A raw JSON text that is displayed as the name of the entity."), value=JsonStringSchema(type=MINECRAFT_RESOURCE_LOCATION), default=''),  # TODO: type=ENTITY_ID)),
+										PropertySchema(name='name', description=MDStr("Hidden if not present. A raw JSON text that is displayed as the name of the entity."), value=JsonStringSchema(type=MINECRAFT_RESOURCE_LOCATION), optional=True),  # TODO: type=ENTITY_ID)),
 									]
 								),
 							},
@@ -240,34 +295,10 @@ RAW_JSON_TEXT_SCHEMA.options = [
 						),
 					]
 				),
-				default=''  # this property is optional
+				optional=True
 			),
 			# TBD!
 
 		]
 	)
 ]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

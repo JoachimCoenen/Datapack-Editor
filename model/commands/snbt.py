@@ -10,8 +10,10 @@ from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclass, Order
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.snbtParser import SNBTParser, SNBTError
-from model.nbt.tags import NBTTag, ByteTag, ShortTag, IntTag, LongTag, FloatTag, DoubleTag, StringTag, ListTag, CompoundTag, ByteArrayTag, IntArrayTag, LongArrayTag
-from model.utils import Span
+from model.nbt.tags import NBTTag, ByteTag, ShortTag, IntTag, LongTag, FloatTag, DoubleTag, StringTag, ListTag, CompoundTag, ByteArrayTag, IntArrayTag, LongArrayTag, NBTTagSchema
+from model.parsing.bytesUtils import bytesToStr
+from model.parsing.contextProvider import parseNPrepare
+from model.utils import Span, GeneralError, LanguageId
 
 
 def _parseNBTTagBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[Base]:
@@ -53,7 +55,7 @@ def parseNBTTag1(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Opt
 	return result
 
 
-def parseNBTTag2(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
+def parseNBTTag3(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
 	# parse_nbt('{foo: [hello, world], bar: [I; 1, 2, 3]}')
 	sr.save()
 	literal = sr.source[sr.cursor:]
@@ -61,27 +63,40 @@ def parseNBTTag2(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Opt
 		sr.rollback()
 		return None
 
-	parser = SNBTParser(literal, ignoreTrailingChars=True)
-	tag = parser.parseNBTTag()
+	tag, errors = parseNPrepare(
+		sr.source[sr.cursor:],
+		language=LanguageId('SNBT'),
+		schema=NBTTagSchema(''),
+		line=sr._lineNo,
+		lineStart=sr._lineStart,
+		cursor=0,
+		cursorOffset=sr.cursor + sr._lineStart,
+		ignoreTrailingChars=True
+	)
 
-	for ex in parser.errors:
-		message = ex.message
-		start = ex.span.start.index + sr.cursor
-		stop = ex.span.end.index + sr.cursor
-		begin = sr.posFromColumn(start)
-		end = sr.posFromColumn(stop)
-		style = ex.style
-		errorsIO.append(SNBTError(message, Span(begin, end), style=style))
+	# parser = SNBTParser(literal, ignoreTrailingChars=True)
+	# tag = parser.parseNBTTag()
+	#
+	# for ex in parser.errors:
+	# 	message = ex.message
+	# 	start = ex.span.start.index + sr.cursor
+	# 	stop = ex.span.end.index + sr.cursor
+	# 	begin = sr.posFromColumn(start)
+	# 	end = sr.posFromColumn(stop)
+	# 	style = ex.style
+	# 	errorsIO.append(SNBTError(message, Span(begin, end), style=style))
+	errorsIO.extend(errors)
 
 	if tag is not None:
-		cursor = parser._last.span.end.index
-		sr.cursor += cursor
+		sr.cursor += tag.span.length
+		sr._lineNo = tag.span.end.line
+		sr._lineStart = tag.span.end.index - tag.span.end.column
 	else:
 		sr.rollback()
 	return tag
 
 
-parseNBTTag = parseNBTTag2
+parseNBTTag = parseNBTTag3
 
 
 class InvalidPath(ValueError):
@@ -143,6 +158,7 @@ def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -
 	sr.save()
 
 	literal = sr.source[sr.cursor:]
+	literal = bytesToStr(literal)  # TODO utf-8-ify _parseNBTPathBare(...)!
 	parser = None
 	try:
 		parser = Parser(tokenize(literal))

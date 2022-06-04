@@ -9,6 +9,7 @@ from model.commands.filterArgs import FilterArgumentInfo
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.messages import *
+from model.parsing.bytesUtils import strToBytes, bytesToStr
 
 DPE_TARGET_SELECTOR_SCORES = ArgumentType(
 	name='dpe:target_selector_scores',
@@ -74,7 +75,7 @@ targetSelectorArguments: list[FilterArgumentInfo] = [
 	),
 	FilterArgumentInfo(
 		name='sort',
-		type=makeLiteralsArgumentType(['nearest', 'furthest', 'random', 'arbitrary']),
+		type=makeLiteralsArgumentType([b'nearest', b'furthest', b'random', b'arbitrary']),
 	),
 	FilterArgumentInfo(
 		name='level',
@@ -126,8 +127,8 @@ targetSelectorArguments: list[FilterArgumentInfo] = [
 	),
 ]
 
-TARGET_SELECTOR_ARGUMENTS_DICT: dict[str, FilterArgumentInfo] = {
-	tsa.name: tsa
+TARGET_SELECTOR_ARGUMENTS_DICT: dict[bytes, FilterArgumentInfo] = {
+	strToBytes(tsa.name): tsa
 	for tsa in targetSelectorArguments
 }
 
@@ -140,19 +141,19 @@ FALLBACK_TS_ARGUMENT_INFO = FilterArgumentInfo(
 )
 
 
-_GOTO_NEXT_ARG_PATTERN = re.compile(r'[,}=]')
+_GOTO_NEXT_ARG_PATTERN = re.compile(rb'[,}=]')
 
 
 @argumentContext(DPE_TARGET_SELECTOR_SCORES.name)
 class TargetSelectorScoresArgumentHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		if not sr.tryConsumeChar('{'):
+		if not sr.tryConsumeByte(ord('{')):
 			return None
 
 		scores: OrderedMultiDict[str, ParsedArgument] = OrderedMultiDict[str, ParsedArgument]()
 		sr.tryConsumeWhitespace()
 		sr.save()
-		while not sr.tryConsumeChar('}'):
+		while not sr.tryConsumeByte(ord('}')):
 			sr.mergeLastSave()
 
 			handler = getArgumentContext(MINECRAFT_OBJECTIVE)
@@ -164,7 +165,7 @@ class TargetSelectorScoresArgumentHandler(ArgumentContext):
 				objective = objective.value
 
 			sr.tryConsumeWhitespace()
-			if not sr.tryConsumeChar('='):
+			if not sr.tryConsumeByte(ord('=')):
 				sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
 				errorsIO.append(CommandSyntaxError(EXPECTED_MSG.format("'='"), sr.currentSpan, style='error'))
 				sr.mergeLastSave()
@@ -181,9 +182,9 @@ class TargetSelectorScoresArgumentHandler(ArgumentContext):
 				scores.add(objective, value)
 
 			sr.tryConsumeWhitespace()
-			if sr.tryConsumeChar('}'):
+			if sr.tryConsumeByte(ord('}')):
 				break
-			elif sr.tryConsumeChar(','):
+			elif sr.tryConsumeByte(ord(',')):
 				sr.tryConsumeWhitespace()
 				continue
 			else:
@@ -192,8 +193,9 @@ class TargetSelectorScoresArgumentHandler(ArgumentContext):
 					break
 				else:
 					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
+					remainig = bytesToStr(remainig)
 					errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format("`}` or `,`", f"'{remainig}'"), sr.currentSpan, style='error'))
-					if sr.tryConsumeChar('}'):
+					if sr.tryConsumeByte(ord('}')):
 						break
 		return makeParsedArgument(sr, ai, value=scores)
 

@@ -135,15 +135,18 @@ def validateJsonObject(data: JsonObject, *, errorsIO: list[JsonSemanticsError]) 
 		else:
 			validatedProps.add(key)
 
-		if key not in data.schema.propertiesDict:
+		isUnknownProp = prop.schema is None or prop.value.schema is None
+		# isUnknownProp = key not in data.schema.propertiesDict or data.schema.propertiesDict[key].valueForParent(data) is None
+
+		if isUnknownProp:
 			msg = UNKNOWN_PROPERTY_MSG.format(repr(key))
 			errorsIO.append(JsonSemanticsError(msg, prop.key.span))
 			continue
 
 		_validateInternal(prop.value, errorsIO=errorsIO)
 
-	for propSchema in data.schema.properties:
-		if propSchema.name not in validatedProps and propSchema.mandatory:
+	for propSchema in data.schema.propertiesDict.values():
+		if propSchema.name not in validatedProps and propSchema.isMandatory and propSchema.valueForParent(data) is not None:
 			msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(propSchema.name))
 			end = data.span.end
 			start = replace(end, column=end.column - 1, index=end.index - 1)

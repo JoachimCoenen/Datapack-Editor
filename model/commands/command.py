@@ -6,19 +6,25 @@ from typing import TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar
 
 from Cat.utils import Singleton
 from model.commands.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
+from model.parsing.bytesUtils import bytesToStr
 from model.parsing.tree import Schema, Node
-from model.utils import Position
+from model.utils import Position, LanguageId
 
 
 @dataclass
 class Named(ABC):
 	name: str
 
+	def __post_init__(self):
+		assert isinstance(self.name, str)
+
 
 @dataclass
 class CommandPartSchema(Schema, Named, ABC):
 	description: str = field(default='')
 	next: list[CommandPartSchema] = field(default_factory=list)
+
+	language: ClassVar[LanguageId] = 'MCCommand'
 
 
 @dataclass
@@ -43,7 +49,7 @@ class ArgumentSchema(CommandPartSchema):
 	@property
 	def asString(self) -> str:
 		if isinstance(self.type, LiteralsArgumentType):
-			return f"({'|'.join(opt for opt in self.type.options)})"
+			return f"({bytesToStr(b'|'.join(opt for opt in self.type.options))})"
 		return f'<{self.name}: {self.typeName}>'
 
 
@@ -126,7 +132,8 @@ class CommentSchema(CommandPartSchema):
 
 
 @dataclass
-class MCFunctionSchema(Singleton, CommandPartSchema):
+class MCFunctionSchema(CommandPartSchema):
+	commands: dict[bytes, CommandSchema] = field(default_factory=dict)
 
 	@property
 	def asString(self) -> str:
@@ -138,16 +145,16 @@ _TCommandPartSchema = TypeVar('_TCommandPartSchema', bound=CommandPartSchema)
 
 @dataclass
 class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPartSchema]):
-	source: str = field(repr=False)
+	source: bytes = field(repr=False)
 
 	@property
-	def content(self) -> str:
+	def content(self) -> bytes:
 		return self.source[self.span.slice]
 
 	_next: Optional[CommandPart] = field(default=None, init=False)
 	_prev: Optional[CommandPart] = field(default=None, init=False, repr=False)
 
-	language: ClassVar[str] = 'MCCommand'
+	language: ClassVar[LanguageId] = 'MCCommand'
 
 	@property
 	def next(self) -> Optional[CommandPart]:
@@ -182,7 +189,7 @@ class ParsedComment(CommandPart[CommentSchema]):
 
 @dataclass
 class ParsedCommand(CommandPart[CommandSchema]):
-	name: str
+	name: bytes
 
 
 @dataclass

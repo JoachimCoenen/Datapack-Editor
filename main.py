@@ -142,6 +142,8 @@ def start(argv):
 		loadSessionFromFile()
 		showSetupDialogIfNecessary()
 
+		import gui.themes.schemesUI  # DO NOT REMOVE!
+
 		loadPlugins()
 		loadColorSchemes()
 

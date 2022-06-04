@@ -23,16 +23,16 @@ def _parse2dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsI
 	else:
 		numberReader = sr.tryReadInt
 	sr.save()
-	blockPos1: Optional[str] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
+	blockPos1: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
 	if blockPos1 is None:
 		sr.rollback()
 		return None
 	sr.mergeLastSave()
-	if not sr.tryConsumeChar(' '):
+	if not sr.tryConsumeByte(ord(' ')):
 		sr.rollback()
 		return None
 
-	blockPos2: Optional[str] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
+	blockPos2: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
 	if blockPos2 is None:
 		sr.rollback()
 		return None
@@ -52,25 +52,25 @@ def _parse3dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsI
 	else:
 		numberReader = sr.tryReadInt
 	sr.save()
-	blockPos1: Optional[str] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
+	blockPos1: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
 	if blockPos1 is None:
 		sr.rollback()
 		return None
 	sr.mergeLastSave()
-	if not sr.tryConsumeChar(' '):
+	if not sr.tryConsumeByte(ord(' ')):
 		sr.rollback()
 		return None
 
-	blockPos2: Optional[str] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
+	blockPos2: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
 	if blockPos2 is None:
 		sr.rollback()
 		return None
 	sr.mergeLastSave()
-	if not sr.tryConsumeChar(' '):
+	if not sr.tryConsumeByte(ord(' ')):
 		sr.rollback()
 		return None
 
-	blockPos3: Optional[str] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
+	blockPos3: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
 	if blockPos3 is None:
 		sr.rollback()
 		return None

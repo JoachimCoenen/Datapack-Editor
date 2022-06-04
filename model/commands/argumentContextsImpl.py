@@ -1,6 +1,6 @@
 import re
 from abc import abstractmethod, ABC
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Any
 
 from PyQt5.QtWidgets import QWidget
 
@@ -11,15 +11,17 @@ from model.commands.command import ArgumentSchema, ParsedArgument, CommandPart
 from model.commands.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser, getArgumentContext
 from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, \
 	validateFilterArgs
-from model.commands.snbt import parseNBTPath, parseNBTTag
+from model.commands.snbt import parseNBTPath
 from model.commands.stringReader import StringReader
 from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
-from model.json.parser import parseJsonStr
 from model.messages import *
-from model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation
-from model.utils import Span, Position, GeneralError, MDStr, Message
+from model.nbt.tags import NBTTagSchema
+from model.parsing.bytesUtils import bytesToStr, strToBytes
+from model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
+from model.parsing.tree import Schema
+from model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
 from session.session import getSession
 
 
@@ -65,8 +67,8 @@ class ResourceLocationLikeHandler(ArgumentContext, ABC):
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		if node is None:
-			value = ResourceLocationNode.fromString('', Span(pos), self.schema)
-			return getSuggestions(value, '', pos, replaceCtx)
+			value = ResourceLocationNode.fromString(b'', Span(pos), self.schema)
+			return getSuggestions(value, b'', pos, replaceCtx)
 		else:
 			return getSuggestions(node.value, node.source, pos, replaceCtx)
 
@@ -78,6 +80,93 @@ class ResourceLocationLikeHandler(ArgumentContext, ABC):
 
 	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
 		return onIndicatorClicked(node.value, node.source, position, window)
+
+
+class ParsingHandler(ArgumentContext, ABC):
+
+	@abstractmethod
+	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
+		pass
+
+	@abstractmethod
+	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
+		pass
+
+	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
+		return {}
+
+	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		# remainder = sr.tryReadRemaining()
+		if sr.hasReachedEnd:
+			return None
+		sr.save()
+		schema = self.getSchema(ai)
+		language = self.getLanguage(ai)
+
+		data, errors = parseNPrepare(
+			sr.source[sr.cursor:],
+			language=language,
+			schema=schema,
+			line=sr._lineNo,
+			lineStart=sr._lineStart,
+			cursor=0,
+			cursorOffset=sr.cursor + sr._lineStart,
+			**self.getParserKwArgs(ai)
+		)
+		# sr.tryReadRemaining()
+
+		errorsIO.extend(errors)
+		if data is not None:
+			sr.cursor += data.span.length
+			sr._lineNo = data.span.end.line
+			sr._lineStart = data.span.end.index - data.span.end.column
+			return makeParsedArgument(sr, ai, value=data)
+
+	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
+		validateTree(node.value, node.source, errorsIO)
+		# errors = validateJson(node.value)
+		# nss = node.span.start
+		# for er in errors:
+		# 	s = Position(
+		# 		nss.line,
+		# 		nss.column + er.span.start.index,
+		# 		nss.index + er.span.start.index
+		# 	)
+		# 	e = Position(
+		# 		nss.line,
+		# 		nss.column + er.span.end.index,
+		# 		nss.index + er.span.end.index
+		# 	)
+		# 	if isinstance(er, GeneralError):
+		# 		er.span = Span(s, e)
+		# 	else:
+		# 		er = CommandSemanticsError(er.message, Span(s, e), er.style)
+		# 	errorsIO.append(er)
+
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		"""
+		:param ai:
+		:param node:
+		:param pos: cursor position
+		:param replaceCtx: the string that will be replaced
+		:return:
+		"""
+		if node is not None:
+			return getSuggestions(node.value, node.source, pos, replaceCtx)
+		return []
+
+	def getDocumentation(self, node: ParsedArgument, pos: Position) -> MDStr:
+		docs = [
+			super(ParsingHandler, self).getDocumentation(node, pos),
+			getDocumentation(node.value, node.source, pos)
+		]
+		return MDStr('\n\n'.join(docs))
+
+	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
+		return getClickableRanges(node.value, node.source)
+
+	def onIndicatorClicked(self, node: ParsedArgument, pos: Position, window: QWidget) -> None:
+		onIndicatorClicked(node.value, node.source, pos, window)
 
 
 @argumentContext(BRIGADIER_BOOL.name)
@@ -167,7 +256,7 @@ class BlockStateHandler(ArgumentContext):
 		super().__init__()
 		self._allowTag: bool = allowTag
 
-	def _getBlockStatesDict(self, blockID: ResourceLocation) -> dict[str, FilterArgumentInfo]:
+	def _getBlockStatesDict(self, blockID: ResourceLocation) -> dict[bytes, FilterArgumentInfo]:
 		return getSession().minecraftData.getBlockStatesDict(blockID)
 
 	rlcSchema = ResourceLocationSchema('', 'block')
@@ -185,7 +274,7 @@ class BlockStateHandler(ArgumentContext):
 		else:
 			states = FilterArguments()
 		# data tags:
-		if sr.tryConsumeChar('{'):
+		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
 			nbt = tryReadNBTCompoundTag(sr, ai, errorsIO=errorsIO)
 		else:
@@ -222,7 +311,7 @@ class BlockStateHandler(ArgumentContext):
 		argsStart = blockID.span.end
 		if pos.index >= argsStart.index:
 			blockStatesDict = self._getBlockStatesDict(blockID)
-			suggestions += suggestionsForFilterArgs(blockState.states, node.content[argsStart:], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
+			suggestions += suggestionsForFilterArgs(blockState.states, node.source[argsStart.index:node.end], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
 
 		if pos in blockID.span:
 			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
@@ -268,22 +357,22 @@ class BlockPredicateHandler(BlockStateHandler):
 class ColumnPosHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		sr.save()
-		columnPos1: Optional[str] = sr.tryReadInt() or sr.tryReadTildeNotation()
+		columnPos1: Optional[bytes] = sr.tryReadInt() or sr.tryReadTildeNotation()
 		if columnPos1 is None:
 			sr.rollback()
 			return None
 		sr.mergeLastSave()
-		if not sr.tryConsumeChar(' '):
+		if not sr.tryConsumeByte(ord(' ')):
 			sr.rollback()
 			return None
 
-		columnPos2: Optional[str] = sr.tryReadInt() or sr.tryReadTildeNotation()
+		columnPos2: Optional[bytes] = sr.tryReadInt() or sr.tryReadTildeNotation()
 		if columnPos2 is None:
 			sr.rollback()
 			return None
 		sr.mergeLastSave()
 
-		blockPos = f'{columnPos1} {columnPos2}'
+		blockPos = (columnPos1, columnPos2)
 		return makeParsedArgument(sr, ai, value=blockPos)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
@@ -291,69 +380,16 @@ class ColumnPosHandler(ArgumentContext):
 
 
 @argumentContext(MINECRAFT_COMPONENT.name)
-class ComponentHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		# TODO: parseComponent(...): Must be a raw JSON text.
-		# remainder = sr.tryReadRemaining()
-		if sr.hasReachedEnd:
-			return None
-		schema = getSession().datapackData.jsonSchemas.get('rawJsonText')
-		jsonData, errors = parseJsonStr(sr.fullSource, False, schema, cursor=sr.cursor + sr._lineStart, line=sr._lineNo, lineStart=sr._lineStart, totalLength=sr._lineStart + sr.totalLength)
-		sr.tryReadRemaining()
+class ComponentHandler(ParsingHandler):
+	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
+		return getSession().datapackData.jsonSchemas.get('rawJsonText')
 
-		for e in errors:
-			errorsIO.append(e)
-			# position = sr.posFromColumn(sr.lastCursors.peek() + e.span.start.index)
-			# end = sr.posFromColumn(sr.lastCursors.peek() + e.span.end.index)
-			# errorsIO.append(CommandSyntaxError(e.message, Span(position, end), style=e.style))
-		else:
-			return makeParsedArgument(sr, ai, value=jsonData)
+	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
+		return LanguageId('JSON')
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		validateTree(node.value, node.source, errorsIO)
-		# errors = validateJson(node.value)
-		# nss = node.span.start
-		# for er in errors:
-		# 	s = Position(
-		# 		nss.line,
-		# 		nss.column + er.span.start.index,
-		# 		nss.index + er.span.start.index
-		# 	)
-		# 	e = Position(
-		# 		nss.line,
-		# 		nss.column + er.span.end.index,
-		# 		nss.index + er.span.end.index
-		# 	)
-		# 	if isinstance(er, GeneralError):
-		# 		er.span = Span(s, e)
-		# 	else:
-		# 		er = CommandSemanticsError(er.message, Span(s, e), er.style)
-		# 	errorsIO.append(er)
+	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
+		return dict(allowMultilineStr=False)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		"""
-		:param ai:
-		:param node:
-		:param pos: cursor position
-		:param replaceCtx: the string that will be replaced
-		:return:
-		"""
-		if node is not None:
-			return getSuggestions(node.value, node.source, pos, replaceCtx)
-		return []
-
-	def getDocumentation(self, node: ParsedArgument, pos: Position) -> MDStr:
-		docs = [
-			super(ComponentHandler, self).getDocumentation(node, pos),
-			getDocumentation(node.value, node.source, pos)
-		]
-		return MDStr('\n\n'.join(docs))
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		return getClickableRanges(node.value, node.source)
-
-	def onIndicatorClicked(self, node: ParsedArgument, pos: Position, window: QWidget) -> None:
-		onIndicatorClicked(node.value, node.source, pos, window)
 
 @argumentContext(MINECRAFT_DIMENSION.name)
 class DimensionHandler(ResourceLocationLikeHandler):
@@ -370,9 +406,10 @@ class EntityHandler(ArgumentContext):
 		locator = sr.tryReadString()
 		if locator is None:
 			# tryParse Target selector:
-			variable = sr.tryReadRegex(re.compile(r'@[praes]\b'))
+			variable = sr.tryReadRegex(re.compile(rb'@[praes]\b'))
 			if variable is None:
 				return None
+			variable = bytesToStr(variable)
 			arguments = parseFilterArgs(sr, TARGET_SELECTOR_ARGUMENTS_DICT, errorsIO=errorsIO)
 			if arguments is None:
 				arguments = FilterArguments()
@@ -423,7 +460,7 @@ class FloatRangeHandler(ArgumentContext):
 		float1Regex = r'-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)'
 		float2Regex = r'-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)'
 		separatorRegex = r'\.\.'
-		pattern = re.compile(f"{float1Regex}(?:{separatorRegex}(?:{float2Regex})?)?|{separatorRegex}{float2Regex}")
+		pattern = re.compile(strToBytes(f"{float1Regex}(?:{separatorRegex}(?:{float2Regex})?)?|{separatorRegex}{float2Regex}"))
 		range_ = sr.tryReadRegex(pattern)
 		if range_ is None:
 			return None
@@ -453,7 +490,7 @@ class IntRangeHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		intRegex = r'-?[0-9]+'
 		separatorRegex = r'\.\.'
-		pattern = re.compile(f"{intRegex}(?:{separatorRegex}(?:{intRegex})?)?|{separatorRegex}{intRegex}")
+		pattern = re.compile(strToBytes(f"{intRegex}(?:{separatorRegex}(?:{intRegex})?)?|{separatorRegex}{intRegex}"))
 		range_ = sr.tryReadRegex(pattern)
 		if range_ is None:
 			return None
@@ -474,7 +511,7 @@ class ItemEnchantmentHandler(ResourceLocationLikeHandler):
 @argumentContext(MINECRAFT_ITEM_SLOT.name)
 class ItemSlotHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		slot = sr.tryReadRegex(re.compile(r'\w+(?:\.\w+)?'))
+		slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)?'))
 		if slot is None:
 			return None
 		return makeParsedArgument(sr, ai, value=slot)
@@ -485,7 +522,7 @@ class ItemSlotHandler(ArgumentContext):
 			errorsIO.append(CommandSemanticsError(UNKNOWN_MSG.format("item slot",  slot), node.span, style='error'))
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		return list(getSession().minecraftData.slots.keys())
+		return [bytesToStr(slot) for slot in getSession().minecraftData.slots.keys()]
 
 
 @argumentContext(MINECRAFT_ITEM_STACK.name)
@@ -502,7 +539,7 @@ class ItemStackHandler(ArgumentContext):
 		itemID = ResourceLocationNode.fromString(itemID, sr.currentSpan, self.rlcSchema)
 
 		# data tags:
-		if sr.tryConsumeChar('{'):
+		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
 			nbt = tryReadNBTCompoundTag(sr, ai, errorsIO=errorsIO)
 		else:
@@ -589,13 +626,13 @@ class MobEffectHandler(ResourceLocationLikeHandler):
 		return ResourceLocationSchema('', 'mob_effect')
 
 
-@argumentContext(MINECRAFT_NBT_COMPOUND_TAG.name)
-class NbtCompoundTagHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		nbt = tryReadNBTCompoundTag(sr, ai, errorsIO=errorsIO)
-		if nbt is None:
-			return None
-		return makeParsedArgument(sr, ai, value=nbt)
+# @argumentContext(MINECRAFT_NBT_COMPOUND_TAG.name)
+# class NbtCompoundTagHandler(ArgumentContext):
+# 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+# 		nbt = tryReadNBTCompoundTag(sr, ai, errorsIO=errorsIO)
+# 		if nbt is None:
+# 			return None
+# 		return makeParsedArgument(sr, ai, value=nbt)
 
 
 @argumentContext(MINECRAFT_NBT_PATH.name)
@@ -607,18 +644,29 @@ class NbtPathHandler(ArgumentContext):
 		return makeParsedArgument(sr, ai, value=path)
 
 
+@argumentContext(MINECRAFT_NBT_COMPOUND_TAG.name)
 @argumentContext(MINECRAFT_NBT_TAG.name)
-class NbtTagHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		nbt = parseNBTTag(sr, errorsIO=errorsIO)
-		if nbt is None:
-			return None
-		return makeParsedArgument(sr, ai, value=nbt)
+class NbtTagHandler(ParsingHandler):
+	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
+		return NBTTagSchema('')
+
+	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
+		return LanguageId('SNBT')
+
+	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
+		return dict(ignoreTrailingChars=True)
+
+	# def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	# 	nbt = parseNBTTag(sr, errorsIO=errorsIO)
+	# 	if nbt is None:
+	# 		return None
+	# 	return makeParsedArgument(sr, ai, value=nbt)
+
 
 @argumentContext(MINECRAFT_OBJECTIVE.name)
 class ObjectiveHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		pattern = re.compile(r"[a-zA-Z0-9_.+-]+")
+		pattern = re.compile(rb"[a-zA-Z0-9_.+-]+")
 		objective = sr.tryReadRegex(pattern)
 		if objective is None:
 			return None
@@ -675,22 +723,22 @@ class RotationHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		numberReader = sr.tryReadFloat
 		sr.save()
-		yaw: Optional[str] = numberReader() or sr.tryReadTildeNotation()
+		yaw: Optional[bytes] = numberReader() or sr.tryReadTildeNotation()
 		if yaw is None:
 			sr.rollback()
 			return None
 		sr.mergeLastSave()
-		if not sr.tryConsumeChar(' '):
+		if not sr.tryConsumeByte(ord(' ')):
 			sr.rollback()
 			return None
 
-		pitch: Optional[str] = numberReader() or sr.tryReadTildeNotation()
+		pitch: Optional[bytes] = numberReader() or sr.tryReadTildeNotation()
 		if pitch is None:
 			sr.rollback()
 			return None
 		sr.mergeLastSave()
 
-		rotation = f'{yaw} {pitch}'
+		rotation = (yaw, pitch)
 		return makeParsedArgument(sr, ai, value=rotation)
 
 
@@ -702,11 +750,11 @@ class ScoreHolderHandler(EntityHandler):
 		if result is not None:
 			return result
 		sr.save()
-		if sr.tryConsumeChar('*'):
-			locator = '*'
+		if sr.tryConsumeByte(ord('*')):
+			locator = b'*'
 		else:
 			locator = sr.tryReadLiteral()
-			if locator is None or locator.startswith('@'):
+			if locator is None or locator.startswith(b'@'):
 				sr.rollback()
 				return None
 		return makeParsedArgument(sr, ai, value=locator)
@@ -733,10 +781,10 @@ class SwizzleHandler(ArgumentContext):
 		swizzle = sr.tryReadLiteral()
 		if swizzle is None:
 			return None
-		if re.fullmatch(r'[xyz]{1,3}', swizzle) is None:
+		if re.fullmatch(rb'[xyz]{1,3}', swizzle) is None:
 			sr.rollback()
 			return None
-		if swizzle.count('x') > 1 or swizzle.count('y') > 1 or swizzle.count('z') > 1:
+		if swizzle.count(b'x') > 1 or swizzle.count(b'y') > 1 or swizzle.count(b'z') > 1:
 			sr.rollback()
 			return None
 		return makeParsedArgument(sr, ai, value=swizzle)
@@ -746,7 +794,7 @@ class SwizzleHandler(ArgumentContext):
 class TeamHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# -, +, ., _, A-Z, a-z, and 0-9
-		literal = sr.tryReadRegex(re.compile(r'[-+._A-Za-z0-9]+'))
+		literal = sr.tryReadRegex(re.compile(rb'[-+._A-Za-z0-9]+'))
 		if literal is None:
 			return None
 		return makeParsedArgument(sr, ai, value=literal)
@@ -763,7 +811,7 @@ class TimeHandler(ArgumentContext):
 			sr.rollback()
 			return None
 
-		if unit not in ('d', 's', 't'):
+		if unit not in (b'd', b's', b't'):
 			sr.rollback()
 			sr.rollback()
 			return None
@@ -772,7 +820,7 @@ class TimeHandler(ArgumentContext):
 
 
 # 8-4-4-4-12
-UUID_PATTERN = re.compile(r'[a-fA-F0-9]{1,8}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,12}')
+UUID_PATTERN = re.compile(rb'[a-fA-F0-9]{1,8}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,12}')
 
 
 @argumentContext(MINECRAFT_UUID.name)
