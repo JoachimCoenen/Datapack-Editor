@@ -2,6 +2,7 @@
 for Minecraft version 1.17
 """
 from model.datapack.dpVersion import registerDPVersion, DPVersion
+from model.datapack.json.schemas.predicate import PREDICATE_SCHEMA
 from model.datapack.json.schemas.rawJsonText import RAW_JSON_TEXT_SCHEMA
 from model.datapack.json.schemas.tags import *
 from model.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, DatapackContents, GenerationInfo, DefaultFileInfo, \
@@ -238,6 +239,7 @@ DATAPACK_JSON_SCHEMAS: dict[str, JsonSchema] = {
 	'tags/functions': TAGS_FUNCTIONS,
 	'tags/game_events': TAGS_GAME_EVENTS,
 	'tags/items': TAGS_ITEMS,
+	'predicates': PREDICATE_SCHEMA,
 }
 
 version6 = DPVersion(
