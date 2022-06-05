@@ -3,8 +3,8 @@ from model.datapackContents import ResourceLocationSchema
 from model.json.core import JsonStringSchema
 
 
-def JsonResourceLocationSchema(name: str, doc: str = ''):
-	return JsonStringSchema(type=MINECRAFT_RESOURCE_LOCATION, args=dict(schema=ResourceLocationSchema(doc, name)))
+def JsonResourceLocationSchema(name: str, description: str = ''):
+	return JsonStringSchema(type=MINECRAFT_RESOURCE_LOCATION, args=dict(schema=ResourceLocationSchema(description, name)))
 
 
 __all__ = [

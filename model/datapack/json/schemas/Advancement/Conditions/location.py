@@ -4,6 +4,8 @@ from model.datapack.json.utils import *
 from model.json.core import *
 from model.utils import MDStr
 
+
+
 ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 
 ])
@@ -11,7 +13,7 @@ ADVANCEMENT_CONDITIONS_LOCATION.properties = (
 	PropertySchema(
 		name="biome",
 		description=MDStr('The biome the entity is currently in. This tag is a [[resource location]] for a biome (see [[Biome#Biome IDs]] for the ones used in vanilla).'),
-		value=JsonResourceLocationSchema('biome'),
+		value=JsonResourceLocationSchema('biome', ''),
 		optional=True
 	),
 	PropertySchema(
@@ -21,7 +23,7 @@ ADVANCEMENT_CONDITIONS_LOCATION.properties = (
 			PropertySchema(
 				name="blocks",
 				description=MDStr('A list of [[Java Edition data values#Blocks|block IDs]].'),
-				value=JsonArraySchema(element=JsonResourceLocationSchema('block_type')),
+				value=JsonArraySchema(element=JsonResourceLocationSchema('block', '')),
 				optional=True
 			),
 			PropertySchema(
@@ -87,7 +89,7 @@ ADVANCEMENT_CONDITIONS_LOCATION.properties = (
 	PropertySchema(
 		name="feature",
 		description=MDStr('{{until|java 1.19}}: The structure the entity is currently in. This tag is a [[resource location]] for a structure feature (see [[Java Edition data values#Structures]] for the ones used in vanilla).'),
-		value=JsonResourceLocationSchema('structure'),
+		value=JsonResourceLocationSchema('structure', ''),
 		optional=True
 	),
 	PropertySchema(
@@ -97,7 +99,7 @@ ADVANCEMENT_CONDITIONS_LOCATION.properties = (
 			PropertySchema(
 				name="fluid",
 				description=MDStr('The [[Java Edition data values#Fluids|fluid ID]].'),
-				value=JsonResourceLocationSchema('fluid_type'),
+				value=JsonResourceLocationSchema('fluid', ''),
 				optional=True
 			),
 			PropertySchema(
@@ -259,7 +261,7 @@ ADVANCEMENT_CONDITIONS_LOCATION.properties = (
 	PropertySchema(
 		name="structure",
 		description=MDStr('{{upcoming|java 1.19}}: The structure the entity is currently in. This tag is a [[resource location]] for a structure feature (see [[Java Edition data values#Structures]] for the ones used in vanilla).'),
-		value=JsonStringSchema(),
+		value=JsonResourceLocationSchema('structure', ''),
 		optional=True
 	)
 )

@@ -8,181 +8,6 @@ from Cat.utils.collections_ import AddToDictDecorator, Stack, OrderedMultiDict
 from Cat.utils.formatters import indentMultilineStr
 from Cat.utils.typing_ import replace_tuple
 
-# BOOL_REPLACE = \
-# """\tPropertySchema(
-# \t\tname="\\1",
-# \t\tdescription=MDStr("\\2"),
-# \t\tvalue=JsonBoolSchema()
-# \t),"""
-#
-#
-# INT_REPLACE = \
-# """\tPropertySchema(
-# \t\tname="\\1",
-# \t\tdescription=MDStr("\\2"),
-# \t\tvalue=JsonIntSchema()
-# \t),"""
-#
-#
-# FLOAT_REPLACE = \
-# """\tPropertySchema(
-# \t\tname="\\1",
-# \t\tdescription=MDStr("\\2"),
-# \t\tvalue=JsonFloatSchema()
-# \t),"""
-#
-#
-# STRING_REPLACE = \
-# """\tPropertySchema(
-# \t\tname="\\1",
-# \t\tdescription=MDStr("\\2"),
-# \t\tvalue=JsonStringSchema()
-# \t),"""
-#
-#
-# COMPOUND_1_REPLACE = \
-# """\tPropertySchema(
-# \t\tname="\\1",
-# \t\tdescription=MDStr("\\2"),
-# \t\tvalue=JsonObjectSchema(properties=["""
-#
-#
-# def COMPOUND_REPLACE(match: re.Match) -> str:
-# 	return f"""\tPropertySchema(
-# \t\tname="{match.group(1)}",
-# \t\tdescription=MDStr("{match.group(2)}"),
-# \t\tvalue=ADVANCEMENT_{match.group(3).replace('/', '_').upper()}
-# \t),"""
-#
-#
-# def convert(text: str, name: str):
-# 	original = text
-#
-# 	text = extractOnlyinclude(text)
-#
-# 	text = re.sub(
-# 		r'\*\* {{[nN]bt\|boolean\|(\w+)}}(?: ?)(.*)',
-# 		BOOL_REPLACE,
-# 		text,
-# 		flags=re.MULTILINE
-# 	)
-#
-# 	text = re.sub(
-# 		r'\*\* {{[nN]bt\|int\|(\w+)}}(?: ?)(.*)',
-# 		INT_REPLACE,
-# 		text,
-# 		flags=re.MULTILINE
-# 	)
-#
-# 	text = re.sub(
-# 		r'\*\* {{[nN]bt\|(?:double|float)\|(\w+)}}(?: ?)(.*)',
-# 		FLOAT_REPLACE,
-# 		text,
-# 		flags=re.MULTILINE
-# 	)
-#
-# 	text = re.sub(
-# 		r'\*\* {{[nN]bt\|string\|(\w+)}}(?: ?)(.*)',
-# 		STRING_REPLACE,
-# 		text,
-# 		flags=re.MULTILINE
-# 	)
-#
-# 	text = re.sub(
-# 		r'\*\* {{[nN]bt\|compound\|(\w+)}}: ?(.*)\n\*\*\*+ {{nbt inherit/([\w/]+)\|indent=\*+}}',
-# 		COMPOUND_REPLACE,
-# 		text,
-# 		flags=re.MULTILINE
-# 	)
-#
-# 	text = re.sub(
-# 		r'\*\* {{[nN]bt\|compound\|(\w+)}}(?: ?)(.*)',
-# 		COMPOUND_1_REPLACE,
-# 		text,
-# 		flags=re.MULTILINE
-# 	)
-#
-# 	text = (
-# 		f"{name} = JsonObjectSchema( properties=[\n"
-# 		f"{text}\n"
-# 		f"])\n")
-# 	text = addImports(text)
-# 	return text
-#
-#
-# def handleLines(linesStack: Stack[str], depth: int) -> tuple[Optional[str], Optional[str]]:
-# 	"""
-# 	:param linesStack:
-# 	:param depth:
-# 	:return: (generated str, name of prop (if any))
-# 	"""
-# 	if not linesStack.isEmpty():
-# 		line = linesStack.peek()
-# 		if not line.startswith('*'*depth + ' {{'):
-# 			if line.startswith('*' * depth):
-# 				linesStack.pop()
-# 				print(f"too many asterix at start of line: {line!r}")
-# 				return line, None
-# 			return None, None
-# 		else:
-# 			linesStack.pop()
-# 		# if not line.startswith('*'*depth + ' {{nbt|'):
-# 		# if not line.startswith(' {{nbt|', depth):
-# 		# 	return line
-# 		if (match := PROPERTY_PATTERN.match(line, depth)) is not None:
-# 			type_ = match.group(1)
-# 			name = match.group(2)
-# 			doc = match.group(3)
-#
-# 			handler = _schemaHandlers.get(type_)
-# 			if handler is None:
-# 				print(f"[ ] no handler for type_ = {type_!r}")
-# 				return line, name
-# 			schema = handler(linesStack, depth + 0, None)
-# 			return jsonPropertySchema(name, doc, schema), name
-#
-# 		elif (match := INHERIT_PATTERN.match(line, depth)) is not None:
-# 			path = match.group(1)
-# 			const = f"ADVANCEMENT_{path.replace('/', '_').upper()}"
-# 			return f'*{const}.properties', None
-#
-# 		elif (match := ELEMENT_PATTERN.match(line, depth)) is not None:
-# 			type_ = match.group(1)
-# 			doc = match.group(2)
-# 			handler = _schemaHandlers.get(type_)
-# 			if handler is None:
-# 				print(f"[ ] no handler for type_ = {type_!r}")
-# 				return line, None
-# 			return handler(linesStack, depth + 0, doc), None
-#
-# 		# elif (match := DEPENDANT_PROP_PATTERN.match(line, depth)) is not None:
-# 		# 	name = match.group(1)
-# 		# 	handler = _schemaHandlers.get(type_)
-# 		# 	if handler is None:
-# 		# 		print(f"[ ] no handler for type_ = {type_!r}")
-# 		# 		return line, None
-# 		# 	return handler(linesStack, depth + 0, doc), None
-#
-# 		else:
-# 			print(f"[ ] line didn't match property: {line!r}")
-# 			return line, None
-# 	return None, None
-#
-#
-# def jsonPropertySchema(name: str, doc: str, value: str) -> str:
-# 	if name.startswith('<'):
-# 		doc = f'{name}: {doc}'
-# 		name = 'Anything'
-# 	else:
-# 		name = f'"{name}"'
-# 	value = indentMultilineStr(value, indent=INDENT, indentFirstLine=False)
-# 	return (
-# 		f'PropertySchema(\n'
-# 		f'\tname={name},\n'
-# 		f'\tdescription=MDStr({doc!r}),\n'
-# 		f'\tvalue={value}\n'
-# 		f')')
-
 
 INDENT = '\t'
 NL = '\n'
@@ -206,23 +31,52 @@ def extractOnlyinclude(text: str) -> str:
 	return text
 
 
-def addImports(text):
+ALL_IMPORTS = set()
+IMPORT_PREFIX = 'model.datapack.json.schemas'
+
+
+def addImports(text, name):
+	imports = NL.join(im for im in ALL_IMPORTS if not im.endswith(name))
+	ALL_IMPORTS.clear()
 	return (
 		f"from Cat.utils import Anything\n"
+		f"from model.datapack.json.argTypes import *\n"
+		f"from model.datapack.json.utils import *\n"
 		f"from model.json.core import *\n"
 		f"from model.utils import MDStr\n"
+		f"\n"
+		f"{imports}\n"
 		f"\n"
 		f"{text}\n")
 
 
-def convert2(text: str, name: str, *, forceOptional: bool) -> str:
+def convert3(text: str, name: str, *, forceOptional: bool) -> str:
 	original = text
 	text = extractOnlyinclude(text)
 	lines = text.splitlines()
 	inesStack = Stack(list(reversed(lines)))
-	schema = handleObjectSchema(inesStack, 1, None, forceOptional)
+	schema = handleObjectSchema(inesStack, 1, None, None, forceOptional)
 	schema = f"{name} = {schema}\n"
-	return addImports(schema)
+	return addImports(schema, name)
+
+
+def convert2(text: str, name: str, imports: str, *, forceOptional: bool) -> str:
+	original = text
+	text = extractOnlyinclude(text)
+	lines = text.splitlines()
+	inesStack = Stack(list(reversed(lines)))
+	doc, props = handleProperties(inesStack, 2, None, forceOptional=forceOptional)
+	propsStr = indentMultilineStr(SEP.join(props), indent=INDENT)
+	schema = buildObjectSchema([], doc)
+	schema = (
+		f"{name} = {schema}\n"
+		f"{name}.properties = (\n"
+		f"{propsStr}\n"
+		f")\n"
+		f"\n"
+		f"{name}.buildPropertiesDict()\n"
+	)
+	return addImports(schema, name)
 
 
 TYPE_MARKER = r'(?:{{[Nn][Bb][Tt]\|(\w+)}})'
@@ -267,7 +121,7 @@ def handleProp(line: str, linesStack: Stack[str], depth: int, depProp: Optional[
 			if handler is None:
 				print(f"[ ] no handler for type_ = {type_!r}, depProp={depProp!r}")
 				return '# ' + line
-			schema = handler(linesStack, depth + 0, doc if depProp is not None else None, forceOptional)
+			schema = handler(linesStack, depth + 0, doc if depProp is not None else None, doc, forceOptional)
 			schemas.append(schema)
 		schema = buildUnionSchema(schemas, doc)
 		default = None
@@ -291,6 +145,7 @@ def handleProp(line: str, linesStack: Stack[str], depth: int, depProp: Optional[
 	# 	return Proptions(name, doc, schema, depProp, default, optional, deprecated)
 
 	elif (match := INHERIT_PATTERN.match(line, depth)) is not None:
+		print(f"[ ] can't mix INHERIT and normal props: {line!r}, depProp={depProp!r}")
 		path = match.group(1)
 		const = f"ADVANCEMENT_{path.replace('/', '_').upper()}"
 		if depProp is not None:
@@ -302,7 +157,7 @@ def handleProp(line: str, linesStack: Stack[str], depth: int, depProp: Optional[
 		return '# ' + line
 
 
-def handleProperties(linesStack: Stack[str], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> list[Union[str, Proptions]]:
+def handlePropertiesInner(linesStack: Stack[str], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> list[Union[str, Proptions]]:
 	properties = []
 	lastProp: Optional[Proptions] = None
 	while not linesStack.isEmpty():
@@ -325,7 +180,7 @@ def handleProperties(linesStack: Stack[str], depth: int, depProp: Optional[tuple
 				properties[idx] = lastProp
 
 			name = match.group(1)
-			properties.extend(handleProperties(linesStack, depth + 1, (lastProp.name, name), forceOptional=forceOptional))
+			properties.extend(handlePropertiesInner(linesStack, depth + 1, (lastProp.name, name), forceOptional=forceOptional))
 		else:
 			prop = handleProp(line, linesStack, depth, depProp, forceOptional=forceOptional)
 			if isinstance(prop, Proptions):
@@ -336,12 +191,12 @@ def handleProperties(linesStack: Stack[str], depth: int, depProp: Optional[tuple
 
 def buildUnionSchema(schemas: list[str], doc: Optional[str]) -> str:
 	if len(schemas) == 1:
-		schema = schemas[0]
+		return schemas[0]
 	else:
 		options = SEP.join(schemas)
 		if doc is not None:
 			propsStr = indentMultilineStr(options, indent=INDENT * 2)
-			schema = (
+			return (
 				f"JsonUnionSchema(\n"
 				f"\tdescription=MDStr({doc!r}),\n"
 				f"\toptions=[\n"
@@ -351,17 +206,51 @@ def buildUnionSchema(schemas: list[str], doc: Optional[str]) -> str:
 			)
 		else:
 			propsStr = indentMultilineStr(options, indent=INDENT * 1)
-			schema = f"JsonUnionSchema(options=[\n{propsStr}\n])"
-	return schema
+			return f"JsonUnionSchema(options=[\n{propsStr}\n])"
 
 
-_schemaHandlers: dict[str, Callable[[Stack[str], int, Optional[str], bool], str]] = {}
+def buildObjectSchema(properties: list[str], doc: Optional[str]) -> str:
+	if doc:
+		propertiesStr = indentMultilineStr(SEP.join(properties), indent=INDENT*2)
+		return (
+			f"JsonObjectSchema(\n"
+			f'\tdescription=MDStr({doc!r}),\n'
+			f"\tproperties=[\n"
+			f"{propertiesStr}\n"
+			f"\t]\n"
+			f")")
+	else:
+		propertiesStr = indentMultilineStr(SEP.join(properties), indent=INDENT)
+		return f"JsonObjectSchema(properties=[\n{propertiesStr}\n])"
+
+
+_schemaHandlers: dict[str, Callable[[Stack[str], int, Optional[str], Optional[str], bool], str]] = {}
 schemaHandler = AddToDictDecorator(_schemaHandlers)
 
 
 @schemaHandler('compound')
-def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], forceOptional: bool) -> str:
-	properties = handleProperties(linesStack, depth + 1, None, forceOptional=forceOptional)
+def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+	# are we inheriting anything?
+	line = linesStack.peek()
+	if (match := INHERIT_PATTERN.match(line, depth + 1)) is not None:
+		linesStack.pop()
+		path = match.group(1)
+		const = f"ADVANCEMENT_{path.replace('/', '_').upper()}"
+
+		import_ = 'Advancement.' + path.replace('/', '.')
+		import_ = import_.replace('.conditions', '.Conditions')
+		ALL_IMPORTS.add(f'from {IMPORT_PREFIX}.{import_} import {const}')
+
+		return f'{const}'
+
+	# "normal" object definition:
+	doc, propStrings = handleProperties(linesStack, depth + 1, doc, forceOptional=forceOptional)
+
+	return buildObjectSchema(propStrings, doc)
+
+
+def handleProperties(linesStack: Stack[str], depth: int, doc: Optional[str], *, forceOptional: bool) -> tuple[Optional[str], list[str]]:
+	properties = handlePropertiesInner(linesStack, depth, None, forceOptional=forceOptional)
 	propStrings = []
 	byName: OrderedMultiDict[str, Proptions] = OrderedMultiDict()
 	for prop in properties:
@@ -369,7 +258,6 @@ def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], f
 			propStrings.append(prop)
 		else:
 			byName.add(prop.name, prop)
-
 	for name in byName.uniqueKeys():
 		props = byName.getall(name)
 		decidingProp = props[0].depProp
@@ -389,7 +277,7 @@ def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], f
 				value = f"'{decidingVal}': {valueStr}"
 				values.append(value)
 
-			valuesStr = indentMultilineStr(SEP.join(values), indent=INDENT*2)
+			valuesStr = indentMultilineStr(SEP.join(values), indent=INDENT * 2)
 			valueRelatedStrs = [
 				f"\tdecidingProp='{decidingProp}'",
 				f"\tvalues={{\n{valuesStr}\n\t}}",
@@ -423,48 +311,61 @@ def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], f
 			f'PropertySchema(\n'
 			f'\tname={name},\n'
 			f'{valueRelatedStr}\n'
-			f')')
-
-	if doc:
-		propertiesStr = f"[\n{indentMultilineStr(SEP.join(propStrings), indent=INDENT*2)}\n{INDENT}]"
-		return (
-			f"JsonObjectSchema(\n"
-			f'\tdescription=MDStr({doc!r}),\n'
-			f"\tproperties={propertiesStr}\n"
-			f")")
-	else:
-		propertiesStr = f"[\n{indentMultilineStr(SEP.join(propStrings), indent=INDENT)}\n]"
-		return f"JsonObjectSchema(properties={propertiesStr})"
+			f')'
+		)
+	return doc, propStrings
 
 
 @schemaHandler('bool')
 @schemaHandler('boolean')
-def handleBoolSchema(linesStack: Stack[str], depth: int, doc: Optional[str], forceOptional: bool) -> str:
+def handleBoolSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonBoolSchema({docStr})"
 
 
 @schemaHandler('int')
-def handleIntSchema(linesStack: Stack[str], depth: int, doc: Optional[str], forceOptional: bool) -> str:
+def handleIntSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonIntSchema({docStr})"
 
 
 @schemaHandler('double')
 @schemaHandler('float')
-def handleFloatSchema(linesStack: Stack[str], depth: int, doc: Optional[str], forceOptional: bool) -> str:
+def handleFloatSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonFloatSchema({docStr})"
 
 
+RES_LOC_MATCHER_1 = re.compile(r'\[\[[^]\n]*values#(\w+)')
+RES_LOC_MATCHER_2 = re.compile(r'(\w+) ids?]]')
+
+NBT_MATCHER_1 = re.compile(r'(?<!{{)nbt')
+
+
 @schemaHandler('string')
-def handleStrSchema(linesStack: Stack[str], depth: int, doc: Optional[str], forceOptional: bool) -> str:
+def handleStrSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
+
+	docToAnalyze = doc if doc else parentDoc
+	if docToAnalyze:
+		docToAnalyze = docToAnalyze.lower()
+
+		resLoc = None
+		if resLocs := list(RES_LOC_MATCHER_1.finditer(docToAnalyze)):
+			resLoc = resLocs[0].group(1).removesuffix('s')
+		elif resLocs := list(RES_LOC_MATCHER_2.finditer(docToAnalyze)):
+			resLoc = resLocs[0].group(1)
+		if resLoc:
+			return f"JsonResourceLocationSchema({resLoc!r}, {docStr!r})"
+
+		if list(NBT_MATCHER_1.finditer(docToAnalyze)):
+			return f"JsonStringSchema({docStr}type=MINECRAFT_NBT_COMPOUND_TAG)"
+
 	return f"JsonStringSchema({docStr})"
 
 
 @schemaHandler('list')
-def handleArraySchema(linesStack: Stack[str], depth: int, doc: Optional[str], forceOptional: bool) -> str:
+def handleArraySchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	if not linesStack.isEmpty():
 		line = linesStack.peek()
 		if not line.startswith('*' * (depth + 1) + ' '):
@@ -479,13 +380,13 @@ def handleArraySchema(linesStack: Stack[str], depth: int, doc: Optional[str], fo
 
 			if (match := ELEMENT_PATTERN.match(line, depth + 1)) is not None:
 				type_ = match.group(1)
-				doc = match.group(2)
+				iDoc = match.group(2)
 				handler = _schemaHandlers.get(type_)
 				if handler is None:
 					print(f"[ ] no handler for type_ = {type_!r}")
 					element = line
 				else:
-					element = handler(linesStack, depth + 1, doc, forceOptional)
+					element = handler(linesStack, depth + 1, iDoc, doc, forceOptional)
 			else:
 				print(f"[ ] line didn't match element: {line!r}")
 				element = line
@@ -493,43 +394,17 @@ def handleArraySchema(linesStack: Stack[str], depth: int, doc: Optional[str], fo
 		element = None
 
 	if element is None:
-		element = handleStrSchema(linesStack, depth + 1, doc, forceOptional)
+		element = handleStrSchema(linesStack, depth + 1, doc, parentDoc, forceOptional)
 	# element = indentMultilineStr(element, indent=INDENT, indentFirstLine=False)
 	return f"JsonArraySchema(element={element})"
 
 
-def processFile(path: str, *, forceOptional: bool):
-	path = path.replace('\\', '/')
-	pathPart = path.removeprefix(SRC_FOLDER).rpartition('.')[0]
-	dstPath = os.path.join(DST_FOLDER, pathPart).replace('\\', '/') + '.py'
-	name = pathPart.replace('/', '_').upper()
-	with open(path, 'r', encoding='utf-8') as f:
+def processFile(srcPath: str, dstPath: str, name: str, imports: str, *, forceOptional: bool):
+	with open(srcPath, 'r', encoding='utf-8') as f:
 		text = f.read()
-	newText = convert2(text, name, forceOptional=forceOptional)
+	newText = convert2(text, name, imports, forceOptional=forceOptional)
 	with openOrCreate(dstPath, 'w', encoding='utf-8') as f:
 		f.write(newText)
-
-
-testData = """
-<div class="treeview"><onlyinclude>
-** {{nbt|boolean|bypasses_armor}}: Checks if the damage bypassed the armor of the player (suffocation damage predominantly).
-** {{nbt|boolean|bypasses_invulnerability}}: Checks if the damage bypassed the invulnerability status of the player (void or {{cmd|kill}} damage). 
-** {{nbt|boolean|bypasses_magic}}: Checks if the damage was caused by starvation.
-** {{nbt|compound|direct_entity}}: The entity that was the direct cause of the damage.
-*** {{nbt inherit/conditions/entity|indent=***}}
-** {{nbt|boolean|is_explosion}}: Checks if the damage originated from an explosion.
-** {{nbt|boolean|is_fire}}: Checks if the damage originated from fire.
-** {{nbt|boolean|is_magic}}: Checks if the damage originated from magic.
-** {{nbt|boolean|is_projectile}}: Checks if the damage originated from a projectile.
-** {{nbt|boolean|is_lightning}}: Checks if the damage originated from lightning.
-** {{nbt|compound|source_entity}}: Checks the entity that was the source of the damage (for example: The skeleton that shot the arrow).
-*** {{nbt inherit/conditions/entity|indent=***}}
-</onlyinclude></div><noinclude>
-[[Category:Top-level data pages]]
-</noinclude>
-"""
-
-# print(convert(testData))
 
 
 SRC_FOLDER = "D:/Programming/Python/MinecraftDataPackEditor/tools/mcWiki/"
@@ -548,10 +423,24 @@ def run():
 
 	print(f"There are {len(allFiles)} files to edit...")
 
-	for i, path in enumerate(allFiles):
+	allPaths: list[tuple[str, str, str]] = []
+	imports = []
+
+	for srcPath in allFiles:
+		srcPath = srcPath.replace('\\', '/')
+		pathPart = srcPath.removeprefix(SRC_FOLDER).rpartition('.')[0]
+		dstPath = os.path.join(DST_FOLDER, pathPart).replace('\\', '/') + '.py'
+		name = pathPart.replace('/', '_').upper()
+		import_ = pathPart.replace('/', '.')
+		imports.append(f'from {IMPORT_PREFIX}.{import_} import {name}')
+		allPaths.append((srcPath, dstPath, name))
+
+	# imports = NL.join(imports)
+
+	for i, (srcPath, dstPath, name) in enumerate(allPaths):
 		if i % 100 == 0:
 			print(f"processing file {i}")
-		processFile(path, forceOptional=True)
+		processFile(srcPath, dstPath, name, '', forceOptional=True)
 
 
 run()

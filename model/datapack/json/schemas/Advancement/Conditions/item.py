@@ -1,7 +1,10 @@
 from Cat.utils import Anything
-from model.datapack.json.argTypes import MINECRAFT_NBT_COMPOUND_TAG
+from model.datapack.json.argTypes import *
+from model.datapack.json.utils import *
 from model.json.core import *
 from model.utils import MDStr
+
+
 
 ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 
@@ -58,7 +61,7 @@ ADVANCEMENT_CONDITIONS_ITEM.properties = (
 			PropertySchema(
 				name="enchantment",
 				description=MDStr('An [[Java Edition data values#Enchantments|enchantment ID]].'),
-				value=JsonStringSchema(),
+				value=JsonResourceLocationSchema('enchantment', ''),
 				optional=True
 			),
 			PropertySchema(
@@ -93,7 +96,7 @@ ADVANCEMENT_CONDITIONS_ITEM.properties = (
 			PropertySchema(
 				name="enchantment",
 				description=MDStr('An [[Java Edition data values#Enchantments|enchantment ID]].'),
-				value=JsonStringSchema(),
+				value=JsonResourceLocationSchema('enchantment', ''),
 				optional=True
 			),
 			PropertySchema(
@@ -124,7 +127,7 @@ ADVANCEMENT_CONDITIONS_ITEM.properties = (
 	PropertySchema(
 		name="items",
 		description=MDStr('A list of [[Java Edition data values#Items|item IDs]].'),
-		value=JsonArraySchema(element=JsonStringSchema()),
+		value=JsonArraySchema(element=JsonResourceLocationSchema('item', '')),
 		optional=True
 	),
 	PropertySchema(
@@ -136,7 +139,7 @@ ADVANCEMENT_CONDITIONS_ITEM.properties = (
 	PropertySchema(
 		name="potion",
 		description=MDStr('A [[Potion#Item data|brewed potion ID]].'),
-		value=JsonStringSchema(),
+		value=JsonResourceLocationSchema('potion', ''),
 		optional=True
 	),
 	PropertySchema(

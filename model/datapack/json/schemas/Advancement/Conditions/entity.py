@@ -1,9 +1,11 @@
 from Cat.utils import Anything
-from model.datapack.json.argTypes import MINECRAFT_NBT_COMPOUND_TAG
-from model.datapack.json.schemas.Advancement.Conditions.item import ADVANCEMENT_CONDITIONS_ITEM
-from model.datapack.json.schemas.Advancement.Conditions.location import ADVANCEMENT_CONDITIONS_LOCATION
+from model.datapack.json.argTypes import *
+from model.datapack.json.utils import *
 from model.json.core import *
 from model.utils import MDStr
+
+from model.datapack.json.schemas.Advancement.Conditions.location import ADVANCEMENT_CONDITIONS_LOCATION
+from model.datapack.json.schemas.Advancement.Conditions.item import ADVANCEMENT_CONDITIONS_ITEM
 
 ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 
@@ -481,7 +483,7 @@ ADVANCEMENT_CONDITIONS_ENTITY.properties = (
 	PropertySchema(
 		name="type",
 		description=MDStr("Test this entity's type. Accepts an [[Data values/Entity IDs|entity ID]]."),
-		value=JsonStringSchema(),
+		value=JsonResourceLocationSchema('entity', ''),
 		optional=True
 	),
 	PropertySchema(
