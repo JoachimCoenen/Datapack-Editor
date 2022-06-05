@@ -370,6 +370,22 @@ class PredicateContext(ResourceLocationContext):
 		return ()
 
 
+@resourceLocationContext('potion', allowTags=False)
+class StructureContext(ResourceLocationContext):
+	@property
+	def name(self) -> str:
+		return 'potion'
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.potions
+
+
 @resourceLocationContext('biome', allowTags=False)
 class BiomeIdContext(ResourceLocationContext):
 	@property
@@ -384,6 +400,22 @@ class BiomeIdContext(ResourceLocationContext):
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
 		return mc.biomes
+
+
+@resourceLocationContext('structure', allowTags=False)
+class StructureContext(ResourceLocationContext):
+	@property
+	def name(self) -> str:
+		return 'structure'
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return mc.structures
 
 
 @resourceLocationContext('condition', allowTags=False)

@@ -1415,6 +1415,51 @@ ENTITIES: set[ResourceLocation] = {
 	*ENTITIES_ITEMS,
 }
 
+# compiled from the Minecraft wiki:
+POTIONS: set[ResourceLocation] = {	ResourceLocation.fromString('water'),
+	ResourceLocation.fromString('mundane'),
+	ResourceLocation.fromString('thick'),
+	ResourceLocation.fromString('awkward'),
+	ResourceLocation.fromString('night_vision'),
+	ResourceLocation.fromString('long_night_vision'),
+	ResourceLocation.fromString('invisibility'),
+	ResourceLocation.fromString('long_invisibility'),
+	ResourceLocation.fromString('leaping'),
+	ResourceLocation.fromString('strong_leaping'),
+	ResourceLocation.fromString('long_leaping'),
+	ResourceLocation.fromString('fire_resistance'),
+	ResourceLocation.fromString('long_fire_resistance'),
+	ResourceLocation.fromString('swiftness'),
+	ResourceLocation.fromString('strong_swiftness'),
+	ResourceLocation.fromString('long_swiftness'),
+	ResourceLocation.fromString('slowness'),
+	ResourceLocation.fromString('strong_slowness'),
+	ResourceLocation.fromString('long_slowness'),
+	ResourceLocation.fromString('water_breathing'),
+	ResourceLocation.fromString('long_water_breathing'),
+	ResourceLocation.fromString('healing'),
+	ResourceLocation.fromString('strong_healing'),
+	ResourceLocation.fromString('harming'),
+	ResourceLocation.fromString('strong_harming'),
+	ResourceLocation.fromString('poison'),
+	ResourceLocation.fromString('strong_poison'),
+	ResourceLocation.fromString('long_poison'),
+	ResourceLocation.fromString('regeneration'),
+	ResourceLocation.fromString('strong_regeneration'),
+	ResourceLocation.fromString('long_regeneration'),
+	ResourceLocation.fromString('strength'),
+	ResourceLocation.fromString('strong_strength'),
+	ResourceLocation.fromString('long_strength'),
+	ResourceLocation.fromString('weakness'),
+	ResourceLocation.fromString('long_weakness'),
+	ResourceLocation.fromString('luck'),
+	ResourceLocation.fromString('turtle_master'),
+	ResourceLocation.fromString('strong_turtle_master'),
+	ResourceLocation.fromString('long_turtle_master'),
+	ResourceLocation.fromString('slow_falling'),
+	ResourceLocation.fromString('long_slow_falling'),
+}
+
 
 # compiled from the Minecraft wiki:
 EFFECTS: set[ResourceLocation] = {
@@ -1705,27 +1750,27 @@ PREDICATE_CONDITIONS: set[ResourceLocation] = {
 
 
 # compiled from the Minecraft wiki:
-STRUCTURES: set[bytes] = {
-	b'jungle_pyramid',
-	b'village',
-	b'endcity',
-	b'ruined_portal',
-	b'igloo',
-	b'stronghold',
-	b'bastion_remnant',
-	b'desert_pyramid',
-	b'nether_fossil',
-	b'buried_treasure',
-	b'mansion',
-	b'shipwreck',
-	b'monument',
-	b'swamp_hut',
-	b'fortress',
-	b'pillager_outpost',
-	b'ocean_ruin',
-	b'mineshaft',
-}
 
+STRUCTURES: set[ResourceLocation] = {
+	ResourceLocation.fromString('jungle_pyramid'),
+	ResourceLocation.fromString('village'),
+	ResourceLocation.fromString('endcity'),
+	ResourceLocation.fromString('ruined_portal'),
+	ResourceLocation.fromString('igloo'),
+	ResourceLocation.fromString('stronghold'),
+	ResourceLocation.fromString('bastion_remnant'),
+	ResourceLocation.fromString('desert_pyramid'),
+	ResourceLocation.fromString('nether_fossil'),
+	ResourceLocation.fromString('buried_treasure'),
+	ResourceLocation.fromString('mansion'),
+	ResourceLocation.fromString('shipwreck'),
+	ResourceLocation.fromString('monument'),
+	ResourceLocation.fromString('swamp_hut'),
+	ResourceLocation.fromString('fortress'),
+	ResourceLocation.fromString('pillager_outpost'),
+	ResourceLocation.fromString('ocean_ruin'),
+	ResourceLocation.fromString('mineshaft'),
+}
 
 # compiled from the Minecraft wiki:
 SLOTS: dict[bytes, int] = {
@@ -1978,7 +2023,7 @@ version1_17 = MCVersion(
 	# 	blocks=ENTITIES_BLOCKS,
 	# 	items=ENTITIES_ITEMS,
 	# ),
-
+	potions=POTIONS,
 	effects=EFFECTS,
 	enchantments=ENCHANTMENTS,
 	biomes=BIOMES,

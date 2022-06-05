@@ -28,7 +28,7 @@ class MCVersion:
 	items: set[ResourceLocation]
 
 	entities: set[ResourceLocation]
-
+	potions: set[ResourceLocation]
 	effects: set[ResourceLocation]
 	enchantments: set[ResourceLocation]
 	biomes: set[ResourceLocation]
@@ -37,7 +37,7 @@ class MCVersion:
 	predicateConditions: set[ResourceLocation]
 	gameEvents: set[ResourceLocation]  # introduced in version 1.19
 
-	structures: set[bytes]
+	structures: set[ResourceLocation]
 	slots: dict[bytes, int]
 
 	blockStates: dict[ResourceLocation, list[FilterArgumentInfo]]

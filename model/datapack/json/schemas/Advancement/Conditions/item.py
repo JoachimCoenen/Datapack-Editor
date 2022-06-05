@@ -1,8 +1,12 @@
 from Cat.utils import Anything
+from model.datapack.json.argTypes import MINECRAFT_NBT_COMPOUND_TAG
 from model.json.core import *
 from model.utils import MDStr
 
 ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
+
+])
+ADVANCEMENT_CONDITIONS_ITEM.properties = (
 	PropertySchema(
 		name="count",
 		description=MDStr('Amount of the item.'),
@@ -126,7 +130,7 @@ ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 	PropertySchema(
 		name="nbt",
 		description=MDStr('An NBT string.'),
-		value=JsonStringSchema(),
+		value=JsonStringSchema(type=MINECRAFT_NBT_COMPOUND_TAG),
 		optional=True
 	),
 	PropertySchema(
@@ -141,5 +145,7 @@ ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 		value=JsonStringSchema(),
 		optional=True
 	)
-])
+)
+
+ADVANCEMENT_CONDITIONS_ITEM.buildPropertiesDict()
 

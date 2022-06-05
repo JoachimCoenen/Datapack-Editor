@@ -2005,7 +2005,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 	BASIC_COMMAND_INFO[b'locate'].next = [
 		ArgumentSchema(
 			name='StructureType',
-			type=makeLiteralsArgumentType(list(version.structures)),
+			type=makeLiteralsArgumentType([strToBytes(s.path) for s in version.structures]),
 		),
 	]
 

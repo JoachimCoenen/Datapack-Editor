@@ -1,8 +1,14 @@
 from Cat.utils import Anything
+from model.datapack.json.argTypes import MINECRAFT_NBT_COMPOUND_TAG
+from model.datapack.json.schemas.Advancement.Conditions.item import ADVANCEMENT_CONDITIONS_ITEM
+from model.datapack.json.schemas.Advancement.Conditions.location import ADVANCEMENT_CONDITIONS_LOCATION
 from model.json.core import *
 from model.utils import MDStr
 
 ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
+
+])
+ADVANCEMENT_CONDITIONS_ENTITY.properties = (
 	PropertySchema(
 		name="catType",
 		description=MDStr(" {{until|java 1.19}}: Check the variant of this cat. Accepts a resource location for the texture of the cat's variant. To be moved under <code>type_specific</code> in 1.19."),
@@ -191,49 +197,37 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="mainhand",
 				description=MDStr("Test the item in the entity's main hand."),
-				value=JsonObjectSchema(properties=[
-					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				]),
+				value=ADVANCEMENT_CONDITIONS_ITEM,
 				optional=True
 			),
 			PropertySchema(
 				name="offhand",
 				description=MDStr("Test the item in the entity's offhand."),
-				value=JsonObjectSchema(properties=[
-					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				]),
+				value=ADVANCEMENT_CONDITIONS_ITEM,
 				optional=True
 			),
 			PropertySchema(
 				name="head",
 				description=MDStr("Test the item in the entity's head armour slot."),
-				value=JsonObjectSchema(properties=[
-					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				]),
+				value=ADVANCEMENT_CONDITIONS_ITEM,
 				optional=True
 			),
 			PropertySchema(
 				name="chest",
 				description=MDStr("Test the item in the entity's chest  armour slot."),
-				value=JsonObjectSchema(properties=[
-					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				]),
+				value=ADVANCEMENT_CONDITIONS_ITEM,
 				optional=True
 			),
 			PropertySchema(
 				name="legs",
 				description=MDStr("Test the item in the entity's legs armour slot."),
-				value=JsonObjectSchema(properties=[
-					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				]),
+				value=ADVANCEMENT_CONDITIONS_ITEM,
 				optional=True
 			),
 			PropertySchema(
 				name="feet",
 				description=MDStr("Test the item in the entity's feet armour slot."),
-				value=JsonObjectSchema(properties=[
-					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				]),
+				value=ADVANCEMENT_CONDITIONS_ITEM,
 				optional=True
 			)
 		]),
@@ -318,9 +312,7 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="entity_struck",
 				description=MDStr('Test the properties of entities struck by this lightning bolt. Passes if at least one of the struck entities matches the entered conditions.'),
-				value=JsonObjectSchema(properties=[
-					# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-				]),
+				value=ADVANCEMENT_CONDITIONS_ENTITY,
 				optional=True
 			)
 		]),
@@ -329,23 +321,19 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 	PropertySchema(
 		name="location",
 		description=MDStr("Test properties of this entity's location."),
-		value=JsonObjectSchema(properties=[
-			# *ADVANCEMENT_CONDITIONS_LOCATION.properties
-		]),
+		value=ADVANCEMENT_CONDITIONS_LOCATION,
 		optional=True
 	),
 	PropertySchema(
 		name="nbt",
 		description=MDStr('An NBT string.'),
-		value=JsonStringSchema(),
+		value=JsonStringSchema(type=MINECRAFT_NBT_COMPOUND_TAG),
 		optional=True
 	),
 	PropertySchema(
 		name="passenger",
 		description=MDStr('Test the entity directly riding this entity.'),
-		value=JsonObjectSchema(properties=[
-			# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-		]),
+		value=ADVANCEMENT_CONDITIONS_ENTITY,
 		optional=True
 	),
 	PropertySchema(
@@ -355,9 +343,7 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="looking_at",
 				description=MDStr("Test properties of the entity that this player is looking at, as long as it is visible and within a radius of 100 blocks. Visibility is defined through the line from the player's eyes to the entity's eyes, rather than the direction that the player is looking in."),
-				value=JsonObjectSchema(properties=[
-					# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-				]),
+				value=ADVANCEMENT_CONDITIONS_ENTITY,
 				optional=True
 			),
 			PropertySchema(
@@ -483,9 +469,7 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 	PropertySchema(
 		name="stepping_on",
 		description=MDStr('Test properties of the block the entity is standing on, using a location predicate.'),
-		value=JsonObjectSchema(properties=[
-			# *ADVANCEMENT_CONDITIONS_LOCATION.properties
-		]),
+		value=ADVANCEMENT_CONDITIONS_LOCATION,
 		optional=True
 	),
 	PropertySchema(
@@ -503,17 +487,13 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 	PropertySchema(
 		name="targeted_entity",
 		description=MDStr('Test properties of the entity which this entity is targeting for attacks.'),
-		value=JsonObjectSchema(properties=[
-			# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-		]),
+		value=ADVANCEMENT_CONDITIONS_ENTITY,
 		optional=True
 	),
 	PropertySchema(
 		name="vehicle",
 		description=MDStr('Test properties of the vehicle entity that this entity is riding upon.'),
-		value=JsonObjectSchema(properties=[
-			# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-		]),
+		value=ADVANCEMENT_CONDITIONS_ENTITY,
 		optional=True
 	),
 	PropertySchema(
@@ -591,12 +571,7 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 				name="looking_at",
 				decidingProp='type',
 				values={
-					'player': JsonObjectSchema(
-						description=MDStr("Test properties of the entity that this player is looking at, as long as it is visible and within a radius of 100 blocks. Visibility is defined through the line from the player's eyes to the entity's eyes, rather than the direction that the player is looking in."),
-						properties=[
-							# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-						]
-					)
+					'player': ADVANCEMENT_CONDITIONS_ENTITY
 				},
 				value=None,
 				optional=True
@@ -767,5 +742,7 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 		]),
 		optional=True
 	)
-])
+)
+
+ADVANCEMENT_CONDITIONS_ENTITY.buildPropertiesDict()
 

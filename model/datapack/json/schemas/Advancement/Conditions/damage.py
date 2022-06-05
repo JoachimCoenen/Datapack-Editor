@@ -1,8 +1,13 @@
 from Cat.utils import Anything
+from model.datapack.json.schemas.Advancement.Conditions.damage_type import ADVANCEMENT_CONDITIONS_DAMAGE_TYPE
+from model.datapack.json.schemas.Advancement.Conditions.entity import ADVANCEMENT_CONDITIONS_ENTITY
 from model.json.core import *
 from model.utils import MDStr
 
 ADVANCEMENT_CONDITIONS_DAMAGE = JsonObjectSchema(properties=[
+
+])
+ADVANCEMENT_CONDITIONS_DAMAGE.properties = (
 	PropertySchema(
 		name="blocked",
 		description=MDStr('Checks if the damage was successfully blocked.'),
@@ -34,9 +39,7 @@ ADVANCEMENT_CONDITIONS_DAMAGE = JsonObjectSchema(properties=[
 	PropertySchema(
 		name="source_entity",
 		description=MDStr('Checks the entity that was the source of the damage (for example: The skeleton that shot the arrow).'),
-		value=JsonObjectSchema(properties=[
-			# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-		]),
+		value=ADVANCEMENT_CONDITIONS_ENTITY,
 		optional=True
 	),
 	PropertySchema(
@@ -64,10 +67,10 @@ ADVANCEMENT_CONDITIONS_DAMAGE = JsonObjectSchema(properties=[
 	PropertySchema(
 		name="type",
 		description=MDStr('Checks the type of damage done.'),
-		value=JsonObjectSchema(properties=[
-			# *ADVANCEMENT_CONDITIONS_DAMAGE_TYPE.properties
-		]),
+		value=ADVANCEMENT_CONDITIONS_DAMAGE_TYPE,
 		optional=True
 	)
-])
+)
+
+ADVANCEMENT_CONDITIONS_DAMAGE.buildPropertiesDict()
 

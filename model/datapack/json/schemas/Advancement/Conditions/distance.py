@@ -3,6 +3,9 @@ from model.json.core import *
 from model.utils import MDStr
 
 ADVANCEMENT_CONDITIONS_DISTANCE = JsonObjectSchema(properties=[
+
+])
+ADVANCEMENT_CONDITIONS_DISTANCE.properties = (
 	PropertySchema(
 		name="absolute",
 		description=MDStr('Test the distance between the two points in 3D space.'),
@@ -113,5 +116,7 @@ ADVANCEMENT_CONDITIONS_DISTANCE = JsonObjectSchema(properties=[
 		]),
 		optional=True
 	)
-])
+)
+
+ADVANCEMENT_CONDITIONS_DISTANCE.buildPropertiesDict()
 
