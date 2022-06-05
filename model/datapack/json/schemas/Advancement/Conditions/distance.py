@@ -12,15 +12,18 @@ ADVANCEMENT_CONDITIONS_DISTANCE = JsonObjectSchema(properties=[
 				PropertySchema(
 					name="max",
 					description=MDStr('The maximum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				),
 				PropertySchema(
 					name="min",
 					description=MDStr('The minimum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				)
 			])
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="horizontal",
@@ -31,15 +34,18 @@ ADVANCEMENT_CONDITIONS_DISTANCE = JsonObjectSchema(properties=[
 				PropertySchema(
 					name="max",
 					description=MDStr('The maximum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				),
 				PropertySchema(
 					name="min",
 					description=MDStr('The minimum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				)
 			])
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="x",
@@ -50,15 +56,18 @@ ADVANCEMENT_CONDITIONS_DISTANCE = JsonObjectSchema(properties=[
 				PropertySchema(
 					name="max",
 					description=MDStr('The maximum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				),
 				PropertySchema(
 					name="min",
 					description=MDStr('The minimum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				)
 			])
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="y",
@@ -69,15 +78,18 @@ ADVANCEMENT_CONDITIONS_DISTANCE = JsonObjectSchema(properties=[
 				PropertySchema(
 					name="max",
 					description=MDStr('The maximum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				),
 				PropertySchema(
 					name="min",
 					description=MDStr('The minimum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				)
 			])
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="z",
@@ -88,15 +100,18 @@ ADVANCEMENT_CONDITIONS_DISTANCE = JsonObjectSchema(properties=[
 				PropertySchema(
 					name="max",
 					description=MDStr('The maximum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				),
 				PropertySchema(
 					name="min",
 					description=MDStr('The minimum value.'),
-					value=JsonFloatSchema()
+					value=JsonFloatSchema(),
+					optional=True
 				)
 			])
-		])
+		]),
+		optional=True
 	)
 ])
 

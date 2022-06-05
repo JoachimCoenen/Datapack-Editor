@@ -12,15 +12,18 @@ ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 				PropertySchema(
 					name="max",
 					description=MDStr('The maximum value.'),
-					value=JsonIntSchema()
+					value=JsonIntSchema(),
+					optional=True
 				),
 				PropertySchema(
 					name="min",
 					description=MDStr('The minimum value.'),
-					value=JsonIntSchema()
+					value=JsonIntSchema(),
+					optional=True
 				)
 			])
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="durability",
@@ -31,15 +34,18 @@ ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 				PropertySchema(
 					name="max",
 					description=MDStr('The maximum value.'),
-					value=JsonIntSchema()
+					value=JsonIntSchema(),
+					optional=True
 				),
 				PropertySchema(
 					name="min",
 					description=MDStr('The minimum value.'),
-					value=JsonIntSchema()
+					value=JsonIntSchema(),
+					optional=True
 				)
 			])
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="enchantments",
@@ -48,7 +54,8 @@ ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="enchantment",
 				description=MDStr('An [[Java Edition data values#Enchantments|enchantment ID]].'),
-				value=JsonStringSchema()
+				value=JsonStringSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="levels",
@@ -59,17 +66,21 @@ ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="max",
 							description=MDStr('The maximum value.'),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="min",
 							description=MDStr('The minimum value.'),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						)
 					])
-				])
+				]),
+				optional=True
 			)
-		]))
+		])),
+		optional=True
 	),
 	PropertySchema(
 		name="stored_enchantments",
@@ -78,7 +89,8 @@ ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="enchantment",
 				description=MDStr('An [[Java Edition data values#Enchantments|enchantment ID]].'),
-				value=JsonStringSchema()
+				value=JsonStringSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="levels",
@@ -89,37 +101,45 @@ ADVANCEMENT_CONDITIONS_ITEM = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="max",
 							description=MDStr('The maximum value.'),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="min",
 							description=MDStr('The minimum value.'),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						)
 					])
-				])
+				]),
+				optional=True
 			)
-		]))
+		])),
+		optional=True
 	),
 	PropertySchema(
 		name="items",
 		description=MDStr('A list of [[Java Edition data values#Items|item IDs]].'),
-		value=JsonArraySchema(element=JsonStringSchema())
+		value=JsonArraySchema(element=JsonStringSchema()),
+		optional=True
 	),
 	PropertySchema(
 		name="nbt",
 		description=MDStr('An NBT string.'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="potion",
 		description=MDStr('A [[Potion#Item data|brewed potion ID]].'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="tag",
 		description=MDStr('An item data pack tag.'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	)
 ])
 

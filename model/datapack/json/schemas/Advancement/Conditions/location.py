@@ -6,7 +6,8 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 	PropertySchema(
 		name="biome",
 		description=MDStr('The biome the entity is currently in. This tag is a [[resource location]] for a biome (see [[Biome#Biome IDs]] for the ones used in vanilla).'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="block",
@@ -15,17 +16,20 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="blocks",
 				description=MDStr('A list of [[Java Edition data values#Blocks|block IDs]].'),
-				value=JsonArraySchema(element=JsonStringSchema())
+				value=JsonArraySchema(element=JsonStringSchema()),
+				optional=True
 			),
 			PropertySchema(
 				name="tag",
 				description=MDStr('The block [[tag]].'),
-				value=JsonStringSchema()
+				value=JsonStringSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="nbt",
 				description=MDStr('The block NBT.'),
-				value=JsonStringSchema()
+				value=JsonStringSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="state",
@@ -33,37 +37,53 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 				value=JsonObjectSchema(
 					description=MDStr("''key'': None"),
 					properties=[
-						# **** {{nbt|boolean}}{{nbt|int}}{{nbt|string|''key''}}: Block property key and value pair.,
 						PropertySchema(
 							name=Anything,
-							description=MDStr(''),
-							value=JsonObjectSchema(properties=[
-								PropertySchema(
-									name="max",
-									description=MDStr('A maximum value.'),
-									value=JsonIntSchema()
+							description=MDStr('Block property key and value pair.'),
+							value=JsonUnionSchema(options=[
+								JsonUnionSchema(
+									description=MDStr('Block property key and value pair.'),
+									options=[
+										JsonIntSchema(),
+										JsonBoolSchema(),
+										JsonStringSchema()
+									]
 								),
-								PropertySchema(
-									name="min",
-									description=MDStr('A minimum value.'),
-									value=JsonIntSchema()
-								)
-							])
+								JsonObjectSchema(properties=[
+									PropertySchema(
+										name="max",
+										description=MDStr('A maximum value.'),
+										value=JsonIntSchema(),
+										optional=True
+									),
+									PropertySchema(
+										name="min",
+										description=MDStr('A minimum value.'),
+										value=JsonIntSchema(),
+										optional=True
+									)
+								])
+							]),
+							optional=True
 						)
 					]
-				)
+				),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="dimension",
 		description=MDStr('The dimension the entity is currently in.'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="feature",
 		description=MDStr('{{until|java 1.19}}: The structure the entity is currently in. This tag is a [[resource location]] for a structure feature (see [[Java Edition data values#Structures]] for the ones used in vanilla).'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="fluid",
@@ -72,12 +92,14 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="fluid",
 				description=MDStr('The [[Java Edition data values#Fluids|fluid ID]].'),
-				value=JsonStringSchema()
+				value=JsonStringSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="tag",
 				description=MDStr('The fluid [[tag]].'),
-				value=JsonStringSchema()
+				value=JsonStringSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="state",
@@ -85,27 +107,41 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 				value=JsonObjectSchema(
 					description=MDStr("''key'': None"),
 					properties=[
-						# **** {{nbt|boolean}}{{nbt|int}}{{nbt|string|''key''}}: Fluid property key and value pair.,
 						PropertySchema(
 							name=Anything,
-							description=MDStr(''),
-							value=JsonObjectSchema(properties=[
-								PropertySchema(
-									name="max",
-									description=MDStr('A maximum value.'),
-									value=JsonIntSchema()
+							description=MDStr('Fluid property key and value pair.'),
+							value=JsonUnionSchema(options=[
+								JsonUnionSchema(
+									description=MDStr('Fluid property key and value pair.'),
+									options=[
+										JsonIntSchema(),
+										JsonBoolSchema(),
+										JsonStringSchema()
+									]
 								),
-								PropertySchema(
-									name="min",
-									description=MDStr('A minimum value.'),
-									value=JsonIntSchema()
-								)
-							])
+								JsonObjectSchema(properties=[
+									PropertySchema(
+										name="max",
+										description=MDStr('A maximum value.'),
+										value=JsonIntSchema(),
+										optional=True
+									),
+									PropertySchema(
+										name="min",
+										description=MDStr('A minimum value.'),
+										value=JsonIntSchema(),
+										optional=True
+									)
+								])
+							]),
+							optional=True
 						)
 					]
-				)
+				),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="light",
@@ -120,17 +156,21 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="max",
 							description=MDStr('A maximum value.'),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="min",
 							description=MDStr('A minimum value.'),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						)
 					])
-				])
+				]),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="position",
@@ -145,15 +185,18 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="max",
 							description=MDStr('A maximum value.'),
-							value=JsonFloatSchema()
+							value=JsonFloatSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="min",
 							description=MDStr('A minimum value.'),
-							value=JsonFloatSchema()
+							value=JsonFloatSchema(),
+							optional=True
 						)
 					])
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="y",
@@ -164,15 +207,18 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="max",
 							description=MDStr('A maximum value.'),
-							value=JsonFloatSchema()
+							value=JsonFloatSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="min",
 							description=MDStr('A minimum value.'),
-							value=JsonFloatSchema()
+							value=JsonFloatSchema(),
+							optional=True
 						)
 					])
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="z",
@@ -183,27 +229,33 @@ ADVANCEMENT_CONDITIONS_LOCATION = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="max",
 							description=MDStr('A maximum value.'),
-							value=JsonFloatSchema()
+							value=JsonFloatSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="min",
 							description=MDStr('A minimum value.'),
-							value=JsonFloatSchema()
+							value=JsonFloatSchema(),
+							optional=True
 						)
 					])
-				])
+				]),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="smokey",
 		description=MDStr('True if the block is closely above a campfire or soul campfire.'),
-		value=JsonBoolSchema()
+		value=JsonBoolSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="structure",
 		description=MDStr('{{upcoming|java 1.19}}: The structure the entity is currently in. This tag is a [[resource location]] for a structure feature (see [[Java Edition data values#Structures]] for the ones used in vanilla).'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	)
 ])
 

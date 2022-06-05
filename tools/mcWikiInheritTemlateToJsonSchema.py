@@ -266,7 +266,7 @@ def handleProp(line: str, linesStack: Stack[str], depth: int, depProp: Optional[
 			handler = _schemaHandlers.get(type_)
 			if handler is None:
 				print(f"[ ] no handler for type_ = {type_!r}, depProp={depProp!r}")
-				return line
+				return '# ' + line
 			schema = handler(linesStack, depth + 0, doc if depProp is not None else None, forceOptional)
 			schemas.append(schema)
 		schema = buildUnionSchema(schemas, doc)
@@ -299,7 +299,7 @@ def handleProp(line: str, linesStack: Stack[str], depth: int, depProp: Optional[
 
 	else:
 		print(f"[ ] line didn't match property: {line!r}, depProp={depProp!r}")
-		return line
+		return '# ' + line
 
 
 def handleProperties(linesStack: Stack[str], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> list[Union[str, Proptions]]:
@@ -311,7 +311,7 @@ def handleProperties(linesStack: Stack[str], depth: int, depProp: Optional[tuple
 			if line.startswith('*' * depth):
 				linesStack.pop()
 				print(f"too many asterisks at start of line: {line!r}")
-				properties.append(line)
+				properties.append('# ' + line)
 				continue
 			break
 		else:
@@ -366,7 +366,7 @@ def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], f
 	byName: OrderedMultiDict[str, Proptions] = OrderedMultiDict()
 	for prop in properties:
 		if isinstance(prop, str):
-			propStrings.append(f'# {prop}')
+			propStrings.append(prop)
 		else:
 			byName.add(prop.name, prop)
 
@@ -409,7 +409,7 @@ def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], f
 		if props[0].optional:
 			valueRelatedStrs.append(f"\toptional=True")
 		if props[0].default is not None:
-			valueRelatedStrs.append(f"\tdefault={p.default!r}")
+			valueRelatedStrs.append(f"\tdefault={props[0].default!r}")
 		if props[0].deprecated:
 			valueRelatedStrs.append(f"\tdeprecated=True")
 		valueRelatedStr = SEP.join(valueRelatedStrs)

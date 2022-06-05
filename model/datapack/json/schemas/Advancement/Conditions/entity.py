@@ -6,7 +6,8 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 	PropertySchema(
 		name="catType",
 		description=MDStr(" {{until|java 1.19}}: Check the variant of this cat. Accepts a resource location for the texture of the cat's variant. To be moved under <code>type_specific</code> in 1.19."),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="distance",
@@ -19,14 +20,17 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 					PropertySchema(
 						name="max",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					),
 					PropertySchema(
 						name="min",
 						description=MDStr(' '),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					)
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="horizontal",
@@ -35,14 +39,17 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 					PropertySchema(
 						name="max",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					),
 					PropertySchema(
 						name="min",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					)
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="x",
@@ -51,14 +58,17 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 					PropertySchema(
 						name="max",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					),
 					PropertySchema(
 						name="min",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					)
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="y",
@@ -67,14 +77,17 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 					PropertySchema(
 						name="max",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					),
 					PropertySchema(
 						name="min",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					)
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="z",
@@ -83,16 +96,20 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 					PropertySchema(
 						name="max",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					),
 					PropertySchema(
 						name="min",
 						description=MDStr(''),
-						value=JsonFloatSchema()
+						value=JsonFloatSchema(),
+						optional=True
 					)
-				])
+				]),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="effects",
@@ -107,7 +124,8 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="ambient",
 							description=MDStr('Test whether the effect is from a beacon.'),
-							value=JsonBoolSchema()
+							value=JsonBoolSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="amplifier",
@@ -118,15 +136,18 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 									PropertySchema(
 										name="max",
 										description=MDStr(''),
-										value=JsonIntSchema()
+										value=JsonIntSchema(),
+										optional=True
 									),
 									PropertySchema(
 										name="min",
 										description=MDStr(''),
-										value=JsonIntSchema()
+										value=JsonIntSchema(),
+										optional=True
 									)
 								])
-							])
+							]),
+							optional=True
 						),
 						PropertySchema(
 							name="duration",
@@ -137,25 +158,31 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 									PropertySchema(
 										name="max",
 										description=MDStr(''),
-										value=JsonIntSchema()
+										value=JsonIntSchema(),
+										optional=True
 									),
 									PropertySchema(
 										name="min",
 										description=MDStr(''),
-										value=JsonIntSchema()
+										value=JsonIntSchema(),
+										optional=True
 									)
 								])
-							])
+							]),
+							optional=True
 						),
 						PropertySchema(
 							name="visible",
 							description=MDStr('Test if the effect has visible particles.'),
-							value=JsonBoolSchema()
+							value=JsonBoolSchema(),
+							optional=True
 						)
-					])
+					]),
+					optional=True
 				)
 			]
-		)
+		),
+		optional=True
 	),
 	PropertySchema(
 		name="equipment",
@@ -166,44 +193,51 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 				description=MDStr("Test the item in the entity's main hand."),
 				value=JsonObjectSchema(properties=[
 					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="offhand",
 				description=MDStr("Test the item in the entity's offhand."),
 				value=JsonObjectSchema(properties=[
 					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="head",
 				description=MDStr("Test the item in the entity's head armour slot."),
 				value=JsonObjectSchema(properties=[
 					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="chest",
 				description=MDStr("Test the item in the entity's chest  armour slot."),
 				value=JsonObjectSchema(properties=[
 					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="legs",
 				description=MDStr("Test the item in the entity's legs armour slot."),
 				value=JsonObjectSchema(properties=[
 					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="feet",
 				description=MDStr("Test the item in the entity's feet armour slot."),
 				value=JsonObjectSchema(properties=[
 					# *ADVANCEMENT_CONDITIONS_ITEM.properties
-				])
+				]),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="fishing_hook",
@@ -212,9 +246,11 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="in_open_water",
 				description=MDStr('Whether the fishing hook was in [[Fishing#Junk_and_treasure|open water]].'),
-				value=JsonBoolSchema()
+				value=JsonBoolSchema(),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="flags",
@@ -223,29 +259,35 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 			PropertySchema(
 				name="is_baby",
 				description=MDStr('Test whether the entity is or is not a baby variant.'),
-				value=JsonBoolSchema()
+				value=JsonBoolSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="is_on_fire",
 				description=MDStr('Test whether the entity is or is not on fire.'),
-				value=JsonBoolSchema()
+				value=JsonBoolSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="is_sneaking",
 				description=MDStr('Test whether the entity is or is not sneaking.'),
-				value=JsonBoolSchema()
+				value=JsonBoolSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="is_sprinting",
 				description=MDStr('Test whether the entity is or is not sprinting.'),
-				value=JsonBoolSchema()
+				value=JsonBoolSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="is_swimming",
 				description=MDStr('Test whether the entity is or is not swimming.'),
-				value=JsonBoolSchema()
+				value=JsonBoolSchema(),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="lightning_bolt",
@@ -260,43 +302,51 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="max",
 							description=MDStr(''),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="min",
 							description=MDStr(''),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						)
 					])
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="entity_struck",
 				description=MDStr('Test the properties of entities struck by this lightning bolt. Passes if at least one of the struck entities matches the entered conditions.'),
 				value=JsonObjectSchema(properties=[
 					# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-				])
+				]),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="location",
 		description=MDStr("Test properties of this entity's location."),
 		value=JsonObjectSchema(properties=[
 			# *ADVANCEMENT_CONDITIONS_LOCATION.properties
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="nbt",
 		description=MDStr('An NBT string.'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="passenger",
 		description=MDStr('Test the entity directly riding this entity.'),
 		value=JsonObjectSchema(properties=[
 			# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="player",
@@ -307,7 +357,8 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 				description=MDStr("Test properties of the entity that this player is looking at, as long as it is visible and within a radius of 100 blocks. Visibility is defined through the line from the player's eyes to the entity's eyes, rather than the direction that the player is looking in."),
 				value=JsonObjectSchema(properties=[
 					# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="advancements",
@@ -326,19 +377,23 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 										PropertySchema(
 											name=Anything,
 											description=MDStr('Key is one of the criteria of the advancement, value is <code>true</code> or <code>false</code> to test for completed/not completed respectively.'),
-											value=JsonBoolSchema()
+											value=JsonBoolSchema(),
+											optional=True
 										)
 									]
 								)
-							])
+							]),
+							optional=True
 						)
 					]
-				)
+				),
+				optional=True
 			),
 			PropertySchema(
 				name="gamemode",
 				description=MDStr('Test the [[Game modes|game mode]] of this player. Valid values are <code>survival</code>, <code>creative</code>, <code>adventure</code> and <code>spectator</code>.'),
-				value=JsonStringSchema()
+				value=JsonStringSchema(),
+				optional=True
 			),
 			PropertySchema(
 				name="level",
@@ -349,15 +404,18 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="max",
 							description=MDStr(''),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="min",
 							description=MDStr(''),
-							value=JsonIntSchema()
+							value=JsonIntSchema(),
+							optional=True
 						)
 					])
-				])
+				]),
+				optional=True
 			),
 			PropertySchema(
 				name="recipes",
@@ -368,10 +426,12 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 						PropertySchema(
 							name=Anything,
 							description=MDStr('Key is the recipe ID; value is <code>true</code> or <code>false</code> to test for known/unknown respectively.'),
-							value=JsonBoolSchema()
+							value=JsonBoolSchema(),
+							optional=True
 						)
 					]
-				)
+				),
+				optional=True
 			),
 			PropertySchema(
 				name="stats",
@@ -382,12 +442,14 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 						PropertySchema(
 							name="type",
 							description=MDStr('The statistic type. Valid values are <code>minecraft:custom</code>, <code>minecraft:crafted</code>, <code>minecraft:used</code>, <code>minecraft:broken</code>, <code>minecraft:mined</code>, <code>minecraft:killed</code>, <code>minecraft:picked_up</code>, <code>minecraft:dropped</code> and <code>minecraft:killed_by</code>.'),
-							value=JsonStringSchema()
+							value=JsonStringSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="stat",
 							description=MDStr('The statistic ID to test.'),
-							value=JsonStringSchema()
+							value=JsonStringSchema(),
+							optional=True
 						),
 						PropertySchema(
 							name="value",
@@ -398,51 +460,61 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 									PropertySchema(
 										name="max",
 										description=MDStr(''),
-										value=JsonIntSchema()
+										value=JsonIntSchema(),
+										optional=True
 									),
 									PropertySchema(
 										name="min",
 										description=MDStr(''),
-										value=JsonIntSchema()
+										value=JsonIntSchema(),
+										optional=True
 									)
 								])
-							])
+							]),
+							optional=True
 						)
 					]
-				))
+				)),
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="stepping_on",
 		description=MDStr('Test properties of the block the entity is standing on, using a location predicate.'),
 		value=JsonObjectSchema(properties=[
 			# *ADVANCEMENT_CONDITIONS_LOCATION.properties
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="team",
 		description=MDStr('Passes if the [[Scoreboard#Teams|team]] of this entity matches this string.'),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="type",
 		description=MDStr("Test this entity's type. Accepts an [[Data values/Entity IDs|entity ID]]."),
-		value=JsonStringSchema()
+		value=JsonStringSchema(),
+		optional=True
 	),
 	PropertySchema(
 		name="targeted_entity",
 		description=MDStr('Test properties of the entity which this entity is targeting for attacks.'),
 		value=JsonObjectSchema(properties=[
 			# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="vehicle",
 		description=MDStr('Test properties of the vehicle entity that this entity is riding upon.'),
 		value=JsonObjectSchema(properties=[
 			# *ADVANCEMENT_CONDITIONS_ENTITY.properties
-		])
+		]),
+		optional=True
 	),
 	PropertySchema(
 		name="type_specific",
@@ -458,16 +530,11 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 				name="variant",
 				decidingProp='type',
 				values={
-					'cat': JsonUnionSchema(options=[
-						JsonStringSchema(description=MDStr('A resource location specifying a cat variant. Valid values are <code>minecraft:all_black</code>, <code>minecraft:black</code>, <code>minecraft:british</code>, <code>minecraft:calico</code>, <code>minecraft:jellie</code>, <code>minecraft:persian</code>, <code>minecraft:ragdoll</code>, <code>minecraft:red</code>, <code>minecraft:siamese</code>, <code>minecraft:tabby</code>, or <code>minecraft:white</code>.')),
-						JsonStringSchema(description=MDStr('A resource location specifying a frog variant. Valid values are <code>minecraft:cold</code>, <code>minecraft:temperate</code>, or <code>minecraft:warm</code>.'))
-					]),
-					'frog': JsonUnionSchema(options=[
-						JsonStringSchema(description=MDStr('A resource location specifying a cat variant. Valid values are <code>minecraft:all_black</code>, <code>minecraft:black</code>, <code>minecraft:british</code>, <code>minecraft:calico</code>, <code>minecraft:jellie</code>, <code>minecraft:persian</code>, <code>minecraft:ragdoll</code>, <code>minecraft:red</code>, <code>minecraft:siamese</code>, <code>minecraft:tabby</code>, or <code>minecraft:white</code>.')),
-						JsonStringSchema(description=MDStr('A resource location specifying a frog variant. Valid values are <code>minecraft:cold</code>, <code>minecraft:temperate</code>, or <code>minecraft:warm</code>.'))
-					])
+					'cat': JsonStringSchema(description=MDStr('A resource location specifying a cat variant. Valid values are <code>minecraft:all_black</code>, <code>minecraft:black</code>, <code>minecraft:british</code>, <code>minecraft:calico</code>, <code>minecraft:jellie</code>, <code>minecraft:persian</code>, <code>minecraft:ragdoll</code>, <code>minecraft:red</code>, <code>minecraft:siamese</code>, <code>minecraft:tabby</code>, or <code>minecraft:white</code>.')),
+					'frog': JsonStringSchema(description=MDStr('A resource location specifying a frog variant. Valid values are <code>minecraft:cold</code>, <code>minecraft:temperate</code>, or <code>minecraft:warm</code>.'))
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="in_open_water",
@@ -475,7 +542,8 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 				values={
 					'fishing_hook': JsonBoolSchema(description=MDStr('Whether the fishing hook was in [[Fishing#Junk_and_treasure|open water]].'))
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="blocks_set_on_fire",
@@ -489,18 +557,21 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 								PropertySchema(
 									name="max",
 									description=MDStr(''),
-									value=JsonIntSchema()
+									value=JsonIntSchema(),
+									optional=True
 								),
 								PropertySchema(
 									name="min",
 									description=MDStr(''),
-									value=JsonIntSchema()
+									value=JsonIntSchema(),
+									optional=True
 								)
 							]
 						)
 					])
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="entity_struck",
@@ -513,7 +584,8 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 						]
 					)
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="looking_at",
@@ -526,7 +598,8 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 						]
 					)
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="advancements",
@@ -546,16 +619,19 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 											PropertySchema(
 												name=Anything,
 												description=MDStr('Key is one of the criteria of the advancement, value is <code>true</code> or <code>false</code> to test for completed/not completed respectively.'),
-												value=JsonBoolSchema()
+												value=JsonBoolSchema(),
+												optional=True
 											)
 										]
 									)
-								])
+								]),
+								optional=True
 							)
 						]
 					)
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="gamemode",
@@ -563,7 +639,8 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 				values={
 					'player': JsonStringSchema(description=MDStr('Test the [[Game modes|game mode]] of this player. Valid values are <code>survival</code>, <code>creative</code>, <code>adventure</code> and <code>spectator</code>.'))
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="level",
@@ -577,18 +654,21 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 								PropertySchema(
 									name="max",
 									description=MDStr(''),
-									value=JsonIntSchema()
+									value=JsonIntSchema(),
+									optional=True
 								),
 								PropertySchema(
 									name="min",
 									description=MDStr(''),
-									value=JsonIntSchema()
+									value=JsonIntSchema(),
+									optional=True
 								)
 							]
 						)
 					])
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="recipes",
@@ -600,12 +680,14 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 							PropertySchema(
 								name=Anything,
 								description=MDStr('Key is the recipe ID; value is <code>true</code> or <code>false</code> to test for known/unknown respectively.'),
-								value=JsonBoolSchema()
+								value=JsonBoolSchema(),
+								optional=True
 							)
 						]
 					)
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="stats",
@@ -617,12 +699,14 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 							PropertySchema(
 								name="type",
 								description=MDStr('The statistic type. Valid values are <code>minecraft:custom</code>, <code>minecraft:crafted</code>, <code>minecraft:used</code>, <code>minecraft:broken</code>, <code>minecraft:mined</code>, <code>minecraft:killed</code>, <code>minecraft:picked_up</code>, <code>minecraft:dropped</code> and <code>minecraft:killed_by</code>.'),
-								value=JsonStringSchema()
+								value=JsonStringSchema(),
+								optional=True
 							),
 							PropertySchema(
 								name="stat",
 								description=MDStr('The statistic ID to test.'),
-								value=JsonStringSchema()
+								value=JsonStringSchema(),
+								optional=True
 							),
 							PropertySchema(
 								name="value",
@@ -633,20 +717,24 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 										PropertySchema(
 											name="max",
 											description=MDStr(''),
-											value=JsonIntSchema()
+											value=JsonIntSchema(),
+											optional=True
 										),
 										PropertySchema(
 											name="min",
 											description=MDStr(''),
-											value=JsonIntSchema()
+											value=JsonIntSchema(),
+											optional=True
 										)
 									])
-								])
+								]),
+								optional=True
 							)
 						]
 					))
 				},
-				value=None
+				value=None,
+				optional=True
 			),
 			PropertySchema(
 				name="size",
@@ -660,20 +748,24 @@ ADVANCEMENT_CONDITIONS_ENTITY = JsonObjectSchema(properties=[
 								PropertySchema(
 									name="max",
 									description=MDStr(''),
-									value=JsonIntSchema()
+									value=JsonIntSchema(),
+									optional=True
 								),
 								PropertySchema(
 									name="min",
 									description=MDStr(''),
-									value=JsonIntSchema()
+									value=JsonIntSchema(),
+									optional=True
 								)
 							]
 						)
 					])
 				},
-				value=None
+				value=None,
+				optional=True
 			)
-		])
+		]),
+		optional=True
 	)
 ])
 

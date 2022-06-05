@@ -282,7 +282,7 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 
 	@property
 	def isMandatory(self) -> bool:
-		return self.isOptional
+		return not self.isOptional
 
 	def valueForParent(self, parent: JsonObject) -> Optional[JsonSchema[_TT2]]:
 		# TODO find better name for .valueForParent(...)
