@@ -96,8 +96,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 				# 	before = hit
 		if before is not None:
 			if (schema := before.schema) is not None:
-				result = self._getNextKeywords(schema.next, hit, pos, replaceCtx)
-				return result
+				return self._getNextKeywords(schema.next, hit, pos, replaceCtx)
 			# contextStr = context[-1] if context else ''
 			return []
 

@@ -1,61 +1,18 @@
-import functools as ft
 from typing import Optional
 
-from nbtlib import Parser, tokenize, Base, Byte, Short, Int, Long, Float, Double, String, List, Compound, ByteArray, IntArray, LongArray, Path, \
-	ListIndex, CompoundMatch, InvalidLiteral
+from nbtlib import Parser, tokenize, Int, String, List, Compound, Path, ListIndex, CompoundMatch, InvalidLiteral
 from nbtlib.path import can_be_converted_to_int, NamedKey, extend_accessors
 
 from Cat.utils import escapeForXml
-from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclass, OrderedDict
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
-from model.nbt.snbtParser import SNBTParser, SNBTError
-from model.nbt.tags import NBTTag, ByteTag, ShortTag, IntTag, LongTag, FloatTag, DoubleTag, StringTag, ListTag, CompoundTag, ByteArrayTag, IntArrayTag, LongArrayTag, NBTTagSchema
+from model.nbt.tags import NBTTag, NBTTagSchema
 from model.parsing.bytesUtils import bytesToStr
 from model.parsing.contextProvider import parseNPrepare
 from model.utils import Span, GeneralError, LanguageId
 
 
-def _parseNBTTagBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[Base]:
-	# parse_nbt('{foo: [hello, world], bar: [I; 1, 2, 3]}')
-	sr.save()
-	literal = sr.source[sr.cursor:]
-	if not literal:
-		sr.rollback()
-		return None
-	try:
-		parser = Parser(tokenize(literal))
-		tag = parser.parse()
-
-		cursor = parser.token_span[1]
-		# account for whitespace at the end:
-		strVal = literal[:cursor]
-		strVal = strVal.rstrip()
-		cursor = len(strVal)
-
-		sr.cursor += cursor
-	except InvalidLiteral as ex:
-		if ex.args[0] != (0, 1):
-			message = ex.args[1]
-			start = ex.args[0][0] + sr.cursor
-			stop = ex.args[0][1] + sr.cursor
-			begin = sr.posFromColumn(start)
-			end = sr.posFromColumn(stop)
-			errorsIO.append(CommandSyntaxError(escapeForXml(message), Span(begin, end), style='error'))
-		sr.rollback()
-		return None
-	return tag
-
-
-def parseNBTTag1(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
-	tag: Optional[Base] = _parseNBTTagBare(sr, errorsIO=errorsIO)
-	if tag is None:
-		return None
-	result = convertTag(tag)
-	return result
-
-
-def parseNBTTag3(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
+def parseNBTTag(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
 	# parse_nbt('{foo: [hello, world], bar: [I; 1, 2, 3]}')
 	sr.save()
 	literal = sr.source[sr.cursor:]
@@ -94,9 +51,6 @@ def parseNBTTag3(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[
 	else:
 		sr.rollback()
 	return tag
-
-
-parseNBTTag = parseNBTTag3
 
 
 class InvalidPath(ValueError):
@@ -199,81 +153,3 @@ def parseNBTPath(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Opt
 	if path is None:
 		return None
 	return path
-	# result = convertTag(path)
-	# return result
-
-
-__tagConverters: dict = {}
-TagConverter = AddToDictDecorator(__tagConverters)
-getTagConverter = ft.partial(getIfKeyIssubclass, __tagConverters)
-
-
-def convertTag(tag: Base) -> NBTTag:
-	tagType = type(tag)
-	converter = getTagConverter(tagType)
-	return converter(tag)
-
-# @TagConverter(Boolean)
-# def convertBooleanTag(tag: Boolean) -> BooleanTag:
-# 	pass
-
-
-@TagConverter(Byte)
-def convertByteTag(tag: Byte) -> ByteTag:
-	return ByteTag(int(tag))
-
-
-@TagConverter(Short)
-def convertShortTag(tag: Short) -> ShortTag:
-	return ShortTag(int(tag))
-
-
-@TagConverter(Int)
-def convertIntTag(tag: Int) -> IntTag:
-	return IntTag(int(tag))
-
-
-@TagConverter(Long)
-def convertLongTag(tag: Long) -> LongTag:
-	return LongTag(int(tag))
-
-
-@TagConverter(Float)
-def convertFloatTag(tag: Float) -> FloatTag:
-	return FloatTag(float(tag))
-
-
-@TagConverter(Double)
-def convertDoubleTag(tag: Double) -> DoubleTag:
-	return DoubleTag(float(tag))
-
-
-@TagConverter(String)
-def convertStringTag(tag: String) -> StringTag:
-	return StringTag(tag)
-
-
-@TagConverter(List)
-def convertListTag(tag: List) -> ListTag:
-	return ListTag([convertTag(t) for t in tag])
-
-
-@TagConverter(Compound)
-def convertCompoundTag(tag: Compound) -> CompoundTag:
-	return CompoundTag(OrderedDict((n, convertTag(t)) for n, t in tag.items()))
-
-
-@TagConverter(ByteArray)
-def convertByteArrayTag(tag: ByteArray) -> ByteArrayTag:
-	return ByteArrayTag([convertByteTag(t) for t in tag])
-
-
-@TagConverter(IntArray)
-def convertIntArrayTag(tag: IntArray) -> IntArrayTag:
-	return IntArrayTag([convertIntTag(t) for t in tag])
-
-
-@TagConverter(LongArray)
-def convertLongArrayTag(tag: LongArray) -> LongArrayTag:
-	return LongArrayTag([convertLongTag(t) for t in tag])
-

@@ -373,8 +373,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		if (ctxProvider := self.contextProvider) is not None:
 			replaceCtx = context[0] if context else ''
 			position = self.currentCursorPos
-			suggestions = ctxProvider.getSuggestions(position, replaceCtx)
-			return suggestions
+			return ctxProvider.getSuggestions(position, replaceCtx)
 		return super().updateAutoCompletionList(context, aList)
 
 	@override
