@@ -1,12 +1,12 @@
 """Lexer functions, loosely based on www.github.com/tusharsadhwani/json_parser"""
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import NamedTuple, Optional
+from typing import Optional
 
 from Cat.utils import CachedProperty
+from model.json.core import TokenType, Token, JsonTokenizeError
 from model.parsing.bytesUtils import *
 from model.parsing.parser import TokenizerBase
-from model.utils import Span, GeneralError, Position, Message
+from model.utils import Span, Position, Message
 
 
 INCOMPLETE_ESCAPE_MSG = Message("Incomplete escape at end of string", 0)
@@ -22,55 +22,6 @@ EMPTY_STRING_MSG = Message("Cannot parse empty string", 0)
 
 
 Char = int
-
-
-class TokenType(Enum):
-	default = 0
-	null = 1
-	boolean = 2
-	number = 3
-	string = 4
-	left_bracket = 5
-	left_brace = 6
-	right_bracket = 7
-	right_brace = 8
-	comma = 9
-	colon = 10
-	invalid = 11
-	eof = 12
-
-	@property
-	def asString(self) -> str:
-		return _TOKEN_TYPE_STR_REP[self]
-
-
-_TOKEN_TYPE_STR_REP = {
-	TokenType.default: "default",
-	TokenType.null: "null",
-	TokenType.boolean: "boolean",
-	TokenType.number: "number",
-	TokenType.string: "string",
-	TokenType.left_bracket: "'['",
-	TokenType.left_brace: "'{'",
-	TokenType.right_bracket: "']'",
-	TokenType.right_brace: "'}'",
-	TokenType.comma: "','",
-	TokenType.colon: "':'",
-	TokenType.invalid: "invalid",
-	TokenType.eof: "end of file",
-}
-
-
-class Token(NamedTuple):
-	"""Represents a Token extracted by the parser"""
-	value: bytes
-	type: TokenType
-	span: Span
-	# isValid: bool = True
-
-
-class JsonTokenizeError(GeneralError):
-	pass
 
 
 _TOKEN_TYPE_FOR_SPECIAL = {
@@ -269,47 +220,6 @@ class JsonTokenizer(TokenizerBase[Token]):
 			**{c: self.extract_number for c in b'0123456789+-.eE'},
 		}
 
-	# def tokenize(self) -> tuple[deque[Token], list[GeneralError]]:
-	# 	"""Converts a JSON string into a queue of tokens"""
-	# 	self.consumeWhitespace()
-	# 	while self.cursor < self.totalLength:
-	# 		char = self.text[self.cursor]
-	# 		if char == ord('"'):
-	# 			self.extract_string()
-	# 		elif char in b'[]{},:':
-	# 			self.extract_operator()
-	# 		# elif char in '0123456789+-.eE':
-	# 		# 	extract_number(self)
-	# 		elif char in b'tfn':
-	# 			self.extract_special()
-	# 		# elif char == "'":
-	# 		# 	extract_string(self)
-	# 		else:
-	# 			extractor = self._TOKEN_EXTRACTORS_BY_CHAR.get(char, self.extract_illegal)
-	# 			extractor()
-	# 		self.consumeWhitespace()
-	# 	self.addToken2(self.currentPos, b'', TokenType.eof)
-	#
-	# 	# if char in '[]{},:':
-	# 	# 	start = self.currentPos
-	# 	# 	self.cursor += 1
-	# 	# 	self.addToken(start, _TOKEN_TYPE_FOR_OPERATOR[char])
-	# 	# elif char == '"':
-	# 	# 	extract_string(self)
-	# 	# elif char.isdigit() or char in '+-':
-	# 	# 	extract_number(self)
-	# 	# elif char.isalpha():
-	# 	# 	extract_special(self)
-	# 	# else:
-	# 	# 	extract_illegal(self)
-	# 	#
-	# 	# self.consumeWhitespace()
-	#
-	# 	if len(self.tokens) == 0:
-	# 		self.error(EMPTY_STRING_MSG, span=Span())
-	#
-	# 	return self.tokens, self.errors
-
 	def nextToken(self) -> Optional[Token]:
 		self.consumeWhitespace()
 		if not self.cursor < self.totalLength:
@@ -329,10 +239,8 @@ class JsonTokenizer(TokenizerBase[Token]):
 		else:
 			extractor = self._TOKEN_EXTRACTORS_BY_CHAR.get(char, self.extract_illegal)
 			return extractor()
-		# self.addToken2(self.currentPos, b'', TokenType.eof)
-		#
-		#
-		# if len(self.tokens) == 0:
-		# 	self.errorLastToken(EMPTY_STRING_MSG)
-		#
-		# return self.tokens, self.errors
+
+
+__all__ = [
+	'JsonTokenizer',
+]

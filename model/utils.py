@@ -1,7 +1,7 @@
 from __future__ import annotations
 import builtins
 from dataclasses import dataclass, field
-from typing import final, Iterator, Optional, NewType, Protocol
+from typing import final, Iterator, NewType, Protocol
 
 import markdown
 
@@ -9,6 +9,17 @@ from Cat.utils import strings
 
 
 LanguageId = NewType('LanguageId', str)
+
+
+class _LanguageIds:
+	SNBT = LanguageId('SNBT')
+	MCJson = LanguageId('MCJson')
+	JSON = LanguageId('JSON')
+	MCCommand = LanguageId('MCCommand')
+	MCFunction = LanguageId('MCFunction')
+
+
+LANGUAGES: _LanguageIds = _LanguageIds()
 
 
 class MessageLike(Protocol):
@@ -182,6 +193,7 @@ class WrappedError(GeneralError):
 
 __all__ = [
 	'LanguageId',
+	'LANGUAGES',
 	'Message',
 	'MessageAdapter',
 	'Position',

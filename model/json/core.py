@@ -1,16 +1,62 @@
 from __future__ import annotations
 
+import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from math import inf
-from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable
+from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable, NamedTuple
 
 from Cat.utils import CachedProperty, Anything
 from Cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
-from model.json.lexer import TokenType
 from model.parsing.parser import IndexMapper
 from model.parsing.tree import Node, Schema
-from model.utils import GeneralError, MDStr, LanguageId
+from model.utils import GeneralError, MDStr, LanguageId, Span
+
+
+class TokenType(enum.Enum):
+	default = 0
+	null = 1
+	boolean = 2
+	number = 3
+	string = 4
+	left_bracket = 5
+	left_brace = 6
+	right_bracket = 7
+	right_brace = 8
+	comma = 9
+	colon = 10
+	invalid = 11
+	eof = 12
+
+	@property
+	def asString(self) -> str:
+		return _TOKEN_TYPE_STR_REP[self]
+
+
+_TOKEN_TYPE_STR_REP = {
+	TokenType.default: "default",
+	TokenType.null: "null",
+	TokenType.boolean: "boolean",
+	TokenType.number: "number",
+	TokenType.string: "string",
+	TokenType.left_bracket: "'['",
+	TokenType.left_brace: "'{'",
+	TokenType.right_bracket: "']'",
+	TokenType.right_brace: "'}'",
+	TokenType.comma: "','",
+	TokenType.colon: "':'",
+	TokenType.invalid: "invalid",
+	TokenType.eof: "end of file",
+}
+
+
+class Token(NamedTuple):
+	"""Represents a Token extracted by the parser"""
+	value: bytes
+	type: TokenType
+	span: Span
+	# isValid: bool = True
+
 
 Array = list['JsonData']
 Object = OrderedMultiDict[str, 'JsonProperty']
@@ -383,6 +429,10 @@ class JsonCalculatedValueSchema(JsonSchema[JsonData]):
 		return f"(...)"
 
 
+class JsonTokenizeError(GeneralError):
+	pass
+
+
 class JsonParseError(GeneralError):
 	pass
 
@@ -422,6 +472,9 @@ OPTIONS_JSON_ARG_TYPE = JsonArgType(
 
 
 __all__ = [
+	'TokenType',
+	'Token',
+
 	'Array',
 	'Object',
 	'JsonTypes',
@@ -453,6 +506,7 @@ __all__ = [
 	'JsonUnionSchema',
 	'JsonCalculatedValueSchema',
 
+	'JsonTokenizeError',
 	'JsonParseError',
 	'JsonSemanticsError',
 

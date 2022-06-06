@@ -9,9 +9,10 @@ from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
 from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty, Deprecated
 from model.parsing.bytesUtils import bytesToStr
+from model.parsing.parser import parse
 from model.parsing.tree import Schema, Node
-from model.pathUtils import FilePathTpl, loadTextFile, ZipFilePool
-from model.utils import MDStr, Span
+from model.pathUtils import FilePathTpl, loadBinaryFile, loadTextFile, ZipFilePool
+from model.utils import MDStr, Span, LANGUAGES
 
 
 def isNamespaceValid(namespace: str) -> bool:
@@ -222,13 +223,12 @@ class JsonMeta(MetaInfo):
 	def documentation(self) -> MDStr:
 		try:
 			with ZipFilePool() as pool:
-				file = loadTextFile(self.filePath, pool)
+				file = loadBinaryFile(self.filePath, pool)
 		except OSError as e:
 			logError(e)
 			return MDStr('')
 
-		from model.json.parser import parseJsonStr
-		json, errors = parseJsonStr(file, True, None)
+		json, errors = parse(file, language=LANGUAGES.JSON, schema=None, allowMultilineStr=True)
 
 		from model.json.core import JsonObject
 		if json is not None and isinstance(json, JsonObject):

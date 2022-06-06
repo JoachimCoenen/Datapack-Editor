@@ -6,7 +6,7 @@ from typing import Optional, AbstractSet
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import ProfiledFunction
 from model.json.core import *
-from model.json.lexer_v2 import Token, TokenType, JsonTokenizer
+from model.json.lexer_v2 import JsonTokenizer
 from model.json.schema import enrichWithSchema
 from model.messages import *
 from model.parsing.bytesUtils import bytesToStr, strToBytes
