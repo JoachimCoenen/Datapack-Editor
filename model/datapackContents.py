@@ -1,6 +1,7 @@
 from __future__ import annotations
 import re
 from dataclasses import dataclass, field, replace
+from itertools import chain
 from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable, TYPE_CHECKING, Union, Mapping
 
 from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
@@ -29,6 +30,10 @@ class ResourceLocation:
 
 	def __post_init__(self):
 		assert self.namespace is None or self.namespace.strip()
+
+	@property
+	def isMCNamespace(self) -> bool:
+		return self.namespace is None or self.namespace == 'minecraft'
 
 	@property
 	def actualNamespace(self) -> str:
@@ -434,7 +439,8 @@ def collectAllEntries(files: list[FilePathTpl], handlers: EntryHandlers, content
 
 def autoCompletionTreeForResourceLocations(locations: Iterable[ResourceLocation]) -> AutoCompletionTree:
 	locationStrs = [l.asString for l in locations]
-	tree = buildSimpleAutoCompletionTree(locationStrs, (':', '/'))
+	mcLocationStrs = [l.asCompactString for l in locations if l.isMCNamespace]
+	tree = buildSimpleAutoCompletionTree(chain(locationStrs, mcLocationStrs), (':', '/'))
 	return tree
 
 
