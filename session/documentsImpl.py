@@ -17,9 +17,9 @@ from session.documents import RegisterDocument, TextDocument
 
 
 def init():
-	from model.commands import parser_v2 as commandsParser
+	from model.commands import parser as commandsParser
 	from model.nbt import snbtParser as snbtParser
-	from model.json import parser_v2 as jsonParser
+	from model.json import parser as jsonParser
 	commandsParser.init()
 	snbtParser.init()
 	jsonParser.init()
