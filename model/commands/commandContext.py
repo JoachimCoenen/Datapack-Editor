@@ -7,12 +7,11 @@ from PyQt5.QtWidgets import QWidget
 from Cat.utils import escapeForXml, Decorator
 from Cat.utils.profiling import logError
 from model.commands.argumentTypes import LiteralsArgumentType, ArgumentType
-from model.commands.command import CommandPart, MCFunction, ParsedComment, ParsedArgument, ArgumentSchema, CommandPartSchema, TERMINAL, COMMANDS_ROOT, KeywordSchema, \
-	SwitchSchema, formatPossibilities, ParsedCommand
+from model.commands.command import *
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.parsing.bytesUtils import bytesToStr
-from model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, registerContextProvider, AddContextToDictDecorator
+from model.parsing.contextProvider import *
 from model.utils import Position, Span, GeneralError, MDStr, formatAsError
 
 
@@ -22,18 +21,6 @@ from model.utils import Position, Span, GeneralError, MDStr, formatAsError
 @registerContextProvider(ParsedArgument)
 @registerContextProvider(CommandPart)
 class CommandCtxProvider(ContextProvider[CommandPart]):
-	@staticmethod
-	def _getBestMatch(tree: CommandPart, pos: Position, match: Match) -> None:
-		child = tree
-		while child is not None:
-			if child.end < pos:
-				match.before = child
-			elif child.start <= pos:
-				match.hit = child
-			elif pos < child.start:
-				match.after = child
-				break
-			child = child.next
 
 	def getBestMatch(self, pos: Position) -> Match[CommandPart]:
 		tree = self.tree
@@ -45,7 +32,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 					if isinstance(child, ParsedComment):
 						continue
 					match.before = child
-					self._getBestMatch(child, pos, match)
+					_getBestMatch(child, pos, match)
 					# correct some special cases:
 					if match.before is match.hit and isinstance(match.hit, ParsedCommand):
 						if match.hit.start.index + len(match.hit.name) < pos.index:
@@ -57,7 +44,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 							match.contained.append(match.hit)
 							match.hit = None
 		else:
-			self._getBestMatch(tree, pos, match)
+			_getBestMatch(tree, pos, match)
 		return match
 
 	def getContext(self, node: CommandPart) -> Optional[Context]:
@@ -95,50 +82,10 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 				# if isinstance(hit, ParsedCommand):
 				# 	before = hit
 		if before is not None:
-			if (schema := before.schema) is not None:
-				return self._getNextKeywords(schema.next, hit, pos, replaceCtx)
-			# contextStr = context[-1] if context else ''
-			return []
+			return _getNextKeywords(getNextSchemas(before), hit, pos, replaceCtx)
 
 		from session.session import getSession
 		return [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
-
-	def _getNextKeywords(self, nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position, replaceCtx: str) -> list[str]:
-		result = []
-		for nx in nexts:
-			if isinstance(nx, KeywordSchema):
-				result.append(nx.name + ' ')
-			elif isinstance(nx, SwitchSchema):
-				result += self._getNextKeywords(nx.options, node, pos, replaceCtx)
-				hasTerminal = TERMINAL in nx.options
-				if hasTerminal:
-					result += self._getNextKeywords(nx.next, node, pos, replaceCtx)
-			elif isinstance(nx, ArgumentSchema):
-				handler = getArgumentContext(nx.type)
-				if handler is not None:
-					result += handler.getSuggestions2(nx, node, pos, replaceCtx)
-			elif nx is COMMANDS_ROOT:
-				from session.session import getSession
-				result += [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
-		return result
-
-	# def getDocumentation(self, pos: Position) -> MDStr:
-	# 	pass
-
-	def _getPossibilitiesFromHit(self, hit: CommandPart, pos: Position) -> Optional[list[CommandPartSchema]]:
-		if (prev := hit.prev) is not None:
-			if (schema := prev.schema) is not None:
-				if (next_ := schema.next) is not None:
-					return next_
-		if (schema := hit.schema) is not None:
-			return [schema]
-		return None
-
-	@staticmethod
-	def _getPossibilitiesFromBefore(before: CommandPart) -> Optional[list[CommandPartSchema]]:
-		if (schema := before.schema) is not None:
-			return schema.next
-		return None
 
 	def getCallTips(self, pos: Position) -> list[str]:
 		match = self.getBestMatch(pos)
@@ -147,11 +94,11 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			if (ctx := self.getContext(hit)) is not None:
 				if tips := ctx.getCallTips(hit, pos):
 					return tips
-			possibilities = self._getPossibilitiesFromHit(hit, pos)
+			possibilities = _getCallTipsFromHit(hit, pos)
 
 		if possibilities is None:
 			if (before := match.before) is not None:
-				possibilities = self._getPossibilitiesFromBefore(before)
+				possibilities = _getCallTipsFromBefore(before)
 
 		if possibilities is not None:
 			return [formatPossibilities((p,)) for p in possibilities]
@@ -177,6 +124,52 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 		else:
 			self._getClickableRangesInternal(span, tree, ranges)
 		return ranges
+
+
+def _getBestMatch(tree: CommandPart, pos: Position, match: Match) -> None:
+	child = tree
+	while child is not None:
+		if child.end < pos:
+			match.before = child
+		elif child.start <= pos:
+			if isinstance(match.hit, ParsedCommand):
+				match.before = match.hit
+			match.hit = child
+		elif pos < child.start:
+			match.after = child
+			break
+		child = child.next
+
+
+def _getNextKeywords(nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position, replaceCtx: str) -> list[str]:
+	result = []
+	for nx in nexts:
+		if isinstance(nx, KeywordSchema):
+			result.append(nx.name + ' ')
+		elif isinstance(nx, ArgumentSchema):
+			handler = getArgumentContext(nx.type)
+			if handler is not None:
+				result += handler.getSuggestions2(nx, node, pos, replaceCtx)
+		elif nx is COMMANDS_ROOT:
+			from session.session import getSession
+			result += [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
+	return result
+
+
+def _getCallTipsFromHit(hit: CommandPart, pos: Position) -> Optional[list[CommandPartSchema]]:
+	if (prev := hit.prev) is not None:
+		if (schema := prev.schema) is not None:
+			if (next_ := schema.next) is not None:
+				return next_
+	if (schema := hit.schema) is not None:
+		return [schema]
+	return None
+
+
+def _getCallTipsFromBefore(before: CommandPart) -> Optional[list[CommandPartSchema]]:
+	if (schema := before.schema) is not None:
+		return schema.next
+	return None
 
 
 class ArgumentContext(Context[ParsedArgument], ABC):

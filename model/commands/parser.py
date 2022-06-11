@@ -188,6 +188,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 					elif isinstance(possibility, SwitchSchema):
 						argument = self.parseKeywords(sr, possibility.options)
 						if argument is not None:
+							argument.switchSchema = possibility
 							infoStack.push(possibility)
 
 					elif possibility is COMMANDS_ROOT:

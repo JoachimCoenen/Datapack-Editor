@@ -80,9 +80,9 @@ def _missingArgumentError(command: ParsedCommand, lastCommandPart: CommandPart, 
 
 def validateArgument(commandPart: CommandPart, *, errorsIO: list[CommandSemanticsError]) -> tuple[Optional[CommandPart], Sequence[CommandPartSchema]]:
 	schema = commandPart.schema
-
 	if schema is None:
-		remainingPossibilities = Maybe(commandPart.prev).getattr('schema').getattr('next').get()
+		before = commandPart.prev
+		remainingPossibilities = getNextSchemas(before) if before is not None else []
 		errorsIO.append(_unknownOrTooManyArgumentsError(commandPart, remainingPossibilities))
 		return commandPart.next, []
 

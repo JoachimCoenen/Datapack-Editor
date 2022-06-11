@@ -151,6 +151,8 @@ class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPar
 	def content(self) -> bytes:
 		return self.source[self.span.slice]
 
+	switchSchema: Optional[SwitchSchema] = field(default=None, init=False)
+
 	_next: Optional[CommandPart] = field(default=None, init=False)
 	_prev: Optional[CommandPart] = field(default=None, init=False, repr=False)
 
@@ -208,3 +210,58 @@ class MCFunction(CommandPart[MCFunctionSchema]):
 	@property
 	def comments(self) -> list[ParsedComment]:
 		return [c for c in self.children if isinstance(c, ParsedComment)]
+
+
+def _addSchemas(schemas: Sequence[CommandPartSchema], allSchemasIO: list[CommandPartSchema]) -> bool:
+	"""returns True if TERMINAL was found in schemas, or schemas was empty"""
+	hasTerminal = False
+	wasEmpty = True
+	for n in schemas:
+		if n is TERMINAL:
+			hasTerminal = True
+		elif isinstance(n, SwitchSchema):
+			wasEmpty = False
+			if _addSchemas(n.options, allSchemasIO):
+				hasTerminal = _addSchemas(n.next, allSchemasIO) or hasTerminal
+		else:
+			wasEmpty = False
+			allSchemasIO.append(n)
+	return hasTerminal or wasEmpty
+
+
+def getNextSchemas(before: CommandPart) -> Sequence[CommandPartSchema]:
+	allSchemas = []
+	if (schema := before.schema) is not None:
+		if not _addSchemas(schema.next, allSchemas):
+			return allSchemas
+	else:
+		return allSchemas
+
+	prev = before
+	while (prev := prev.prev) is not None:
+		if (schema := prev.switchSchema) is not None:
+			if not _addSchemas(schema.next, allSchemas):
+				return allSchemas
+	return allSchemas
+
+
+__all__ = [
+	'CommandPartSchema',
+	'KeywordSchema',
+	'ArgumentSchema',
+	'SwitchSchema',
+	'TerminalSchema',
+	'TERMINAL',
+	'CommandsRoot',
+	'COMMANDS_ROOT',
+	'formatPossibilities',
+	'CommandSchema',
+	'CommentSchema',
+	'MCFunctionSchema',
+	'CommandPart',
+	'ParsedComment',
+	'ParsedCommand',
+	'ParsedArgument',
+	'MCFunction',
+	'getNextSchemas',
+]
