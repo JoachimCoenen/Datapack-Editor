@@ -1,4 +1,4 @@
-from collections import Callable
+from typing import Callable
 
 from PyQt5.QtGui import QColor, QFont
 

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import enum
-from collections import Callable
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Callable
 
 from Cat.utils.collections_ import AddToDictDecorator
 from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler
