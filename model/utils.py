@@ -132,6 +132,30 @@ def formatMarkdown(text: str, /) -> HTMLStr:
 	return HTMLStr(html)
 
 
+def wrapInMarkdownCode(text: str) -> str:
+	lenText = len(text)
+	needsDouble = False
+	if (idx := text.find('`')) >= 0:
+		startsWith = idx == 0
+		endsWith = text[-1] == '`'
+		needsDouble = True
+		while (idx := text.find('``', idx)) != -1:
+			idx += 2
+			if idx >= lenText or text[idx] != '`':
+				needsDouble = False
+
+		if startsWith:
+			text = ' ' + text
+		if endsWith:
+			text += ' '
+
+	if needsDouble:
+		text = f'``{text}``'
+	else:
+		text = f'`{text}`'
+	return text
+
+
 def addStyle(message: str, /, style: str) -> MDStr:
 	from Cat.CatPythonGUI.GUI import PythonGUI
 	md = f'<div style="{PythonGUI.helpBoxStyles[style]}">{message}</div>'
@@ -201,6 +225,7 @@ __all__ = [
 	'HTMLStr',
 	'MDStr',
 	'formatMarkdown',
+	'wrapInMarkdownCode',
 	'addStyle',
 	'formatAsHint',
 	'formatAsWarning',
