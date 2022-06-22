@@ -198,7 +198,7 @@ class AboutSettings(SerializableContainer):
 	@pd.ReadOnlyLabel()
 	@Serialized(shouldSerialize=False, wordWrap=False, label='Version')
 	def version(self) -> str:
-		return """0.2.1-alpha"""
+		return """0.3.0-alpha"""
 
 	organization: str = Computed(default="""Joachim Coenen""", decorators=[pd.NoUI()])
 

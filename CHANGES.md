@@ -1,4 +1,4 @@
-## Next Version
+## Version 0.3.0-alpha
 ### Features
  * Added support for different data pack versions (separate from the MC version).
  * Added call tips for mcFunction files.
