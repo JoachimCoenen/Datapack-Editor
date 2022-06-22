@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import os
+import shutil
+import sys
 import warnings
 from dataclasses import dataclass, field, fields, Field, is_dataclass
 from operator import attrgetter
@@ -11,9 +14,9 @@ from typing import TypeVar, Generic, Union, Optional, Iterable
 from PyQt5.QtGui import QFont, QColor
 
 from Cat.extensions import processRecursively
-from Cat.utils import getExePath
+from Cat.utils import getExePath, openOrCreate
 from Cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
-from Cat.utils.logging_ import logDebug, logWarning
+from Cat.utils.logging_ import logDebug, logWarning, logInfo
 from model.utils import LanguageId
 
 _TT = TypeVar('_TT')
@@ -388,21 +391,56 @@ def getColorSchemesDir() -> str:
 	return colorSchemesDir
 
 
-def _allColorSchemeModules() -> list[str]:
-	csDir = getColorSchemesDir()
+def _createColorSchemesDir(csDir: str) -> None:
+	# os.makedirs(csDir)
+
+	with openOrCreate(os.path.join(csDir, '__init__.py'), 'w') as f:
+		pass
+
+	defaultSchemesDir = os.path.join(
+		os.path.dirname(__file__), "colorSchemes/"
+	)
+	logDebug(f"defaultSchemesDir = {defaultSchemesDir}")
 	allModulePaths: list[str] = []
+	processRecursively(defaultSchemesDir, '/**', allModulePaths.append)
+	for absPath in allModulePaths:
+		relPath = absPath.removeprefix(defaultSchemesDir)
+		logDebug(f"absPath = {absPath}")
+		logDebug(f"relPath = {relPath}")
+		dest = os.path.join(csDir, relPath)
+		logDebug(f"dest = {dest}")
+		shutil.copy2(absPath, dest)
+
+
+def _allColorSchemeModules() -> list[tuple[str, str]]:
+	csDir = getColorSchemesDir()
+	logInfo(f"ColorSchemesDir = {csDir}")
+	allModulePaths: list[str] = []
+
+	if not os.path.exists(csDir):
+		_createColorSchemesDir(csDir)
 
 	processRecursively(csDir, '/**', allModulePaths.append)
 
-	allModulePaths = [mp.removeprefix(csDir).removesuffix('.py') for mp in allModulePaths if mp.endswith('.py')]
-	allModuleNames = ['colorSchemes' + '.'.join(mp.split('/')) for mp in allModulePaths if mp.rpartition('/')[2].startswith("scheme_")]
+	allModuleNames = [(mp.removeprefix(csDir).removesuffix('.py'), mp) for mp in allModulePaths if mp.endswith('.py')]
+	allModuleNames = [('colorSchemes' + '.'.join(mn.split('/')), mp) for mn, mp in allModuleNames if mn.rpartition('/')[2].startswith("scheme_")]
 	return allModuleNames
 
 
-def _loadColorSchemeModules(names: list[str]) -> dict[str, ModuleType]:
+def _importModuleFromFile(moduleName: str, path: str):
+	spec = importlib.util.spec_from_file_location(moduleName, path)
+	foo = importlib.util.module_from_spec(spec)
+	sys.modules[moduleName] = foo
+	spec.loader.exec_module(foo)
+	return foo
+
+
+def _loadColorSchemeModules(names: list[tuple[str, str]]) -> dict[str, ModuleType]:
+	colorSchemeMod = _importModuleFromFile('colorSchemes', os.path.join(getColorSchemesDir(), '__init__.py'))
 	colorSchemeModules: dict[str, ModuleType] = {}
-	for modName in names:
-		thisMod = importlib.import_module(modName)
+	for modName, modPath in names:
+		#thisMod = importlib.import_module(modName)
+		thisMod = _importModuleFromFile(modName, modPath)
 		if getattr(thisMod, 'enabled') is True:
 			colorSchemeModules[modName] = thisMod
 			logDebug(f"imported colorScheme {modName}")
