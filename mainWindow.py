@@ -10,17 +10,14 @@ from PyQt5.QtWidgets import QMainWindow, QApplication
 
 import Cat
 from Cat.CatPythonGUI.GUI import CORNERS, NO_OVERLAP, NO_MARGINS, SizePolicy, Overlap, RoundedCorners, maskCorners, adjustOverlap
-from Cat.CatPythonGUI.GUI.codeEditor import Position, Error
 from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.icons import icons
-from Cat.utils import openOrCreate
-from Cat.utils.formatters import formatVal, FW
 from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
 from gui.themes import theme
 from keySequences import KEY_SEQUENCES
-from model.utils import Span
+from model.utils import Span, GeneralError, Position
 from session.session import getSession, WindowId, saveSessionToFile
 from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
 from session import documentsImpl
@@ -303,10 +300,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	def documentErrorsGUI(self, gui: DatapackEditorGUI, roundedCorners: RoundedCorners, cornerRadius: float) -> None:
 		document: Optional[Document] = self.selectedDocument
 		if document is not None:
-			errors: Sequence[Error] = document.errors
+			errors: Sequence[GeneralError] = document.errors
 			errors = sorted(errors, key=attrgetter('position'))
 		else:
-			errors: Sequence[Error] = []
+			errors: Sequence[GeneralError] = []
 		gui.errorsList(
 			errors,
 			onDoubleClicked=lambda e: (document.locatePosition(e.position, e.end) if e.position is not None else None) or self._gui.redrawGUI(),

@@ -1,12 +1,11 @@
 from __future__ import annotations
 import builtins
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import final, Iterator, NewType, Protocol
 
 import markdown
 
-from Cat.utils import strings
-
+from Cat.utils import escapeForXmlTextContent, strings
 
 LanguageId = NewType('LanguageId', str)
 
@@ -72,6 +71,12 @@ class Position:
 	def __len__(self):
 		return 2
 
+	def __add__(self, other: int) -> Position:
+		return replace(self, column=self.column + other, index=self.index + other)
+
+	def __sub__(self, other: int) -> Position:
+		return replace(self, column=self.column - other, index=self.index - other)
+
 
 @final
 @dataclass(init=False)
@@ -82,6 +87,8 @@ class Span:
 	def __init__(self, start: Position = None, end: Position = None):
 		self.start = Position() if start is None else start
 		self.end = self.start if end is None else end
+		assert isinstance(self.start, Position)
+		assert isinstance(self.end, Position)
 
 	@property
 	def slice(self) -> builtins.slice:
@@ -209,9 +216,10 @@ class WrappedError(GeneralError):
 	just a wrapper for any Exception
 	satisfies protocol `Error`
 	"""
-	def __init__(self, exception: Exception):
-		message = MDStr(str(exception))
-		super(WrappedError, self).__init__(message, Span(), 'error')
+	def __init__(self, exception: Exception, *, span: Span = None, style: str = 'error'):
+		if span is None:
+			span = Span()
+		super(WrappedError, self).__init__(MDStr(escapeForXmlTextContent(str(exception))), span=span, style=style)
 		self.wrappedEx = exception
 
 

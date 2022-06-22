@@ -7,8 +7,8 @@ from model.datapackContents import ResourceLocation
 from model.parsing.bytesUtils import strToBytes
 
 
-def rlsFromData(mcdList: list) -> set[ResourceLocation]:
-	return {ResourceLocation.fromString(f"minecraft:{d['name']}") for d in mcdList}
+def rlsFromData(*mcdLists: list[dict]) -> set[ResourceLocation]:
+	return {ResourceLocation.fromString(f"minecraft:{d['name']}") for mcdList in mcdLists for d in mcdList}
 
 
 def fillFromMinecraftData(version: MCVersion) -> None:
@@ -21,7 +21,7 @@ def fillFromMinecraftData(version: MCVersion) -> None:
 	version.enchantments = rlsFromData(mcd.enchantments_list)
 	version.entities = rlsFromData(mcd.entities_list)
 
-	version.items = rlsFromData(mcd.items_list)
+	version.items = rlsFromData(mcd.items_list, [dict(name='air')])
 	version.particles = rlsFromData(mcd.particles_list)
 	# version.windows = rlsFromData(mcd.windows_list)
 

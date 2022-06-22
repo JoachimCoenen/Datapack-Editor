@@ -310,6 +310,7 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 			default: JsonTypes = None,
 			decidingProp: Optional[str] = None,
 			values: dict[Union[tuple[Union[str, int, bool], ...], Union[str, int, bool]], JsonSchema[_TT2]] = None,
+			requiresProp: Optional[tuple[str, ...]] = None,
 			deprecated: bool = False):
 		super(SwitchingPropertySchema, self).__init__(description=description, deprecated=deprecated)
 		self.name: Union[str, Anything] = name
@@ -318,6 +319,11 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 		self.value: Optional[JsonSchema[_TT2]] = value
 		self.decidingProp: Optional[str] = decidingProp
 		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = {}
+		if requiresProp is None:
+			requiresProp = ()
+		elif isinstance(requiresProp, str):
+			requiresProp = (requiresProp,)
+		self.requiresProp: tuple[str, ...] = requiresProp
 		if values is not None:
 			for key, val in values.items():
 				if isinstance(key, tuple):

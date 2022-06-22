@@ -300,7 +300,8 @@ class BlockStateHandler(ArgumentContext):
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		if node is None:
-			return []
+			blockID = ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
+			return getSuggestions(blockID, b'', pos, replaceCtx)
 		blockState: BlockState = node.value
 		if not isinstance(blockState, BlockState):
 			return []
@@ -562,13 +563,10 @@ class ItemStackHandler(ArgumentContext):
 		return None
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		# result = choicesFromResourceLocations(contextStr, chain(getSession().minecraftData.items, getSession().minecraftData.blocks))
-		# if self._allowTag:
-		# 	result.extend(choicesForDatapackContents(contextStr, Datapack.contents.tags.items))
-		# 	# ?? result.extend(choicesForDatapackContents(contextStr, Datapack.contents.tags.blocks))
 		# return result
 		if node is None:
-			return []
+			itemId = ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
+			return getSuggestions(itemId, b'', pos, replaceCtx)
 		itemStack: ItemStack = node.value
 		if not isinstance(itemStack, ItemStack):
 			return []
@@ -580,7 +578,7 @@ class ItemStackHandler(ArgumentContext):
 		if itemStack.nbt is not None and pos in itemStack.nbt.span:
 			suggestions += getSuggestions(itemStack.nbt, node.source, pos, replaceCtx)
 
-		return getSuggestions(node, node.source, pos, replaceCtx)
+		return suggestions
 
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		itemStack: ItemStack = node.value

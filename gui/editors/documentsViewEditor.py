@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt
 from Cat.CatPythonGUI.GUI import NO_MARGINS, CORNERS, NO_OVERLAP, Overlap, RoundedCorners, adjustOverlap, maskCorners
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin
 from Cat.CatPythonGUI.GUI.enums import TabPosition, SizePolicy
-from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
+from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase, TabOptions
 from Cat.icons import icons
 from Cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
@@ -45,7 +45,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 	def documentsTabBarGUI(self, gui: DatapackEditorGUI, position: TabPosition = TabPosition.North, overlap: Overlap = (0, 0), roundedCorners: RoundedCorners = CORNERS.ALL):
 		view = self.model()
 		tabs = OrderedMultiDict((
-			(document, (document.fileName + (' *' if document.documentChanged else '   '), ))
+			(document, (document.fileName + (' *' if document.documentChanged else '   '), TabOptions(tip=document.filePathForDisplay)))
 			for document in view.documents
 		))
 

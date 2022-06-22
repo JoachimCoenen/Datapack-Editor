@@ -33,16 +33,6 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 						continue
 					match.before = child
 					_getBestMatch(child, pos, match)
-					# correct some special cases:
-					if match.before is match.hit and isinstance(match.hit, ParsedCommand):
-						if match.hit.start.index + len(match.hit.name) < pos.index:
-							match.hit = None
-						else:
-							match.before = None
-					if match.before is not None and match.hit is not None:
-						if match.before.span.end > match.hit.span.start and not isinstance(match.before, ParsedCommand):
-							match.contained.append(match.hit)
-							match.hit = None
 		else:
 			_getBestMatch(tree, pos, match)
 		return match
@@ -70,17 +60,8 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 		match = self.getBestMatch(pos)
 		hit = match.hit
 		before = match.before
-		contextStr = ''
-		posInContextStr = 0
-		# if match.info is None or (0 <= idx-1 < len(text) and text[idx-1] != ' '):
 		if hit is not None:
-			if not pos <= hit.span.end:
-				before = hit
-			elif before is not None:
-				contextStr = hit.content
-				posInContextStr = pos.index - hit.span.start.index
-				# if isinstance(hit, ParsedCommand):
-				# 	before = hit
+			before = hit.prev
 		if before is not None:
 			return _getNextKeywords(getNextSchemas(before), hit, pos, replaceCtx)
 
@@ -129,15 +110,25 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 def _getBestMatch(tree: CommandPart, pos: Position, match: Match) -> None:
 	child = tree
 	while child is not None:
-		if child.end < pos:
+		span = child.span
+		if isinstance(child, ParsedCommand):
+			span = child.nameSpan
+			isCommand = True
+		else:
+			isCommand = False
+
+		if span.end < pos:
+			if isCommand:
+				match.contained.append(child)
 			match.before = child
-		elif child.start <= pos:
-			if isinstance(match.hit, ParsedCommand):
-				match.before = match.hit
+		elif span.start <= pos:
 			match.hit = child
-		elif pos < child.start:
+			match.before = None
+			break
+		elif pos < span.start:
 			match.after = child
 			break
+
 		child = child.next
 
 
@@ -181,8 +172,6 @@ class ArgumentContext(Context[ParsedArgument], ABC):
 		pass
 
 	def getSuggestions(self, node: ParsedArgument, pos: Position, replaceCtx: str) -> Suggestions:
-		posInContextStr = pos.index - node.span.start.index
-		contextStr = node.content
 		return self.getSuggestions2(node.schema, node, pos, replaceCtx)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
@@ -266,10 +255,12 @@ def missingArgumentParser(sr: StringReader, ai: ArgumentSchema, *, errorsIO: lis
 
 
 def makeParsedArgument(sr: StringReader, schema: Optional[CommandPartSchema], value: Any) -> ParsedArgument:
+	content = sr.source[sr.lastCursors.peek():sr.cursor]
 	return ParsedArgument(
 		sr.currentSpan,
 		schema,
 		sr.fullSource,
+		content,
 		value
 	)
 

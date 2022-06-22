@@ -59,6 +59,7 @@ RAW_JSON_TEXT_SCHEMA.options = [
 					description=MDStr("A raw JSON text component. If no component is provided for a slot, the slot is displayed as no text."),
 					element=RAW_JSON_TEXT_SCHEMA
 				),
+				requiresProp=('translate', ),
 				optional=True
 			),
 			PropertySchema(
@@ -97,6 +98,7 @@ RAW_JSON_TEXT_SCHEMA.options = [
 				name="separator",
 				description=MDStr("Defaults to `{\"color\": \"gray\", \"text\": \", \"}`. A raw JSON text component. Used as the separator between different names, if the component selects multiple entities."),
 				value=RAW_JSON_TEXT_SCHEMA,
+				requiresProp=('selector', 'nbt'),
 				optional=True
 			),
 			PropertySchema(
@@ -107,8 +109,37 @@ RAW_JSON_TEXT_SCHEMA.options = [
 			),
 			PropertySchema(
 				name="nbt",
-				description=MDStr("TO BE DONE"),  # TODO description for nbt in raw JSON text
-				value=JsonStringSchema(type=MINECRAFT_NBT_COMPOUND_TAG),
+				description=MDStr("The NBT path used for looking up NBT values from an entity, block entity, or storage. Requires one of `block`, `entity`, or `storage`. Having more than one is allowed, but only one is used."),
+				value=JsonStringSchema(type=MINECRAFT_NBT_PATH),
+				optional=True
+			),
+			PropertySchema(
+				name="interpret",
+				description=MDStr("Optional, defaults to `false`. If true, the game attempts to parse the text of each NBT value as a raw JSON text component. Ignored if `nbt` is not present."),
+				value=JsonBoolSchema(),
+				requiresProp=('nbt', ),
+				optional=True,
+				default="false"
+			),
+			PropertySchema(
+				name="block",
+				description=MDStr("A string specifying the coordinates of the block entity from which the NBT value is obtained. The coordinates can be absolute, relative, or local. Ignored if `nbt` is not present."),
+				value=JsonStringSchema(type=MINECRAFT_ENTITY),
+				requiresProp=('nbt', ),
+				optional=True
+			),
+			PropertySchema(
+				name="entity",
+				description=MDStr("A string specifying the target selector for the entity or entities from which the NBT value is obtained. Ignored if `nbt` is not present."),
+				value=JsonStringSchema(type=MINECRAFT_BLOCK_POS),  # actually maybe MINECRAFT_TARGET_SELECTOR
+				requiresProp=('nbt', ),
+				optional=True
+			),
+			PropertySchema(
+				name="storage",
+				description=MDStr("A string specifying the namespaced ID of the command storage from which the NBT value is obtained. Ignored if `nbt` is not present."),
+				value=JsonStringSchema(type=MINECRAFT_RESOURCE_LOCATION, args=dict(schema=ResourceLocationSchema('', 'command_storage'))),
+				requiresProp=('nbt', ),
 				optional=True
 			),
 

@@ -75,7 +75,7 @@ class JsonParser(ParserBase[JsonData, JsonSchema]):
 			return self._last  # TODO: WTF ?????
 
 		if current.type is not tokenType:
-			msg = EXPECTED_BUT_GOT_MSG.format(tokenType.asString, current.value)
+			msg = EXPECTED_BUT_GOT_MSG.format(tokenType.asString, bytesToStr(current.value))
 			self._error(msg, current.span)
 		self._next()
 		return current
@@ -90,7 +90,7 @@ class JsonParser(ParserBase[JsonData, JsonSchema]):
 		if current.type not in tokenTypes:
 			if name is None:
 				name = ' | '.join(tk.asString for tk in tokenTypes)
-			msg = EXPECTED_BUT_GOT_MSG.format(name, current.value)
+			msg = EXPECTED_BUT_GOT_MSG.format(name, bytesToStr(current.value))
 			self._error(msg, current.span)
 		self._next()
 		return current
@@ -325,9 +325,9 @@ class JsonParser(ParserBase[JsonData, JsonSchema]):
 		"""Parses a JSON string into a Python object"""
 		value = self.parseJsonTokens()
 
-		if self._current is not None:
+		if self._current is not None and self._current.type is not TokenType.eof:
 			self._error(
-				MDStr(f"Invalid JSON at `{self._current.value}`"),
+				MDStr(f"Invalid JSON at `{bytesToStr(self._current.value)}`"),
 				self._current.span
 			)
 

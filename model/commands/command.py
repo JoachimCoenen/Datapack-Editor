@@ -8,7 +8,7 @@ from Cat.utils import Singleton
 from model.commands.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
 from model.parsing.bytesUtils import bytesToStr
 from model.parsing.tree import Schema, Node
-from model.utils import Position, LanguageId
+from model.utils import Position, LanguageId, Span
 
 
 @dataclass
@@ -146,10 +146,10 @@ _TCommandPartSchema = TypeVar('_TCommandPartSchema', bound=CommandPartSchema)
 @dataclass
 class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPartSchema]):
 	source: bytes = field(repr=False)
-
-	@property
-	def content(self) -> bytes:
-		return self.source[self.span.slice]
+	content: bytes = field(repr=False)
+	# @property
+	# def content(self) -> bytes:
+	# 	return self.source[self.span.slice]
 
 	switchSchema: Optional[SwitchSchema] = field(default=None, init=False)
 
@@ -192,6 +192,10 @@ class ParsedComment(CommandPart[CommentSchema]):
 @dataclass
 class ParsedCommand(CommandPart[CommandSchema]):
 	name: bytes
+
+	@property
+	def nameSpan(self) -> Span:
+		return Span(self.start, self.start + len(self.name))
 
 
 @dataclass

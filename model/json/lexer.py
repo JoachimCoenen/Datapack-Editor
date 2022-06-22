@@ -182,7 +182,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 		tkType = _TOKEN_TYPE_FOR_SPECIAL.get(word, TokenType.invalid)
 		token = self.addToken2(start, word, tkType)
 		if token.type is TokenType.invalid:
-			self.error(UNKNOWN_LITERAL_MSG, token.value, span=token.span)
+			self.error(UNKNOWN_LITERAL_MSG, bytesToStr(token.value), span=token.span)
 		return token
 
 	def extract_illegal(self) -> Token:

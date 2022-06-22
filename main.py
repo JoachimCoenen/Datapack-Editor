@@ -1,7 +1,3 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import os
 import sys
 
@@ -14,7 +10,7 @@ from Cat.CatPythonGUI.GUI import _StyleProperty, setStyles, Style, Styles, SizeP
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.extensions.fileSystemChangedDependency import startObserver
 from Cat.icons import icons
-from Cat.utils import getExePath, profiling
+from Cat.utils import getExePath, logging_
 from Cat.utils.formatters import FW
 from mainWindow import MainWindow
 from Cat.utils.profiling import Timer
@@ -92,7 +88,7 @@ def showSetupDialogIfNecessary():
 def run():
 	with open(os.path.join(os.path.dirname(getExePath()), 'logfile.log'), 'w', encoding='utf-8') as logFile:
 		loadApplicationSettings()
-		profiling._currentOutStream = FW(logFile)
+		logging_.setLoggingStream(FW(logFile))
 		startObserver()
 		app = start(argv=sys.argv)
 		app.exec_()
@@ -155,8 +151,5 @@ def start(argv):
 	return app
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 	run()
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

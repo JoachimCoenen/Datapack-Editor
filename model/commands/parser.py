@@ -77,6 +77,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			),
 			self.schema,
 			self.text,
+			self.text,
 			children=children
 		)
 
@@ -92,14 +93,16 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			return None
 
 	def parseComment(self, sr: StringReader) -> ParsedComment:
-		sr.tryReadRemaining()
+		content = sr.tryReadRemaining() or b''
 		return ParsedComment(
-			source=self.text,
 			span=sr.currentSpan,
-			schema=None
+			schema=None,
+			source=self.text,
+			content=content
 		)
 
 	def parseCommand(self, sr: StringReader) -> Optional[ParsedCommand]:
+		startCursor = sr.cursor
 		sr.tryConsumeByte(ord(b'/'))
 		commandName: Optional[bytes] = sr.tryReadLiteral()
 		if commandName is None:
@@ -126,8 +129,10 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 
 		sr.tryReadRemaining()
 		commandSpan = Span(commandSpan.start, sr.currentPos)
+		endCursor = sr.cursor
+		content = sr.source[startCursor:endCursor]
 
-		command = ParsedCommand(name=commandName, schema=commandSchema, span=commandSpan, source=self.text)
+		command = ParsedCommand(name=commandName, schema=commandSchema, span=commandSpan, source=self.text, content=content)
 		command.next = argument
 
 		return command

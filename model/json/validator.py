@@ -14,6 +14,8 @@ NO_JSON_SCHEMA_VALIDATOR_MSG = Message("No JSON Schema validator for {0}", 1)
 MISSING_JSON_STRING_HANDLER_MSG = Message("Missing JsonStringHandler for type `{0}`", 1)
 DUPLICATE_PROPERTY_MSG = Message("Duplicate property `{0}`", 1)
 UNKNOWN_PROPERTY_MSG = Message("Unknown property `{0}`", 1)
+DEPRECATED_PROPERTY_MSG = Message("Deprecated property `{0}`", 1)
+REQUIRES_PROPERTY_SET_MSG = Message("Requires property `{0}`. Will be ignored if  `{0}` is not present", 1)
 MISSING_MANDATORY_PROPERTY_MSG = Message("Missing mandatory property `{0}`", 1)
 
 
@@ -137,17 +139,28 @@ def validateJsonObject(data: JsonObject, *, errorsIO: list[JsonSemanticsError]) 
 
 		isUnknownProp = prop.schema is None or prop.value.schema is None
 		# isUnknownProp = key not in data.schema.propertiesDict or data.schema.propertiesDict[key].valueForParent(data) is None
-
 		if isUnknownProp:
 			msg = UNKNOWN_PROPERTY_MSG.format(repr(key))
 			errorsIO.append(JsonSemanticsError(msg, prop.key.span))
 			continue
 
+		missingRequiredProp = prop.schema.requiresProp != () and all(p not in data.data for p in prop.schema.requiresProp)
+		if missingRequiredProp:
+			msg = REQUIRES_PROPERTY_SET_MSG.format(repr(prop.schema.requiresProp))
+			errorsIO.append(JsonSemanticsError(msg, prop.key.span, style='warning'))
+
+		if prop.schema.deprecated:
+			msg = DEPRECATED_PROPERTY_MSG.format(repr(prop.key.data))
+			errorsIO.append(JsonSemanticsError(msg, prop.key.span, style='warning'))
+
 		_validateInternal(prop.value, errorsIO=errorsIO)
 
 	for propSchema in data.schema.propertiesDict.values():
-		if propSchema.name not in validatedProps and propSchema.isMandatory and propSchema.valueForParent(data) is not None:
-			msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(propSchema.name))
-			end = data.span.end
-			start = replace(end, column=end.column - 1, index=end.index - 1)
-			errorsIO.append(JsonSemanticsError(msg, Span(start, end)))
+		if propSchema.name not in validatedProps:
+			missingRequiredProp = propSchema.requiresProp != () and all(p not in data.data for p in propSchema.requiresProp)
+			isMandatory = propSchema.isMandatory and not missingRequiredProp and propSchema.valueForParent(data) is not None
+			if isMandatory:
+				msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(propSchema.name))
+				end = data.span.end
+				start = replace(end, column=end.column - 1, index=end.index - 1)
+				errorsIO.append(JsonSemanticsError(msg, Span(start, end)))

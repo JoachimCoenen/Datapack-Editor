@@ -172,6 +172,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			onFocusReceived=lambda fr: self.editorFocusReceived.emit(fr),
 			focusPolicy=Qt.StrongFocus,
 			autoIndent=autoIndent,
+			caretLineVisible=False,
 			**kwargs
 		)
 

@@ -391,13 +391,24 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 			if match is None:
 				continue
 			if (schema := match.schema) is not None:
-				tips.append(f'###{schema.asString}:')
+				if schema.typeName == PropertySchema.typeName:
+					match: JsonProperty
+					tips.append(f"###Property '{match.key.data}':")
+				else:
+					tips.append(f'###{schema.asString}:')
+				hasSeenDescription = False
 				if isinstance(schema, JsonStringSchema) and schema.type is not None:
 					if isinstance(match, JsonString):
 						if (strHandler := self.getContext(match)) is not None:
-							tips.append(strHandler.getDocumentation(match, pos))
+							if (doc := strHandler.getDocumentation(match, pos)):
+								tips.append(doc)
+								hasSeenDescription = True
 				elif schema.description:
 					tips.append(schema.description)
+					hasSeenDescription = True
+				if not hasSeenDescription:
+					# remove heading:
+					tips.pop()
 				if schema.typeName == PropertySchema.typeName:
 					break
 

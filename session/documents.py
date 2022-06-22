@@ -174,6 +174,12 @@ def loadDocument(filePath: FilePath, archiveFilePool: ArchiveFilePool = None) ->
 	return doc
 
 
+def addErrors(self):
+	parserErrors = self.parserErrors
+	validationErrors = self.validationErrors
+	summ = parserErrors + validationErrors
+	return summ
+
 @RegisterContainer
 class Document(SerializableContainer):
 	__slots__ = ('undoRedoStack', 'inUndoRedoMode')
@@ -248,18 +254,19 @@ class Document(SerializableContainer):
 
 	highlightErrors: bool = Serialized(default=True)
 	onErrorsChanged: CatSignal[Callable[[Document], None]] = CatSignal('onErrorsChanged')
-	parserErrors: Sequence[GeneralError] = Serialized(getInitValue=list, shouldSerialize=False)
-	validationErrors: Sequence[GeneralError] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
-	errors: Sequence[GeneralError] = Computed(getInitValue=lambda s: s.parserErrors + s.validationErrors, shouldSerialize=False)
+	parserErrors: Sequence[GeneralError] = Serialized(default_factory=list, shouldSerialize=False)
+	validationErrors: Sequence[GeneralError] = Serialized(default_factory=list, shouldSerialize=False)
+	# validationErrors: Sequence[GeneralError] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
+	errors: Sequence[GeneralError] = Computed(getInitValue=addErrors, shouldSerialize=False)
 
 	@parserErrors.onSet
-	def errors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
+	def parserErrors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
 		if newVal != oldVal:
 			QTimer.singleShot(0, lambda self=self: self.onErrorsChanged.emit(self))
 		return newVal
 
 	@validationErrors.onSet
-	def errors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
+	def validationErrors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
 		if newVal != oldVal:
 			QTimer.singleShot(0, lambda self=self: self.onErrorsChanged.emit(self))
 		return newVal

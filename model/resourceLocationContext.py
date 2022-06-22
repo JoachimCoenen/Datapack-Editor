@@ -434,6 +434,26 @@ class ConditionIdContext(ResourceLocationContext):
 		return mc.predicateConditions
 
 
+@resourceLocationContext('command_storage', allowTags=False)
+class CommandStorageContext(ResourceLocationContext):
+
+	@property
+	def name(self) -> str:
+		return 'command_storage'
+
+	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return ()
+
+	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
+		return ()
+
+	def validate(self, node: ResourceLocationNode, errorsIO: list[GeneralError]) -> None:
+		self._checkIsResourceLocation(node, errorsIO)
+
+
 @resourceLocationContext('any_no_tag', allowTags=False)
 @resourceLocationContext('any', allowTags=True)
 class AnyContext(ResourceLocationContext):

@@ -1913,7 +1913,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 					next=[
 						ArgumentSchema(
 							name='slot',
-							type=MINECRAFT_NBT_PATH,
+							type=MINECRAFT_ITEM_SLOT,
 							next=[*ITEM_MODIFIER]
 						),
 					]
@@ -1929,7 +1929,7 @@ def fillCommandsFor1_17(version: MCVersion) -> None:
 					next=[
 						ArgumentSchema(
 							name='slot',
-							type=MINECRAFT_NBT_PATH,
+							type=MINECRAFT_ITEM_SLOT,
 							next=[
 								KeywordSchema(
 									name='with',

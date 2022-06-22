@@ -37,11 +37,12 @@ FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo(
 )
 
 
-def makeCommandPart(sr: StringReader) -> CommandPart:
+def makeCommandPart(sr: StringReader, key: bytes) -> CommandPart:
 	argument = CommandPart(
 		sr.currentSpan,
 		None,
 		sr.fullSource,
+		key,
 	)
 	return argument
 
@@ -67,7 +68,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 			else:
 				tsai = argsInfo[key]
 
-			keyNode = makeCommandPart(sr)
+			keyNode = makeCommandPart(sr, key)
 			assert keyNode.content == key, f"keyNode.content = {keyNode.content!r}, key = {bytesToStr(key)!r}"
 
 			# duplicate?:
@@ -132,7 +133,7 @@ class CursorCtx:
 	after: bool = False
 
 
-def getCursorContext(contextStr: bytes, cursorPos: int, argsInfo: dict[bytes, FilterArgumentInfo], fas: FilterArguments) -> CursorCtx:
+def getCursorContext(contextStr: bytes, cursorPos: int, pos: Position, argsInfo: dict[bytes, FilterArgumentInfo], fas: FilterArguments) -> CursorCtx:
 	assert contextStr
 	assert contextStr[0] == ord('[')
 	if cursorPos == 1:
@@ -142,21 +143,21 @@ def getCursorContext(contextStr: bytes, cursorPos: int, argsInfo: dict[bytes, Fi
 		keySpan = fa.key.span
 		if (value := fa.value) is not None:
 			valSpan = value.span
-			if valSpan.end.index < cursorPos:
+			if valSpan.end < pos:
 				if re.search(rb', *$', contextStr[:cursorPos]) is not None:
 					return CursorCtx(fa, isValue=False, inside=True)
 				else:
 					return CursorCtx(fa, isValue=True, after=True)
-			elif valSpan.start.index <= cursorPos and not cursorPos <= keySpan.end.index:
+			elif valSpan.start <= pos and not pos <= keySpan.end:
 				# TODO: check if value is parsable: if not: set after=False
 				return CursorCtx(fa, isValue=True, inside=True, after=False)
 
-		if keySpan.end.index < cursorPos:
+		if keySpan.end < pos:
 			if re.search(rb'= *$', contextStr[:cursorPos]) is not None:
 				return CursorCtx(fa, isValue=True, inside=True)
 			else:
 				return CursorCtx(fa, isValue=False, after=True)
-		elif keySpan.start.index <= cursorPos:
+		elif keySpan.start <= pos:
 			if (keyMatch := re.search(rb'\w+$', contextStr[:cursorPos])) is not None:
 				keyStr = keyMatch.group(0)
 				return CursorCtx(fa, isValue=False, inside=True, after=keyStr in argsInfo)
@@ -177,7 +178,7 @@ def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes,
 	# 		if contextStr[0] == '[':
 	#
 	if contextStr.startswith(b'[') and not contextStr.endswith(b']'):
-		contextStr += ']'
+		contextStr += b']'
 
 	if node is None:
 		return []
@@ -185,9 +186,9 @@ def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes,
 	cursorTouchesWord = re.search(rb'\w*$', contextStr[:cursorPos]).group()
 	cursorTouchesWord = bytesToStr(cursorTouchesWord)
 
-	context = getCursorContext(contextStr, cursorPos, argsInfo, node)
+	context = getCursorContext(contextStr, cursorPos, pos, argsInfo, node)
 	if context.fa is None:
-		return [cursorTouchesWord + ']'] + [f'{bytesToStr(key)}=' for key in argsInfo.keys()]
+		return [cursorTouchesWord + ']'] + _getKeySuggestions(argsInfo)
 
 	suggestions: Suggestions = []
 	if context.isValue:
@@ -207,9 +208,13 @@ def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes,
 			suggestions.append(cursorTouchesWord + '=')
 		if context.inside:
 			# context.fa is not None, so we already have an '=' after the key, so don't add one here.
-			suggestions += [f'{key}' for key in argsInfo.keys()]
+			suggestions += _getKeySuggestions(argsInfo)
 
 	return suggestions
+
+
+def _getKeySuggestions(argsInfo: dict[bytes, FilterArgumentInfo]):
+	return [f'{bytesToStr(key)}=' for key in argsInfo.keys()]
 
 
 def clickableRangesForFilterArgs(filterArgs: FilterArguments) -> list[Span]:
