@@ -3,7 +3,7 @@ import minecraft_data
 from model.commands.argumentTypes import *
 from model.commands.filterArgs import FilterArgumentInfo
 from model.data.mcVersions import MCVersion
-from model.datapackContents import ResourceLocation
+from model.datapack.datapackContents import ResourceLocation
 from model.parsing.bytesUtils import strToBytes
 
 

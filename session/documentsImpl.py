@@ -6,7 +6,7 @@ from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.utils.logging_ import logError
 from model.commands.command import MCFunctionSchema
 from model.commands.validator import getSession
-from model.datapackContents import MetaInfo, getEntryHandlerForFile, JsonMeta
+from model.datapack.datapackContents import MetaInfo, getEntryHandlerForFile, JsonMeta
 from model.json.core import JsonSchema
 from model.nbt.tags import NBTTagSchema
 from model.parsing.contextProvider import getContextProvider, parseNPrepare

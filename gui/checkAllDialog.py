@@ -18,7 +18,7 @@ from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
 from Cat.utils.profiling import TimedMethod, logError
 from model.Model import Datapack
-from model.datapackContents import EntryHandlerInfo
+from model.datapack.datapackContents import EntryHandlerInfo
 from model.utils import WrappedError
 from session.documents import ErrorCounts, getErrorCounts, loadDocument
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries

@@ -6,7 +6,7 @@ from model.commands.snbt import parseNBTTag
 from model.commands.utils import CommandSyntaxError
 from model.commands.command import ParsedArgument
 from model.commands.stringReader import StringReader
-from model.datapackContents import ResourceLocationSchema, ResourceLocationNode
+from model.datapack.datapackContents import ResourceLocationSchema, ResourceLocationNode
 from model.nbt.tags import NBTTag, CompoundTag
 from model.parsing.contextProvider import Suggestions
 from model.resourceLocationContext import getResourceLocationContext

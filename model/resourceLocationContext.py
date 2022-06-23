@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QWidget
 from Cat.utils import Decorator
 from model.Model import Datapack
 from model.data.mcVersions import MCVersion
-from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations, metaInfoFromResourceLocation, containsResourceLocation, ResourceLocationNode, \
+from model.datapack.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations, metaInfoFromResourceLocation, containsResourceLocation, ResourceLocationNode, \
 	ResourceLocationSchema
 from model.messages import *
 from model.parsing.contextProvider import Suggestions, registerContextProvider, ContextProvider, Match, AddContextToDictDecorator, Context

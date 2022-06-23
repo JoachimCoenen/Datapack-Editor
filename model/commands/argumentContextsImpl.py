@@ -15,7 +15,7 @@ from model.commands.snbt import parseNBTPath
 from model.commands.stringReader import StringReader
 from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
-from model.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
+from model.datapack.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from model.messages import *
 from model.nbt.tags import NBTTagSchema
 from model.parsing.bytesUtils import bytesToStr, strToBytes

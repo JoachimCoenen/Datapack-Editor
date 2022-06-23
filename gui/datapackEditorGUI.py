@@ -13,13 +13,13 @@ from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy
 
 from Cat.CatPythonGUI.GUI.enums import ResizeMode
-from model.datapackContents import getEntryHandlersForFolder
-from model.utils import formatMarkdown
+from model.datapack.datapackContents import getEntryHandlersForFolder
+from model.utils import GeneralError
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
-from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, Error
+from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
 from Cat.Serializable import SerializedPropertyABC, SerializableContainer
@@ -336,10 +336,6 @@ class FilesTreeItem:
 	def isFile(self) -> bool:
 		filePathsCount = len(self.filePaths)
 		return (filePathsCount == 1 and len(getattr(self.filePaths[0], 'virtualPath', '')) == self.commonDepth - 1)
-
-
-class Project:
-	pass
 
 
 class DatapackEditorGUI(AutoGUI):
@@ -775,7 +771,7 @@ class DatapackEditorGUI(AutoGUI):
 		self.label(f'errors: {errorCounts.parserErrors + errorCounts.configErrors:3} | warnings: {errorCounts.configWarnings:3} | hints: {errorCounts.configHints:3}')
 		self.hSeparator()
 
-	def drawError(self, error: Error, **kwargs):
+	def drawError(self, error: GeneralError, **kwargs):
 		if error.position is not None:
 			positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
 		else:
@@ -788,7 +784,7 @@ class DatapackEditorGUI(AutoGUI):
 		# msg = f'{errorMsg} {positionMsg}'
 		# self.helpBox(msg, style=style, **kwargs)
 
-	def drawErrors(self: DatapackEditorGUI, errors: Collection[Error], onDoubleClicked: Callable[[Error], None]):
+	def drawErrors(self: DatapackEditorGUI, errors: Collection[GeneralError], onDoubleClicked: Callable[[GeneralError], None]):
 		if errors:
 			for error in errors:
 				self.drawError(error, onDoubleClicked=lambda ev, error=error, gui=self: onDoubleClicked(error) or gui.redrawGUI())
@@ -800,9 +796,9 @@ class DatapackEditorGUI(AutoGUI):
 	def _htmlDelegate(self) -> HTMLDelegate:
 		return HTMLDelegate()
 
-	def errorsList(self: DatapackEditorGUI, errors: Collection[Error], onDoubleClicked: Callable[[Error], None], **kwargs):
+	def errorsList(self: DatapackEditorGUI, errors: Collection[GeneralError], onDoubleClicked: Callable[[GeneralError], None], **kwargs):
 
-		def getLabel(error: Error, i: int) -> str:
+		def getLabel(error: GeneralError, i: int) -> str:
 			if error.position is not None:
 				positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
 			else:
@@ -812,7 +808,7 @@ class DatapackEditorGUI(AutoGUI):
 
 		errorIcons = self._errorIcons
 
-		def getIcon(error: Error, i: int) -> Optional[QIcon]:
+		def getIcon(error: GeneralError, i: int) -> Optional[QIcon]:
 			if i == 0:
 				return errorIcons.get(error.style)
 			else:
@@ -843,7 +839,7 @@ TPythonGUI = TypeVar('TPythonGUI', bound=DatapackEditorGUI)
 def drawCodeField(
 		gui: DatapackEditorGUI,
 		code: str,
-		errors: list[Error],
+		errors: list[GeneralError],
 		forceLocateElement: bool,
 		highlightErrors: bool,
 		currentCursorPos: tuple[int, int] = None,

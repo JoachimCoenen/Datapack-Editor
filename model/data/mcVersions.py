@@ -7,7 +7,7 @@ from typing import Optional
 from model.commands.argumentTypes import ArgumentType
 from model.commands.command import CommandSchema
 from model.commands.filterArgs import FilterArgumentInfo
-from model.datapackContents import ResourceLocation
+from model.datapack.datapackContents import ResourceLocation
 from model.parsing.bytesUtils import strToBytes
 
 

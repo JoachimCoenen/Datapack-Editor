@@ -11,7 +11,7 @@ from Cat.icons import icons
 from Cat.utils import DeferredCallOnceMethod, openOrCreate
 from gui.datapackEditorGUI import DatapackEditorGUI, LocalFilesPropInfo, ContextMenuEntries, FilesTreeItem, createNewFileGUI, createNewFolderGUI, createNewFolder
 from model.Model import World, Datapack
-from model.datapackContents import isNamespaceValid, NAME_SPACE_VAR
+from model.datapack.datapackContents import isNamespaceValid, NAME_SPACE_VAR
 from model.utils import Position
 from model.pathUtils import FilePath, normalizeDirSeparators
 from session.session import getSession

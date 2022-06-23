@@ -4,7 +4,7 @@
 """
 from model.commands.argumentTypes import *
 from model.commands.filterArgs import FilterArgumentInfo
-from model.datapackContents import ResourceLocation
+from model.datapack.datapackContents import ResourceLocation
 # Argument types:
 
 AGE_1 = FilterArgumentInfo(

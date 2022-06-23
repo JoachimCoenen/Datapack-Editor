@@ -4,7 +4,7 @@ from model.commands.command import KeywordSchema
 from model.data.mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
 from model.data.mcd import fillFromMinecraftData
 from model.data.v1_17.commands import fillCommandsFor1_17
-from model.datapackContents import ResourceLocation
+from model.datapack.datapackContents import ResourceLocation
 
 
 def initPlugin() -> None:

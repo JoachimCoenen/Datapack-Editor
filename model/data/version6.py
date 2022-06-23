@@ -5,7 +5,7 @@ from model.data.dpVersion import registerDPVersion, DPVersion
 from model.data.json.schemas.predicate import PREDICATE_SCHEMA
 from model.data.json.schemas.rawJsonText import RAW_JSON_TEXT_SCHEMA
 from model.data.json.schemas.tags import *
-from model.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, DatapackContents, GenerationInfo, DefaultFileInfo, \
+from model.datapack.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, DatapackContents, GenerationInfo, DefaultFileInfo, \
 	buildFunctionMeta, buildEntryHandlers, buildJsonMeta, buildNbtMeta
 from model.json.core import JsonSchema
 
