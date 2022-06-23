@@ -1,11 +1,11 @@
 from Cat.utils import Anything
-from model.datapack.json.argTypes import *
-from model.datapack.json.utils import *
+from model.data.json.argTypes import *
+from model.data.json.utils import *
 from model.json.core import *
 from model.utils import MDStr
 
-from model.datapack.json.schemas.Advancement.Conditions.damage_type import ADVANCEMENT_CONDITIONS_DAMAGE_TYPE
-from model.datapack.json.schemas.Advancement.Conditions.entity import ADVANCEMENT_CONDITIONS_ENTITY
+from model.data.json.schemas.Advancement.Conditions.damage_type import ADVANCEMENT_CONDITIONS_DAMAGE_TYPE
+from model.data.json.schemas.Advancement.Conditions.entity import ADVANCEMENT_CONDITIONS_ENTITY
 
 ADVANCEMENT_CONDITIONS_DAMAGE = JsonObjectSchema(properties=[
 

@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QWidget
 
 from Cat.utils.logging_ import logError
 from model.commands.stringReader import StringReader
-from model.datapack.json.argTypes import *
+from model.data.json.argTypes import *
 from model.datapackContents import ResourceLocationNode, ResourceLocationSchema
 from model.json.core import *
 from model.json.core import OPTIONS_JSON_ARG_TYPE

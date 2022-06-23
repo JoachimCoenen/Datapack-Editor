@@ -103,7 +103,7 @@ def loadPlugins():
 	version1_17.initPlugin()
 	version1_18.initPlugin()
 
-	from model.datapack import version6
+	from model.data import version6
 	version6.initPlugin()
 
 

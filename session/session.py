@@ -13,7 +13,7 @@ from Cat.utils.profiling import logError
 from Cat.utils.signals import CatSignal, CatBoundSignal
 from model.Model import World
 from model.data.mcVersions import MCVersion, getMCVersion
-from model.datapack.dpVersion import DPVersion, getDPVersion
+from model.data.dpVersion import DPVersion, getDPVersion
 from session.documentHandling import DocumentsManager
 from settings import applicationSettings
 

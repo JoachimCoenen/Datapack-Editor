@@ -1,10 +1,10 @@
 """
 for Minecraft version 1.17
 """
-from model.datapack.dpVersion import registerDPVersion, DPVersion
-from model.datapack.json.schemas.predicate import PREDICATE_SCHEMA
-from model.datapack.json.schemas.rawJsonText import RAW_JSON_TEXT_SCHEMA
-from model.datapack.json.schemas.tags import *
+from model.data.dpVersion import registerDPVersion, DPVersion
+from model.data.json.schemas.predicate import PREDICATE_SCHEMA
+from model.data.json.schemas.rawJsonText import RAW_JSON_TEXT_SCHEMA
+from model.data.json.schemas.tags import *
 from model.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, DatapackContents, GenerationInfo, DefaultFileInfo, \
 	buildFunctionMeta, buildEntryHandlers, buildJsonMeta, buildNbtMeta
 from model.json.core import JsonSchema
@@ -12,7 +12,7 @@ from model.json.core import JsonSchema
 
 def initPlugin() -> None:
 	registerDPVersion(version6)
-	from model.datapack.json import contexts
+	from model.data.json import contexts
 	contexts.init()
 
 

@@ -23,7 +23,7 @@ from PyQt5.QtWidgets import QStyleFactory
 QFont.__deepcopy__ = lambda x, m: QFont(x)
 
 from model.data.mcVersions import ALL_MC_VERSIONS
-from model.datapack.dpVersion import ALL_DP_VERSIONS
+from model.data.dpVersion import ALL_DP_VERSIONS
 
 
 class ColorSchemePD(pd.PropertyDecorator):
