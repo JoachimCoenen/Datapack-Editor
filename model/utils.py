@@ -79,7 +79,7 @@ class Position:
 
 
 @final
-@dataclass(init=False)
+@dataclass(init=False, unsafe_hash=True)
 class Span:
 	start: Position
 	end: Position

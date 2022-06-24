@@ -2,18 +2,20 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field, replace
 from itertools import chain
-from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable, TYPE_CHECKING, Union, Mapping
+from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable, Mapping
 
 from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
-from Cat.Serializable import RegisterContainer, SerializableContainer, Serialized, SerializedPropertyBaseBase
-from Cat.utils.collections_ import OrderedDict
 from Cat.utils.profiling import logError
-from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty, Deprecated
+from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty
+from model.index import Index, IndexBundle
 from model.parsing.bytesUtils import bytesToStr
 from model.parsing.parser import parse
 from model.parsing.tree import Schema, Node
 from model.pathUtils import FilePathTpl, loadBinaryFile, loadTextFile, ZipFilePool
+from model.project import IndexBundleAspect, AspectType, Project
 from model.utils import MDStr, Span, LANGUAGES
+
+DATAPACK_CONTENTS_TYPE = AspectType('dpe:datapack_contents')
 
 
 def isNamespaceValid(namespace: str) -> bool:
@@ -250,56 +252,45 @@ class NbtMeta(MetaInfo):
 	pass
 
 
-@RegisterContainer
-class TagInfos(SerializableContainer):
-	__slots__ = ()
-	blocks: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	entity_types: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	fluids: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	functions: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	game_events: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	items: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+@dataclass
+class TagInfos(IndexBundle):
+	blocks: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	entity_types: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	fluids: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	functions: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	game_events: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	items: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 
 
-@RegisterContainer
-class WorldGenInfos(SerializableContainer):
-	__slots__ = ()
-	biome: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	configured_carver: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	configured_feature: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	configured_structure_feature: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	configured_surface_builder: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	noise_settings: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	processor_list: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	template_pool: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
+@dataclass
+class WorldGenInfos(IndexBundle):
+	biome: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	configured_carver: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	configured_feature: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	configured_structure_feature: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	configured_surface_builder: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	noise_settings: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	processor_list: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	template_pool: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 
 
-@RegisterContainer
-class DatapackContents(SerializableContainer):
-	__slots__ = ()
-	advancements: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	functions: OrderedDict[ResourceLocation, FunctionMeta] = Serialized(default_factory=OrderedDict)
-	item_modifiers: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	loot_tables: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	predicates: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	recipes: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	structures: OrderedDict[ResourceLocation, NbtMeta] = Serialized(default_factory=OrderedDict)
-	tags: TagInfos = Serialized(default_factory=TagInfos)
-	dimension: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	dimension_type: OrderedDict[ResourceLocation, JsonMeta] = Serialized(default_factory=OrderedDict)
-	worldGen: WorldGenInfos = Serialized(default_factory=WorldGenInfos)
-	# if TYPE_CHECKING:
-	# 	advancementsProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
-	# 	functionsProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, FunctionMeta]]] = Serialized()
-	# 	item_modifiersProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
-	# 	loot_tablesProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
-	# 	predicatesProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
-	# 	recipesProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
-	# 	structuresProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, NbtMeta]]] = Serialized()
-	# 	tagsProp: ClassVar[Serialized[ResourceLocation, TagInfos]] = Serialized()
-	# 	dimensionProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
-	# 	dimension_typeProp: ClassVar[Serialized[ResourceLocation, OrderedDict[ResourceLocation, JsonMeta]]] = Serialized()
-	# 	worldGenProp: ClassVar[Serialized[ResourceLocation, WorldGenInfos]] = Serialized()
+@dataclass
+class DatapackContents(IndexBundleAspect):
+	@classmethod
+	def getAspectType(cls) -> AspectType:
+		return DATAPACK_CONTENTS_TYPE
+
+	advancements: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	functions: Index[ResourceLocation, FunctionMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	item_modifiers: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	loot_tables: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	predicates: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	recipes: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	structures: Index[ResourceLocation, NbtMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	tags: TagInfos = field(default_factory=TagInfos, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	dimension: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	dimension_type: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	worldGen: WorldGenInfos = field(default_factory=WorldGenInfos, init=False, metadata=dict(dpe=dict(isIndex=True)))
 
 
 def createMetaInfo(cls: Type[_TMetaInfo], filePath: FilePathTpl, resourceLocation: ResourceLocation) -> _TMetaInfo:
@@ -339,24 +330,14 @@ class GenerationInfo:
 	initialFiles: list[DefaultFileInfo] = field(default_factory=list)
 
 
-if TYPE_CHECKING:
-	@dataclass(frozen=True)
-	class EntryHandlerInfo:
-		folder: str
-		extension: str
-		isTag: bool
-		buildMetaInfo: Callable[[FilePathTpl, ResourceLocation], MetaInfo]
-		contentsProp: Union[SerializedPropertyBaseBase[DatapackContents, OrderedDict[ResourceLocation, MetaInfo]], OrderedDict[ResourceLocation, MetaInfo]]
-		generation: GenerationInfo = field(default_factory=GenerationInfo)
-else:
-	@dataclass(frozen=True)
-	class EntryHandlerInfo:
-		folder: str
-		extension: str
-		isTag: bool
-		buildMetaInfo: Callable[[FilePathTpl, ResourceLocation], MetaInfo]
-		contentsProp: SerializedPropertyBaseBase[DatapackContents, OrderedDict[ResourceLocation, MetaInfo]]
-		generation: GenerationInfo = field(default_factory=GenerationInfo)
+@dataclass(frozen=True)
+class EntryHandlerInfo:
+	folder: str
+	extension: str
+	isTag: bool
+	buildMetaInfo: Callable[[FilePathTpl, ResourceLocation], MetaInfo]
+	getIndex: Callable[[Project], Index[ResourceLocation, MetaInfo]]
+	generation: GenerationInfo = field(default_factory=GenerationInfo)
 
 
 class EntryHandlerKey(NamedTuple):
@@ -418,23 +399,14 @@ def getEntryHandlersForFolder(fullPath: FilePathTpl, handlers: dict[str, list[En
 	return []
 
 
-@Deprecated
-def getMetaInfo(fullPath: FilePathTpl, handlers: EntryHandlers) -> Optional[MetaInfo]:
-	resLocHandler = getEntryHandlerForFile(fullPath, handlers)
-	if resLocHandler is None:
-		return None
-	resLoc, handler = resLocHandler
-	return handler.buildMetaInfo(fullPath, resLoc)
-
-
-def collectAllEntries(files: list[FilePathTpl], handlers: EntryHandlers, contents: DatapackContents) -> None:
+def collectAllEntries(files: list[FilePathTpl], handlers: EntryHandlers, project: Project) -> None:
 	for fullPath in files:
 		resLocHandler = getEntryHandlerForFile(fullPath, handlers)
 		if resLocHandler is None:
 			continue
 		resLoc, handler = resLocHandler
 		metaInfo = handler.buildMetaInfo(fullPath, resLoc)
-		handler.contentsProp.get(contents)[resLoc] = metaInfo
+		handler.getIndex(project).add(resLoc, fullPath, metaInfo)
 
 
 def autoCompletionTreeForResourceLocations(locations: Iterable[ResourceLocation]) -> AutoCompletionTree:

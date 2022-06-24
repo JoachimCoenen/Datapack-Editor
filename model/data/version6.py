@@ -40,28 +40,28 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		'.json',
 		True,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/blocks'),
-		DatapackContents.tags.blocks
+		lambda p: p.setdefaultIndex(DatapackContents).tags.blocks
 	),
 	EntryHandlerInfo(
 		'tags/entity_types/',
 		'.json',
 		True,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/entity_types'),
-		DatapackContents.tags.entity_types
+		lambda p: p.setdefaultIndex(DatapackContents).tags.entity_types
 	),
 	EntryHandlerInfo(
 		'tags/fluids/',
 		'.json',
 		True,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/fluids'),
-		DatapackContents.tags.fluids
+		lambda p: p.setdefaultIndex(DatapackContents).tags.fluids
 	),
 	EntryHandlerInfo(
 		'tags/functions/',
 		'.json',
 		True,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/functions'),
-		DatapackContents.tags.functions,
+		lambda p: p.setdefaultIndex(DatapackContents).tags.functions,
 		GenerationInfo(
 			initialFiles=[
 				DefaultFileInfo(
@@ -82,14 +82,14 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		'.json',
 		True,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/game_events'),
-		DatapackContents.tags.game_events
+		lambda p: p.setdefaultIndex(DatapackContents).tags.game_events
 	),
 	EntryHandlerInfo(
 		'tags/items/',
 		'.json',
 		True,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/items'),
-		DatapackContents.tags.items
+		lambda p: p.setdefaultIndex(DatapackContents).tags.items
 	),
 
 	# WorldGenInfos:
@@ -98,56 +98,56 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/biome'),
-		DatapackContents.worldGen.biome
+		lambda p: p.setdefaultIndex(DatapackContents).worldGen.biome
 	),
 	EntryHandlerInfo(
 		'worldgen/configured_carver/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/configured_carver'),
-		DatapackContents.worldGen.configured_carver
+		lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_carver
 	),
 	EntryHandlerInfo(
 		'worldgen/configured_feature/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/configured_feature'),
-		DatapackContents.worldGen.configured_feature
+		lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_feature
 	),
 	EntryHandlerInfo(
 		'worldgen/configured_structure_feature/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/configured_structure_feature'),
-		DatapackContents.worldGen.configured_structure_feature
+		lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_structure_feature
 	),
 	EntryHandlerInfo(
 		'worldgen/configured_surface_builder/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/configured_surface_builder'),
-		DatapackContents.worldGen.configured_surface_builder
+		lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_surface_builder
 	),
 	EntryHandlerInfo(
 		'worldgen/noise_settings/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/noise_settings'),
-		DatapackContents.worldGen.noise_settings
+		lambda p: p.setdefaultIndex(DatapackContents).worldGen.noise_settings
 	),
 	EntryHandlerInfo(
 		'worldgen/processor_list/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/processor_list'),
-		DatapackContents.worldGen.processor_list
+		lambda p: p.setdefaultIndex(DatapackContents).worldGen.processor_list
 	),
 	EntryHandlerInfo(
 		'worldgen/template_pool/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/template_pool'),
-		DatapackContents.worldGen.template_pool
+		lambda p: p.setdefaultIndex(DatapackContents).worldGen.template_pool
 	),
 
 	# DatapackContents:
@@ -156,14 +156,14 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='advancements'),
-		DatapackContents.advancements
+		lambda p: p.setdefaultIndex(DatapackContents).advancements
 	),
 	EntryHandlerInfo(
 		'functions/',
 		'.mcfunction',
 		False,
 		lambda fp, rl: buildFunctionMeta(fp, rl),
-		DatapackContents.functions,
+		lambda p: p.setdefaultIndex(DatapackContents).functions,
 		GenerationInfo(
 			initialFiles=[
 				DefaultFileInfo(
@@ -184,49 +184,49 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='item_modifiers'),
-		DatapackContents.item_modifiers
+		lambda p: p.setdefaultIndex(DatapackContents).item_modifiers
 	),
 	EntryHandlerInfo(
 		'loot_tables/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='loot_tables'),
-		DatapackContents.loot_tables
+		lambda p: p.setdefaultIndex(DatapackContents).loot_tables
 	),
 	EntryHandlerInfo(
 		'predicates/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='predicates'),
-		DatapackContents.predicates
+		lambda p: p.setdefaultIndex(DatapackContents).predicates
 	),
 	EntryHandlerInfo(
 		'recipes/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='recipes'),
-		DatapackContents.recipes
+		lambda p: p.setdefaultIndex(DatapackContents).recipes
 	),
 	EntryHandlerInfo(
 		'structures/',
 		'.nbt',
 		False,
 		lambda fp, rl: buildNbtMeta(fp, rl),
-		DatapackContents.structures
+		lambda p: p.setdefaultIndex(DatapackContents).structures
 	),
 	EntryHandlerInfo(
 		'dimension/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='dimension'),
-		DatapackContents.dimension
+		lambda p: p.setdefaultIndex(DatapackContents).dimension
 	),
 	EntryHandlerInfo(
 		'dimension_type/',
 		'.json',
 		False,
 		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='dimension_type'),
-		DatapackContents.dimension_type
+		lambda p: p.setdefaultIndex(DatapackContents).dimension_type
 	),
 
 ]

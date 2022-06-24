@@ -14,8 +14,8 @@ from Cat.CatPythonGUI.utilities import connect, CrashReportWrapped
 from Cat.utils.profiling import ProfiledFunction, TimedMethod
 from Cat import utils
 from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries
-from model.Model import Datapack
 from model.pathUtils import FilePath
+from model.project import Project
 from session.session import getSession
 
 from settings import applicationSettings
@@ -27,7 +27,7 @@ class FileEntry:
 	splitPath: list[tuple[int, str]]
 	fileName: str
 	fullPath: FilePath
-	datapack: Datapack
+	project: Project
 
 	def __hash__(self):
 		return hash((56783265, self.fullPath))
@@ -294,15 +294,15 @@ class SpotlightSearchGui(CatTextField):
 		# 		translations=True,
 		# 	)
 
-		searchFileProps = [Datapack.files]
+		searchFileProps = [Project.files]
 
-		allDatapacks = self.getAllDatapacks()
+		allProjects = self.getAllProjects()
 		filePathsToSearch: list[FileEntry] = []
 
 		lastFEs: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = self.lastFEsCache
 		newFEs: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = {}
 
-		for pack in allDatapacks:
+		for pack in allProjects:
 			for i, searchFileProp in enumerate(searchFileProps):
 				feKey = (pack.name, i)
 				lastFE = lastFEs.pop(feKey, None)
@@ -327,8 +327,8 @@ class SpotlightSearchGui(CatTextField):
 		self.lastFEsCache = newFEs
 		self.allChoices = filePathsToSearch
 
-	def getAllDatapacks(self) -> list[Datapack]:
-		return getSession().world.datapacks
+	def getAllProjects(self) -> list[Project]:
+		return getSession().project.deepDependencies
 
 	def _showPopup(self):
 		self._resultsPopup.setTextField(self)
@@ -491,7 +491,7 @@ class FileSearchPopup(PythonGUIDialog):
 				if gui.doubleClickLabel(labelMaker1(fe.fileName, sr.match_, fileNameStyle), font=font):
 					self.selectedItem = sr
 					self.accept()
-				if gui.doubleClickLabel(labelMaker2(fe.datapack.name, pathStyle), alignment=Qt.AlignRight, font=font):
+				if gui.doubleClickLabel(labelMaker2(fe.project.name, pathStyle), alignment=Qt.AlignRight, font=font):
 					self.selectedItem = sr
 					self.accept()
 			if gui.doubleClickLabel(labelMaker2(fe.path, pathStyle), font=font):

@@ -164,7 +164,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		mg = gui.margin
 		with gui.vLayout(contentsMargins=(mg, mg, mg, mg)):
 			gui.addVSpacer(int(50 * gui.scale), SizePolicy.Expanding)
-			if not getSession().hasOpenedWorld:
+			if not getSession().hasOpenedProject:
 				self._noWorldLoadedGUI(gui)
 			else:
 				self._noDocumentOpenedGUI(gui)
@@ -183,13 +183,13 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
 
 	def _noWorldLoadedGUI(self, gui: DatapackEditorGUI) -> None:
-		gui.label('No world loaded.', wordWrap=False, alignment=Qt.AlignCenter)
+		gui.label('No project loaded.', wordWrap=False, alignment=Qt.AlignCenter)
 		gui.addVSpacer(gui.margin, SizePolicy.Fixed)
-		gui.label(f"Please open a Minecraft world. You can always switch it later", wordWrap=False, alignment=Qt.AlignCenter)
+		gui.label(f"Please open a project.", wordWrap=False, alignment=Qt.AlignCenter)
 		gui.addVSpacer(gui.margin, SizePolicy.Fixed)
 		with gui.hLayout():
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
-			if gui.framelessButton("Load World", icon=icons.globeAlt, tip="Load World", default=True):
+			if gui.framelessButton("Load Project", icon=icons.globeAlt, tip="Load Project", default=True):
 				self.window()._loadWorldDialog(gui)
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
 

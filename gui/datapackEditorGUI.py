@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QApplication, QSizePolicy
 
 from Cat.CatPythonGUI.GUI.enums import ResizeMode
 from model.datapack.datapackContents import getEntryHandlersForFolder
+from model.project import Project
 from model.utils import GeneralError
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
@@ -28,7 +29,6 @@ from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, open
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from gui import lexers
 from session.documents import Document, ErrorCounts
-from model.Model import Datapack
 from model.pathUtils import FilePath
 from session.session import getSession
 
@@ -52,15 +52,16 @@ T2 = TypeVar('T2')
 def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
 	handlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.byFolder)
 	extensions = [h.extension for h in handlers]
-
+	CUSTOM_EXT = "[custom]"
+	extensions.append(CUSTOM_EXT)
 	@dataclass
 	class Context:
 		extension: int = 0
 		name: str = "untitled"
 
 	def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
-		context.name = gui.textField(context.name, "name")
-		context.extension = gui.radioButtonGroup(context.extension, extensions, "extension")
+		context.name = gui.textField(context.name, "name:")
+		context.extension = gui.radioButtonGroup(context.extension, extensions, "extension:")
 		return context
 
 	context = Context()
@@ -69,6 +70,8 @@ def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Cal
 		return
 
 	ext = extensions[context.extension]
+	if ext == CUSTOM_EXT:
+		ext = ''
 	try:
 		filePath = createNewFile(folderPath, context.name.removesuffix(ext) + ext)
 		openFunc(filePath)
@@ -155,7 +158,7 @@ class ContextMenuEntries:
 		return entries
 
 	@classmethod
-	def datapackItems(cls, datapack: Datapack, openFunc: Callable[[FilePath], None]) -> list[MenuItemData]:
+	def datapackItems(cls, datapack: Project, openFunc: Callable[[FilePath], None]) -> list[MenuItemData]:
 		enabled = datapack is not None
 		return [
 			*cls.pathItems(datapack.path,),
@@ -607,7 +610,10 @@ class DatapackEditorGUI(AutoGUI):
 				splittingPath = fullPath[1]
 			else:
 				splittingPath = fullPath
-			return splittingPath.split(firstSplitter, 1)[-1]
+			if firstSplitter:
+				return splittingPath.split(firstSplitter, 1)[-1]
+			else:
+				return splittingPath.removeprefix('/')
 		# autocomplete strings:
 		allAutocompleteStrings: list[str] = []
 		allFilePaths: list[FileEntry2] = []
@@ -627,11 +633,14 @@ class DatapackEditorGUI(AutoGUI):
 				for fullPath in fullPathsInProj:
 					right = getRight(fullPath, firstSplitter)
 					virtualPath = virtualFolderPrefix + right
-
 					allAutocompleteStrings.append(virtualPath)
 					filesForFolder.append(FileEntry2(fullPath, virtualPath))
+
 				if folderItem.filePaths:
-					projItem.filePaths.append(folderItem)
+					if folderItem.label:
+						projItem.filePaths.append(folderItem)
+					else:
+						projItem.filePaths.extend(folderItem.filePaths)
 			if projItem.filePaths:
 				rootItem.filePaths.append(projItem)
 
@@ -644,11 +653,13 @@ class DatapackEditorGUI(AutoGUI):
 
 				if filterStr:
 					for projItem in rootItem.filePaths:
-						for folderItem in projItem.filePaths:
-							folderItem.filePaths = [fp for fp in folderItem.filePaths if filterStr in fp.virtualPath.lower()]
-
-							filteredFilesCount += len(folderItem.filePaths)
-						projItem.filePaths = [folderItem for folderItem in projItem.filePaths if folderItem.filePaths]
+						# for folderItem in projItem.filePaths:
+						# 	folderItem.filePaths = [fp for fp in folderItem.filePaths if filterStr in fp.virtualPath.lower()]
+						#
+						# 	filteredFilesCount += len(folderItem.filePaths)
+						# projItem.filePaths = [folderItem for folderItem in projItem.filePaths if folderItem.filePaths]
+						projItem.filePaths = [fp for fp in projItem.filePaths if filterStr in fp.virtualPath.lower()]
+						filteredFilesCount += len(projItem.filePaths)
 					rootItem.filePaths = [projItem for projItem in rootItem.filePaths if projItem.filePaths]
 				else:
 					filteredFilesCount = totalFilesCount
