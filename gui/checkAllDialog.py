@@ -228,8 +228,8 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 	def fileTypesSelectionGUI(self, gui: DatapackEditorGUI, oldVals: dict[str, EntryHandlerInfo]) -> dict[str, EntryHandlerInfo]:
 		# build Folder Structure:
 		structure: _DPStructure = {}
-		for path, infos in getSession().datapackData.byFolder.items():
-			pathParts = path.strip('/').split('/')
+		for path, infos in getSession().datapackData.structure.items():
+			pathParts = path.pattern.strip('/').split('/')
 			folder = structure
 			for pathPart in pathParts:
 				folder = folder.setdefault(pathPart, {})
@@ -253,8 +253,9 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self._allFiles = []
 		for dp in self._includedProjects:
 			for ft in self._fileTypes.values():
-				cnts = ft.getIndex(dp)
-				self._allFiles.extend(cnt.filePath for cnt in cnts.values())
+				if ft.getIndex is not None:
+					cnts = ft.getIndex(dp)
+					self._allFiles.extend(cnt.filePath for cnt in cnts.values())
 			# for f in dp.files:
 			# 	if isinstance(f, tuple):
 			# 		fn = f[1]

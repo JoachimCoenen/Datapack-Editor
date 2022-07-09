@@ -148,6 +148,9 @@ class DatapackFilesEditor(EditorBase[Session]):
 		# else:
 		# 	self.redraw('DatapackFilesEditor._createNewDatapackGUI(...)')
 
+	def _refreshDependencies(self) -> None:
+		self.model().project.deepDependenciesProp.reset(self.model().project)
+
 	def _onContextMenu(self, data: FilesTreeItem, column: int):
 		if not data.filePaths:
 			return
@@ -205,6 +208,7 @@ class DatapackFilesEditor(EditorBase[Session]):
 				iconMaker=self._iconMaker,
 				overlap=adjustOverlap(self.overlap(), (None, None, None, 0)),
 				roundedCorners=maskCorners(self.roundedCorners(), CORNERS.TOP),
+
 			)
 
 			with gui.hPanel(
@@ -217,11 +221,19 @@ class DatapackFilesEditor(EditorBase[Session]):
 				if gui.toolButton(
 					icon=icons.add,
 					tip="create new Datapack",
-					overlap=adjustOverlap(self.overlap(), (0, 1, None, None)),
-					roundedCorners=maskCorners(self.roundedCorners(), CORNERS.BOTTOM_RIGHT),
+					overlap=adjustOverlap(self.overlap(), (0, 1, 0, None)),
+					roundedCorners=maskCorners(self.roundedCorners(), CORNERS.NONE),
 					enabled=True
 				):
 					self._createNewDatapackGUI()
+				if gui.toolButton(
+					icon=icons.refresh,
+					tip="refresh dependencies",
+					overlap=adjustOverlap(self.overlap(), (1, 1, None, None)),
+					roundedCorners=maskCorners(self.roundedCorners(), CORNERS.BOTTOM_RIGHT),
+					enabled=True
+				):
+					self._refreshDependencies()
 
 
 __all__ = [

@@ -5,15 +5,15 @@ from abc import ABC
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 import functools as ft
-from typing import NewType, Type, TypeVar, Optional, Generic
+from typing import NewType, Type, TypeVar, Optional, Generic, Callable
 
-from Cat.Serializable import SerializableContainer, Serialized, ComputedCached
+from Cat.Serializable import SerializableContainer, Serialized, ComputedCached, Computed
 from Cat.extensions import FilesChangedDependency
 
 from Cat.utils.abc_ import abstractmethod
 from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from model.index import IndexBundle
-from model.pathUtils import fileNameFromFilePath, FilePathTpl, getAllFilesFromSearchPath
+from model.pathUtils import fileNameFromFilePath, FilePathTpl, getAllFilesFromSearchPath, normalizeDirSeparators
 
 _TT = TypeVar('_TT')
 _TS = TypeVar('_TS')
@@ -22,7 +22,7 @@ _TS = TypeVar('_TS')
 @dataclass
 class Dependency:
 	name: str
-	required: bool
+	mandatory: bool
 
 
 AspectType = NewType('AspectType', str)
@@ -130,8 +130,18 @@ class IndexBundleAspect(Aspect, IndexBundle, ABC):
 _TIndexBundle = TypeVar('_TIndexBundle', bound=IndexBundleAspect)
 
 
-dependencySearchLocations: list[str] = []
+dependencySearchLocations: list[Callable[[], list[str]]] = []
 """search in these directories to resolve dependencies"""
+
+
+def defaultSearchLocations():
+	from settings import applicationSettings
+	sl = applicationSettings.minecraft.savesLocation
+	if sl:
+		return [sl]
+	return []
+
+dependencySearchLocations.append(defaultSearchLocations)
 
 
 class Project(SerializableContainer):
@@ -154,10 +164,15 @@ class Project(SerializableContainer):
 	def name(self) -> str:
 		return fileNameFromFilePath(self.path)
 
-	@property
+	@Computed()
 	def dependencies(self) -> list[Dependency]:
 		""" for now. might change"""
-		return []
+		result = {}
+		for aspect in self.aspects:
+			for dependency in aspect.dependencies:
+				if dependency.mandatory or dependency.name not in result:
+					result[dependency.name] = dependency
+		return list(result.values())
 
 	@ComputedCached()
 	def deepDependencies(self) -> list[Project]:
@@ -170,8 +185,12 @@ class Project(SerializableContainer):
 	@ComputedCached(dependencies_=[_fileSystemChanges])
 	def files(self) -> list[FilePathTpl]:
 		allLocalFiles: list[FilePathTpl] = []
-		pathInFolder = '/**'
-		pathInZip = '/**'
+		if self.path.endswith('.jar'):  # we don't need '.class' files. This is not a Java IDE.
+			pathInFolder = 'data/**'
+			pathInZip = 'data/**'
+		else:
+			pathInFolder = '/**'
+			pathInZip = '/**'
 		pif = pathInFolder
 		piz = pathInZip
 
@@ -226,12 +245,22 @@ class Project(SerializableContainer):
 		self._checkIndices()
 		return self.indexBundles.get(indexCls)
 
+	def __str__(self):
+		return f"<{self.__class__.__name__}({self.name!r})>"
+
 
 def resolveDependency(dep: Dependency) -> Optional[Project]:
-	for dsl in dependencySearchLocations:
-		path = os.path.join(dsl, dep.name)
-		if os.path.exists(path):
-			return Project.create(path=path)
+	if '/' in dep.name and os.path.exists(dep.name):
+		return Project.create(path=dep.name)
+	for dslProvider in dependencySearchLocations:
+		dsls = dslProvider()
+		for dsl in dsls:
+			path = os.path.join(dsl, dep.name)
+			if os.path.exists(path):
+				return Project.create(path=normalizeDirSeparators(path))
+			path = path + '.zip'
+			if os.path.exists(path):
+				return Project.create(path=normalizeDirSeparators(path))
 	return None
 
 

@@ -29,7 +29,7 @@ from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, open
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from gui import lexers
 from session.documents import Document, ErrorCounts
-from model.pathUtils import FilePath
+from model.pathUtils import FilePath, normalizeDirSeparators
 from session.session import getSession
 
 lexers.init()  # don't delete!
@@ -50,10 +50,11 @@ T2 = TypeVar('T2')
 
 
 def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
-	handlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.byFolder)
-	extensions = [h.extension for h in handlers]
+	nsHandlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.structure)
+	extensions = [h.extension for ns, h, _ in nsHandlers]
 	CUSTOM_EXT = "[custom]"
 	extensions.append(CUSTOM_EXT)
+
 	@dataclass
 	class Context:
 		extension: int = 0
@@ -66,7 +67,7 @@ def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Cal
 
 	context = Context()
 	context, isOk = gui.askUserInput(f"new File", context, guiFunc)
-	if not isOk or not context.name:
+	if not isOk:  # or not context.name:
 		return
 
 	ext = extensions[context.extension]
@@ -82,14 +83,11 @@ def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Cal
 def createNewFile(folderPath: FilePath, name: str) -> FilePath:
 	if isinstance(folderPath, tuple):
 		filePath = folderPath[0], os.path.join(folderPath[1], name)
-		joinedFilePath = os.path.join(*filePath)
 	else:
-		filePath = os.path.join(folderPath, name)
-		joinedFilePath = filePath
-
-	with openOrCreate(joinedFilePath, 'a'):
+		filePath = (folderPath, name)
+	with openOrCreate(os.path.join(*filePath), 'a'):
 		pass  # creates the File
-	return filePath
+	return normalizeDirSeparators(filePath)
 
 
 def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):

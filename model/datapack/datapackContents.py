@@ -1,8 +1,9 @@
 from __future__ import annotations
 import re
+from collections import OrderedDict
 from dataclasses import dataclass, field, replace
 from itertools import chain
-from typing import Optional, TypeVar, Type, Callable, NamedTuple, Iterable, Mapping
+from typing import Optional, TypeVar, Type, Callable, Iterable, Mapping
 
 from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from Cat.utils.profiling import logError
@@ -158,7 +159,7 @@ class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema],
 @dataclass
 class MetaInfo:
 	filePath: FilePathTpl = FilePathTpl(('', ''))
-	resourceLocation: ResourceLocation = ResourceLocation(None, '', False)
+	# resourceLocation: ResourceLocation = ResourceLocation(None, '', False)
 
 	@property
 	def documentation(self) -> MDStr:
@@ -168,6 +169,7 @@ class MetaInfo:
 _TMetaInfo = TypeVar('_TMetaInfo', bound=MetaInfo)
 
 
+@dataclass
 class FunctionMeta(MetaInfo):
 
 	@CachedProperty
@@ -293,29 +295,32 @@ class DatapackContents(IndexBundleAspect):
 	worldGen: WorldGenInfos = field(default_factory=WorldGenInfos, init=False, metadata=dict(dpe=dict(isIndex=True)))
 
 
-def createMetaInfo(cls: Type[_TMetaInfo], filePath: FilePathTpl, resourceLocation: ResourceLocation) -> _TMetaInfo:
-	return cls(filePath, resourceLocation)
+def createMetaInfo(cls: Type[_TMetaInfo], filePath: FilePathTpl) -> _TMetaInfo:
+	return cls(filePath)
 
 
-def buildDefaultMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation) -> _TMetaInfo:
-	return createMetaInfo(MetaInfo, filePath, resourceLocation)
+def buildDefaultMeta(filePath: FilePathTpl) -> _TMetaInfo:
+	return createMetaInfo(MetaInfo, filePath)
 
 
-def buildFunctionMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation) -> FunctionMeta:
-	return createMetaInfo(FunctionMeta, filePath, resourceLocation)
+def buildFunctionMeta(filePath: FilePathTpl) -> FunctionMeta:
+	return createMetaInfo(FunctionMeta, filePath)
 
 
-def buildJsonMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation, *, schemaId: str) -> JsonMeta:
-	info = createMetaInfo(JsonMeta, filePath, resourceLocation)
+def buildJsonMeta(filePath: FilePathTpl, *, schemaId: str) -> JsonMeta:
+	info = createMetaInfo(JsonMeta, filePath)
 	info.schemaId = schemaId
 	return info
 
 
-def buildNbtMeta(filePath: FilePathTpl, resourceLocation: ResourceLocation) -> NbtMeta:
-	return createMetaInfo(NbtMeta, filePath, resourceLocation)
+def buildNbtMeta(filePath: FilePathTpl) -> NbtMeta:
+	return createMetaInfo(NbtMeta, filePath)
 
 
 NAME_SPACE_VAR = '${namespace}'
+
+NAME_SPACE_CAPTURE_GROUP = r'(?P<namespace>\w+)'
+"""used to mark the namespace folder in EntryHandlerInfo.folder"""
 
 
 @dataclass(frozen=True)
@@ -332,81 +337,123 @@ class GenerationInfo:
 
 @dataclass(frozen=True)
 class EntryHandlerInfo:
-	folder: str
-	extension: str
-	isTag: bool
-	buildMetaInfo: Callable[[FilePathTpl, ResourceLocation], MetaInfo]
-	getIndex: Callable[[Project], Index[ResourceLocation, MetaInfo]]
-	generation: GenerationInfo = field(default_factory=GenerationInfo)
+	folder: re.Pattern[str] = field(kw_only=True)
+	extension: str = field(kw_only=True)
+	isTag: bool = field(kw_only=True)
+	includeSubdirs: bool = field(kw_only=True)
+	buildMetaInfo: Callable[[FilePathTpl], MetaInfo] = field(kw_only=True)
+	getIndex: Callable[[Project], Index[ResourceLocation, MetaInfo]] | None = field(kw_only=True)
+	generation: GenerationInfo = field(default_factory=GenerationInfo, kw_only=True)
 
 
-class EntryHandlerKey(NamedTuple):
-	folder: str
-	extension: str
-
-
-EntryHandlers = dict[EntryHandlerKey, EntryHandlerInfo]
+EntryHandlers = OrderedDict[re.Pattern[str], list[EntryHandlerInfo]]
 
 
 def buildEntryHandlers(handlers: list[EntryHandlerInfo]) -> EntryHandlers:
-	handlersDict = {EntryHandlerKey(handler.folder, handler.extension): handler for handler in handlers}
-	return handlersDict
+	result = OrderedDict()
+	for handler in handlers:
+		result.setdefault(handler.folder, []).append(handler)
+	return result
 
 
-def getEntryHandlerForFile(fullPath: FilePathTpl, handlers: EntryHandlers) -> Optional[tuple[ResourceLocation, EntryHandlerInfo]]:
+# def getEntryHandlerForFile_OLD(fullPath: FilePathTpl, handlers: EntryHandlers) -> Optional[tuple[ResourceLocation, EntryHandlerInfo]]:
+# 	dpPath, filePath = fullPath
+# 	if filePath.startswith('data/'):
+# 		filePath = filePath.removeprefix('data/')
+# 		namespace, _, path = filePath.partition('/')
+# 	else:
+# 		namespace = ''
+# 		path = filePath
+#
+# 	extIndex = path.rfind('.')
+# 	if extIndex >= 0:
+# 		extension = path[extIndex:]
+# 	else:
+# 		extension = ''
+# 	_, _, name = path.partition('/')
+#
+# 	prefix = ''
+# 	rest = path
+# 	while True:
+# 		p, _, rest = rest.partition('/')
+# 		prefix += p + '/'
+# 		handler = handlers.get(EntryHandlerKey(prefix, extension))
+# 		if handler is None:
+# 			handler = handlers.get(EntryHandlerKey(prefix, name))
+# 		if handler is not None:
+# 			rest = rest[:len(rest) - len(extension)]
+# 			resourceLocation = ResourceLocation(namespace, rest, handler.isTag)
+# 			return resourceLocation, handler
+# 		if not rest:
+# 			break
+# 	return None
+
+
+def getEntryHandlerForFile(fullPath: FilePathTpl, handlersDict: EntryHandlers) -> tuple[ResourceLocation | None, EntryHandlerInfo] | None:
 	dpPath, filePath = fullPath
-	if filePath.startswith('data/'):
-		filePath = filePath.removeprefix('data/')
-	else:
-		return None
-	namespace, _, path = filePath.partition('/')
+	path, sep, name = filePath.rpartition('/')
+	nsHandlers = getEntryHandlersForFolder((dpPath, path + sep), handlersDict)
+	return getEntryHandlerForFile2(fullPath, nsHandlers)
 
-	extIndex = path.rfind('.')
-	if extIndex >= 0:
-		extension = path[extIndex:]
-	else:
-		extension = ''
 
-	prefix = ''
-	rest = path
-	while rest:
-		p, _, rest = rest.partition('/')
-		prefix += p + '/'
-		if (handler := handlers.get(EntryHandlerKey(prefix, extension))) is not None:
-			rest = rest[:len(rest) - len(extension)]
-			resourceLocation = ResourceLocation(namespace, rest, handler.isTag)
-			return resourceLocation, handler
-		continue
+def getEntryHandlerForFile2(fullPath: FilePathTpl, nsHandlers: list[tuple[str | None, EntryHandlerInfo, str]]) -> tuple[ResourceLocation | None, EntryHandlerInfo] | None:
+	dpPath, filePath = fullPath
+	name = filePath.rpartition('/')[2].partition('.')[0]
+
+	for namespace, handler, rest in nsHandlers:
+		if not filePath.endswith(handler.extension):
+			continue
+		resLoc = ResourceLocation(namespace, rest + name, handler.isTag) if namespace is not None else None
+		return resLoc, handler
+
 	return None
 
 
-def getEntryHandlersForFolder(fullPath: FilePathTpl, handlers: dict[str, list[EntryHandlerInfo]]) -> list[EntryHandlerInfo]:
-	dpPath, filePath = fullPath
-	if filePath.startswith('data/'):
-		filePath = filePath.removeprefix('data/')
-	else:
-		return []
-	namespace, _, path = filePath.partition('/')
+def getEntryHandlersForFolder(fullPath: FilePathTpl, handlersDict: EntryHandlers) -> list[tuple[str | None, EntryHandlerInfo, str]]:
+	"""
+	:param fullPath:
+	:param handlersDict:
+	:return: list[(namespace | None, EntryHandlerInfo, subdirectory)]
+	"""
+	dpPath, filePath = fullPath if isinstance(fullPath, tuple) else (fullPath, '')
+	if filePath.startswith('/') and len(filePath) > 1:
+		filePath = filePath[1:]
+	if not filePath.endswith('/'):
+		filePath = filePath + '/'
 
-	prefix = ''
-	rest = path
-	while rest:
-		p, _, rest = rest.partition('/')
-		prefix += p + '/'
-		if (handler := handlers.get(prefix)) is not None:
-			return handler
-		continue
-	return []
+	result = []
+	for pattern, handlers in handlersDict.items():
+		match = pattern.match(filePath)
+		if match is None:
+			continue
+
+		namespace = match.groupdict().get('namespace')
+		rest = filePath[match.end():]
+
+		for handler in handlers:
+			if handler.includeSubdirs or not rest:
+				result.append((namespace, handler, rest))
+
+	return result
+
+
+def getMetaInfo(fullPath: FilePathTpl, handlers: EntryHandlers) -> MetaInfo | None:
+	if isinstance(fullPath, tuple):
+		if (resLocHandler := getEntryHandlerForFile(fullPath, handlers)) is not None:
+			rl, handler = resLocHandler
+			metaInfo = handler.buildMetaInfo(fullPath)
+			return metaInfo
 
 
 def collectAllEntries(files: list[FilePathTpl], handlers: EntryHandlers, project: Project) -> None:
 	for fullPath in files:
-		resLocHandler = getEntryHandlerForFile(fullPath, handlers)
-		if resLocHandler is None:
-			continue
-		resLoc, handler = resLocHandler
-		metaInfo = handler.buildMetaInfo(fullPath, resLoc)
-		handler.getIndex(project).add(resLoc, fullPath, metaInfo)
+		if (resLocHandler := getEntryHandlerForFile(fullPath, handlers)) is not None:
+			resLoc, handler = resLocHandler
+			if resLoc is None:
+				continue
+			metaInfo = handler.buildMetaInfo(fullPath)
+			if handler.getIndex is not None:
+				handler.getIndex(project).add(resLoc, fullPath, metaInfo)
 
 
 def autoCompletionTreeForResourceLocations(locations: Iterable[ResourceLocation]) -> AutoCompletionTree:

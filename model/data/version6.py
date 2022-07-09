@@ -1,12 +1,15 @@
 """
 for Minecraft version 1.17
 """
+import re
+
 from model.data.dpVersion import registerDPVersion, DPVersion
+from model.data.json.schemas.dependency import DEPENDENCIES_SCHEMA
 from model.data.json.schemas.predicate import PREDICATE_SCHEMA
 from model.data.json.schemas.rawJsonText import RAW_JSON_TEXT_SCHEMA
 from model.data.json.schemas.tags import *
 from model.datapack.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, DatapackContents, GenerationInfo, DefaultFileInfo, \
-	buildFunctionMeta, buildEntryHandlers, buildJsonMeta, buildNbtMeta
+	buildFunctionMeta, buildEntryHandlers, buildJsonMeta, buildNbtMeta, NAME_SPACE_CAPTURE_GROUP
 from model.json.core import JsonSchema
 
 
@@ -34,35 +37,55 @@ TICK_MCFUNCTION_CONTENTS = f"# add commands here..."
 
 
 DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
+	EntryHandlerInfo(
+		folder=re.compile('/'),
+		extension='pack.mcmeta',
+		isTag=False,
+		includeSubdirs=False,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='pack.mcmeta'),
+		getIndex=None
+	),
+	EntryHandlerInfo(
+		folder=re.compile('/'),
+		extension='dependencies.json',
+		isTag=False,
+		includeSubdirs=False,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='dependencies.json'),
+		getIndex=None
+	),
 	# TagInfos:
 	EntryHandlerInfo(
-		'tags/blocks/',
-		'.json',
-		True,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/blocks'),
-		lambda p: p.setdefaultIndex(DatapackContents).tags.blocks
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/blocks/'),
+		extension='.json',
+		isTag=True,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/blocks'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.blocks
 	),
 	EntryHandlerInfo(
-		'tags/entity_types/',
-		'.json',
-		True,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/entity_types'),
-		lambda p: p.setdefaultIndex(DatapackContents).tags.entity_types
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/entity_types/'),
+		extension='.json',
+		isTag=True,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/entity_types'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.entity_types
 	),
 	EntryHandlerInfo(
-		'tags/fluids/',
-		'.json',
-		True,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/fluids'),
-		lambda p: p.setdefaultIndex(DatapackContents).tags.fluids
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/fluids/'),
+		extension='.json',
+		isTag=True,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/fluids'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.fluids
 	),
 	EntryHandlerInfo(
-		'tags/functions/',
-		'.json',
-		True,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/functions'),
-		lambda p: p.setdefaultIndex(DatapackContents).tags.functions,
-		GenerationInfo(
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/functions/'),
+		extension='.json',
+		isTag=True,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/functions'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.functions,
+		generation=GenerationInfo(
 			initialFiles=[
 				DefaultFileInfo(
 					'load.json',
@@ -78,93 +101,105 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		)
 	),
 	EntryHandlerInfo(
-		'tags/game_events/',
-		'.json',
-		True,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/game_events'),
-		lambda p: p.setdefaultIndex(DatapackContents).tags.game_events
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/game_events/'),
+		extension='.json',
+		isTag=True,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/game_events'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.game_events
 	),
 	EntryHandlerInfo(
-		'tags/items/',
-		'.json',
-		True,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='tags/items'),
-		lambda p: p.setdefaultIndex(DatapackContents).tags.items
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/items/'),
+		extension='.json',
+		isTag=True,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/items'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.items
 	),
 
 	# WorldGenInfos:
 	EntryHandlerInfo(
-		'worldgen/biome/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/biome'),
-		lambda p: p.setdefaultIndex(DatapackContents).worldGen.biome
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/biome/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/biome'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.biome
 	),
 	EntryHandlerInfo(
-		'worldgen/configured_carver/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/configured_carver'),
-		lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_carver
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/configured_carver/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/configured_carver'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_carver
 	),
 	EntryHandlerInfo(
-		'worldgen/configured_feature/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/configured_feature'),
-		lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_feature
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/configured_feature/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/configured_feature'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_feature
 	),
 	EntryHandlerInfo(
-		'worldgen/configured_structure_feature/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/configured_structure_feature'),
-		lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_structure_feature
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/configured_structure_feature/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/configured_structure_feature'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_structure_feature
 	),
 	EntryHandlerInfo(
-		'worldgen/configured_surface_builder/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/configured_surface_builder'),
-		lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_surface_builder
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/configured_surface_builder/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/configured_surface_builder'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_surface_builder
 	),
 	EntryHandlerInfo(
-		'worldgen/noise_settings/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/noise_settings'),
-		lambda p: p.setdefaultIndex(DatapackContents).worldGen.noise_settings
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/noise_settings/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/noise_settings'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.noise_settings
 	),
 	EntryHandlerInfo(
-		'worldgen/processor_list/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/processor_list'),
-		lambda p: p.setdefaultIndex(DatapackContents).worldGen.processor_list
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/processor_list/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/processor_list'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.processor_list
 	),
 	EntryHandlerInfo(
-		'worldgen/template_pool/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='worldgen/template_pool'),
-		lambda p: p.setdefaultIndex(DatapackContents).worldGen.template_pool
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/template_pool/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/template_pool'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.template_pool
 	),
 
 	# DatapackContents:
 	EntryHandlerInfo(
-		'advancements/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='advancements'),
-		lambda p: p.setdefaultIndex(DatapackContents).advancements
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/advancements/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='advancements'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).advancements
 	),
 	EntryHandlerInfo(
-		'functions/',
-		'.mcfunction',
-		False,
-		lambda fp, rl: buildFunctionMeta(fp, rl),
-		lambda p: p.setdefaultIndex(DatapackContents).functions,
-		GenerationInfo(
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/functions/'),
+		extension='.mcfunction',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildFunctionMeta(fp),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).functions,
+		generation=GenerationInfo(
 			initialFiles=[
 				DefaultFileInfo(
 					'load.mcfunction',
@@ -180,55 +215,61 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		)
 	),
 	EntryHandlerInfo(
-		'item_modifiers/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='item_modifiers'),
-		lambda p: p.setdefaultIndex(DatapackContents).item_modifiers
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/item_modifiers/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='item_modifiers'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).item_modifiers
 	),
 	EntryHandlerInfo(
-		'loot_tables/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='loot_tables'),
-		lambda p: p.setdefaultIndex(DatapackContents).loot_tables
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/loot_tables/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='loot_tables'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).loot_tables
 	),
 	EntryHandlerInfo(
-		'predicates/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='predicates'),
-		lambda p: p.setdefaultIndex(DatapackContents).predicates
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/predicates/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='predicates'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).predicates
 	),
 	EntryHandlerInfo(
-		'recipes/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='recipes'),
-		lambda p: p.setdefaultIndex(DatapackContents).recipes
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/recipes/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='recipes'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).recipes
 	),
 	EntryHandlerInfo(
-		'structures/',
-		'.nbt',
-		False,
-		lambda fp, rl: buildNbtMeta(fp, rl),
-		lambda p: p.setdefaultIndex(DatapackContents).structures
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/structures/'),
+		extension='.nbt',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildNbtMeta(fp),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).structures
 	),
 	EntryHandlerInfo(
-		'dimension/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='dimension'),
-		lambda p: p.setdefaultIndex(DatapackContents).dimension
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/dimension/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='dimension'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).dimension
 	),
 	EntryHandlerInfo(
-		'dimension_type/',
-		'.json',
-		False,
-		lambda fp, rl: buildJsonMeta(fp, rl, schemaId='dimension_type'),
-		lambda p: p.setdefaultIndex(DatapackContents).dimension_type
+		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/dimension_type/'),
+		extension='.json',
+		isTag=False,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='dimension_type'),
+		getIndex=lambda p: p.setdefaultIndex(DatapackContents).dimension_type
 	),
-
 ]
 
 DATAPACK_JSON_SCHEMAS: dict[str, JsonSchema] = {
@@ -240,6 +281,7 @@ DATAPACK_JSON_SCHEMAS: dict[str, JsonSchema] = {
 	'tags/game_events': TAGS_GAME_EVENTS,
 	'tags/items': TAGS_ITEMS,
 	'predicates': PREDICATE_SCHEMA,
+	'dependencies.json': DEPENDENCIES_SCHEMA,
 }
 
 version6 = DPVersion(
