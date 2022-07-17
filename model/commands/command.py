@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar
+from typing import TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar, Collection
 
 from Cat.utils import Singleton
 from model.commands.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
@@ -186,7 +186,10 @@ class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPar
 
 @dataclass
 class ParsedComment(CommandPart[CommentSchema]):
-	pass
+
+	@property
+	def children(self) -> Collection[CommandPart]:
+		return ()
 
 
 @dataclass
@@ -197,15 +200,30 @@ class ParsedCommand(CommandPart[CommandSchema]):
 	def nameSpan(self) -> Span:
 		return Span(self.start, self.start + len(self.name))
 
+	@property
+	def children(self) -> Collection[CommandPart]:
+		result = []
+		arg = self.next
+		while arg is not None:
+			result.append(arg)
+			if type(arg) is ParsedCommand:
+				break
+			arg = arg._next
+		return result
+
 
 @dataclass
 class ParsedArgument(CommandPart[ArgumentSchema]):
 	value: Any
 
+	@property
+	def children(self) -> Collection[CommandPart]:
+		return ()
+
 
 @dataclass
 class MCFunction(CommandPart[MCFunctionSchema]):
-	children: list[Union[ParsedCommand, ParsedComment]] = field(default_factory=list)
+	_children: list[Union[ParsedCommand, ParsedComment]] = field(default_factory=list)
 
 	@property
 	def commands(self) -> list[ParsedCommand]:
@@ -214,6 +232,10 @@ class MCFunction(CommandPart[MCFunctionSchema]):
 	@property
 	def comments(self) -> list[ParsedComment]:
 		return [c for c in self.children if isinstance(c, ParsedComment)]
+
+	@property
+	def children(self) -> Collection[CommandPart]:
+		return self._children
 
 
 def _addSchemas(schemas: Sequence[CommandPartSchema], allSchemasIO: list[CommandPartSchema]) -> bool:

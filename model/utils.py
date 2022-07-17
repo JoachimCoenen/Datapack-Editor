@@ -128,7 +128,7 @@ class Span:
 
 
 HTMLStr = strings.HTMLStr
-"""A HTML string. (see: https://daringfireball.net/projects/markdown/)"""
+"""A HTML string."""
 
 MDStr = NewType('MDStr', str)
 """A Markdown string. (see: https://daringfireball.net/projects/markdown/)"""

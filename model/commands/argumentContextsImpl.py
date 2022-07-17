@@ -312,7 +312,7 @@ class BlockStateHandler(ArgumentContext):
 		argsStart = blockID.span.end
 		if pos.index >= argsStart.index:
 			blockStatesDict = self._getBlockStatesDict(blockID)
-			suggestions += suggestionsForFilterArgs(blockState.states, node.source[argsStart.index:node.end], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
+			suggestions += suggestionsForFilterArgs(blockState.states, node.source[argsStart.index:node.end.index], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
 
 		if pos in blockID.span:
 			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
