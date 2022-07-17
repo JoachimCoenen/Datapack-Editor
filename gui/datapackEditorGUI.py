@@ -31,6 +31,7 @@ from gui import lexers
 from session.documents import Document, ErrorCounts
 from model.pathUtils import FilePath, normalizeDirSeparators
 from session.session import getSession
+from settings import applicationSettings
 
 lexers.init()  # don't delete!
 
@@ -862,6 +863,8 @@ def drawCodeField(
 
 	forceLocate = False
 
+	font = applicationSettings.appearance.monospaceFont
+
 	with gui.vLayout(verticalSpacing=0):
 		# actual GUI:
 		with gui.hLayout(horizontalSpacing=0):
@@ -880,6 +883,7 @@ def drawCodeField(
 			returnCursorPos=True,
 			#onCursorPositionChanged=lambda a, b, g=gui: g.customData.__setitem__('currentCursorPos', (a, b)) ,
 			errors=errors,
+			font=font,
 			**codeFieldKwargs,
 			**kwargs
 		)

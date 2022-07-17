@@ -13,6 +13,7 @@ from typing import TypeVar, Generic, Union, Optional, Iterable
 
 from PyQt5.QtGui import QFont, QColor
 
+from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from Cat.extensions import processRecursively
 from Cat.utils import getExePath, openOrCreate
 from Cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
@@ -39,6 +40,14 @@ class StyleFont:
 	overline: Union[bool, NotSet[bool]] = NotSet(False)
 	strikeOut: Union[bool, NotSet[bool]] = NotSet(False)
 
+	def __or__(self, other: StyleFont) -> StyleFont:
+		if not isinstance(other, StyleFont):
+			return NotImplemented
+		return _mergeDataclass(self, other)
+
+	# def __ior__(self, other: StyleFont) -> StyleFont:
+	# 	return self | other
+
 
 @dataclass
 class Style:
@@ -46,42 +55,23 @@ class Style:
 	background: Optional[QColor] = None
 	font: Optional[StyleFont] = None
 
+	def __or__(self, other: Style) -> Style:
+		if not isinstance(other, Style):
+			return NotImplemented
+		return _mergeDataclass(self, other)
+
+	# def __ior__(self, other: Style) -> Style:
+	# 	return self | other
+
+
+EMPTY_STYLE_STYLE = Style()
+
 
 DEFAULT_STYLE_STYLE = Style(
 	foreground=QColor(0x00, 0x00, 0x00),
 	background=QColor(0xff, 0xff, 0xff),
 	font=StyleFont("Consolas", QFont.Monospace, 8)
 )
-
-
-# def mergeFont(font1: StyleFont, font2: StyleFont) -> StyleFont:
-# 	aField: Field
-# 	values = {}
-# 	for aField in fields(StyleFont):
-# 		propName: str = aField.name
-# 		value = getattr(font2, propName)
-# 		if isinstance(value, NotSet):
-# 			value = getattr(font1, propName)
-# 		values[propName] = value
-#
-# 	return StyleFont(**values)
-#
-#
-# def _mergeSimpleVal(val1: _TT, val2: _TT) -> _TT:
-# 	if val2 is None or isinstance(val2, NotSet):
-# 		return val1
-# 	return val2
-#
-#
-# def mergeFont2(font1: Optional[StyleFont], font2: Optional[StyleFont]) -> Optional[StyleFont]:
-# 	aField: Field
-# 	values = {}
-# 	for aField in fields(StyleFont):
-# 		propName: str = aField.name
-# 		value = _mergeSimpleVal(getattr(font1, propName), getattr(font2, propName))
-# 		values[propName] = value
-#
-# 	return StyleFont(**values)
 
 
 def _getWithDefaultsFilled(obj: _TT) -> _TT:
@@ -101,48 +91,32 @@ def _getWithDefaultsFilled(obj: _TT) -> _TT:
 	return type(obj)(**values)
 
 
-def _mergeDataclass(val1: _TT, val2: _TT) -> _TT:
+def mergeVal(val: _TT, overridingVal: _TT) -> _TT:
+	if overridingVal is None or isinstance(overridingVal, NotSet):
+		return val
+	elif val is None or isinstance(val, NotSet):
+		return overridingVal
+	elif is_dataclass(val):
+		return _mergeDataclass(val, overridingVal)
+	else:
+		return overridingVal
+
+
+def _mergeDataclass(val: _TT, overridingVal: _TT) -> _TT:
 	aField: Field
 	values = {}
-	for aField in fields(val2):
+	for aField in fields(overridingVal):
 		if not aField.init:
 			continue
 		propName: str = aField.name
-		value = mergeVal(getattr(val1, propName), getattr(val2, propName))
+		value = mergeVal(getattr(val, propName), getattr(overridingVal, propName))
 		values[propName] = value
 
-	return type(val2)(**values)
+	return type(overridingVal)(**values)
 
 
-def mergeVal(val1: _TT, val2: _TT) -> _TT:
-	if val2 is None or isinstance(val2, NotSet):
-		return val1
-	elif val1 is None or isinstance(val1, NotSet):
-		return val2
-	elif is_dataclass(val1):
-		return _mergeDataclass(val1, val2)
-	else:
-		return val2
-
-
-def mergeStyle(style1: Style, style2: Style) -> Style:
-	mergedStyle = _mergeDataclass(style1, style2)
-	return mergedStyle
-	# foreground = mergeSimpleVal(style1.foreground, style2.foreground)
-	# background = mergeSimpleVal(style1.background, style2.background)
-	#
-	# if style2.font is None:
-	# 	font = style1.font
-	# elif style1.font is None:
-	# 	font = style2.font
-	# else:
-	# 	font = mergeFont(style1.font, style2.font)
-	#
-	# return Style(
-	# 	foreground=foreground,
-	# 	background=background,
-	# 	font=font
-	# )
+def mergeStyle(style: Style, overridingStyle: Style) -> Style:
+	return style | overridingStyle
 
 
 @dataclass
@@ -154,6 +128,16 @@ class ColorScheme:
 	allFallbackSchemes: list[ColorScheme] = field(init=False, default_factory=list)
 
 	defaultStyle: Style = DEFAULT_STYLE_STYLE
+	lineNumberStyle: Style = EMPTY_STYLE_STYLE
+	braceLightStyle: Style = EMPTY_STYLE_STYLE
+	braceBadStyle: Style = EMPTY_STYLE_STYLE
+	controlCharStyle: Style = EMPTY_STYLE_STYLE
+	indentGuideStyle: Style = EMPTY_STYLE_STYLE
+	calltipStyle: Style = EMPTY_STYLE_STYLE
+	foldDisplayTextStyle: Style = EMPTY_STYLE_STYLE
+	caretLineStyle: Style = EMPTY_STYLE_STYLE
+
+	uiColors: Optional[BaseColors] = None
 
 	# styles: dict[LanguageId, dict[str, Style]] = field(default_factory=dict)
 
@@ -193,27 +177,6 @@ class ColorScheme:
 		allFbs = collectAndSemiTopolSortAllNodes(self, attrgetter('localFallbackSchemes'), attrgetter('name'))
 		self.allFallbackSchemes = allFbs
 
-	# def getLocalStyles(self, language: LanguageId) -> Optional[dict[str, Style]]:
-	# 	return self.styles.get(language)
-	#
-	# def getStyles(self, language: LanguageId) -> Optional[dict[str, Style]]:
-	# 	styles = self.getLocalStyles(language)
-	# 	if styles is not None:
-	# 		return styles
-	#
-	# 	for fbScheme in self.allFallbackSchemes:
-	# 		styles = fbScheme.getLocalStyles(language)
-	# 		if styles is not None:
-	# 			return styles
-	#
-	# 	return None
-	#
-	# def getStyle(self, language: LanguageId, style: str) -> Optional[Style]:
-	# 	styles = self.getStyles(language)
-	# 	if styles is None:
-	# 		return None
-	# 	return styles.get(style)
-
 	styles2: dict[LanguageId, Styles] = field(default_factory=dict)
 
 	def getLocalStyles2(self, language: LanguageId) -> Optional[Styles]:
@@ -240,35 +203,11 @@ class ColorScheme:
 			return None
 		return styles.get(style)
 
-	# def getAllStyles(self, language: LanguageId, allStylesIds: Iterable[str]) -> dict[str, Style]:
-	# 	styles = self.getStyles2(language)
-	# 	styleMap = {}
-	# 	if styles is None:
-	# 		return {}
-	#
-	# 	for fullStyleName in allStylesIds:
-	# 		lang, styleName = fullStyleName.partition(':')[::2]
-	# 		style = self.getStyle(lang, styleName)
-	# 		if style is None:
-	# 			style = DEFAULT_STYLE_STYLE
-	# 		style = styles.modifyStyle(lang, style)
-	# 		styleMap[fullStyleName] = style
-	#
-	# 	return styleMap
 
-
-# class StylesLike(ABC):
-# 	@abstractmethod
-# 	def get(self, style: str) -> Optional[Style]:
-# 		raise NotImplementedError('StylesLike.get()')
-#
-# 	@abstractmethod
-# 	def getInnerLanguageStyles(self, innerLanguage: LanguageId) -> Optional[StylesLike]:
-# 		raise NotImplementedError('StylesLike.getInnerLanguageStyles()')
-#
-# 	@abstractmethod
-# 	def getInnerLanguageStyleModifier(self, innerLanguage: LanguageId) -> Optional[Style]:
-# 		raise NotImplementedError('StylesLike.getInnerLanguageStyleModifier()')
+@dataclass
+class StylesModifier:
+	modifier: Optional[Style] = None
+	default: Optional[Style] = None
 
 
 @dataclass
@@ -276,16 +215,10 @@ class Styles:
 	# language: LanguageId
 
 	_styles: dict[str, Style] = field(default_factory=dict)
-	innerLanguageStyleModifiers: dict[LanguageId, Style] = field(default_factory=dict)
+	innerLanguageStyleModifiers: dict[LanguageId, StylesModifier] = field(default_factory=dict)
 
 	def get(self, name: str) -> Optional[Style]:
 		return self._styles.get(name)
-
-	# def modifyStyle(self, language: LanguageId, style: Style) -> Style:
-	# 	return mergeStyle(style, self.getInnerLanguageStyleModifier(language))
-
-	# def getInnerLanguageStyleModifier(self, innerLanguage: LanguageId) -> Optional[Style]:
-	# 	return self.innerLanguageStyleModifiers.get(innerLanguage)
 
 
 @dataclass
@@ -294,26 +227,30 @@ class StylesProxy:
 	language: LanguageId
 	_styles: Styles
 	outerStyles: Optional[Styles]
-	_styleModifier: Optional[Style] = field(init=False)
+	_styleModifier: StylesModifier = field(init=False)
 
 	def __post_init__(self):
 		if self.outerStyles is not None:
-			self._styleModifier = self.outerStyles.innerLanguageStyleModifiers.get(self.language)
+			self._styleModifier = self.outerStyles.innerLanguageStyleModifiers.get(self.language, StylesModifier())
 		else:
-			self._styleModifier = None
-
-	# @property
-	# def _styleModifier(self) -> Optional[Style]:
-	# 	if self.outerStyles is not None:
-	# 		return self.outerStyles.innerLanguageStyleModifiers.get(self._styles.language)
-	# 		# return self.outerStyles.getInnerLanguageStyleModifier(self._styles.language)
+			self._styleModifier = StylesModifier()
 
 	def get(self, styleName: str) -> Optional[Style]:
 		style = self._styles.get(styleName)
 		if style is None:
 			return None
-		if self._styleModifier is not None:
-			style = mergeStyle(style, self._styleModifier)
+
+		if (default2 := self._styleModifier.default) is not None:
+			if styleName == 'default':
+				style = mergeStyle(style, default2)
+			else:
+				style = mergeStyle(default2, style)
+
+		if (default1 := self._styles.get('default')) is not None:
+			style = mergeStyle(default1, style)
+
+		if (modifier := self._styleModifier.modifier) is not None:
+			style = mergeStyle(style, modifier)
 		return style
 
 	def getInnerLanguageStyles(self, innerLanguage: LanguageId) -> Optional[StylesProxy]:

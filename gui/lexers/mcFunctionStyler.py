@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-import enum
 from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
 from typing import Type, Optional, ClassVar
 
 from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
-from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler
+from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum, StylingFunc
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import ItemStack
 from model.commands.command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
 from model.utils import LanguageId
 
 
-class StyleId(enum.IntEnum):
+class StyleId(StyleIdEnum):
 	Default = DEFAULT_STYLE_ID
 	Command = DEFAULT_STYLE_ID + 1
 	String = DEFAULT_STYLE_ID + 2
@@ -87,10 +86,14 @@ _allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
 
 @dataclass
 class ArgumentStyler(ABC):
-	# setStyling: StylingFunc
 	# innerStylers: dict[Type[Node], CatStyler]
 	commandStyler: MCCommandStyler
-	# offset: int
+	offset: int = field(init=False)
+	setStyling: StylingFunc = field(init=False)
+
+	def __post_init__(self):
+		self.offset = self.commandStyler.offset
+		self.setStyling = self.commandStyler.setStyling
 
 	@classmethod
 	@abstractmethod
@@ -111,23 +114,8 @@ argumentStyler = Decorator(AddToDictDecorator(_argumentStylers))
 class MCCommandStyler(CatStyler[CommandPart]):
 
 	@property
-	def localStyles(self) -> dict[str, StyleId]:
-		styles = {
-			StyleId.Default.name:  self.offset + StyleId.Default.value,
-			StyleId.Command.name:  self.offset + StyleId.Command.value,
-			StyleId.String.name:   self.offset + StyleId.String.value,
-			StyleId.Number.name:   self.offset + StyleId.Number.value,
-			StyleId.Constant.name: self.offset + StyleId.Constant.value,
-			StyleId.TargetSelector.name: self.offset + StyleId.TargetSelector.value,
-			StyleId.Operator.name: self.offset + StyleId.Operator.value,
-			StyleId.Keyword.name:  self.offset + StyleId.Keyword.value,
-
-			StyleId.Complex.name:  self.offset + StyleId.Complex.value,
-
-			StyleId.Comment.name:  self.offset + StyleId.Comment.value,
-			StyleId.Error.name:    self.offset + StyleId.Error.value,
-		}
-		return styles
+	def styleIdEnum(self) -> Type[StyleIdEnum]:
+		return StyleId
 
 	argumentStylers: dict[str, ArgumentStyler] = field(init=False, repr=False, compare=False)
 
@@ -138,10 +126,6 @@ class MCCommandStyler(CatStyler[CommandPart]):
 			localInnerLanguages.extend(argS.localLanguages())
 		return list(set(localInnerLanguages))
 		# return [LanguageId('JSON')]
-
-	@property
-	def localStylesCount(self) -> int:
-		return len(StyleId)
 
 	@classmethod
 	def language(cls) -> LanguageId:
@@ -173,7 +157,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		return end
 
 	def styleComment(self, comment: ParsedComment) -> int:
-		self.setStyling(comment.span.slice, StyleId.Comment.value)
+		self.setStyling(comment.span.slice, StyleId.Comment.value + self.offset)
 		return comment.span.end.index
 
 	def styleCommand(self, command: ParsedCommand) -> int:
@@ -204,7 +188,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 							continue
 				else:
 					style = StyleId.Error
-			self.setStyling(span, style.value)
+			self.setStyling(span, style.value + self.offset)
 
 			argument = argument.next
 		return span.stop
@@ -221,7 +205,7 @@ def addSimpleArgumentStyler(style: StyleId, *, forArgTypes: list[ArgumentType]) 
 			return []
 
 		def style(self, argument: ParsedArgument) -> None:
-			self.commandStyler.setStyling(argument.span.slice, styleId)
+			self.setStyling(argument.span.slice, styleId + self.offset)
 
 	for argType in forArgTypes:
 		argumentStyler(argType.name)(SimpleArgumentStyler)
@@ -303,7 +287,7 @@ class ComponentStyler(ArgumentStyler):
 	def style(self, argument: ParsedArgument) -> None:
 		idx = self.commandStyler.styleForeignNode(argument.value)
 		if idx == argument.value.span.start.index:
-			self.commandStyler.setStyling(argument.span.slice, StyleId.Complex.value)
+			self.setStyling(argument.span.slice, StyleId.Complex.value + self.offset)
 
 
 @argumentStyler(MINECRAFT_NBT_COMPOUND_TAG.name, forceOverride=True)
@@ -316,7 +300,7 @@ class SNBTStyler(ArgumentStyler):
 	def style(self, argument: ParsedArgument) -> None:
 		idx = self.commandStyler.styleForeignNode(argument.value)
 		if idx == argument.value.span.start.index:
-			self.commandStyler.setStyling(argument.span.slice, StyleId.Complex.value)
+			self.setStyling(argument.span.slice, StyleId.Complex.value + self.offset)
 
 
 @argumentStyler(MINECRAFT_ITEM_STACK.name, forceOverride=True)
@@ -328,16 +312,16 @@ class ItemStackStyler(ArgumentStyler):
 	def style(self, argument: ParsedArgument) -> None:
 		value: ItemStack = argument.value
 		if not isinstance(value, ItemStack):
-			self.commandStyler.setStyling(argument.span.slice, StyleId.Complex)
+			self.setStyling(argument.span.slice, StyleId.Complex.value + self.offset)
 			return
 
 		idx = self.commandStyler.styleForeignNode(value.itemId)
 		if idx == value.itemId.span.start.index:
-			self.commandStyler.setStyling(value.itemId.span.slice, StyleId.Complex.value)
+			self.setStyling(value.itemId.span.slice, StyleId.Complex.value + self.offset)
 		if value.nbt is not None:
 			idx = self.commandStyler.styleForeignNode(value.nbt)
 			if idx == value.nbt.span.start.index:
-				self.commandStyler.setStyling(value.nbt.span.slice, StyleId.Complex.value)
+				self.setStyling(value.nbt.span.slice, StyleId.Complex.value + self.offset)
 
 
 

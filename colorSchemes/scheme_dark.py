@@ -1,109 +1,95 @@
-from typing import Callable
+from dataclasses import replace, fields
 
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor, qGray
 
-from Cat.utils.collections_ import AddToDictDecorator
-from model.utils import LanguageId
-from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StyleFont
+from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
+from gui.themes.theme import addColorScheme, ColorScheme, Style, StylesModifier
 
 enabled = True
 
 
 def initPlugin():
-	scheme = addColorScheme(ColorScheme('Dark Default', []))
-	# addMCCommandScheme(scheme)
-	# addJsonScheme(scheme)
-	for language, stylesGen in _STYLES_TO_ADD.items():
-		scheme.styles2[language] = stylesGen()
+	addColorScheme(buildColorScheme())
 
 
-StylesGenerator = Callable[[], Styles]
+def buildColorScheme() -> ColorScheme:
+	scheme = ColorScheme('Default Dark', [])
+	from .scheme_default import buildColorScheme
+	lightScheme = buildColorScheme()
+	for language, styles in lightScheme.styles2.items():
+		styles._styles = {name: invertStyle(style) for name, style in styles._styles.items()}
+		styles.innerLanguageStyleModifiers = {name: invertStylesModifier(stylesMode) for name, stylesMode in styles.innerLanguageStyleModifiers.items()}
+		scheme.styles2[language] = styles
 
-_STYLES_TO_ADD: dict[LanguageId, StylesGenerator] = {}
+	scheme.defaultStyle = invertStyle(lightScheme.defaultStyle)
+	scheme.lineNumberStyle = invertStyle(lightScheme.lineNumberStyle)
+	scheme.braceLightStyle = invertStyle(lightScheme.braceLightStyle)
+	scheme.braceBadStyle = invertStyle(lightScheme.braceBadStyle)
+	scheme.controlCharStyle = invertStyle(lightScheme.controlCharStyle)
+	scheme.indentGuideStyle = invertStyle(lightScheme.indentGuideStyle)
+	scheme.calltipStyle = invertStyle(lightScheme.calltipStyle)
+	scheme.foldDisplayTextStyle = invertStyle(lightScheme.foldDisplayTextStyle)
 
-languageStyles = AddToDictDecorator(_STYLES_TO_ADD)
+	scheme.caretLineStyle = invertStyle(lightScheme.caretLineStyle)
 
-
-def lighten(fg: QColor, lightness=.975):
-	return QColor.fromHslF(fg.hueF(), fg.saturationF(), lightness)
-
-
-def invert(fg: QColor, lightness=.975):
-	return QColor.fromHslF(fg.hueF(), fg.saturationF(), 1.0-fg.lightnessF())
-
-
-DEFAULT_STYLE_STYLE = Style(
-	foreground=invert(QColor(0x00, 0x00, 0x00)),
-	background=invert(QColor(0xff, 0xff, 0xff)),
-	font=StyleFont("Consolas", QFont.Monospace, 8)
-)
-
-
-@languageStyles(LanguageId('MCCommand'))
-def addMCCommandScheme():
-	from gui.lexers.mcFunctionStyler import StyleId
-	styles = {
-		StyleId.Default.name:        DEFAULT_STYLE_STYLE,
-		StyleId.Command.name:        Style(foreground=invert(QColor(0x88, 0x0A, 0xE8))),
-		StyleId.String.name:         Style(foreground=invert(QColor(0x7f, 0x00, 0x00))),
-		StyleId.Number.name:         Style(foreground=invert(QColor(0x00, 0x7f, 0x7f))),
-		StyleId.Constant.name:       Style(foreground=invert(QColor(0x00, 0x00, 0xBf))),
-		StyleId.TargetSelector.name: Style(foreground=invert(QColor(0x00, 0x7f, 0x7f))),
-		StyleId.Operator.name:       Style(foreground=invert(QColor(0x00, 0x00, 0x00))),
-		StyleId.Keyword.name:        Style(foreground=invert(QColor(0x00, 0x00, 0x00))),
-
-		StyleId.Complex.name:        Style(foreground=invert(QColor(0x7f, 0x7f, 0x00))),
-
-		StyleId.Comment.name:        Style(foreground=invert(QColor(0x7f, 0x7f, 0x7f)), font=StyleFont(italic=True)),
-		StyleId.Error.name:          Style(foreground=invert(QColor(0xff, 0x00, 0x00))),
-	}
-
-	innerLanguageStyleModifiers = {
-		LanguageId('JSON'): Style(background=invert(lighten(styles[StyleId.String.name].foreground, 0.95))),
-		LanguageId('SNBT'): Style(background=invert(lighten(styles[StyleId.Complex.name].foreground, 0.925))),
-	}
-
-	return Styles(styles, innerLanguageStyleModifiers)
+	scheme.uiColors = invertUIColors(lightScheme.uiColors)
+	return scheme
 
 
-@languageStyles(LanguageId('JSON'))
-def addJsonScheme():
-	from gui.lexers.jsonStyler import StyleId
-	styles = {
-		StyleId.default.name: DEFAULT_STYLE_STYLE,
-		StyleId.null.name:    Style(foreground=invert(QColor(0x00, 0x00, 0xBf))),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
-		StyleId.boolean.name: Style(foreground=invert(QColor(0x00, 0x00, 0xBf))),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
-		StyleId.number.name:  Style(foreground=invert(QColor(0x00, 0x7f, 0x7f))),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),
-		StyleId.string.name:  Style(foreground=invert(QColor(0x7f, 0x00, 0x00))),  # , background=lighten(QColor(0x7f, 0x00, 0x00))),
-		StyleId.key.name:     Style(foreground=invert(QColor(0x88, 0x0A, 0xE8))),  # , background=lighten(QColor(0x88, 0x0A, 0xE8))),  # .lighten(209)),
-		StyleId.invalid.name: Style(foreground=invert(QColor(0xff, 0x00, 0x00))),  # , background=lighten(QColor(0xff, 0x00, 0x00))),  # .lighten(209)),
-	}
-
-	innerLanguageStyleModifiers = {
-		LanguageId('MCCommand'): Style(background=invert(lighten(styles[StyleId.boolean.name].foreground, 0.95))),
-		LanguageId('SNBT'): Style(background=invert(lighten(QColor(0x7f, 0x7f, 0x00), 0.925))),
-	}
-
-	return Styles(styles, innerLanguageStyleModifiers)
+def invertUIColors(uiColors: BaseColors) -> BaseColors:
+	inverted = {}
+	for f in fields(uiColors):
+		inverted[f.name] = invert(getattr(uiColors, f.name))
+	return BaseColors(**inverted)
 
 
-@languageStyles(LanguageId('SNBT'))
-def addSNBTScheme():
-	from gui.lexers.snbtStyler import StyleId
-	styles = {
-		StyleId.default.name: DEFAULT_STYLE_STYLE,
-		StyleId.boolean.name:   Style(foreground=invert(QColor(0x00, 0x00, 0xBf))),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
-		StyleId.intLike.name:   Style(foreground=invert(QColor(0x00, 0x7f, 0x7f))),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),
-		StyleId.floatLike.name: Style(foreground=invert(QColor(0x00, 0x7f, 0x7f))),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),
-		StyleId.string.name:    Style(foreground=invert(QColor(0x7f, 0x00, 0x00))),  # , background=lighten(QColor(0x7f, 0x00, 0x00))),
-		StyleId.key.name:       Style(foreground=invert(QColor(0x88, 0x0A, 0xE8))),  # , background=lighten(QColor(0x88, 0x0A, 0xE8))),  # .lighten(209)),
-		StyleId.invalid.name:   Style(foreground=invert(QColor(0xff, 0x00, 0x00))),  # , background=lighten(QColor(0xff, 0x00, 0x00))),  # .lighten(209)),
-	}
-
-	innerLanguageStyleModifiers = {
-	}
-
-	return Styles(styles, innerLanguageStyleModifiers)
+def invertStylesModifier(stylesMod: StylesModifier) -> StylesModifier:
+	modifier = invertStyle(stylesMod.modifier) if stylesMod.modifier is not None else None
+	default = invertStyle(stylesMod.default) if stylesMod.default is not None else None
+	return replace(stylesMod, modifier=modifier, default=default)
 
 
-print("math module says hi!")
+def invertStyle(style: Style) -> Style:
+	foreground = invert(style.foreground) if style.foreground is not None else None
+	background = invert(style.background) if style.background is not None else None
+	return replace(style, foreground=foreground, background=background)
+
+
+def invert(c1: QColor):
+	value = 1 - (qGray(c1.rgb()) / 255)
+	# print(f"value = {value}")
+	c2 = QColor.fromRgbF(value, value, value, c1.alphaF())
+	cr3 = matchValue(c1, matchTo=c2)
+	cr4 = matchValue2(c1, matchTo=c2)
+
+	power = 1.2
+
+	lightness = c1.lightnessF()
+	lightness2 = lightness**power
+	darkness2 = 1.0 - lightness2
+	darkness = darkness2**(1 / power)
+	cr1 = QColor.fromHslF(c1.hueF(), c1.hslSaturationF(), darkness)
+	cr2 = QColor.fromHsvF(c1.hsvHueF(), c1.hsvSaturationF(), 1.0-c1.valueF())
+	return cr1
+
+
+def matchValue(c1: QColor, *, matchTo: QColor) -> QColor:
+	br2 = qGray(matchTo.rgb())
+	br1 = qGray(c1.rgb())
+	val3 = c1.valueF() * br2 / br1 if br1 != 0 else matchTo.valueF()
+	val3 = min(1., val3)
+	c3 = QColor.fromHsvF(c1.hsvHueF(), c1.hsvSaturationF(), val3, matchTo.alphaF())
+	return c3
+
+
+def matchValue2(c1: QColor, *, matchTo: QColor) -> QColor:
+	br2 = qGray(matchTo.rgb())
+	br1 = qGray(c1.rgb())
+	val3 = c1.lightnessF() * br2 / br1 if br1 != 0 else matchTo.lightnessF()
+	val3 = min(1., val3)
+	c3 = QColor.fromHsvF(c1.hslHueF(), c1.hslSaturationF(), val3, matchTo.alphaF())
+	return c3
+
+
+def colorToStr(c: QColor):
+	return c.name()

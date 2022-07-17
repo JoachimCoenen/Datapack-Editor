@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import enum
 from dataclasses import dataclass
-from typing import ClassVar, Callable
+from typing import ClassVar, Callable, Type
 
 from Cat.utils.collections_ import AddToDictDecorator
-from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler
+from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum
 from model.json.core import *
 from model.parsing.tree import Node
 from model.utils import LanguageId
 
 
-class StyleId(enum.IntEnum):
+class StyleId(StyleIdEnum):
 	default = DEFAULT_STYLE_ID
 	null    = DEFAULT_STYLE_ID + 1
 	boolean = DEFAULT_STYLE_ID + 2
@@ -26,25 +25,12 @@ class StyleId(enum.IntEnum):
 class JsonStyler(CatStyler[JsonData]):
 
 	@property
-	def localStyles(self) -> dict[str, StyleId]:
-		styles = {
-			StyleId.default.name: self.offset + StyleId.default.value,
-			StyleId.null.name:    self.offset + StyleId.null.value,
-			StyleId.boolean.name: self.offset + StyleId.boolean.value,
-			StyleId.number.name:  self.offset + StyleId.number.value,
-			StyleId.string.name:  self.offset + StyleId.string.value,
-			StyleId.key.name:     self.offset + StyleId.key.value,
-			StyleId.invalid.name: self.offset + StyleId.invalid.value,
-		}
-		return styles
+	def styleIdEnum(self) -> Type[StyleIdEnum]:
+		return StyleId
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
 		return [LanguageId('SNBT'), LanguageId('MCCommand')]
-
-	@property
-	def localStylesCount(self) -> int:
-		return self._localStylesCount
 
 	@classmethod
 	def language(cls) -> LanguageId:
@@ -62,7 +48,6 @@ class JsonStyler(CatStyler[JsonData]):
 		self.STRING_STYLE:  StyleId = self.offset + StyleId.string.value
 		self.KEY_STYLE:     StyleId = self.offset + StyleId.key.value
 		self.INVALID_STYLE: StyleId = self.offset + StyleId.invalid.value
-		self._localStylesCount = 7
 
 	def styleNode(self, data: JsonData) -> int:
 		return self._STYLERS[data.typeName](self, data)
