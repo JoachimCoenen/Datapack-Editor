@@ -69,24 +69,23 @@ _TN = TypeVar('_TN', int, float)
 
 
 @dataclass
-class JsonData(Node['JsonData', 'JsonSchema'], ABC):
-	schema: Optional[JsonSchema]
-
-	typeName: ClassVar[str] = 'JsonData'
-
+class JsonNode(Node['JsonNode', 'JsonSchema'], ABC):
+	typeName: ClassVar[str] = 'JsonNode'
 	language: ClassVar[LanguageId] = 'JSON'
+
+	schema: Optional[JsonSchema]
 
 	@property
 	@abstractmethod
-	def children(self) -> Collection[JsonData]:
+	def children(self) -> Collection[JsonNode]:
 		return ()
 
-	def walkTree(self) -> Iterator[JsonData]:
+	def walkTree(self) -> Iterator[JsonNode]:
 		yield self
 		yield from _walkChildren(self.children)
 
 
-def _walkChildren(children: Collection[JsonData]) -> Iterator[JsonData]:
+def _walkChildren(children: Collection[JsonNode]) -> Iterator[JsonNode]:
 	for child in children:
 		yield child
 		innerChildren = child.children
@@ -95,21 +94,28 @@ def _walkChildren(children: Collection[JsonData]) -> Iterator[JsonData]:
 
 
 @dataclass
+class JsonData(JsonNode, ABC):
+	typeName: ClassVar[str] = 'JsonData'
+	data: object
+
+
+@dataclass
 class JsonInvalid(JsonData):
 	typeName: ClassVar[str] = 'invalid'
 	data: str
 
 	@property
-	def children(self) -> Collection[JsonData]:
+	def children(self) -> Collection[JsonNode]:
 		return ()
 
 
 @dataclass
 class JsonNull(JsonData):
 	typeName: ClassVar[str] = 'null'
+	data: None = None
 
 	@property
-	def children(self) -> Collection[JsonData]:
+	def children(self) -> Collection[JsonNode]:
 		return ()
 
 
@@ -119,7 +125,7 @@ class JsonBool(JsonData):
 	typeName: ClassVar[str] = 'boolean'
 
 	@property
-	def children(self) -> Collection[JsonData]:
+	def children(self) -> Collection[JsonNode]:
 		return ()
 
 
@@ -129,7 +135,7 @@ class JsonNumber(JsonData):
 	typeName: ClassVar[str] = 'number'
 
 	@property
-	def children(self) -> Collection[JsonData]:
+	def children(self) -> Collection[JsonNode]:
 		return ()
 
 
@@ -141,7 +147,7 @@ class JsonString(JsonData):
 	typeName: ClassVar[str] = 'string'
 
 	@property
-	def children(self) -> Collection[JsonData]:
+	def children(self) -> Collection[JsonNode]:
 		return ()
 
 
@@ -156,7 +162,7 @@ class JsonArray(JsonData):
 
 
 @dataclass
-class JsonProperty(JsonData):
+class JsonProperty(JsonNode):
 	key: JsonString
 	value: JsonData
 	schema: Optional[SwitchingPropertySchema]
@@ -174,7 +180,7 @@ class JsonObject(JsonData):
 	typeName: ClassVar[str] = 'object'
 
 	@property
-	def children(self) -> Collection[JsonData]:
+	def children(self) -> Collection[JsonProperty]:
 		return self.data.values()
 
 
@@ -297,7 +303,7 @@ JSON_KEY_SCHEMA = JsonKeySchema()
 
 class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 	TOKEN = TokenType.invalid
-	DATA_TYPE: ClassVar[Type[JsonData]] = JsonProperty
+	DATA_TYPE: ClassVar[Type[JsonNode]] = JsonProperty
 	typeName: ClassVar[str] = 'property'
 
 	def __init__(
@@ -485,7 +491,7 @@ __all__ = [
 	'Object',
 	'JsonTypes',
 
-	'JsonProperty',
+	'JsonNode',
 	'JsonData',
 	'JsonInvalid',
 	'JsonNull',
@@ -494,6 +500,7 @@ __all__ = [
 	'JsonString',
 	'JsonArray',
 	'JsonObject',
+	'JsonProperty',
 
 	'JsonSchema',
 	'JsonNullSchema',

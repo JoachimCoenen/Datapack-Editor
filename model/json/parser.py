@@ -34,7 +34,7 @@ _BOOLEAN_TOKENS = {
 @registerParser(LanguageId('MCJson'))
 @registerParser(LanguageId('JSON'))
 @dataclass
-class JsonParser(ParserBase[JsonData, JsonSchema]):
+class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	allowMultilineStr: bool = False
 
 	# tokens: deque[Token] = field(init=False)
@@ -165,7 +165,6 @@ class JsonParser(ParserBase[JsonData, JsonSchema]):
 
 	def parse_array(self) -> JsonArray:
 		"""Parses an array out of JSON tokens"""
-
 		arrayData: list[JsonData] = []
 
 		start = self._last

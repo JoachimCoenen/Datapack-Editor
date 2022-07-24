@@ -22,7 +22,7 @@ class StyleId(StyleIdEnum):
 
 @registerStyler
 @dataclass
-class JsonStyler(CatStyler[JsonData]):
+class JsonStyler(CatStyler[JsonNode]):
 
 	@property
 	def styleIdEnum(self) -> Type[StyleIdEnum]:
