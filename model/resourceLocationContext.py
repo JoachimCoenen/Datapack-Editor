@@ -5,12 +5,12 @@ from typing import Iterable, Mapping, Optional, final
 from PyQt5.QtWidgets import QWidget
 
 from Cat.utils import Decorator
-from model.Model import Datapack
 from model.data.mcVersions import MCVersion
-from model.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations, metaInfoFromResourceLocation, containsResourceLocation, ResourceLocationNode, \
-	ResourceLocationSchema
+from model.datapack.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations, metaInfoFromResourceLocation, containsResourceLocation, ResourceLocationNode, \
+	ResourceLocationSchema, DatapackContents
 from model.messages import *
 from model.parsing.contextProvider import Suggestions, registerContextProvider, ContextProvider, Match, AddContextToDictDecorator, Context
+from model.project import Project
 from model.utils import Span, GeneralError, SemanticsError, MDStr, Position
 from session.session import getSession
 
@@ -63,11 +63,11 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 		return self._allowTags
 
 	@abstractmethod
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		pass
 
 	@abstractmethod
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		pass
 
 	@abstractmethod
@@ -83,9 +83,9 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 
 	def validate(self, value: ResourceLocationNode, errorsIO: list[GeneralError]) -> None:
 		if value.isTag:
-			isValid = any(containsResourceLocation(value, tags) for dp in getSession().world.datapacks for tags in self.tagsFromDP(dp))
+			isValid = any(containsResourceLocation(value, tags) for dp in getSession().project.deepDependencies for tags in self.tagsFromDP(dp))
 		else:
-			isValid = any(containsResourceLocation(value, values) for dp in getSession().world.datapacks for values in self.valuesFromDP(dp))
+			isValid = any(containsResourceLocation(value, values) for dp in getSession().project.deepDependencies for values in self.valuesFromDP(dp))
 			if not isValid:
 				isValid = containsResourceLocation(value, self.valuesFromMC(getSession().minecraftData))
 		if isValid:
@@ -108,13 +108,13 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 					yield from it
 
 		if self.allowTags:
-			tagsIter = (self.tagsFromDP(dp) for dp in getSession().world.datapacks)
+			tagsIter = (self.tagsFromDP(dp) for dp in getSession().project.deepDependencies)
 		else:
 			tagsIter = ()
 
 		locations = chain(*chain(
 				*tagsIter,
-				*(self.valuesFromDP(dp) for dp in getSession().world.datapacks)
+				*(self.valuesFromDP(dp) for dp in getSession().project.deepDependencies)
 			),
 			self.valuesFromMC(getSession().minecraftData)
 		)
@@ -123,7 +123,7 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 	def getDocumentation(self, node: ResourceLocationNode, pos: Position) -> MDStr:
 		if not isinstance(node, ResourceLocation):
 			return MDStr('')
-		for dp in getSession().world.datapacks:
+		for dp in getSession().project.deepDependencies:
 			if node.isTag:
 				for tags in self.tagsFromDP(dp):
 					if (info := tags.get(node)) is not None:
@@ -138,15 +138,15 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 		if not isinstance(node, ResourceLocation):
 			return ()
 		if node.isTag:
-			isValid = any(containsResourceLocation(node, tags) for dp in getSession().world.datapacks for tags in self.tagsFromDP(dp))
+			isValid = any(containsResourceLocation(node, tags) for dp in getSession().project.deepDependencies for tags in self.tagsFromDP(dp))
 		else:
-			isValid = any(containsResourceLocation(node, values) for dp in getSession().world.datapacks for values in self.valuesFromDP(dp))
+			isValid = any(containsResourceLocation(node, values) for dp in getSession().project.deepDependencies for values in self.valuesFromDP(dp))
 		return [node.span] if isValid else ()
 
 	def onIndicatorClicked(self, node: ResourceLocationNode, pos: Position, window: QWidget) -> None:
 		if not isinstance(node, ResourceLocation):
 			return None
-		for dp in getSession().world.datapacks:
+		for dp in getSession().project.deepDependencies:
 			for tags in self.tagsFromDP(dp):
 				if (metaInfo := metaInfoFromResourceLocation(node, tags)) is not None:
 					window._tryOpenOrSelectDocument(metaInfo.filePath)
@@ -172,11 +172,11 @@ class DimensionContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'advancement'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.advancements,)
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).advancements,)
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
 		return ()
@@ -190,10 +190,10 @@ class BlockContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'block'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.tags.blocks,)
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).tags.blocks,)
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -207,11 +207,11 @@ class DimensionContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'dimension'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.dimension,)
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).dimension,)
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
 		return mc.dimensions
@@ -225,10 +225,10 @@ class EntityContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'entity'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.tags.entity_types,)
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).tags.entity_types,)
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -246,10 +246,10 @@ class FluidContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'fluid'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.tags.fluids,)
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).tags.fluids,)
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -262,11 +262,11 @@ class FunctionContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'function'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.tags.functions,)
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).tags.functions,)
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.functions,)
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).functions,)
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
 		return ()
@@ -278,10 +278,10 @@ class GameEventsContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'game_event'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.tags.game_events,)
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).tags.game_events,)
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -294,10 +294,10 @@ class ItemEnchantmentContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'enchantment'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -312,10 +312,10 @@ class ItemsContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'item'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.tags.items,)
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).tags.items,)
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -328,10 +328,10 @@ class MobEffectContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'mob_effect'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -344,10 +344,10 @@ class ParticleContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'particle'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -360,11 +360,11 @@ class PredicateContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'predicate'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-		return (dp.contents.predicates,)
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+		return (dp.setdefaultIndex(DatapackContents).predicates,)
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
 		return ()
@@ -376,10 +376,10 @@ class StructureContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'potion'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -392,10 +392,10 @@ class BiomeIdContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'biome'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -408,10 +408,10 @@ class StructureContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'structure'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -424,10 +424,10 @@ class ConditionIdContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'condition'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -441,10 +441,10 @@ class CommandStorageContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'command_storage'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
@@ -462,10 +462,10 @@ class AnyContext(ResourceLocationContext):
 	def name(self) -> str:
 		return 'resource_location'
 
-	def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
-	def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
+	def valuesFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
 		return ()
 
 	def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:

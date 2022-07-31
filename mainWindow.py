@@ -17,7 +17,7 @@ from Cat.icons import icons
 from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
 from gui.themes import theme
 from keySequences import KEY_SEQUENCES
-from model.utils import Span, GeneralError, Position
+from model.utils import Span, GeneralError
 from session.session import getSession, WindowId, saveSessionToFile
 from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
 from session import documentsImpl
@@ -151,7 +151,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			pass
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		gui.editor(DatapackFilesEditor, getSession().world, roundedCorners=CORNERS.RIGHT).redrawLater()
+		gui.editor(DatapackFilesEditor, getSession(), roundedCorners=CORNERS.RIGHT).redrawLater()
 
 	def documentToolBarGUI(self, gui: DatapackEditorGUI, button, btnCorners, btnOverlap, btnMargins):
 		button = gui.framelessButton
@@ -212,8 +212,8 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		btnKwArgs = dict(roundedCorners=btnCorners, overlap=btnOverlap, margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value)
 
 		with gui.hLayout(horizontalSpacing=hSpacing):
-			hasOpenedWorld = getSession().hasOpenedWorld
-			if button(icon=icons.globeAlt, tip='Switch World' if hasOpenedWorld else 'Load World', **btnKwArgs, default=not hasOpenedWorld):
+			hasOpenedProject = getSession().hasOpenedProject
+			if button(icon=icons.globeAlt, tip='Switch Project' if hasOpenedProject else 'Load Project', **btnKwArgs, default=not hasOpenedProject):
 				self._loadWorldDialog(gui)
 
 			docToolBarGUI = gui.subGUI(type(gui), lambda g: self.documentToolBarGUI(g, button=button, btnCorners=btnCorners, btnOverlap=btnOverlap, btnMargins=btnMargins), hSizePolicy=SizePolicy.Fixed.value)
@@ -350,11 +350,11 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	@staticmethod
 	def _loadWorldDialog(gui: DatapackEditorGUI) -> None:
 		session = getSession()
-		oldPath = session.world.path
-		oldPath = applicationSettings.minecraft.savesLocation
+		oldPath = session.project.path
+		# oldPath = applicationSettings.minecraft.savesLocation
 		newPath = gui.showFolderDialog(oldPath)
 		if newPath is not None:
-			session.openWorld(newPath)
+			session.openProject(newPath)
 
 	# Fields:
 
@@ -408,10 +408,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				return False
 			return True
 
-	def _tryOpenOrSelectDocument(self, filePath: FilePath, selectedPosition: Optional[Position] = None):
+	def _tryOpenOrSelectDocument(self, filePath: FilePath, selectedSpan: Optional[Span] = None):
 		# find Document if is alredy open:
 		try:
-			getSession().documents.openOrShowDocument(filePath, Span(selectedPosition) if selectedPosition is not None else None)
+			getSession().documents.openOrShowDocument(filePath, selectedSpan)
 			self._gui.redrawGUI()
 		except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
 			getSession().showAndLogError(e)

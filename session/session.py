@@ -11,9 +11,9 @@ from Cat.Serializable import SerializableContainer, RegisterContainer, Serialize
 from Cat.utils import getExePath, openOrCreate, format_full_exc
 from Cat.utils.profiling import logError
 from Cat.utils.signals import CatSignal, CatBoundSignal
-from model.Model import World
 from model.data.mcVersions import MCVersion, getMCVersion
-from model.datapack.dpVersion import DPVersion, getDPVersion
+from model.data.dpVersion import DPVersion, getDPVersion
+from model.project import Project
 from session.documentHandling import DocumentsManager
 from settings import applicationSettings
 
@@ -29,23 +29,23 @@ class Session(SerializableContainer):
 		# giving the type checker a helping hand...
 		pass
 
-	world: World = Serialized(default_factory=World)
-	hasOpenedWorld: bool = Computed(getInitValue=lambda s: bool(s.world.isValid))
+	project: Project = Serialized(default_factory=Project)
+	hasOpenedProject: bool = Computed(getInitValue=lambda s: bool(s.project.isValid))
 
 	documents: DocumentsManager = Serialized(default_factory=DocumentsManager, decorators=[pd.NoUI()])
 
 	minecraftData: MCVersion = Computed(default_factory=lambda: getMCVersion(applicationSettings.minecraft.version))
 	datapackData: DPVersion = Computed(default_factory=lambda: getDPVersion(applicationSettings.minecraft.dpVersion))
 
-	def closeWorld(self) -> None:
-		world = self.world
-		world.reset()
+	def closeProject(self) -> None:
+		project = self.project
+		project.reset()
 		# resetAllGlobalCaches()
 		gc.collect()
 
-	def openWorld(self, newWorldPath: str) -> None:
-		self.closeWorld()
-		self.world.path = newWorldPath
+	def openProject(self, newWorldPath: str) -> None:
+		self.closeProject()
+		self.project.path = newWorldPath
 
 	onError: CatBoundSignal[Session, Callable[[Exception, str], None]] = CatSignal[Callable[[Exception, str], None]]('onError')
 

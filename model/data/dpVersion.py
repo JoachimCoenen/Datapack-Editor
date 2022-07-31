@@ -1,24 +1,16 @@
+import re
 from copy import copy
 from dataclasses import dataclass, fields, Field, is_dataclass
 from typing import Optional
 
-from model.datapackContents import EntryHandlers, EntryHandlerInfo
+from model.datapack.datapackContents import EntryHandlers
 from model.json.core import JsonSchema
 
 
 @dataclass
 class DPVersion:
 	name: str
-
 	structure: EntryHandlers
-
-	@property
-	def byFolder(self) -> dict[str, list[EntryHandlerInfo]]:
-		result = {}
-		for handler in self.structure.values():
-			result.setdefault(handler.folder, []).append(handler)
-		return result
-
 	jsonSchemas: dict[str, JsonSchema]
 
 

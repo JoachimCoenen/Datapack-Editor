@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TypeVar, Generic, Optional, ClassVar, Protocol
+from typing import Collection, Iterable, Iterator, TypeVar, Generic, Optional, ClassVar, Protocol
 
 from model.utils import Span, LanguageId
 
@@ -13,6 +13,13 @@ class TokenLike(Protocol):
 	type: Enum
 	span: Span
 	startEnd: slice
+
+
+def _walkTree(children: Iterable[_TNode]) -> Iterator[_TNode]:
+	for child in children:
+		yield child
+		if innerChildren := child.children:
+			yield from _walkTree(innerChildren)
 
 
 @dataclass
@@ -30,18 +37,17 @@ class Node(Generic[_TNode, _TSchema]):
 	# 	"""
 	# 	pass
 
-	# @property
-	# @abstractmethod
-	# def children(self) -> Collection[_TNode]:
-	# 	"""
-	# 	:return: a collection of its children
-	# 	"""
-	# 	return ()
-	#
-	# def walkTree(self) -> Iterator[_TNode]:
-	# 	yield self
-	# 	for child in self.children:
-	# 		yield from child.walkTree()
+	@property
+	@abstractmethod
+	def children(self) -> Collection[_TNode]:
+		"""
+		:return: a collection of its children
+		"""
+		return ()
+
+	def walkTree(self) -> Iterator[_TNode]:
+		yield self
+		yield from _walkTree(self.children)
 
 
 @dataclass

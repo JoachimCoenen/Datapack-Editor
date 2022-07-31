@@ -1,6 +1,7 @@
+from __future__ import annotations
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
-from typing import Generic, TypeVar, Iterable, Optional, Type, final, Protocol
+from typing import Generic, Protocol, TypeVar, Iterable, Optional, Type, final
 
 from PyQt5.QtWidgets import QWidget
 
@@ -9,7 +10,7 @@ from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.collections_.collections_ import IfKeyIssubclassGetter
 from model.parsing.parser import parse, IndexMapper
 from model.parsing.tree import Node, Schema
-from model.utils import Span, Position, GeneralError, MDStr, LanguageId
+from model.utils import LanguageId, MDStr, Span, Position, GeneralError
 
 _TNode = TypeVar('_TNode', bound=Node)
 
@@ -51,6 +52,14 @@ class Context(Generic[_TNode]):
 	def onIndicatorClicked(self, node: _TNode, pos: Position, window: QWidget) -> None:
 		pass
 
+	# @abstractmethod
+	def getWordCharacters(self, node: _TNode, pos: Position) -> Optional[str]:
+		return None  #  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
+
+	# @abstractmethod
+	def getAutoCompletionWordSeparators(self, node: _TNode, pos: Position) -> list[str]:
+		return []  # ['.', '::', '->']
+
 
 _TContext = TypeVar('_TContext', bound=Context)
 
@@ -78,28 +87,10 @@ class Match(Generic[_TNode]):
 	contained: list[_TNode]
 
 
-class StylingFunc(Protocol):
-	def call(self, length: int, style: int) -> None:
-		...
-
-
 class ContextProvider(Generic[_TNode], ABC):
 	def __init__(self, tree: _TNode, text: bytes):
 		self.tree: _TNode = tree
 		self.text: bytes = text
-
-	# @classmethod
-	# @abstractmethod
-	# def parse(cls, text: str, errorsIO: list[GeneralError]) -> _TNode:
-	# 	pass
-	#
-	# @abstractmethod
-	# def getStyles(self) -> dict[str, int]:
-	# 	pass
-	#
-	# @abstractmethod
-	# def styleText(self, start: int, end: int, startStyling: Callable[[int], None], setStyle: StylingFunc):
-	# 	pass
 
 	@abstractmethod
 	def getBestMatch(self, pos: Position) -> Match[_TNode]:
@@ -109,13 +100,17 @@ class ContextProvider(Generic[_TNode], ABC):
 	def getContext(self, node: _TNode) -> Optional[Context]:
 		pass
 
-	@abstractmethod
 	def prepareTree(self) -> list[GeneralError]:
-		pass
+		errorsIO = []
+		for node in self.tree.walkTree():
+			if (ctx := self.getContext(node)) is not None:
+				ctx.prepare(node, errorsIO)
+		return errorsIO
 
 	def validateTree(self, errorsIO: list[GeneralError]) -> None:
-		if (ctx := self.getContext(self.tree)) is not None:
-			ctx.validate(self.tree, errorsIO)
+		for node in self.tree.walkTree():
+			if (ctx := self.getContext(node)) is not None:
+				ctx.validate(node, errorsIO)
 
 	# @abstractmethod
 	# def validate(self, data: _TNode, errorsIO: list[GeneralError]) -> None:
@@ -143,7 +138,7 @@ class ContextProvider(Generic[_TNode], ABC):
 
 	@abstractmethod
 	def getCallTips(self, pos: Position) -> list[str]:
-		pass
+		return []
 
 	@final
 	def getClickableRanges(self, span: Span = ...) -> Iterable[Span]:
@@ -153,13 +148,41 @@ class ContextProvider(Generic[_TNode], ABC):
 
 	@abstractmethod
 	def getClickableRangesInternal(self, span: Span) -> Iterable[Span]:
-		return ()
+		ranges: list[Span] = []
+		for node in self.tree.walkTree():
+			if not node.span.overlaps(span):
+				continue
+			if(ctx := self.getContext(node)) is not None:
+				partRanges = ctx.getClickableRanges(node)
+				if partRanges:
+					ranges.extend(partRanges)
+		return ranges
 
 	def onIndicatorClicked(self, pos: Position, window: QWidget) -> None:
 		match = self.getBestMatch(pos)
 		if match.hit is not None:
 			if (ctx := self.getContext(match.hit)) is not None:
 				ctx.onIndicatorClicked(match.hit, pos, window)
+
+	@property
+	def defaultWordCharacters(self) -> str:
+		return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
+
+	def getWordCharacters(self, pos: Position) -> Optional[str]:
+		match = self.getBestMatch(pos)
+		if match.hit is not None:
+			if (ctx := self.getContext(match.hit)) is not None:
+				if (wordCharacters := ctx.getWordCharacters(match.hit, pos)) is not None:
+					return wordCharacters
+
+		return self.defaultWordCharacters
+
+	def getAutoCompletionWordSeparators(self, pos: Position) -> list[str]:
+		match = self.getBestMatch(pos)
+		if match.hit is not None:
+			if (ctx := self.getContext(match.hit)) is not None:
+				return ctx.getAutoCompletionWordSeparators(match.hit, pos)
+		return []
 
 
 __contextProviders: dict[Type[Node], Type[ContextProvider]] = {}
@@ -208,9 +231,8 @@ def parseNPrepare(
 		indexMapper=indexMapper,
 		**kwargs
 	)
-	if node is not None and (ctxProvider := getContextProvider(node, text)) is not None:
-		errors2 = ctxProvider.prepareTree()
-		errors.extend(errors2)
+	if node is not None:
+		errors += prepareTree(node, text)
 	return node, errors
 
 
@@ -255,6 +277,18 @@ def onIndicatorClicked(node: Node, text: bytes, pos: Position, window: QWidget) 
 		return ctxProvider.onIndicatorClicked(pos, window)
 
 
+def getWordCharacters(node: Node, text: bytes, pos: Position) -> Optional[str]:
+	if (ctxProvider := getContextProvider(node, text)) is not None:
+		return ctxProvider.getWordCharacters(pos)
+	return None
+
+
+def getAutoCompletionWordSeparators(node: Node, text: bytes, pos: Position) -> list[str]:
+	if (ctxProvider := getContextProvider(node, text)) is not None:
+		return ctxProvider.getAutoCompletionWordSeparators(pos)
+	return []
+
+
 __all__ = [
 	'Suggestion',
 	'Suggestions',
@@ -275,4 +309,6 @@ __all__ = [
 	'getCallTips',
 	'getClickableRanges',
 	'onIndicatorClicked',
+	'getWordCharacters',
+	'getAutoCompletionWordSeparators',
 ]

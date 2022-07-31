@@ -6,7 +6,7 @@ from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.utils.logging_ import logError
 from model.commands.command import MCFunctionSchema
 from model.commands.validator import getSession
-from model.datapackContents import MetaInfo, getEntryHandlerForFile, JsonMeta
+from model.datapack.datapackContents import MetaInfo, getEntryHandlerForFile, JsonMeta, getMetaInfo
 from model.json.core import JsonSchema
 from model.nbt.tags import NBTTagSchema
 from model.parsing.contextProvider import getContextProvider, parseNPrepare
@@ -41,12 +41,7 @@ class DatapackDocument(TextDocument):
 
 	@ComputedCached(shouldSerialize=False)
 	def metaInfo(self) -> Optional[MetaInfo]:
-		entryHandlers = getSession().datapackData.structure
-		if isinstance(self.filePath, tuple):
-			if (resLocHandler := getEntryHandlerForFile(self.filePath, entryHandlers)) is not None:
-				rl, handler = resLocHandler
-				metaInfo = handler.buildMetaInfo(self.filePath, rl)
-				return metaInfo
+		return getMetaInfo(self.filePath, getSession().datapackData.structure)
 
 	@property
 	@abstractmethod

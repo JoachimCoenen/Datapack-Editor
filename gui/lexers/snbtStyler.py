@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import enum
 from dataclasses import dataclass
-from typing import ClassVar, Callable
+from typing import ClassVar, Callable, Type
 
 from Cat.utils.collections_ import AddToDictDecorator
-from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler
+from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum
 from model.nbt.tags import *
 from model.parsing.tree import Node
 from model.utils import LanguageId
 
 
-class StyleId(enum.IntEnum):
+class StyleId(StyleIdEnum):
 	default   = DEFAULT_STYLE_ID
 	boolean   = DEFAULT_STYLE_ID + 1
 	intLike   = DEFAULT_STYLE_ID + 2
@@ -26,20 +25,12 @@ class StyleId(enum.IntEnum):
 class SNBTStyler(CatStyler[NBTTag]):
 
 	@property
-	def localStyles(self) -> dict[str, StyleId]:
-		styles = {
-			name: self.offset + value
-			for name, value in StyleId.__members__.items()
-		}
-		return styles
+	def styleIdEnum(self) -> Type[StyleIdEnum]:
+		return StyleId
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
 		return []
-
-	@property
-	def localStylesCount(self) -> int:
-		return self._localStylesCount
 
 	@classmethod
 	def language(cls) -> LanguageId:
@@ -50,14 +41,13 @@ class SNBTStyler(CatStyler[NBTTag]):
 
 	def __post_init__(self):
 		super(SNBTStyler, self).__post_init__()
-		self.DEFAULT_STYLE:    StyleId = self.offset + StyleId.default
-		self.BOOLEAN_STYLE:    StyleId = self.offset + StyleId.boolean
-		self.INT_LIKE_STYLE:   StyleId = self.offset + StyleId.intLike
-		self.FLOAT_LIKE_STYLE: StyleId = self.offset + StyleId.floatLike
-		self.STRING_STYLE:     StyleId = self.offset + StyleId.string
-		self.KEY_STYLE:        StyleId = self.offset + StyleId.key
-		self.INVALID_STYLE:    StyleId = self.offset + StyleId.invalid
-		self._localStylesCount = len(StyleId)  # len() of an enum does not include the aliases, which is good.
+		self.DEFAULT_STYLE:    StyleId = self.offset + StyleId.default.value
+		self.BOOLEAN_STYLE:    StyleId = self.offset + StyleId.boolean.value
+		self.INT_LIKE_STYLE:   StyleId = self.offset + StyleId.intLike.value
+		self.FLOAT_LIKE_STYLE: StyleId = self.offset + StyleId.floatLike.value
+		self.STRING_STYLE:     StyleId = self.offset + StyleId.string.value
+		self.KEY_STYLE:        StyleId = self.offset + StyleId.key.value
+		self.INVALID_STYLE:    StyleId = self.offset + StyleId.invalid.value
 
 	def styleNode(self, data: NBTTag) -> int:
 		return self._STYLERS[data.typeName](self, data)
@@ -132,12 +122,12 @@ class SNBTStyler(CatStyler[NBTTag]):
 		return data.span.end.index
 
 
-def run():
-	from Cat.utils.formatters import formatVal
-	styler = SNBTStyler(lambda x, y: None, {}, 5)
-	print(f"styler.localStylesCount = {styler.localStylesCount}")
-	print(f"styler.localStyles = {formatVal(styler.localStyles)}")
-
-
-if __name__ == '__main__':
-	run()
+# def run():
+# 	from Cat.utils.formatters import formatVal
+# 	styler = SNBTStyler(lambda x, y: None, {}, 5)
+# 	print(f"styler.localStylesCount = {styler.localStylesCount}")
+# 	print(f"styler.localStyles = {formatVal(styler.localStyles)}")
+#
+#
+# if __name__ == '__main__':
+# 	run()

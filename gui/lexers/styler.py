@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import enum
 from abc import ABC, abstractmethod
 from collections import deque, OrderedDict
 from dataclasses import dataclass, field
-from typing import TypeVar, NewType, Protocol, Generic, Type, Optional, NamedTuple
+from typing import Mapping, TYPE_CHECKING, TypeVar, NewType, Protocol, Generic, Type, Optional
 
+from Cat.utils import CachedProperty
 from Cat.utils.graphs import semiTopologicalSort
 from Cat.utils.logging_ import logError
-from Cat.utils.profiling import TimedFunction
 from model.parsing.tree import Node
 from model.utils import LanguageId
 
@@ -17,6 +18,14 @@ _TStyler = TypeVar('_TStyler', bound='CatStyler')
 StyleId = NewType('StyleId', int)
 
 DEFAULT_STYLE_ID: StyleId = StyleId(0)
+
+
+if TYPE_CHECKING:
+	class StyleIdEnum(StyleId, enum.Enum):
+		"""Enum where members are also (and must be) StyleIds"""
+else:
+	class StyleIdEnum(StyleId.__supertype__, enum.Enum):
+		"""Enum where members are also (and must be) StyleIds"""
 
 
 class StylingFunc(Protocol):
@@ -40,20 +49,24 @@ class CatStyler(Generic[_TNode], ABC):
 	def language(cls) -> LanguageId:
 		pass
 
+	@classmethod
+	@abstractmethod
+	def localInnerLanguages(cls) -> list[LanguageId]:
+		pass
+
 	@property
 	@abstractmethod
+	def styleIdEnum(self) -> Type[StyleIdEnum]:
+		raise NotImplementedError("styleIdEnum")
+
+	@property
 	def localStylesCount(self) -> int:
-		pass
+		return len(self.styleIdEnum)
 
 	# @classmethod
 	# @abstractmethod
 	# def localInnerStylers(cls) -> list[Type[CatStyler]]:
 	# 	pass
-
-	@classmethod
-	@abstractmethod
-	def localInnerLanguages(cls) -> list[LanguageId]:
-		pass
 
 	# @classmethod
 	# def createStyler(cls, setStyling: StylingFunc):
@@ -176,10 +189,13 @@ class CatStyler(Generic[_TNode], ABC):
 		else:
 			return node.span.start.index
 
-	@property
-	@abstractmethod
+	@CachedProperty
 	def localStyles(self) -> dict[str, StyleId]:
-		pass
+		styles = {
+			styleId.name: self.offset + styleId.value
+			for styleId in self.styleIdEnum
+		}
+		return styles
 
 	@property
 	def allStylesIds(self) -> dict[str, StyleId]:
@@ -228,6 +244,10 @@ def getStyler(language: LanguageId, stylerCtx: StylerCtx) -> Optional[CatStyler]
 	return styler
 
 
+def allStylers() -> Mapping[LanguageId, Type[CatStyler]]:
+	return __allCatStylers
+
+
 @dataclass
 class StylerCtx(ABC):
 	defaultStyle: StyleId
@@ -236,3 +256,16 @@ class StylerCtx(ABC):
 	@abstractmethod
 	def setStylingUtf8(self, span: slice, style: StyleId) -> None:
 		pass
+
+
+__all__ = [
+	'StyleId',
+	'DEFAULT_STYLE_ID',
+	'StyleIdEnum',
+	'CatStyler',
+	'registerStyler',
+	'getStylerCls',
+	'getStyler',
+	'allStylers',
+	'StylerCtx',
+]

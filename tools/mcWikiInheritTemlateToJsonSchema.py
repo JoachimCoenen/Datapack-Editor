@@ -32,7 +32,8 @@ def extractOnlyinclude(text: str) -> str:
 
 
 ALL_IMPORTS = set()
-IMPORT_PREFIX = 'model.datapack.json.schemas'
+DATA_IMPORT_PREFIX = 'model.data'
+SCHEMA_IMPORT_PREFIX = f'{DATA_IMPORT_PREFIX}.json.schemas'
 
 
 def addImports(text, name):
@@ -40,8 +41,8 @@ def addImports(text, name):
 	ALL_IMPORTS.clear()
 	return (
 		f"from Cat.utils import Anything\n"
-		f"from model.datapack.json.argTypes import *\n"
-		f"from model.datapack.json.utils import *\n"
+		f"from {DATA_IMPORT_PREFIX}.json.argTypes import *\n"
+		f"from {DATA_IMPORT_PREFIX}.json.utils import *\n"
 		f"from model.json.core import *\n"
 		f"from model.utils import MDStr\n"
 		f"\n"
@@ -239,7 +240,7 @@ def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], p
 
 		import_ = 'Advancement.' + path.replace('/', '.')
 		import_ = import_.replace('.conditions', '.Conditions')
-		ALL_IMPORTS.add(f'from {IMPORT_PREFIX}.{import_} import {const}')
+		ALL_IMPORTS.add(f'from {SCHEMA_IMPORT_PREFIX}.{import_} import {const}')
 
 		return f'{const}'
 
@@ -432,7 +433,7 @@ def run():
 		dstPath = os.path.join(DST_FOLDER, pathPart).replace('\\', '/') + '.py'
 		name = pathPart.replace('/', '_').upper()
 		import_ = pathPart.replace('/', '.')
-		imports.append(f'from {IMPORT_PREFIX}.{import_} import {name}')
+		imports.append(f'from {SCHEMA_IMPORT_PREFIX}.{import_} import {name}')
 		allPaths.append((srcPath, dstPath, name))
 
 	# imports = NL.join(imports)

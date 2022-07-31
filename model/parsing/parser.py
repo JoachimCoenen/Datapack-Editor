@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Generic, TypeVar, Type, Optional, Iterator
+from typing import Generic, TypeVar, Type, Optional, Iterator, Mapping
 
 from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
@@ -57,6 +57,18 @@ class _Base(ABC):
 		actualCursor = self.indexMapper.toEncoded(self.cursor) + self.cursorOffset
 		return Position(self.line, actualCursor - self.lineStart, actualCursor)
 
+	@staticmethod
+	def createError(message: MDStr, span: Span, style: str) -> ParsingError:
+		return ParsingError(message, span=span, style=style)
+
+	def error(self, message: MDStr, *, span: Span = ..., style: str = 'error') -> None:
+		# Provide additional information in the errors message
+		if span is ...:
+			position = self.currentPos
+			span = Span(position)
+		error = self.createError(message, span, style)
+		self.errors.append(error)
+
 
 @dataclass
 class TokenizerBase(_Base, Generic[_TToken], ABC):
@@ -93,6 +105,10 @@ registerParser = Decorator(AddToDictDecorator(__parsers))
 getParserCls = __parsers.get
 
 
+def allParsers() -> Mapping[LanguageId, Type[ParserBase]]:
+	return __parsers
+
+
 def parse(
 		text: bytes,
 		*,
@@ -107,7 +123,7 @@ def parse(
 ) -> tuple[Optional[Node], list[GeneralError]]:
 	parserCls = getParserCls(language)
 	if parserCls is None:
-		return None, [ParsingError(MDStr(f"No Parser for language `{language}` registered."), Span(), style='info')]
+		return None, [GeneralError(MDStr(f"No Parser for language `{language}` registered."), Span(), style='info')]
 	if indexMapper is None:
 		indexMapper = IndexMapper()
 	parser: ParserBase = parserCls(text, line, lineStart, cursor, cursorOffset, indexMapper, schema, **kwargs)

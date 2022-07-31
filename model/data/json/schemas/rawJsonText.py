@@ -1,5 +1,5 @@
 from model.commands.argumentTypes import *
-from model.datapackContents import ResourceLocationSchema
+from model.datapack.datapackContents import ResourceLocationSchema
 from ..argTypes import *
 from model.json.core import *
 from model.utils import MDStr

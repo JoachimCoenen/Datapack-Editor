@@ -13,13 +13,14 @@ from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy
 
 from Cat.CatPythonGUI.GUI.enums import ResizeMode
-from model.datapackContents import getEntryHandlersForFolder
-from model.utils import formatMarkdown
+from model.datapack.datapackContents import getEntryHandlersForFolder
+from model.project import Project
+from model.utils import GeneralError
 from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
-from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, Error
+from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
 from Cat.Serializable import SerializedPropertyABC, SerializableContainer
@@ -28,9 +29,9 @@ from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, open
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from gui import lexers
 from session.documents import Document, ErrorCounts
-from model.Model import Datapack
-from model.pathUtils import FilePath
+from model.pathUtils import FilePath, normalizeDirSeparators
 from session.session import getSession
+from settings import applicationSettings
 
 lexers.init()  # don't delete!
 
@@ -50,8 +51,10 @@ T2 = TypeVar('T2')
 
 
 def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
-	handlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.byFolder)
-	extensions = [h.extension for h in handlers]
+	nsHandlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.structure)
+	extensions = [h.extension for ns, h, _ in nsHandlers]
+	CUSTOM_EXT = "[custom]"
+	extensions.append(CUSTOM_EXT)
 
 	@dataclass
 	class Context:
@@ -59,16 +62,18 @@ def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Cal
 		name: str = "untitled"
 
 	def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
-		context.name = gui.textField(context.name, "name")
-		context.extension = gui.radioButtonGroup(context.extension, extensions, "extension")
+		context.name = gui.textField(context.name, "name:")
+		context.extension = gui.radioButtonGroup(context.extension, extensions, "extension:")
 		return context
 
 	context = Context()
 	context, isOk = gui.askUserInput(f"new File", context, guiFunc)
-	if not isOk or not context.name:
+	if not isOk:  # or not context.name:
 		return
 
 	ext = extensions[context.extension]
+	if ext == CUSTOM_EXT:
+		ext = ''
 	try:
 		filePath = createNewFile(folderPath, context.name.removesuffix(ext) + ext)
 		openFunc(filePath)
@@ -79,14 +84,11 @@ def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Cal
 def createNewFile(folderPath: FilePath, name: str) -> FilePath:
 	if isinstance(folderPath, tuple):
 		filePath = folderPath[0], os.path.join(folderPath[1], name)
-		joinedFilePath = os.path.join(*filePath)
 	else:
-		filePath = os.path.join(folderPath, name)
-		joinedFilePath = filePath
-
-	with openOrCreate(joinedFilePath, 'a'):
+		filePath = (folderPath, name)
+	with openOrCreate(os.path.join(*filePath), 'a'):
 		pass  # creates the File
-	return filePath
+	return normalizeDirSeparators(filePath)
 
 
 def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
@@ -155,7 +157,7 @@ class ContextMenuEntries:
 		return entries
 
 	@classmethod
-	def datapackItems(cls, datapack: Datapack, openFunc: Callable[[FilePath], None]) -> list[MenuItemData]:
+	def datapackItems(cls, datapack: Project, openFunc: Callable[[FilePath], None]) -> list[MenuItemData]:
 		enabled = datapack is not None
 		return [
 			*cls.pathItems(datapack.path,),
@@ -336,10 +338,6 @@ class FilesTreeItem:
 	def isFile(self) -> bool:
 		filePathsCount = len(self.filePaths)
 		return (filePathsCount == 1 and len(getattr(self.filePaths[0], 'virtualPath', '')) == self.commonDepth - 1)
-
-
-class Project:
-	pass
 
 
 class DatapackEditorGUI(AutoGUI):
@@ -611,7 +609,10 @@ class DatapackEditorGUI(AutoGUI):
 				splittingPath = fullPath[1]
 			else:
 				splittingPath = fullPath
-			return splittingPath.split(firstSplitter, 1)[-1]
+			if firstSplitter:
+				return splittingPath.split(firstSplitter, 1)[-1]
+			else:
+				return splittingPath.removeprefix('/')
 		# autocomplete strings:
 		allAutocompleteStrings: list[str] = []
 		allFilePaths: list[FileEntry2] = []
@@ -631,11 +632,14 @@ class DatapackEditorGUI(AutoGUI):
 				for fullPath in fullPathsInProj:
 					right = getRight(fullPath, firstSplitter)
 					virtualPath = virtualFolderPrefix + right
-
 					allAutocompleteStrings.append(virtualPath)
 					filesForFolder.append(FileEntry2(fullPath, virtualPath))
+
 				if folderItem.filePaths:
-					projItem.filePaths.append(folderItem)
+					if folderItem.label:
+						projItem.filePaths.append(folderItem)
+					else:
+						projItem.filePaths.extend(folderItem.filePaths)
 			if projItem.filePaths:
 				rootItem.filePaths.append(projItem)
 
@@ -648,11 +652,13 @@ class DatapackEditorGUI(AutoGUI):
 
 				if filterStr:
 					for projItem in rootItem.filePaths:
-						for folderItem in projItem.filePaths:
-							folderItem.filePaths = [fp for fp in folderItem.filePaths if filterStr in fp.virtualPath.lower()]
-
-							filteredFilesCount += len(folderItem.filePaths)
-						projItem.filePaths = [folderItem for folderItem in projItem.filePaths if folderItem.filePaths]
+						# for folderItem in projItem.filePaths:
+						# 	folderItem.filePaths = [fp for fp in folderItem.filePaths if filterStr in fp.virtualPath.lower()]
+						#
+						# 	filteredFilesCount += len(folderItem.filePaths)
+						# projItem.filePaths = [folderItem for folderItem in projItem.filePaths if folderItem.filePaths]
+						projItem.filePaths = [fp for fp in projItem.filePaths if filterStr in fp.virtualPath.lower()]
+						filteredFilesCount += len(projItem.filePaths)
 					rootItem.filePaths = [projItem for projItem in rootItem.filePaths if projItem.filePaths]
 				else:
 					filteredFilesCount = totalFilesCount
@@ -775,7 +781,7 @@ class DatapackEditorGUI(AutoGUI):
 		self.label(f'errors: {errorCounts.parserErrors + errorCounts.configErrors:3} | warnings: {errorCounts.configWarnings:3} | hints: {errorCounts.configHints:3}')
 		self.hSeparator()
 
-	def drawError(self, error: Error, **kwargs):
+	def drawError(self, error: GeneralError, **kwargs):
 		if error.position is not None:
 			positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
 		else:
@@ -788,7 +794,7 @@ class DatapackEditorGUI(AutoGUI):
 		# msg = f'{errorMsg} {positionMsg}'
 		# self.helpBox(msg, style=style, **kwargs)
 
-	def drawErrors(self: DatapackEditorGUI, errors: Collection[Error], onDoubleClicked: Callable[[Error], None]):
+	def drawErrors(self: DatapackEditorGUI, errors: Collection[GeneralError], onDoubleClicked: Callable[[GeneralError], None]):
 		if errors:
 			for error in errors:
 				self.drawError(error, onDoubleClicked=lambda ev, error=error, gui=self: onDoubleClicked(error) or gui.redrawGUI())
@@ -800,9 +806,9 @@ class DatapackEditorGUI(AutoGUI):
 	def _htmlDelegate(self) -> HTMLDelegate:
 		return HTMLDelegate()
 
-	def errorsList(self: DatapackEditorGUI, errors: Collection[Error], onDoubleClicked: Callable[[Error], None], **kwargs):
+	def errorsList(self: DatapackEditorGUI, errors: Collection[GeneralError], onDoubleClicked: Callable[[GeneralError], None], **kwargs):
 
-		def getLabel(error: Error, i: int) -> str:
+		def getLabel(error: GeneralError, i: int) -> str:
 			if error.position is not None:
 				positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
 			else:
@@ -812,7 +818,7 @@ class DatapackEditorGUI(AutoGUI):
 
 		errorIcons = self._errorIcons
 
-		def getIcon(error: Error, i: int) -> Optional[QIcon]:
+		def getIcon(error: GeneralError, i: int) -> Optional[QIcon]:
 			if i == 0:
 				return errorIcons.get(error.style)
 			else:
@@ -843,7 +849,7 @@ TPythonGUI = TypeVar('TPythonGUI', bound=DatapackEditorGUI)
 def drawCodeField(
 		gui: DatapackEditorGUI,
 		code: str,
-		errors: list[Error],
+		errors: list[GeneralError],
 		forceLocateElement: bool,
 		highlightErrors: bool,
 		currentCursorPos: tuple[int, int] = None,
@@ -856,6 +862,8 @@ def drawCodeField(
 		codeFieldKwargs['cursorPosition'] = currentCursorPos
 
 	forceLocate = False
+
+	font = applicationSettings.appearance.monospaceFont
 
 	with gui.vLayout(verticalSpacing=0):
 		# actual GUI:
@@ -875,6 +883,7 @@ def drawCodeField(
 			returnCursorPos=True,
 			#onCursorPositionChanged=lambda a, b, g=gui: g.customData.__setitem__('currentCursorPos', (a, b)) ,
 			errors=errors,
+			font=font,
 			**codeFieldKwargs,
 			**kwargs
 		)

@@ -15,7 +15,7 @@ from model.commands.snbt import parseNBTPath
 from model.commands.stringReader import StringReader
 from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from model.commands.utils import CommandSyntaxError, CommandSemanticsError
-from model.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
+from model.datapack.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from model.messages import *
 from model.nbt.tags import NBTTagSchema
 from model.parsing.bytesUtils import bytesToStr, strToBytes
@@ -312,7 +312,7 @@ class BlockStateHandler(ArgumentContext):
 		argsStart = blockID.span.end
 		if pos.index >= argsStart.index:
 			blockStatesDict = self._getBlockStatesDict(blockID)
-			suggestions += suggestionsForFilterArgs(blockState.states, node.source[argsStart.index:node.end], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
+			suggestions += suggestionsForFilterArgs(blockState.states, node.source[argsStart.index:node.end.index], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
 
 		if pos in blockID.span:
 			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)

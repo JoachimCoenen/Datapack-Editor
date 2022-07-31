@@ -6,7 +6,7 @@ from model.data.mcVersions import registerMCVersion, MCVersion, Gamerule
 from model.data.mcd import fillFromMinecraftData
 from model.data.v1_17.commands import fillCommandsFor1_17
 from model.data.v1_17.generatedBlockStates import BLOCK_STATES_BY_BLOCK
-from model.datapackContents import ResourceLocation
+from model.datapack.datapackContents import ResourceLocation
 from model.parsing.bytesUtils import strToBytes
 
 

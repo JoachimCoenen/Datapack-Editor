@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
 from Cat.CatPythonGUI.GUI import CORNERS, PythonGUI
 from Cat.CatPythonGUI.GUI.Widgets import HTMLDelegate
-from Cat.CatPythonGUI.GUI.codeEditor import Position, SearchOptions, SearchMode
+from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 from Cat.CatPythonGUI.utilities import connectOnlyOnce
@@ -18,15 +18,16 @@ from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import TimedMethod
 from gui.checkAllDialog import FILE_TYPES
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
-from model.Model import Datapack
 from model.pathUtils import FilePath, ZipFilePool, loadTextFile
+from model.project import Project
+from model.utils import Position, Span
 from session.session import getSession
 
 
 @dataclass(unsafe_hash=True)
 class Occurrence:
 	file: FilePath
-	position: Position
+	span: Span
 	line: str
 
 
@@ -43,7 +44,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=PythonGUI, parent=parent)
 
-		self._includedDatapacks: list[Datapack] = []
+		self._includedProjects: list[Project] = []
 		self.searchExpr: str = ''
 		self.searchOptions: SearchOptions = SearchOptions(
 			searchMode=SearchMode.Normal,
@@ -68,12 +69,12 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 			self._fileTypes = tuple(ft for ft in FILE_TYPES if gui.checkboxLeft(None, ft))
 
 		gui.vSeparator()
-		includedDatapacks = []
+		includedProjects = []
 		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
-			for dp in getSession().world.datapacks:
+			for dp in getSession().project.deepDependencies:
 				if gui.checkboxLeft(None, dp.name):
-					includedDatapacks.append(dp)
-		self._includedDatapacks = includedDatapacks
+					includedProjects.append(dp)
+		self._includedProjects = includedProjects
 
 	def OnGUI(self, gui: PythonGUI):
 		with gui.vLayout(preventVStretch=False):
@@ -130,7 +131,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 
 		def openDocument(x: Union[FilePath, Occurrence], *, s=self):
 			if isinstance(x, Occurrence):
-				s.parent()._tryOpenOrSelectDocument(x.file, x.position)
+				s.parent()._tryOpenOrSelectDocument(x.file, x.span)
 			else:
 				s.parent()._tryOpenOrSelectDocument(x)
 
@@ -168,8 +169,8 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	@property
 	def filePathsToSearch(self) -> list[FilePath]:
 		filePathsToSearch: list[FilePath] = []
-		for datapack in self._includedDatapacks:
-			for f in datapack.files:
+		for p in self._includedProjects:
+			for f in p.files:
 				if isinstance(f, tuple):
 					fn = f[1]
 				else:
@@ -199,18 +200,21 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 						text = loadTextFile(filePath, zipFilePool)
 					except UnicodeDecodeError:
 						continue
-					lastStart = 0
+					lastLineStart = 0
 					lastLineNr = 0
 					for matchStart, matchEnd in searcher(text):
-						start = text.rfind('\n', 0, matchStart)
-						start = start + 1  # skip \n at beginning of line  # if start != -1 else 0
+						lineStart = text.rfind('\n', 0, matchStart)
+						lineStart = lineStart + 1  # skip \n at beginning of line  # if start != -1 else 0
 						end = text.find('\n', matchEnd)
 						end = end if end != -1 else len(text)
-						occurrenceStr = f'<font>{escapeForXml(text[start:matchStart])}<b>{escapeForXml(text[matchStart:matchEnd])}</b>{escapeForXml(text[matchEnd:end])}</font>'
+						occurrenceStr = f'<font>{escapeForXml(text[lineStart:matchStart])}<b>{escapeForXml(text[matchStart:matchEnd])}</b>{escapeForXml(text[matchEnd:end])}</font>'
 
-						lastLineNr += text.count('\n', lastStart, start)
-						lastStart = start
+						lastLineNr += text.count('\n', lastLineStart, lineStart)
+						lastLineStart = lineStart
 
-						searchResult.occurrences.add(filePath, Occurrence(filePath, Position(lastLineNr, matchStart - start), occurrenceStr))
+						p1 = Position(lastLineNr, matchStart - lineStart, matchStart)
+						p2 = Position(lastLineNr, matchEnd - lineStart, matchEnd)
+
+						searchResult.occurrences.add(filePath, Occurrence(filePath, Span(p1, p2), occurrenceStr))
 		finally:
 			self._gui.redrawGUI()

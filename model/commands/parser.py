@@ -78,7 +78,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			self.schema,
 			self.text,
 			self.text,
-			children=children
+			children
 		)
 
 		return result

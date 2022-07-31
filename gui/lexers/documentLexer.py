@@ -1,31 +1,37 @@
-from __future__ import annotations
-
 from abc import abstractmethod
-from dataclasses import fields, dataclass
+from dataclasses import dataclass, fields
 from typing import TypeVar, Optional, cast, Sequence
 
 from PyQt5.Qsci import QsciLexerCustom, QsciLexer, QsciScintilla
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QColor
+from PyQt5.QtGui import QFont
 
-from Cat.CatPythonGUI.GUI.codeEditor import MyQsciAPIs, AutoCompletionTree, Position as CEPosition, CallTipInfo
+from Cat.CatPythonGUI.GUI.codeEditor import CodeEditor, MyQsciAPIs, AutoCompletionTree, Position as CEPosition, CallTipInfo
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override, HTMLStr
 from Cat.utils.logging_ import logWarning
-from Cat.utils.profiling import TimedMethod, ProfiledFunction, TimedAction
-from gui.lexers.styler import getStyler, StyleId, DEFAULT_STYLE_ID, StylerCtx
+from gui.lexers.styler import DEFAULT_STYLE_ID, getStyler, StyleId, StylerCtx
 from gui.themes import theme
-from gui.themes.theme import StyleFont, Style, DEFAULT_STYLE_STYLE, mergeVal, _getWithDefaultsFilled
+from gui.themes.theme import DEFAULT_STYLE_STYLE, StyleFont, Style
 from model.parsing.contextProvider import ContextProvider, getContextProvider
 from model.parsing.tree import Node
-from model.utils import GeneralError, Position, addStyle, MDStr, formatMarkdown, LanguageId
+from model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position
 from session.documents import TextDocument
 
 TT = TypeVar('TT')
 TokenType = int
 
 
+_SCI_STYLE_DEFAULT = 32  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
+_SCI_STYLE_LINENUMBER = 33  # This style sets the attributes of the text used to display line numbers in a line number margin. The background colour set for this style also sets the background colour for all margins that do not have any folding mask bits set. That is, any margin for which mask & SC_MASK_FOLDERS is 0. See SCI_SETMARGINMASKN for more about masks.
+_SCI_STYLE_BRACELIGHT = 34  # This style sets the attributes used when highlighting braces with the SCI_BRACEHIGHLIGHT message and when highlighting the corresponding indentation with SCI_SETHIGHLIGHTGUIDE.
+_SCI_STYLE_BRACEBAD = 35  # This style sets the display attributes used when marking an unmatched brace with the SCI_BRACEBADLIGHT message.
+_SCI_STYLE_CONTROLCHAR = 36  # This style sets the font used when drawing control characters. Only the font, size, bold, italics, and character set attributes are used and not the colour attributes. See also: SCI_SETCONTROLCHARSYMBOL.
+_SCI_STYLE_INDENTGUIDE = 37  # This style sets the foreground and background colours used when drawing the indentation guides.
+_SCI_STYLE_CALLTIP = 38  # Call tips normally use the font attributes defined by STYLE_DEFAULT. Use of SCI_CALLTIPUSESTYLE causes call tips to use this style instead. Only the font face name, font size, foreground and background colours and character set attributes are used.
+_SCI_STYLE_FOLDDISPLAYTEXT = 39  # This is the style used for drawing text tags attached to folded text.
 _SCI_STYLE_LASTPREDEFINED = 39
+_CAT_STYLE_CARETLINE = -257
 
 
 def QFontFromStyleFont(styleFont: StyleFont) -> QFont:
@@ -47,9 +53,6 @@ def StyleFontFromQFont(qFont: QFont) -> StyleFont:
 		values[propName] = value
 
 	return StyleFont(**values)
-
-
-DEFAULT_STYLE: TokenType = 0
 
 
 class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be a metaclass conflict.
@@ -75,56 +78,52 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 	def getStyles(self) -> dict[TokenType, Style]:
 		pass
 
+	def setCaretLineStyle(self, style: Style):
+		editor: CodeEditor = self.editor()
+		if editor is None:
+			return
+		editor.setCaretLineBackgroundColor(style.background)
+
+	def initStyle(self, style: Style, id: int) -> None:
+		actualId = id + _SCI_STYLE_LASTPREDEFINED + 1
+		self.setColor(style.foreground, actualId)
+		self.setPaper(style.background, actualId)
+		self.setFont(QFontFromStyleFont(style.font), actualId)
+
 	def initStyles(self, styles: dict[TokenType, Style], overwriteDefaultStyle: bool = False):
+		defaultStyle = Style(
+			foreground=self.defaultColor(),
+			background=self.defaultPaper(),
+			font=StyleFontFromQFont(self.defaultFont()),
+		)
 		# handle default first:
 		if overwriteDefaultStyle:
-			defaultStyle = styles[DEFAULT_STYLE]
-			defaultFont = _getWithDefaultsFilled(defaultStyle.font)
-			defaultQFont = QFontFromStyleFont(defaultFont)
-			defaultQFont.setPointSize(self.defaultFont().pointSize())
+			defaultStyle = defaultStyle | styles[DEFAULT_STYLE_ID]
+			defaultQFont = QFontFromStyleFont(defaultStyle.font)
+			# defaultQFont.setPointSize(self.defaultFont().pointSize())
 
 			self.setDefaultColor(defaultStyle.foreground)
+			self.setColor(defaultStyle.foreground, 0)
 			self.setDefaultPaper(defaultStyle.background)
-			super(DocumentLexerBase, self).setDefaultFont(defaultQFont)
-
-		defaultForeground: QColor = self.defaultColor()
-		defaultBackground: QColor = self.defaultPaper()
-		defaultFont: StyleFont = StyleFontFromQFont(self.defaultFont())
+			self.setPaper(defaultStyle.background, 0)
+			super().setDefaultFont(defaultQFont)
 
 		for tokenType, style in styles.items():
-			foreground = style.foreground
-			if foreground is None or tokenType == DEFAULT_STYLE:
-				foreground = defaultForeground
+			actualStyle = defaultStyle
+			if tokenType != DEFAULT_STYLE_ID:
+				actualStyle |= style
 
-			background = style.background
-			# if background is None:
-			# 	fg = foreground
-			# 	background = QColor.fromHslF(fg.hueF(), fg.saturationF(), 0.975)
-
-			if background is None or tokenType == DEFAULT_STYLE:
-				background = defaultBackground
-
-			if style.font is None or tokenType == DEFAULT_STYLE:
-				font = defaultFont
+			if tokenType == _CAT_STYLE_CARETLINE:
+				self.setCaretLineStyle(actualStyle)
 			else:
-				font = mergeVal(defaultFont, style.font)
-
-			font = _getWithDefaultsFilled(font)
-			qFont = QFontFromStyleFont(font)
-
-			self.setColor(foreground, tokenType + _SCI_STYLE_LASTPREDEFINED + 1)
-			self.setPaper(background, tokenType + _SCI_STYLE_LASTPREDEFINED + 1)
-			self.setFont(qFont, tokenType + _SCI_STYLE_LASTPREDEFINED + 1)
+				self.initStyle(actualStyle, tokenType)
 
 	def setDefaultFont(self, font: QFont):
 		super().setDefaultFont(font)
 		self.initStyles(self.getStyles(), overwriteDefaultStyle=True)
 
 	def setFont(self, font: QFont, style=-1):
-		if style == -1:
-			self.setDefaultFont(font)
-		else:
-			super().setFont(font, style)
+		super().setFont(font, style)
 
 	def getTree(self) -> Optional[Node]:
 		doc = self.document()
@@ -204,28 +203,18 @@ class DocumentLexerBase2(DocumentLexerBase):  # this is an ABC, but there would 
 					style = DEFAULT_STYLE_STYLE
 				styleMap[styleId] = style
 
-		return styleMap
+		revOffset = -_SCI_STYLE_LASTPREDEFINED - 1
+		styleMap[_SCI_STYLE_LINENUMBER + revOffset] = scheme.lineNumberStyle
+		styleMap[_SCI_STYLE_BRACELIGHT + revOffset] = scheme.braceLightStyle
+		styleMap[_SCI_STYLE_BRACEBAD + revOffset] = scheme.braceBadStyle
+		styleMap[_SCI_STYLE_CONTROLCHAR + revOffset] = scheme.controlCharStyle
+		styleMap[_SCI_STYLE_INDENTGUIDE + revOffset] = scheme.indentGuideStyle
+		styleMap[_SCI_STYLE_CALLTIP + revOffset] = scheme.calltipStyle
+		styleMap[_SCI_STYLE_FOLDDISPLAYTEXT + revOffset] = scheme.foldDisplayTextStyle
 
-	# @override
-	# def getStyles(self) -> dict[StyleId, Style]:
-	# 	styleMap = {DEFAULT_STYLE_ID: DEFAULT_STYLE_STYLE}
-	# 	languageId = self.languageId
-	# 	if languageId is not None:
-	# 		styler = getStyler(languageId, lambda x, y: None)
-	# 		if styler is not None:
-	# 			scheme = theme.currentColorScheme()
-	# 			styles = scheme.getStyles2(languageId)
-	#
-	# 			styleIds = styler.allStylesIds
-	# 			for name, styleId in styleIds.items():
-	# 				lang, styleName = name.partition(':')[::2]
-	# 				style = scheme.getStyle(lang, styleName)
-	# 				if style is None:
-	# 					style = DEFAULT_STYLE_STYLE
-	# 				style = styles.modifyStyle(lang, style)
-	# 				styleMap[styleId] = style
-	#
-	# 	return styleMap
+		styleMap[_CAT_STYLE_CARETLINE] = scheme.caretLineStyle
+
+		return styleMap
 
 	def startStyling(self, pos: int, styleBits: int = ...) -> None:
 		self._lastStylePos = pos
@@ -240,24 +229,14 @@ class DocumentLexerBase2(DocumentLexerBase):  # this is an ABC, but there would 
 		if tree is None or text is None:
 			return
 
-		# def setStyling(span: slice, style: StyleId) -> None:
-		# 	index = span.start
-		# 	if index > self._lastStylePos:
-		# 		interStr = text[self._lastStylePos:index]
-		# 		interStrLength = len(bytearray(interStr, "utf-8"))
-		# 		self.setStyling(interStrLength, 0)  # styler.offset)
-		#
-		# 	token = text[index:span.stop]
-		# 	self._lastStylePos = span.stop
-		# 	length = len(bytearray(token, "utf-8"))
-		#
-		# 	self.setStyling(length, style)
-
 		stylerCtx = StylerCtxQScintilla(DEFAULT_STYLE_ID, start, self)
 		styler = getStyler(tree.language, stylerCtx)
 		if styler is not None:
 			self.startStyling(start)
 			styler.styleNode(tree)
+
+		folder = Folder(self.editor())
+		folder.add_folding(start, len(text) - start)
 
 
 @dataclass
@@ -269,14 +248,65 @@ class StylerCtxQScintilla(StylerCtx):
 		index = span.start
 		if index > self._lastStylePos:
 			interStrLength = index - self._lastStylePos
-			assert interStrLength >= 0
+			assert interStrLength >= 0, interStrLength
 			self.lexer.setStyling(interStrLength, _SCI_STYLE_LASTPREDEFINED + 1 + self.defaultStyle)  # styler.offset)
 
-		length = span.stop - index
-		assert length >= 0
-		self.lexer.setStyling(length, _SCI_STYLE_LASTPREDEFINED + 1 + style)
+		if span.stop > self._lastStylePos:
+			length = span.stop - index
+			assert length >= 0, (length, style)
+			self.lexer.setStyling(length, _SCI_STYLE_LASTPREDEFINED + 1 + style)
+			self._lastStylePos = span.stop
 
-		self._lastStylePos = span.stop
+
+@dataclass
+class Folder:
+	view: QsciScintilla
+
+	def set_fold(self, prev, line, fold, full):
+		view = self.view
+		if (prev[0] >= 0):
+			fmax = max(fold, prev[1])
+			for iter in range(prev[0], line + 1):
+				view.SendScintilla(view.SCI_SETFOLDLEVEL, iter,
+					fmax | (0, view.SC_FOLDLEVELHEADERFLAG)[iter + 1 < full])
+
+	def line_empty(self, line):
+		view = self.view
+		return view.SendScintilla(view.SCI_GETLINEENDPOSITION, line) \
+			<= view.SendScintilla(view.SCI_GETLINEINDENTPOSITION, line)
+
+	def modify(self, position: int, modificationType, text, length: int, linesAdded, line, foldLevelNow, foldLevelPrev, token, annotationLinesAdded):
+		view = self.view
+		full = view.SC_MOD_INSERTTEXT | view.SC_MOD_DELETETEXT
+		if (~modificationType & full == full):
+			return
+		self.add_folding(position, length)
+
+	def add_folding(self, position: int, length: int):
+		view = self.view
+		prev = [-1, 0]
+		full = view.SendScintilla(view.SCI_GETLINECOUNT)
+		lbgn = view.SendScintilla(view.SCI_LINEFROMPOSITION, position)
+		lend = view.SendScintilla(view.SCI_LINEFROMPOSITION, position + length)
+		for iter in range(max(lbgn - 1, 0), -1, -1):
+			if ((iter == 0) or not self.line_empty(iter)):
+				lbgn = iter
+				break
+		for iter in range(min(lend + 1, full), full + 1):
+			if ((iter == full) or not self.line_empty(iter)):
+				lend = min(iter + 1, full)
+				break
+		for iter in range(lbgn, lend):
+			if (self.line_empty(iter)):
+				if (prev[0] == -1):
+					prev[0] = iter
+			else:
+				fold = view.SendScintilla(view.SCI_GETLINEINDENTATION, iter)
+				fold //= view.SendScintilla(view.SCI_GETTABWIDTH)
+				self.set_fold(prev, iter - 1, fold, full)
+				self.set_fold([iter, fold], iter, fold, full)
+				prev = [-1, fold]
+		self.set_fold(prev, lend - 1, 0, full)
 
 
 class DocumentQsciAPIs(MyQsciAPIs):
@@ -299,7 +329,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 	# def getApiContext(self, pos: int, self) -> tuple[List[str], int, int]:
 
 	@property
-	def _editor(self) -> QsciScintilla:
+	def _editor(self) -> CodeEditor:
 		return self.lexer().editor()
 
 	@property
@@ -373,7 +403,8 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		if (ctxProvider := self.contextProvider) is not None:
 			replaceCtx = context[0] if context else ''
 			position = self.currentCursorPos
-			return ctxProvider.getSuggestions(position, replaceCtx)
+			suggestions = ctxProvider.getSuggestions(position, replaceCtx)
+			return suggestions
 		return super().updateAutoCompletionList(context, aList)
 
 	@override
@@ -401,78 +432,3 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 		if (ctxProvider := self.contextProvider) is not None:
 			ctxProvider.onIndicatorClicked(position, editor.window())
-
-
-# _TNode = TypeVar('_TNode', bound=Node)
-#
-#
-# class StylingFunc(Protocol):
-# 	def __call__(self, length: int, style: int) -> None:
-# 		...
-#
-#
-# StyleId = NewType('StyleId', int)
-#
-# DEFAULT_STYLE_ID: StyleId = StyleId(0)
-#
-
-# @dataclass
-# class Styler:
-# 	pos: int
-# 	styleOffset: int
-#
-# 	_encoding: Optional[str]
-# 	_text: str
-# 	_lexer: QsciLexerCustom
-#
-# 	def setStyling(self, length: int, style: StyleId) -> None:
-# 		actualLength = length if self._encoding is None else len(bytearray(self._text[self.pos:length], self._encoding))
-# 		self._lexer.setStyling(actualLength, style + self.styleOffset)
-# 		self.pos += length
-
-
-# @dataclass
-# class CatLexerBase(Generic[_TNode], ABC):
-#
-# 	styleIdOffsets: dict[str, int] = field(default_factory=dict)
-#
-# 	@property
-# 	@abstractmethod
-# 	def language(self) -> str:
-# 		pass
-#
-# 	@property
-# 	@abstractmethod
-# 	def styles(self) -> list[Style]:
-# 		pass
-#
-# 	@property
-# 	def totalStylesCount(self) -> int:
-# 		return sum(map(lambda x: x.totalStylesCount, self.innerLexers), len(self.styles))
-#
-# 	@property
-# 	@abstractmethod
-# 	def innerStyler(self) -> list[CatLexerBase]:
-# 		pass
-#
-# 	def initStyleOffsets(self) -> None:
-# 		offset = len(self.styles)
-# 		for styler in self.innerStyler:
-# 			if styler.language in self.styleIdOffsets:
-# 				raise ValueError(f"innerLexer for language '{styler.language}' defined twice in lexer '{self.language}'")
-# 			self.styleIdOffsets[styler.language] = offset
-# 			styler.initStyleOffsets()
-#
-# 	@abstractmethod
-# 	def styleText(self, start: int, end: int, startStyling: Callable[[int], None], setStyle: StylingFunc):
-# 		pass
-#
-# 	def setStyling(self, length: int, style: int) -> None:
-# 		assert (length >= 0)
-# 		doc = self.document()
-# 		if doc is not None:
-# 			text = doc.content[self._lastStylePos:self._lastStylePos + length]
-# 			self._lastStylePos += length
-# 			length = len(bytearray(text, "utf-8"))
-#
-# 		super(LexerJson, self).setStyling(length, style)

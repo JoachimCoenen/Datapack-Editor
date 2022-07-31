@@ -3,7 +3,7 @@ from typing import Optional
 
 from Cat.utils import Anything
 from model.commands.argumentTypes import *
-from model.datapackContents import ResourceLocationSchema, ResourceLocation
+from model.datapack.datapackContents import ResourceLocationSchema, ResourceLocation
 from model.parsing.bytesUtils import bytesToStr
 from .Advancement.Conditions.damage_type import ADVANCEMENT_CONDITIONS_DAMAGE_TYPE
 from .Advancement.Conditions.entity import ADVANCEMENT_CONDITIONS_ENTITY

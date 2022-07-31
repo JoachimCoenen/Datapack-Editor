@@ -6,12 +6,13 @@ from PyQt5.QtWidgets import QDialog
 from qtpy import QtCore
 
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, getStyles
+from Cat.CatPythonGUI.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, getStyles, catWidgetMixins
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.extensions.fileSystemChangedDependency import startObserver
 from Cat.icons import icons
 from Cat.utils import getExePath, logging_
 from Cat.utils.formatters import FW
+from gui.themes.theme import currentColorScheme
 from mainWindow import MainWindow
 from Cat.utils.profiling import Timer
 from session.session import WindowId, loadSessionFromFile
@@ -103,13 +104,14 @@ def loadPlugins():
 	version1_17.initPlugin()
 	version1_18.initPlugin()
 
-	from model.datapack import version6
+	from model.data import version6
 	version6.initPlugin()
 
 
 def loadColorSchemes():
 	from gui.themes.theme import loadAllColorSchemes
 	loadAllColorSchemes()
+	catWidgetMixins.setGUIColors(currentColorScheme().uiColors)
 
 
 def start(argv):
@@ -130,10 +132,7 @@ def start(argv):
 		app.setOrganizationName(applicationSettings.organization)
 
 		applyStyle(app, Style({'QWidget': getStyles().hostWidgetStyle}))  # + styles.layoutingBorder))
-		palette = app.palette()
-		# palette.setColor(palette.Active, palette.Highlight, catWidgetMixins._standardHighlightColor)
-		# palette.setColor(palette.Disabled, palette.Highlight, catWidgetMixins._standardDisabledHighlightColor)
-		app.setPalette(palette)
+		catWidgetMixins.setGUIColors(catWidgetMixins.standardBaseColors)
 
 		loadSessionFromFile()
 		showSetupDialogIfNecessary()

@@ -1,4 +1,4 @@
-from model.datapackContents import ResourceLocation
+from model.datapack.datapackContents import ResourceLocation
 
 _LOG_TYPES = [
 	'oak',

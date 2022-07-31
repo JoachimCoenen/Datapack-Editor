@@ -1,5 +1,5 @@
-from model.datapack.json.argTypes import MINECRAFT_RESOURCE_LOCATION
-from model.datapackContents import ResourceLocationSchema
+from model.data.json.argTypes import MINECRAFT_RESOURCE_LOCATION
+from model.datapack.datapackContents import ResourceLocationSchema
 from model.json.core import JsonStringSchema
 
 

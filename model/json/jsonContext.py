@@ -62,7 +62,7 @@ def _getBestMatchInProperty(tree: JsonProperty, pos: Position, matches: Match) -
 	if valueSpan.end < pos:
 		matches.before = tree.value
 	elif valueSpan.start < pos:
-		matches.before = tree.key
+		matches.before = tree.key  # TODO this seems to be wrong?
 		_getBestMatch(tree.value, pos, matches)
 	elif keySpan.end < pos:
 		matches.before = tree.key
@@ -80,14 +80,14 @@ def _getBestMatchInProperty(tree: JsonProperty, pos: Position, matches: Match) -
 	# 	return
 
 
-_BEST_MATCHERS: dict[str, Callable[[JsonData, Position, Match], None]] = {
-	JsonObject.typeName: cast(Callable[[JsonData, Position, Match], None], _getBestMatchInObject),
-	JsonArray.typeName: cast(Callable[[JsonData, Position, Match], None], _getBestMatchInArray),
-	JsonProperty.typeName: cast(Callable[[JsonData, Position, Match], None], _getBestMatchInProperty),
+_BEST_MATCHERS: dict[str, Callable[[JsonNode, Position, Match], None]] = {
+	JsonObject.typeName: cast(Callable[[JsonNode, Position, Match], None], _getBestMatchInObject),
+	JsonArray.typeName: cast(Callable[[JsonNode, Position, Match], None], _getBestMatchInArray),
+	JsonProperty.typeName: cast(Callable[[JsonNode, Position, Match], None], _getBestMatchInProperty),
 }
 
 
-def _getBestMatch(tree: JsonData, pos: Position, matches: Match) -> None:
+def _getBestMatch(tree: JsonNode, pos: Position, matches: Match) -> None:
 	if (matcher := _BEST_MATCHERS.get(tree.typeName)) is not None:
 		matches.contained.append(tree)
 		matcher(tree, pos, matches)
@@ -122,10 +122,10 @@ def getSuggestionsForSchema(schema: JsonSchema) -> list[str]:
 	return _SCHEMA_SUGGESTIONS_PROVIDERS[schema.typeName](schema)
 
 
-@registerContextProvider(JsonData)
-class JsonCtxProvider(ContextProvider[JsonData]):
+@registerContextProvider(JsonNode)
+class JsonCtxProvider(ContextProvider[JsonNode]):
 
-	def getBestMatch(self, pos: Position) -> Match[JsonData]:
+	def getBestMatch(self, pos: Position) -> Match[JsonNode]:
 		tree = self.tree
 		matches = Match(None, None, None, [])
 		if pos in tree.span:
@@ -136,7 +136,7 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 					matches.hit = None
 		return matches
 
-	def getContext(self, node: JsonData) -> Optional[Context]:
+	def getContext(self, node: JsonNode) -> Optional[Context]:
 		if isinstance(node, JsonString):
 			schema = node.schema
 			if isinstance(schema, JsonStringSchema) and schema.type is not None:
@@ -209,7 +209,7 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 	#
 	# 	return []
 
-	def _getSuggestionsForBefore(self, pos: Position, before: JsonData, contained: list[JsonData], replaceCtx: str) -> Suggestions:
+	def _getSuggestionsForBefore(self, pos: Position, before: JsonNode, contained: list[JsonNode], replaceCtx: str) -> Suggestions:
 		if before.schema is JSON_KEY_SCHEMA:
 			needsColon = b':' not in self.text[before.span.end.index:pos.index]
 			if len(contained) >= 2:
@@ -246,7 +246,7 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 	def _getPropsForObject(self, container: JsonObject, schema: JsonObjectSchema) -> list[str]:
 		return [p.name for p in schema.propertiesDict.values() if p.name not in container.data and p.valueForParent(container) is not None]
 
-	def _getSuggestionsForContained(self, pos: Position, contained: list[JsonData], replaceCtx: str, *, needsComma: bool) -> Suggestions:
+	def _getSuggestionsForContained(self, pos: Position, contained: list[JsonNode], replaceCtx: str, *, needsComma: bool) -> Suggestions:
 		if not contained:
 			return []
 		container = contained[-1]
@@ -269,7 +269,7 @@ class JsonCtxProvider(ContextProvider[JsonData]):
 
 		return []
 
-	def _getSuggestionsForHit(self, pos: Position, hit: JsonData, contained: list[JsonData], replaceCtx: str) -> Suggestions:
+	def _getSuggestionsForHit(self, pos: Position, hit: JsonNode, contained: list[JsonNode], replaceCtx: str) -> Suggestions:
 
 		if isinstance(hit, JsonString):
 			data = self.text[hit.span.slice]
@@ -467,7 +467,7 @@ def getJsonStringContext(aType: str) -> Optional[JsonStringContext]:
 	return __jsonStringContexts.get(aType, None)
 
 
-def defaultDocumentationProvider(argument: JsonData) -> MDStr:
+def defaultDocumentationProvider(argument: JsonNode) -> MDStr:
 	schema = argument.schema
 	if schema is not None:
 		if schema.description:
@@ -480,7 +480,7 @@ def defaultDocumentationProvider(argument: JsonData) -> MDStr:
 	return tip
 
 
-def defaultDocumentationProvider2(data: JsonData) -> MDStr:
+def defaultDocumentationProvider2(data: JsonNode) -> MDStr:
 	if (schema := data.schema) is not None:
 		if schema.description:
 			return schema.description

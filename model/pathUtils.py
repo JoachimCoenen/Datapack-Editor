@@ -224,7 +224,7 @@ def loadBinaryFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> byte
 		with open(filePath, 'rb') as f:  # open file
 			contents = f.read()
 	elif os.path.isdir(filePath[0]):
-		with open(f'{filePath[0]}/{filePath[1]}') as f:  # open file
+		with open(f'{filePath[0]}/{filePath[1]}', 'rb') as f:  # open file
 			contents = f.read()
 	else:
 		# path contains a .jar file:
