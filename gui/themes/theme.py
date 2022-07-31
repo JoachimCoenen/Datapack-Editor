@@ -258,11 +258,11 @@ class StylesProxy:
 
 
 _ALL_COLOR_SCHEMES: dict[str, ColorScheme] = {}
+_currentColorScheme: str = "Default"
 
 
 def currentColorScheme() -> ColorScheme:
-	from settings import applicationSettings
-	csName = applicationSettings.appearance.colorScheme
+	csName = _currentColorScheme
 	scheme = _ALL_COLOR_SCHEMES.get(csName)
 	if scheme is None:
 		scheme = _ALL_COLOR_SCHEMES.get('Default')
@@ -271,7 +271,20 @@ def currentColorScheme() -> ColorScheme:
 	if scheme is None:
 		warnings.warn("No Color Schemes available. Not even the 'None' Color Scheme. Adding it now.", RuntimeWarning)
 		scheme = addColorScheme(ColorScheme('None', []))
+		scheme.uiColors
 	return scheme
+
+
+def currentColorSchemeUpdated() -> None:
+	from Cat.CatPythonGUI.GUI import catWidgetMixins
+	uiColors = currentColorScheme().uiColors
+	catWidgetMixins.setGUIColors(uiColors)
+
+
+def setCurrentColorScheme(name: str) -> None:
+	global _currentColorScheme
+	_currentColorScheme = name
+	currentColorSchemeUpdated()
 
 
 def getColorScheme(name: str) -> Optional[ColorScheme]:
@@ -288,7 +301,7 @@ def addColorScheme(cs: ColorScheme, /) -> ColorScheme:
 
 
 def _breakCycles(colorSchemes: Iterable[ColorScheme]):
-	cycles = getCycles(_ALL_COLOR_SCHEMES.values(), attrgetter('localFallbackSchemes'), attrgetter('name'))
+	cycles = getCycles(colorSchemes, attrgetter('localFallbackSchemes'), attrgetter('name'))
 	if cycles:
 		cyclesStr = '\n'.join(f"[{' -> '.join(elem.name for elem in cycle)}]" for cycle in cycles)
 		logWarning(
@@ -402,6 +415,7 @@ def loadAllColorSchemes() -> None:
 	for module in _colorSchemeModules.values():
 		module.initPlugin()
 	initAllColorSchemes()
+	currentColorSchemeUpdated()
 
 
 def reloadAllColorSchemes() -> None:

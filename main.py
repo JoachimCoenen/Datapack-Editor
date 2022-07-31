@@ -12,7 +12,6 @@ from Cat.extensions.fileSystemChangedDependency import startObserver
 from Cat.icons import icons
 from Cat.utils import getExePath, logging_
 from Cat.utils.formatters import FW
-from gui.themes.theme import currentColorScheme
 from mainWindow import MainWindow
 from Cat.utils.profiling import Timer
 from session.session import WindowId, loadSessionFromFile
@@ -88,7 +87,6 @@ def showSetupDialogIfNecessary():
 
 def run():
 	with open(os.path.join(os.path.dirname(getExePath()), 'logfile.log'), 'w', encoding='utf-8') as logFile:
-		loadApplicationSettings()
 		logging_.setLoggingStream(FW(logFile))
 		startObserver()
 		app = start(argv=sys.argv)
@@ -111,7 +109,6 @@ def loadPlugins():
 def loadColorSchemes():
 	from gui.themes.theme import loadAllColorSchemes
 	loadAllColorSchemes()
-	catWidgetMixins.setGUIColors(currentColorScheme().uiColors)
 
 
 def start(argv):
@@ -123,8 +120,12 @@ def start(argv):
 		QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
 		QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_DisableHighDpiScaling, False)
 		QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseStyleSheetPropagationInWidgetStyles, True)
-		QtWidgets.QApplication.setStyle(applicationSettings.appearance.applicationStyle)
 		app = QtWidgets.QApplication(argv)
+
+		loadColorSchemes()
+		loadApplicationSettings()
+
+		QtWidgets.QApplication.setStyle(applicationSettings.appearance.applicationStyle)
 
 		app.setApplicationName(applicationSettings.applicationName)
 		app.setApplicationDisplayName(applicationSettings.applicationName)
@@ -134,13 +135,12 @@ def start(argv):
 		applyStyle(app, Style({'QWidget': getStyles().hostWidgetStyle}))  # + styles.layoutingBorder))
 		catWidgetMixins.setGUIColors(catWidgetMixins.standardBaseColors)
 
+		import gui.themes.schemesUI  # DO NOT REMOVE!
+
 		loadSessionFromFile()
 		showSetupDialogIfNecessary()
 
-		import gui.themes.schemesUI  # DO NOT REMOVE!
-
 		loadPlugins()
-		loadColorSchemes()
 
 		window = MainWindow(WindowId('0'))
 		window.show()

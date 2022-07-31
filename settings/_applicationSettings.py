@@ -4,7 +4,7 @@ import copy
 import os
 import traceback
 from json import JSONDecodeError
-from typing import Optional, final
+from typing import Optional, final, Iterator, TypeVar
 from zipfile import ZipFile
 
 from PyQt5.QtCore import Qt
@@ -86,6 +86,15 @@ class AppearanceSettings(SerializableContainer):
 		label='Color Scheme',
 		decorators=[ColorSchemePD()],
 	)
+
+	@colorScheme.onSet
+	def colorScheme(self, newVal: str, oldVal: Optional[str]) -> str:
+		from gui.themes import theme
+		if applicationSettings.appearance is self:
+			if newVal != oldVal:
+				theme.setCurrentColorScheme(newVal)
+		return newVal
+
 
 def folderPathValidator(path: str) -> Optional[ValidatorResult]:
 	if not os.path.lexists(path):
@@ -266,7 +275,69 @@ def _getSettingsPath() -> str:
 
 def setApplicationSettings(newSettings: ApplicationSettings):
 	global applicationSettings
-	applicationSettings.copyFrom(copy.deepcopy(newSettings))
+	copyAppSettings(applicationSettings, copy.deepcopy(newSettings))
+	#applicationSettings.copyFrom(copy.deepcopy(newSettings))
+
+
+_TT = TypeVar('_TT')
+_TU = TypeVar('_TU')
+
+
+def createCopy(otherVal: _TT) -> Iterator[_TT]:
+	if isinstance(otherVal, SerializableContainer):
+		return createCopySerializableContainer(otherVal)
+	elif isinstance(otherVal, list):
+		return createCopyList(otherVal)
+	elif isinstance(otherVal, dict):
+		return createCopyDict(otherVal)
+	else:
+		return createCopySimple(otherVal)
+
+
+def createCopySerializableContainer(other: SerializableContainer) -> Iterator[SerializableContainer]:
+	self = type(other)()
+	yield self
+	copyAppSettings(self, other)
+
+
+def createCopyList(other: list[_TT]) -> Iterator[list[_TT]]:
+	self = type(other)()
+	yield self
+	for otherVal in other:
+		selfValIt = createCopy(otherVal)
+		self.append(next(selfValIt))
+		next(selfValIt, None)
+
+
+def createCopyDict(other: dict[_TU, _TT]) -> Iterator[dict[_TU, _TT]]:
+	self = type(other)()
+	yield self
+	for otherKey, otherVal in other.items():
+		selfKeyIt = createCopy(otherKey)
+		selfValIt = createCopy(otherVal)
+		selfKey = next(selfKeyIt)
+		next(selfKeyIt, None)
+		self[selfKey] = next(selfValIt)
+		next(selfValIt, None)
+
+
+def createCopySimple(other: list[_TT]) -> Iterator[list[_TT]]:
+	self = copy.deepcopy(other)
+	yield self
+
+
+def copyAppSettings(self: SerializableContainer, other: SerializableContainer) -> None:
+	"""sets self to a shallow copy of other"""
+	if self is other:  # handle singletons
+		return
+	if not isinstance(other, SerializableContainer):
+		raise ValueError(f"expected a SerializableContainer, but got {other}")
+	for prop in self.getSerializedProperties():
+		if prop.shouldSerialize and prop.hasValue(other):
+			otherVal = prop.get(other)
+			selfValIt = createCopy(otherVal)
+			prop.set(self, next(selfValIt))
+			next(selfValIt, None)
 
 
 def saveApplicationSettings():

@@ -5,7 +5,6 @@ from Cat.Serializable import SerializableContainer
 from Cat.icons import icons
 from Cat.utils import showInFileSystem
 from gui.themes import theme
-from gui.themes.theme import currentColorScheme
 from settings._applicationSettings import ColorSchemePD
 
 
@@ -25,10 +24,5 @@ def drawColorSchemePD(gui_: AutoGUI, value_: str, type_, decorator_: ColorScheme
 			theme.reloadAllColorSchemes()
 		if gui_.button(icon=icons.folder_open, tip="open color schemes folder", roundedCorners=CORNERS.RIGHT, overlap=(1, 0, 0, 0)):
 			showInFileSystem(theme.getColorSchemesDir())
-
-	from Cat.CatPythonGUI.GUI import catWidgetMixins
-	uiColors = currentColorScheme().uiColors
-	if uiColors is not None:
-		catWidgetMixins.setGUIColors(uiColors)
 
 	return result
