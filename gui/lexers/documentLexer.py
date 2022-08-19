@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass, fields
-from typing import TypeVar, Optional, cast, Sequence
+from typing import Optional, cast, Sequence
 
 from PyQt5.Qsci import QsciLexerCustom, QsciLexer, QsciScintilla
 from PyQt5.QtCore import Qt, QTimer
@@ -18,7 +18,6 @@ from model.parsing.tree import Node
 from model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position
 from session.documents import TextDocument
 
-TT = TypeVar('TT')
 TokenType = int
 
 

@@ -45,9 +45,8 @@ class DocumentGUIFunc(Protocol):
 		...
 
 
-TT = TypeVar('TT')
-TR = TypeVar('TR')
-T2 = TypeVar('T2')
+_TT = TypeVar('_TT')
+_TR = TypeVar('_TR')
 
 
 def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
@@ -195,7 +194,7 @@ def autocompleteFromList(text: str, allChoices: Iterable[str]) -> str:
 
 
 @overload
-def autocompleteFromList(text: str, allChoices: Iterable[TT], getStr: Callable[[TT], str]) -> str:
+def autocompleteFromList(text: str, allChoices: Iterable[_TT], getStr: Callable[[_TT], str]) -> str:
 	pass
 
 
@@ -268,14 +267,14 @@ def filterStrChoices(filterStr: FilterStr, allChoices: Collection[str]) -> Colle
 	#[choice for choice in allChoices if filterStr in choice.lower()]
 
 
-def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, TT]) -> list[TT]:
+def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> list[_TT]:
 	if not filterStr:
 		return list(allChoices.values())
 	return [choice[1] for choice in ((  name.lower(),   item) for name, item in allChoices.items()) if any(f in choice[0] for f in filterStr)]
 
 
-def filterComputedChoices(getStr: Callable[[TT], str]):
-	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[TT], getStr=getStr) -> Collection[TT]:
+def filterComputedChoices(getStr: Callable[[_TT], str]):
+	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[_TT], getStr=getStr) -> Collection[_TT]:
 		if not filterStr:
 			return allChoices
 		return [choice[1] for choice in ((getStr(choice).lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
@@ -344,21 +343,21 @@ class DatapackEditorGUI(AutoGUI):
 
 	def searchableChoicePopup(
 			self,
-			value: TT,
+			value: _TT,
 			label: str,
-			allChoices: Iterable[TT],
-			getSearchStr: Optional[Callable[[TT], str]],
-			labelMaker: Callable[[TT, int], str],
-			iconMaker: Optional[Callable[[TT, int], Optional[QIcon]]],
-			toolTipMaker: Optional[Callable[[TT, int], Optional[str]]],
+			allChoices: Iterable[_TT],
+			getSearchStr: Optional[Callable[[_TT], str]],
+			labelMaker: Callable[[_TT, int], str],
+			iconMaker: Optional[Callable[[_TT, int], Optional[QIcon]]],
+			toolTipMaker: Optional[Callable[[_TT, int], Optional[str]]],
 			columnCount: int,
-			onContextMenu: Optional[Callable[[TT, int], None]] = None,
+			onContextMenu: Optional[Callable[[_TT, int], None]] = None,
 			reevaluateAllChoices: bool = False,
 			*,
 			width: int = None,
 			height: int = None,
 	):
-		allChoicesDict: OrderedDict[str, TT] = OrderedDict()
+		allChoicesDict: OrderedDict[str, _TT] = OrderedDict()
 
 		def updateAllChoicesDict() -> None:
 			allChoicesDict.clear()
@@ -375,10 +374,10 @@ class DatapackEditorGUI(AutoGUI):
 		class Context:
 			"""docstring for Context"""
 			index: int
-			#value: TT
+			#value: _TT
 			filterVal: str
-			filteredChoices: OrderedDict[str, TT]
-			selectedValue: Optional[TT] = None
+			filteredChoices: OrderedDict[str, _TT]
+			selectedValue: Optional[_TT] = None
 			focusEndOfText: bool = False
 
 			selectionModel: Optional[QItemSelectionModel] = None
@@ -526,16 +525,16 @@ class DatapackEditorGUI(AutoGUI):
 	def advancedFilterTextField(
 			self,
 			filterStr: Optional[FilterStr],
-			allChoices: TT,
+			allChoices: _TT,
 			*,
-			getStrChoices: Callable[[-TT], Iterable[str]] = lambda x: x,
-			filterFunc: Callable[[FilterStr, -TT], TR] = filterStrChoices,
+			getStrChoices: Callable[[-_TT], Iterable[str]] = lambda x: x,
+			filterFunc: Callable[[FilterStr, -_TT], _TR] = filterStrChoices,
 			valuesName: str = 'choices',
 			shortcut: Optional[QKeySequence] = QKeySequence.Find,
 			roundedCorners: RoundedCorners = (True, True, False, False),
 			overlap: Overlap = (0, -1),
 			**kwargs
-	) -> tuple[FilterStr, TR]:
+	) -> tuple[FilterStr, _TR]:
 		# TODO: find more descriptive name for advancedFilterTextField(...)
 
 		def strChoicesIter(allChoices=allChoices):
