@@ -1,5 +1,6 @@
 from __future__ import annotations
 from abc import abstractmethod, ABC
+from dataclasses import replace
 from typing import Iterable, Mapping, Optional, final
 
 from PyQt5.QtWidgets import QWidget
@@ -49,8 +50,9 @@ class ResourceLocationCtxProvider(ContextProvider[ResourceLocationNode]):
 
 
 class ResourceLocationContext(Context[ResourceLocationNode], ABC):
-	def __init__(self, allowTags: bool):
+	def __init__(self, allowTags: bool, onlyTags: bool = False):
 		self._allowTags: bool = allowTags
+		self._onlyTags: bool = onlyTags
 
 	@property
 	@abstractmethod
@@ -61,6 +63,11 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 	@final
 	def allowTags(self) -> bool:
 		return self._allowTags
+
+	@property
+	@final
+	def onlyTags(self) -> bool:
+		return self._onlyTags
 
 	@abstractmethod
 	def tagsFromDP(self, dp: Project) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
@@ -81,21 +88,23 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 			return False
 		return True
 
-	def validate(self, value: ResourceLocationNode, errorsIO: list[GeneralError]) -> None:
-		if value.isTag:
-			isValid = any(containsResourceLocation(value, tags) for dp in getSession().project.deepDependencies for tags in self.tagsFromDP(dp))
+	def validate(self, node: ResourceLocationNode, errorsIO: list[GeneralError]) -> None:
+		if self.onlyTags:
+			node = replace(node, isTag=True)
+		if node.isTag:
+			isValid = any(containsResourceLocation(node, tags) for dp in getSession().project.deepDependencies for tags in self.tagsFromDP(dp))
 		else:
-			isValid = any(containsResourceLocation(value, values) for dp in getSession().project.deepDependencies for values in self.valuesFromDP(dp))
+			isValid = any(containsResourceLocation(node, values) for dp in getSession().project.deepDependencies for values in self.valuesFromDP(dp))
 			if not isValid:
-				isValid = containsResourceLocation(value, self.valuesFromMC(getSession().minecraftData))
+				isValid = containsResourceLocation(node, self.valuesFromMC(getSession().minecraftData))
 		if isValid:
 			return None
 		else:
-			if value.isTag:
-				errorsIO.append(SemanticsError(UNKNOWN_MSG.format(f'{self.name} tag', value.asString), value.span, style='warning'))
+			if node.isTag:
+				errorsIO.append(SemanticsError(UNKNOWN_MSG.format(f'{self.name} tag', node.asString), node.span, style='warning'))
 				return
 			else:
-				errorsIO.append(SemanticsError(UNKNOWN_MSG.format(self.name, value.asString), value.span))
+				errorsIO.append(SemanticsError(UNKNOWN_MSG.format(self.name, node.asString), node.span))
 				return
 
 	def getSuggestions(self, node: ResourceLocationNode, pos: Position, replaceCtx: str) -> Suggestions:
@@ -111,19 +120,30 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 			tagsIter = (self.tagsFromDP(dp) for dp in getSession().project.deepDependencies)
 		else:
 			tagsIter = ()
+		if not self.onlyTags:
+			locations = chain(*chain(
+					*tagsIter,
+					*(self.valuesFromDP(dp) for dp in getSession().project.deepDependencies)
+				),
+				self.valuesFromMC(getSession().minecraftData)
+			)
+		else:
+			locations = chain(*chain(*tagsIter))
+		locations = list(locations)
 
-		locations = chain(*chain(
-				*tagsIter,
-				*(self.valuesFromDP(dp) for dp in getSession().project.deepDependencies)
-			),
-			self.valuesFromMC(getSession().minecraftData)
-		)
-		return choicesFromResourceLocations(node.asString, locations)
+		if self.onlyTags:
+			node = replace(node, isTag=True)
+		result = choicesFromResourceLocations(node.asString, locations)
+		if self.onlyTags:
+			result = [s.removeprefix('#') for s in result]
+		return result
 
 	def getDocumentation(self, node: ResourceLocationNode, pos: Position) -> MDStr:
 		if not isinstance(node, ResourceLocation):
 			return MDStr('')
 		for dp in getSession().project.deepDependencies:
+			if self.onlyTags:
+				node = replace(node, isTag=True)
 			if node.isTag:
 				for tags in self.tagsFromDP(dp):
 					if (info := tags.get(node)) is not None:
@@ -137,6 +157,8 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 	def getClickableRanges(self, node: ResourceLocationNode) -> Iterable[Span]:  # TODO: check for if not isinstance(value, ResourceLocation):
 		if not isinstance(node, ResourceLocation):
 			return ()
+		if self.onlyTags:
+			node = replace(node, isTag=True)
 		if node.isTag:
 			isValid = any(containsResourceLocation(node, tags) for dp in getSession().project.deepDependencies for tags in self.tagsFromDP(dp))
 		else:
@@ -146,6 +168,8 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 	def onIndicatorClicked(self, node: ResourceLocationNode, pos: Position, window: QWidget) -> None:
 		if not isinstance(node, ResourceLocation):
 			return None
+		if self.onlyTags:
+			node = replace(node, isTag=True)
 		for dp in getSession().project.deepDependencies:
 			for tags in self.tagsFromDP(dp):
 				if (metaInfo := metaInfoFromResourceLocation(node, tags)) is not None:
@@ -184,6 +208,7 @@ class DimensionContext(ResourceLocationContext):
 
 @resourceLocationContext('block', allowTags=False)
 @resourceLocationContext('block_type', allowTags=True)
+@resourceLocationContext('block_tag', allowTags=True, onlyTags=True)
 class BlockContext(ResourceLocationContext):
 
 	@property
@@ -306,6 +331,7 @@ class ItemEnchantmentContext(ResourceLocationContext):
 
 @resourceLocationContext('item', allowTags=False)
 @resourceLocationContext('item_type', allowTags=True)
+@resourceLocationContext('item_tag', allowTags=True, onlyTags=True)
 class ItemsContext(ResourceLocationContext):
 
 	@property

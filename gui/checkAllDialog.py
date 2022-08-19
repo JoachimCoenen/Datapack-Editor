@@ -28,7 +28,8 @@ from session.session import getSession
 def checkFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[GeneralError]:
 	try:
 		document = loadDocument(filePath, archiveFilePool)
-		errors = document.validate()
+		document.asyncValidate.callNow()
+		errors = document.errors
 		return errors
 	except Exception as e:
 		logError(f"filePath = {filePath!r}")
@@ -298,7 +299,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 						allErrorCounts1.add(filePath, errorCounter)
 					allErrorCounts2[errorCounter] = allErrorCounts2.get(errorCounter, 0) + 1
 
-					if i % 100 == 0:
+					if i % 25 == 0:
 						self.progressSignal.emit(i + 1)
 						self.errorCountsUpdateSignal.emit()
 						QApplication.processEvents(QEventLoop.ExcludeUserInputEvents, 1)

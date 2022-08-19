@@ -4,6 +4,7 @@ from typing import Sequence, Optional, Any
 from Cat.Serializable import RegisterContainer, Serialized, ComputedCached
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.utils.logging_ import logError
+from Cat.utils.profiling import TimedMethod
 from model.commands.command import MCFunctionSchema
 from model.datapack.datapackContents import MetaInfo, JsonMeta, getMetaInfo
 from model.json.core import JsonSchema
@@ -44,6 +45,7 @@ class DatapackDocument(TextDocument):
 	def parseKwArgs(self) -> dict[str, Any]:
 		return {}
 
+	@TimedMethod(enabled=True)
 	def parse(self, text: bytes) -> tuple[Optional[Node], Sequence[GeneralError]]:
 		try:
 			schema = self.schema
@@ -53,6 +55,7 @@ class DatapackDocument(TextDocument):
 			logError(e)
 			return None, [WrappedError(e)]
 
+	@TimedMethod(enabled=True)
 	def validate(self) -> Sequence[GeneralError]:
 		errors = []
 		try:
@@ -97,7 +100,7 @@ class JsonDocument(DatapackDocument, TextDocument):
 			schemaId = self.metaInfo.schemaId
 			return getSession().datapackData.jsonSchemas.get(schemaId)
 		else:
-			return None
+			return getSession().datapackData.jsonSchemas.get('dpe:json_schema')
 
 	@property
 	def parseKwArgs(self) -> dict[str, Any]:

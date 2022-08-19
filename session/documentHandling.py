@@ -14,7 +14,7 @@ from Cat.utils.profiling import logInfo
 from Cat.utils.signals import CatSignal, CatBoundSignal
 from model.utils import Span
 from model.pathUtils import FilePath
-from session.documents import Document, DocumentTypeDescription, getDocumentTypeForFilePath, getDocTypeByName, getFilePathForDisplay, loadDocument
+from session.documents import Document, DocumentTypeDescription, getFilePathForDisplay, loadDocument
 
 WindowId = NewType('WindowId', str)
 
@@ -237,9 +237,9 @@ class View(ViewBase):
 		documents.insert(newPosition, document)
 		self.onDocumentsChanged.emit()
 
-	def selectDocument(self, doc: Optional[Document]) -> None:
+	def selectDocument(self, doc: Optional[Document], forceUpdate: bool = False) -> None:
 		old = self.selectedDocument
-		if doc is not old:
+		if doc is not old or forceUpdate:
 			self.selectedDocument = doc
 			if self.isCurrent:
 				self.manager.onSelectedDocumentChanged.emit()
@@ -361,7 +361,7 @@ class DocumentsManager(SerializableContainer):
 		if view is not None:
 			if cursor is not None:
 				doc.locatePosition(*cursor)
-			view.selectDocument(doc)
+			view.selectDocument(doc, forceUpdate=cursor is not None)
 			self.selectView(view)
 
 	def selectDocument(self, doc: Document, cursor: Span = None) -> None:
@@ -437,3 +437,7 @@ class DocumentsManager(SerializableContainer):
 				if doc.filePathForDisplay == filePathForDisplay:
 					return doc
 		return None
+
+	def allOpenedDocuments(self) -> Iterator[Document]:
+		for view in self.views:
+			yield from view.documents

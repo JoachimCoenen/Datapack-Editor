@@ -41,6 +41,16 @@ MINECRAFT_RESOURCE_LOCATION = JsonArgType(
 	),
 )
 
+DPE_FLOAT = JsonArgType(
+	name='dpe:float',
+	description=MDStr("a string containing a float value"),
+	description2=MDStr(""),
+	examples=MDStr(
+		"* true\n"
+		"* false"
+	),
+)
+
 DPE_URL = JsonArgType(
 	name='dpe:url',
 	description=MDStr("a web address"),
@@ -49,6 +59,27 @@ DPE_URL = JsonArgType(
 		"* https://www.minecraft.net\n"
 		"* https://github.com/JoachimCoenen/Datapack-Editor"
 	),
+)
+
+DPE_DEF_REF = JsonArgType(
+	name='dpe:def_ref',
+	description=MDStr("a reference to a definition in a dpe/json/schema"),
+)
+
+
+DPE_TMPL_REF = JsonArgType(
+	name='dpe:tmpl_ref',
+	description=MDStr("a reference to a template in a dpe/json/schema"),
+)
+
+DPE_JSON_ARG_TYPE = JsonArgType(
+	name='dpe:json_arg_type',
+	description=MDStr("name of a JsonArgType"),
+)
+
+DPE_LIB_PATH = JsonArgType(
+	name='dpe:schema_library_path',
+	description=MDStr("relative path to a schema library"),
 )
 
 
@@ -62,5 +93,10 @@ __all__ = [
 	'MINECRAFT_NBT_TAG',
 	'MINECRAFT_CHAT_COMMAND',
 	'MINECRAFT_RESOURCE_LOCATION',
+	'DPE_FLOAT',
 	'DPE_URL',
+	'DPE_DEF_REF',
+	'DPE_TMPL_REF',
+	'DPE_JSON_ARG_TYPE',
+	'DPE_LIB_PATH',
 ]

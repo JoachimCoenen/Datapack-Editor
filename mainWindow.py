@@ -15,6 +15,7 @@ from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFram
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.icons import icons
 from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
+from gui.profileParsingDialog import ProfileParsingDialog
 from gui.themes import theme
 from keySequences import KEY_SEQUENCES
 from model.utils import Span, GeneralError
@@ -86,6 +87,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		self.checkAllDialog = CheckAllDialog(self)
 		self.searchAllDialog = SearchAllDialog(self)
 		self.settingsDialog = SettingsDialog(self)
+		self.profileParsingDialog = ProfileParsingDialog(self)
 		self.currentDocumenSubGUI: Optional[DatapackEditorGUI] = None
 
 		self.setAcceptDrops(True)
@@ -238,6 +240,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 
 			if applicationSettings.debugging.isDeveloperMode:
 				gui.hSeparator()
+
+				if button(icon=icons.stopwatch, tip='Profile Parsing', **btnKwArgs, enabled=True):
+					self.profileParsingDialog.show()
+
 				Cat.CatPythonGUI.GUI.pythonGUI.profilingEnabled = gui.toggleSwitch(Cat.CatPythonGUI.GUI.pythonGUI.profilingEnabled, enabled=True)
 				gui.label('P')
 
@@ -405,10 +411,15 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			return True
 
 	def _tryOpenOrSelectDocument(self, filePath: FilePath, selectedSpan: Optional[Span] = None):
-		# find Document if is alredy open:
+		# find Document if is already open:
+		if filePath is None:
+			cd = getSession().documents.currentDocument
+			if cd is None:
+				return
+			filePath = cd.filePath
 		try:
-			getSession().documents.openOrShowDocument(filePath, selectedSpan)
-			self._gui.redrawGUI()
+			QTimer.singleShot(250, lambda: getSession().documents.openOrShowDocument(filePath, selectedSpan))
+			self._gui.redrawGUILater()
 		except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
 			getSession().showAndLogError(e)
 
