@@ -282,7 +282,7 @@ def parseLiteral(sr: StringReader, ai: ArgumentSchema) -> Optional[ParsedArgumen
 
 class LiteralArgumentHandler(ArgumentContext):
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return parseLiteral(sr, ai)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
