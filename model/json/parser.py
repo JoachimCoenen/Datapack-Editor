@@ -1,18 +1,22 @@
 """Parser functions, based on www.github.com/tusharsadhwani/json_parser"""
 from ast import literal_eval
+from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional, AbstractSet
+from typing import Optional, AbstractSet, Callable
 
+from Cat.utils import CachedProperty
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import ProfiledFunction
 from model.json.core import *
 from model.json.lexer import JsonTokenizer
-from model.json.schema import enrichWithSchema
+from model.json.schema import enrichWithSchema, pathify
 from model.messages import *
 from model.parsing.bytesUtils import bytesToStr, strToBytes
 from model.parsing.parser import ParserBase, registerParser, IndexMapper
-from model.utils import Span, MDStr, LanguageId
+from model.utils import Span, MDStr, LanguageId, Message
 
+ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG = Message("JSON standard allows only double quoted string as property key", 0)
+MISSING_VALUE_MSG = Message("Missing value for property", 0)
 
 _ESCAPE_CHAR_MAP = {
 	ord('"'): b'"',
@@ -37,6 +41,7 @@ _BOOLEAN_TOKENS = {
 class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	allowMultilineStr: bool = False
 
+	_waitingForClosing: dict[TokenType, int] = field(default_factory=lambda: defaultdict(int), init=False)
 	# tokens: deque[Token] = field(init=False)
 	_tokenizer: JsonTokenizer = field(init=False)
 	_current: Optional[Token] = field(init=False)
@@ -67,7 +72,19 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		self._last = self._current
 		self._current = self._tokenizer.nextToken()
 
-	def accept(self, tokenType: TokenType) -> Optional[Token]:
+	def tryAccept(self, tokenType: TokenType) -> Optional[Token]:
+		if self._current is None or self._current.type is not tokenType:
+			return None
+		self._next()
+		return self._last  # current == self._last
+
+	def tryAcceptAnyOf(self, tokenTypes: AbstractSet[TokenType]) -> Optional[Token]:
+		if self._current is None or self._current.type not in tokenTypes:
+			return None
+		self._next()
+		return self._last  # current == self._last
+
+	def accept(self, tokenType: TokenType, advanceIfBad: bool = True) -> Optional[Token]:
 		current = self._current
 		if current is None:
 			span = self._last.span if self._last is not None else Span()
@@ -77,10 +94,13 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		if current.type is not tokenType:
 			msg = EXPECTED_BUT_GOT_MSG.format(tokenType.asString, bytesToStr(current.value))
 			self._error(msg, current.span)
-		self._next()
-		return current
+			if advanceIfBad:
+				self._next()
+		else:
+			self._next()
+		return current  # current == (self._last if _next() was called, else self._current)
 
-	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType], name: str = None) -> Optional[Token]:
+	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType], advanceIfBad: bool = True) -> Optional[Token]:
 		current = self._current
 		if current is None:
 			span = self._last.span if self._last is not None else Span()
@@ -88,12 +108,14 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			return self._last  # TODO: WTF ?????
 
 		if current.type not in tokenTypes:
-			if name is None:
-				name = ' | '.join(tk.asString for tk in tokenTypes)
+			name = ' | '.join(tk.asString for tk in tokenTypes)
 			msg = EXPECTED_BUT_GOT_MSG.format(name, bytesToStr(current.value))
 			self._error(msg, current.span)
-		self._next()
-		return current
+			if advanceIfBad:
+				self._next()
+		else:
+			self._next()
+		return current  # current == (self._last if _next() was called, else self._current)
 
 	def acceptAny(self) -> Optional[Token]:
 		current = self._current
@@ -104,64 +126,197 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		self._next()
 		return current
 
-	def parse_object(self) -> JsonObject:
+	# def parse_object(self) -> JsonObject:
+	# 	"""Parses an object out of JSON tokens"""
+	# 	objData: OrderedMultiDict[str, JsonProperty] = OrderedMultiDict()
+	#
+	# 	start = self._last
+	#
+	# 	token = self.acceptAnyOf({TokenType.right_brace, TokenType.string})
+	# 	if token.type is TokenType.eof:
+	# 		return JsonObject(Span(start.span.start, token.span.end), None, objData)
+	# 	# special case:
+	# 	if token.type is TokenType.right_brace:
+	# 		return JsonObject(Span(start.span.start, token.span.end), None, objData)
+	#
+	# 	token = self.parse_properties(objData, token)
+	#
+	# 	if token.type is TokenType.eof:
+	# 		token = self._last
+	# 	return JsonObject(Span(start.span.start, token.span.end), None, objData)
+	#
+	# def parse_properties(self, objData: OrderedMultiDict[str, JsonProperty], token: Token):
+	# 	while token is not None:
+	# 		# parse KEY:
+	# 		if token.type == TokenType.string:
+	# 			key = self.parse_string()
+	# 			key.schema = JSON_KEY_SCHEMA
+	# 		else:
+	# 			if token.type == TokenType.comma:
+	# 				token = self.accept(TokenType.string)
+	# 				continue
+	# 			if token.type == TokenType.right_brace:
+	# 				break
+	# 			key = JsonString(token.span, JSON_KEY_SCHEMA, '', IndexMapper())
+	#
+	# 		if token.type != TokenType.colon:
+	# 			token = self.accept(TokenType.colon)
+	# 		if token.type is TokenType.eof:
+	# 			value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
+	# 			objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
+	# 			break
+	# 		elif token.type != TokenType.colon:
+	# 			if token.type == TokenType.comma:
+	# 				value = JsonInvalid(self._last.span, None, '')
+	# 				objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), None, key, value))
+	# 				token = self.accept(TokenType.string)
+	# 				continue
+	# 			if token.type == TokenType.right_brace:
+	# 				value = JsonInvalid(self._last.span, None, '')
+	# 				objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), None, key, value))
+	# 				break
+	# 			pass
+	# 		self.acceptAnyOf(self._PARSERS.keys())
+	# 		value = self._internalParseTokens()
+	#
+	# 		token = self.acceptAnyOf({TokenType.comma, TokenType.right_brace})
+	# 		if token.type is TokenType.eof:
+	# 			objData.add(key.data, JsonProperty(Span(key.span.start, token.span.end), None, key, value))
+	# 			break
+	# 		objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
+	# 		if token.type is TokenType.comma:
+	# 			token = self.accept(TokenType.string)
+	# 			continue
+	# 		if token.type == TokenType.right_brace:
+	# 			break
+	# 	return token
+
+	def parse_object2(self) -> JsonObject:
 		"""Parses an object out of JSON tokens"""
+		valueTokens = {*self._PARSERS.keys(), TokenType.invalid, TokenType.colon}
+		goodValueTokens = {TokenType.string}
 		objData: OrderedMultiDict[str, JsonProperty] = OrderedMultiDict()
 
-		start = self._last
-
-		token = self.acceptAnyOf({TokenType.right_brace, TokenType.string})
-		if token.type is TokenType.eof:
-			return JsonObject(Span(start.span.start, token.span.end), None, objData)
-		# special case:
-		if token.type is TokenType.right_brace:
-			return JsonObject(Span(start.span.start, token.span.end), None, objData)
-
-		while token is not None:
+		def parse_property() -> None:
+			nonlocal objData
+			colonAlreadySeen = False
+			token = self._last
+			# parse KEY:
 			if token.type == TokenType.string:
 				key = self.parse_string()
+			elif token.type in self._PARSERS.keys():
+				key = self._internalParseTokens()
+				if key.typeName != JsonString.typeName:
+					msg = ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG.format()
+					self._error(msg, key.span)
+					key = JsonInvalid(key.span, None, bytesToStr(self.text[key.span.slice]))
+			elif token.type == TokenType.invalid:
+				key = self.parse_invalid()
+			elif token.type == TokenType.colon:
+				key = JsonInvalid(Span(token.span.start), None, '')
+				colonAlreadySeen = True
 			else:
-				if token.type == TokenType.comma:
-					token = self.accept(TokenType.string)
-					continue
-				if token.type == TokenType.right_brace:
-					break
-				key = JsonString(token.span, JSON_KEY_SCHEMA, '', IndexMapper())
+				assert False, f"invalid state: invalid TokenType {token.type} for property"
+			key.schema = JsonKeySchema()
 
-			if token.type != TokenType.colon:
-				token = self.accept(TokenType.colon)
-			if token.type is TokenType.eof:
+			if not colonAlreadySeen:
+				token = self.accept(TokenType.colon, advanceIfBad=False)
+
+			if token.type is not TokenType.colon:
 				value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
 				objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
-				break
-			elif token.type != TokenType.colon:
-				if token.type == TokenType.comma:
-					value = JsonInvalid(self._last.span, None, '')
-					objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), None, key, value))
-					token = self.accept(TokenType.string)
+				return
+
+			# duplicate colons:
+			while (tkn2 := self.tryAccept(TokenType.colon)) is not None:
+				msg = DUPLICATE_NOT_ALLOWED_MSG.format(TokenType.colon.asString)
+				self._error(msg, tkn2.span)
+
+			if token is not None and token.type is TokenType.eof:
+				value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
+				objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
+				return
+			elif self._waitingForClosing[self._current.type] > 0:
+				msg = MISSING_VALUE_MSG.format()
+				self._error(msg, self._last.span)
+				value = JsonInvalid(Span(self._last.span.end, self._current.span.start), None, '')
+				objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
+				return
+			elif self.tryAcceptAnyOf(self._PARSERS.keys()) is not None:
+				value = self._internalParseTokens()
+				objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
+				return
+			else:
+				# force error, but don't consume:
+				self.acceptAnyOf(self._PARSERS.keys(), advanceIfBad=False)
+				if self.tryAccept(TokenType.invalid) is not None:
+					value = self.parse_invalid()
+					objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
+					return
+				elif (token := self.tryAccept(TokenType.eof)) is not None:
+					value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
+					objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
+					return
+				else:
+					value = JsonInvalid(Span(self._last.span.end, self._current.span.start), None, '')
+					objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
+					return
+
+		start = self._last
+		self._parse_list_like(TokenType.comma, TokenType.right_brace, valueTokens, goodValueTokens, parse_property)
+		return JsonObject(Span(start.span.start, self._last.span.end), None, objData)
+
+	def _parse_list_like(self, delimiter: TokenType, closing: TokenType, valueTokens: AbstractSet[TokenType], goodValueTokens: AbstractSet[TokenType], parseItem: Callable[[], None]) -> None:
+		delimiterOrClosing = {delimiter, closing}
+
+		def tryParseItem(goodTokens):
+			if self.tryAcceptAnyOf(valueTokens) is not None:
+				parseItem()
+			else:  # force error but don't consume:
+				self.acceptAnyOf(goodTokens, advanceIfBad=False)
+
+		if self.tryAccept(closing) is not None:
+			return
+		self._waitingForClosing[closing] += 1
+		tryParseItem(goodValueTokens | {closing})
+
+		while True:
+			# delimiter or closing:
+			if (tkn := self.tryAcceptAnyOf(delimiterOrClosing)) is not None:
+				if tkn.type is closing:
+					self._waitingForClosing[closing] -= 1
+					return
+				else:  # now: tkn.type is delimiter:
+					while (tkn2 := self.tryAccept(delimiter)) is not None:
+						msg = DUPLICATE_NOT_ALLOWED_MSG.format(delimiter.asString)
+						self._error(msg, tkn2.span)
+						tkn = tkn2
+					if self.tryAccept(closing) is not None:
+						msg = TRAILING_NOT_ALLOWED_MSG.format(delimiter.asString)
+						self._error(msg, tkn.span)
+						self._waitingForClosing[closing] -= 1
+						return
+					tryParseItem(goodValueTokens)
 					continue
-				if token.type == TokenType.right_brace:
-					value = JsonInvalid(self._last.span, None, '')
-					objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), None, key, value))
-					break
-				pass
-			self.acceptAnyOf(self._PARSERS.keys())
-			value = self._internalParseTokens()
-
-			token = self.acceptAnyOf({TokenType.comma, TokenType.right_brace})
-			if token.type is TokenType.eof:
-				objData.add(key.data, JsonProperty(Span(key.span.start, token.span.end), None, key, value))
-				break
-			objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
-			if token.type is TokenType.comma:
-				token = self.accept(TokenType.string)
-				continue
-			if token.type == TokenType.right_brace:
-				break
-
-		if token.type is TokenType.eof:
-			token = self._last
-		return JsonObject(Span(start.span.start, token.span.end), None, objData)
+			else:
+				if self._current.type in valueTokens:
+					msg = MISSING_DELIMITER_MSG.format(delimiter.asString)
+					self._error(msg, self._current.span)
+					tryParseItem(goodValueTokens)
+					continue
+				elif self._waitingForClosing[self._current.type] > 0:
+					msg = MISSING_CLOSING_MSG.format(closing.asString)
+					self._error(msg, self._current.span)
+					return
+				else:
+					# force an error and consume the unknown token, so we don't end up
+					# in an infinite loop of trying to parse that token:
+					tkn = self.acceptAnyOf(delimiterOrClosing)
+					if tkn.type is TokenType.eof:
+						return
+					# tryParseItem(goodValueTokens)
+					continue
+			return
 
 	def parse_array(self) -> JsonArray:
 		"""Parses an array out of JSON tokens"""
@@ -193,6 +348,21 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		if token.type is TokenType.eof:
 			token = self._last
 		return JsonArray(Span(start.span.start, token.span.end), None, arrayData)
+
+	def parse_array2(self) -> JsonArray:
+		"""Parses an array out of JSON tokens"""
+		valueTokens = {*self._PARSERS.keys(), TokenType.invalid}
+		goodValueTokens = {*self._PARSERS.keys()}
+		arrayData: list[JsonData] = []
+
+		def parse_element() -> None:
+			nonlocal arrayData
+			value = self._internalParseTokens()
+			arrayData.append(value)
+
+		start = self._last
+		self._parse_list_like(TokenType.comma, TokenType.right_bracket, valueTokens, goodValueTokens, parse_element)
+		return JsonArray(Span(start.span.start, self._last.span.end), None, arrayData)
 
 	def parse_string(self) -> JsonString:
 		"""Parses a string out of a JSON token"""
@@ -286,25 +456,32 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		return JsonBool(token.span, None, value)
 
 	def parse_null(self) -> JsonNull:
-		"""Parses a boolean out of a JSON token"""
+		"""Parses a null value out of a JSON token"""
 		token = self._last
 		return JsonNull(token.span, None)
 
-	_PARSERS = {
-		TokenType.left_bracket: parse_array,
-		TokenType.left_brace: parse_object,
-		TokenType.string: parse_string,
-		TokenType.number: parse_number,
-		TokenType.boolean: parse_boolean,
-		TokenType.null: parse_null,
-	}
+	def parse_invalid(self) -> JsonInvalid:
+		"""Parses a invalid token out of a JSON token"""
+		token = self._last
+		return JsonInvalid(token.span, None, bytesToStr(token.value))
+
+	@CachedProperty
+	def _PARSERS(self) -> dict[TokenType, Callable[[], JsonData]]:
+		return {
+			TokenType.left_bracket: self.parse_array2,
+			TokenType.left_brace: self.parse_object2,
+			TokenType.string: self.parse_string,
+			TokenType.number: self.parse_number,
+			TokenType.boolean: self.parse_boolean,
+			TokenType.null: self.parse_null,
+		}
 
 	def _internalParseTokens(self) -> JsonData:
 		"""Recursive JSON parse implementation"""
 		token = self._last
 		parser = self._PARSERS.get(token.type)
 		if parser is not None:
-			value = parser(self)
+			value = parser()
 			return value
 		else:
 			return JsonInvalid(token.span, None, bytesToStr(token.value))
@@ -314,6 +491,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		token = self.acceptAnyOf(self._PARSERS.keys())
 		if token is not None:
 			data = self._internalParseTokens()
+			pathify(data, '')
 			enrichWithSchema(data, self.schema)
 		else:
 			data = None

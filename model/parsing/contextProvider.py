@@ -10,7 +10,8 @@ from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.collections_.collections_ import IfKeyIssubclassGetter
 from model.parsing.parser import parse, IndexMapper
 from model.parsing.tree import Node, Schema
-from model.utils import LanguageId, MDStr, Span, Position, GeneralError
+from model.pathUtils import FilePath
+from model.utils import LanguageId, MDStr, Span, Position, GeneralError, formatAsError
 
 _TNode = TypeVar('_TNode', bound=Node)
 
@@ -19,8 +20,14 @@ Suggestion = str  # for now...
 Suggestions = list[Suggestion]
 
 
+@dataclass
+class CtxInfo(Generic[_TNode]):
+	ctxProvider: ContextProvider[_TNode]
+	filePath: FilePath
+
+
 class Context(Generic[_TNode]):
-	def prepare(self, node: _TNode, errorsIO: list[GeneralError]) -> None:
+	def prepare(self, node: _TNode, info: CtxInfo[_TNode], errorsIO: list[GeneralError]) -> None:
 		pass
 
 	@abstractmethod
@@ -39,7 +46,7 @@ class Context(Generic[_TNode]):
 
 	@abstractmethod
 	def getDocumentation(self, node: _TNode, pos: Position) -> MDStr:
-		pass  # return defaultDocumentationProvider(node)
+		return defaultDocumentationProvider(node)
 
 	def getCallTips(self, node: _TNode, pos: Position) -> list[str]:
 		return []
@@ -59,6 +66,20 @@ class Context(Generic[_TNode]):
 	# @abstractmethod
 	def getAutoCompletionWordSeparators(self, node: _TNode, pos: Position) -> list[str]:
 		return []  # ['.', '::', '->']
+
+
+def defaultDocumentationProvider(argument: Node) -> MDStr:
+	schema = argument.schema
+	if schema is not None:
+		if schema.description:
+			tip = schema.description
+		else:
+			tip = MDStr('')
+	else:
+		message = 'no documentation available (most likely due to parsing errors)'
+		tip = formatAsError(message)
+	return tip
+
 
 
 _TContext = TypeVar('_TContext', bound=Context)
@@ -100,21 +121,27 @@ class ContextProvider(Generic[_TNode], ABC):
 	def getContext(self, node: _TNode) -> Optional[Context]:
 		pass
 
-	def prepareTree(self) -> list[GeneralError]:
+	def prepareTree(self, filePath: FilePath) -> list[GeneralError]:
 		errorsIO = []
-		for node in self.tree.walkTree():
-			if (ctx := self.getContext(node)) is not None:
-				ctx.prepare(node, errorsIO)
+		info = CtxInfo(self, filePath)
+		self._prepareAll(self.tree, info, errorsIO)
 		return errorsIO
 
-	def validateTree(self, errorsIO: list[GeneralError]) -> None:
-		for node in self.tree.walkTree():
-			if (ctx := self.getContext(node)) is not None:
-				ctx.validate(node, errorsIO)
+	def _prepareAll(self, node: _TNode, info: CtxInfo, errorsIO: list[GeneralError]) -> None:
+		if (ctx := self.getContext(node)) is not None:
+			ctx.prepare(node, info, errorsIO)
+		for innerChild in node.children:
+			self._prepareAll(innerChild, info, errorsIO)
 
-	# @abstractmethod
-	# def validate(self, data: _TNode, errorsIO: list[GeneralError]) -> None:
-	# 	return None
+	def validateTree(self, errorsIO: list[GeneralError]) -> None:
+		self._validateAll(self.tree, errorsIO)
+		return
+
+	def _validateAll(self, node: _TNode, errorsIO: list[GeneralError]) -> None:
+		if (ctx := self.getContext(node)) is not None:
+			ctx.validate(node, errorsIO)
+		for innerChild in node.children:
+			self._validateAll(innerChild, errorsIO)
 
 	@abstractmethod
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
@@ -202,15 +229,16 @@ def getContext(node: _TNode, text: bytes) -> Optional[Context[_TNode]]:
 	return None
 
 
-def prepareTree(node: Node, text: bytes) -> list[GeneralError]:
+def prepareTree(node: Node, text: bytes, filePath: FilePath) -> list[GeneralError]:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
-		return ctxProvider.prepareTree()
+		return ctxProvider.prepareTree(filePath)
 	return []
 
 
 def parseNPrepare(
 		text: bytes,
 		*,
+		filePath: FilePath,
 		language: LanguageId,
 		schema: Optional[Schema],
 		line: int = 0,
@@ -222,6 +250,7 @@ def parseNPrepare(
 ) -> tuple[Optional[Node], list[GeneralError]]:
 	node, errors = parse(
 		text,
+		filePath=filePath,
 		language=language,
 		schema=schema,
 		line=line,
@@ -232,7 +261,7 @@ def parseNPrepare(
 		**kwargs
 	)
 	if node is not None:
-		errors += prepareTree(node, text)
+		errors += prepareTree(node, text, filePath)
 	return node, errors
 
 
@@ -292,6 +321,7 @@ def getAutoCompletionWordSeparators(node: Node, text: bytes, pos: Position) -> l
 __all__ = [
 	'Suggestion',
 	'Suggestions',
+	'CtxInfo',
 	'Context',
 	'AddContextToDictDecorator',
 	'Match',

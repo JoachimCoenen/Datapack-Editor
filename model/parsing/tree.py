@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Collection, Iterable, Iterator, TypeVar, Generic, Optional, ClassVar, Protocol
@@ -23,7 +23,7 @@ def _walkTree(children: Iterable[_TNode]) -> Iterator[_TNode]:
 
 
 @dataclass
-class Node(Generic[_TNode, _TSchema]):
+class Node(Generic[_TNode, _TSchema], ABC):
 	span: Span = field(hash=False, compare=False)
 	schema: Optional[_TSchema] = field(hash=False, compare=False)
 

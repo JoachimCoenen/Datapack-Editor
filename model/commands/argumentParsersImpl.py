@@ -9,6 +9,7 @@ from model.commands.stringReader import StringReader
 from model.datapack.datapackContents import ResourceLocationSchema, ResourceLocationNode
 from model.nbt.tags import NBTTag, CompoundTag
 from model.parsing.contextProvider import Suggestions
+from model.pathUtils import FilePath
 from model.resourceLocationContext import getResourceLocationContext
 from model.utils import Position
 
@@ -84,8 +85,8 @@ def _get3dPosSuggestions(ai: ArgumentSchema, node: Optional[ParsedArgument], pos
 	return ['~ ~ ~', '^ ^ ^', '0 0 0']
 
 
-def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
-	tag = parseNBTTag(sr, errorsIO=errorsIO)
+def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
+	tag = parseNBTTag(sr, filePath, errorsIO=errorsIO)
 	if tag is None:
 		return None
 

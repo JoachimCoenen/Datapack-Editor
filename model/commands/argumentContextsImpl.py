@@ -21,12 +21,9 @@ from model.nbt.tags import NBTTagSchema
 from model.parsing.bytesUtils import bytesToStr, strToBytes
 from model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
 from model.parsing.tree import Schema
+from model.pathUtils import FilePath
 from model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
 from session.session import getSession
-
-
-def init():
-	pass  # do not remove!
 
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
@@ -59,7 +56,7 @@ class ResourceLocationLikeHandler(ArgumentContext, ABC):
 	def schema(self) -> ResourceLocationSchema:
 		pass
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, self.schema)
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
@@ -95,7 +92,7 @@ class ParsingHandler(ArgumentContext, ABC):
 	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
 		return {}
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		# remainder = sr.tryReadRemaining()
 		if sr.hasReachedEnd:
 			return None
@@ -105,6 +102,7 @@ class ParsingHandler(ArgumentContext, ABC):
 
 		data, errors = parseNPrepare(
 			sr.source[sr.cursor:],
+			filePath=filePath,
 			language=language,
 			schema=schema,
 			line=sr._lineNo,
@@ -171,7 +169,7 @@ class ParsingHandler(ArgumentContext, ABC):
 
 @argumentContext(BRIGADIER_BOOL.name)
 class BoolHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadBoolean()
 		if string is None:
 			return None
@@ -183,7 +181,7 @@ class BoolHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_DOUBLE.name)
 class DoubleHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadFloat()
 		if string is None:
 			return None
@@ -192,7 +190,7 @@ class DoubleHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_FLOAT.name)
 class FloatHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadFloat()
 		if string is None:
 			return None
@@ -201,7 +199,7 @@ class FloatHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_INTEGER.name)
 class IntegerHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadInt()
 		if string is None:
 			return None
@@ -210,7 +208,7 @@ class IntegerHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_LONG.name)
 class LongHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadInt()
 		if string is None:
 			return None
@@ -219,7 +217,7 @@ class LongHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_STRING.name)
 class StringHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadString()
 		if string is None:
 			return None
@@ -228,7 +226,7 @@ class StringHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_ANGLE.name)
 class AngleHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		angle = sr.tryReadTildeNotation()
 		if angle is None:
 			angle = sr.tryReadFloat()
@@ -243,7 +241,7 @@ class BlockPosHandler(ArgumentContext):
 	def useFloat(ai: ArgumentSchema):
 		return ai.args is not None and ai.args.get('type', None) is float
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse3dPos(sr, ai, useFloat=self.useFloat(ai), errorsIO=errorsIO)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
@@ -261,14 +259,14 @@ class BlockStateHandler(ArgumentContext):
 
 	rlcSchema = ResourceLocationSchema('', 'block')
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# block_id[block_states]{data_tags}
 		blockID = sr.readResourceLocation(allowTag=self._allowTag)
 		blockID = ResourceLocationNode.fromString(blockID, sr.currentSpan, self.rlcSchema)
 
 		# block states:
 		blockStatesDict = self._getBlockStatesDict(blockID)
-		states: Optional[FilterArguments] = parseFilterArgs(sr, blockStatesDict, errorsIO=errorsIO)
+		states: Optional[FilterArguments] = parseFilterArgs(sr, blockStatesDict, filePath, errorsIO=errorsIO)
 		if states is not None:
 			sr.mergeLastSave()
 		else:
@@ -276,7 +274,7 @@ class BlockStateHandler(ArgumentContext):
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
-			nbt = tryReadNBTCompoundTag(sr, ai, errorsIO=errorsIO)
+			nbt = tryReadNBTCompoundTag(sr, ai, filePath, errorsIO=errorsIO)
 		else:
 			nbt = None
 		if nbt is not None:
@@ -356,7 +354,7 @@ class BlockPredicateHandler(BlockStateHandler):
 
 @argumentContext(MINECRAFT_COLUMN_POS.name)
 class ColumnPosHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		sr.save()
 		columnPos1: Optional[bytes] = sr.tryReadInt() or sr.tryReadTildeNotation()
 		if columnPos1 is None:
@@ -402,7 +400,7 @@ class DimensionHandler(ResourceLocationLikeHandler):
 
 @argumentContext(MINECRAFT_ENTITY.name)
 class EntityHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# Must be a player name, a target selector or a UUID.
 		locator = sr.tryReadString()
 		if locator is None:
@@ -411,7 +409,7 @@ class EntityHandler(ArgumentContext):
 			if variable is None:
 				return None
 			variable = bytesToStr(variable)
-			arguments = parseFilterArgs(sr, TARGET_SELECTOR_ARGUMENTS_DICT, errorsIO=errorsIO)
+			arguments = parseFilterArgs(sr, TARGET_SELECTOR_ARGUMENTS_DICT, filePath, errorsIO=errorsIO)
 			if arguments is None:
 				arguments = FilterArguments()
 			else:
@@ -457,7 +455,7 @@ class EntityTypeHandler(ResourceLocationLikeHandler):
 
 @argumentContext(MINECRAFT_FLOAT_RANGE.name)
 class FloatRangeHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		float1Regex = r'-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)'
 		float2Regex = r'-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)'
 		separatorRegex = r'\.\.'
@@ -481,14 +479,14 @@ class FunctionHandler(ResourceLocationLikeHandler):
 
 @argumentContext(MINECRAFT_GAME_PROFILE.name)
 class GameProfileHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# TODO: parseGameProfile(...)
-		return EntityHandler().parse(sr, ai, errorsIO=errorsIO)
+		return EntityHandler().parse(sr, ai, filePath, errorsIO=errorsIO)
 
 
 @argumentContext(MINECRAFT_INT_RANGE.name)
 class IntRangeHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		intRegex = r'-?[0-9]+'
 		separatorRegex = r'\.\.'
 		pattern = re.compile(strToBytes(f"{intRegex}(?:{separatorRegex}(?:{intRegex})?)?|{separatorRegex}{intRegex}"))
@@ -511,7 +509,7 @@ class ItemEnchantmentHandler(ResourceLocationLikeHandler):
 
 @argumentContext(MINECRAFT_ITEM_SLOT.name)
 class ItemSlotHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)?'))
 		if slot is None:
 			return None
@@ -534,7 +532,7 @@ class ItemStackHandler(ArgumentContext):
 
 	rlcSchema = ResourceLocationSchema('', 'item')
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# item_id{data_tags}
 		itemID = sr.readResourceLocation(allowTag=self._allowTag)
 		itemID = ResourceLocationNode.fromString(itemID, sr.currentSpan, self.rlcSchema)
@@ -542,7 +540,7 @@ class ItemStackHandler(ArgumentContext):
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
-			nbt = tryReadNBTCompoundTag(sr, ai, errorsIO=errorsIO)
+			nbt = tryReadNBTCompoundTag(sr, ai, filePath, errorsIO=errorsIO)
 		else:
 			nbt = None
 		if nbt is not None:
@@ -609,7 +607,7 @@ class ItemPredicateHandler(ItemStackHandler):
 
 @argumentContext(MINECRAFT_MESSAGE.name)
 class MessageHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		message = sr.tryReadRemaining()
 		if message is None:
 			return None
@@ -626,7 +624,7 @@ class MobEffectHandler(ResourceLocationLikeHandler):
 
 # @argumentContext(MINECRAFT_NBT_COMPOUND_TAG.name)
 # class NbtCompoundTagHandler(ArgumentContext):
-# 	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+# 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 # 		nbt = tryReadNBTCompoundTag(sr, ai, errorsIO=errorsIO)
 # 		if nbt is None:
 # 			return None
@@ -635,7 +633,7 @@ class MobEffectHandler(ResourceLocationLikeHandler):
 
 @argumentContext(MINECRAFT_NBT_PATH.name)
 class NbtPathHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		path = parseNBTPath(sr, errorsIO=errorsIO)
 		if path is None:
 			return None
@@ -654,7 +652,7 @@ class NbtTagHandler(ParsingHandler):
 	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
 		return dict(ignoreTrailingChars=True)
 
-	# def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	# def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 	# 	nbt = parseNBTTag(sr, errorsIO=errorsIO)
 	# 	if nbt is None:
 	# 		return None
@@ -663,7 +661,7 @@ class NbtTagHandler(ParsingHandler):
 
 @argumentContext(MINECRAFT_OBJECTIVE.name)
 class ObjectiveHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		pattern = re.compile(rb"[a-zA-Z0-9_.+-]+")
 		objective = sr.tryReadRegex(pattern)
 		if objective is None:
@@ -679,7 +677,7 @@ class ObjectiveHandler(ArgumentContext):
 class ObjectiveCriteriaHandler(ArgumentContext):
 	rlcSchema = ResourceLocationSchema('', 'any_no_tag')
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, self.rlcSchema)
 		# TODO: add validation for objective_criteria
 
@@ -718,7 +716,7 @@ class ResourceLocationHandler(ResourceLocationLikeHandler):
 
 @argumentContext(MINECRAFT_ROTATION.name)
 class RotationHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		numberReader = sr.tryReadFloat
 		sr.save()
 		yaw: Optional[bytes] = numberReader() or sr.tryReadTildeNotation()
@@ -742,9 +740,9 @@ class RotationHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_SCORE_HOLDER.name)
 class ScoreHolderHandler(EntityHandler):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# Must be a player name, a target selector or a UUID, or *.
-		result = super(ScoreHolderHandler, self).parse(sr, ai, errorsIO=errorsIO)
+		result = super(ScoreHolderHandler, self).parse(sr, ai, filePath, errorsIO=errorsIO)
 		if result is not None:
 			return result
 		sr.save()
@@ -766,7 +764,7 @@ class ScoreHolderHandler(EntityHandler):
 
 @argumentContext(MINECRAFT_SCOREBOARD_SLOT.name)
 class ScoreboardSlotHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		literal = sr.tryReadLiteral()
 		if literal is None:
 			return None
@@ -775,7 +773,7 @@ class ScoreboardSlotHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_SWIZZLE.name)
 class SwizzleHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		swizzle = sr.tryReadLiteral()
 		if swizzle is None:
 			return None
@@ -790,7 +788,7 @@ class SwizzleHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_TEAM.name)
 class TeamHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# -, +, ., _, A-Z, a-z, and 0-9
 		literal = sr.tryReadRegex(re.compile(rb'[-+._A-Za-z0-9]+'))
 		if literal is None:
@@ -800,7 +798,7 @@ class TeamHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_TIME.name)
 class TimeHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		number = sr.tryReadFloat()
 		if number is None:
 			return None
@@ -823,7 +821,7 @@ UUID_PATTERN = re.compile(rb'[a-fA-F0-9]{1,8}-[a-fA-F0-9]{1,4}-[a-fA-F0-9]{1,4}-
 
 @argumentContext(MINECRAFT_UUID.name)
 class UuidHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# 8-4-4-4-12
 		literal = sr.tryReadRegex(UUID_PATTERN)
 		if literal is None:
@@ -833,7 +831,7 @@ class UuidHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_VEC2.name)
 class Vec2Handler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse2dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
@@ -842,7 +840,7 @@ class Vec2Handler(ArgumentContext):
 
 @argumentContext(MINECRAFT_VEC3.name)
 class Vec3Handler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parse3dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
@@ -859,7 +857,7 @@ class BiomeIdHandler(ResourceLocationLikeHandler):
 
 @argumentContext(ST_DPE_DATAPACK.name)
 class StDpeDataPackHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 

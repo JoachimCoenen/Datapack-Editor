@@ -10,6 +10,7 @@ from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.messages import *
 from model.parsing.bytesUtils import strToBytes, bytesToStr
+from model.pathUtils import FilePath
 
 DPE_TARGET_SELECTOR_SCORES = ArgumentType(
 	name='dpe:target_selector_scores',
@@ -146,7 +147,7 @@ _GOTO_NEXT_ARG_PATTERN = re.compile(rb'[,}=]')
 
 @argumentContext(DPE_TARGET_SELECTOR_SCORES.name)
 class TargetSelectorScoresArgumentHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		if not sr.tryConsumeByte(ord('{')):
 			return None
 
@@ -157,7 +158,7 @@ class TargetSelectorScoresArgumentHandler(ArgumentContext):
 			sr.mergeLastSave()
 
 			handler = getArgumentContext(MINECRAFT_OBJECTIVE)
-			objective = handler.parse(sr, None, errorsIO=errorsIO)
+			objective = handler.parse(sr, None, filePath, errorsIO=errorsIO)
 			if objective is None:
 				objective = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
 				errorsIO.append(CommandSyntaxError(EXPECTED_MSG.format("an objective"), sr.currentSpan, style='error'))
@@ -173,7 +174,7 @@ class TargetSelectorScoresArgumentHandler(ArgumentContext):
 				sr.tryConsumeWhitespace()
 
 				handler = getArgumentContext(MINECRAFT_INT_RANGE)
-				value = handler.parse(sr, None, errorsIO=errorsIO)
+				value = handler.parse(sr, None, filePath, errorsIO=errorsIO)
 				if value is None:
 					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
 					value = makeParsedArgument(sr, None, value=remainig)

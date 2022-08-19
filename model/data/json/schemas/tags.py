@@ -1,82 +1,122 @@
-from model.data.json.argTypes import MINECRAFT_RESOURCE_LOCATION
-from model.datapack.datapackContents import ResourceLocationSchema
+import os
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Optional
+
+from Cat.utils.logging_ import logWarning, logInfo
+from model.data.json import argTypes
+from model.data.json.schemas import providers
+from model.json.jsonSchema import SchemaBuilderOrchestrator
 from model.json.core import *
-from model.utils import MDStr
+
+argTypes.init()
+providers.init()
 
 
-def buildTagsSchema(schema: ResourceLocationSchema) -> JsonObjectSchema:
-	return JsonObjectSchema(
-		description=MDStr('Allow grouping of items, blocks, fluids, entity types, or functions together using JSON files.'),
-		properties=[
-			PropertySchema(
-				name='description',
-				description=MDStr("A textual description of the contents of this file. Will be ignored by Minecraft."),
-				value=JsonStringSchema(),
-				optional=True,
-			),
-			PropertySchema(
-				name='replace',
-				description=MDStr(
-					"Whether or not contents of this tag should completely replace tag contents from different lower priority data packs with the same resource location. "
-					"When `false` the tag's content is appended to the contents of the higher priority data packs, instead."),
-				value=JsonBoolSchema(),
-				optional=True,
-				default=False,
-			),
-			PropertySchema(
-				name='values',
-				description=MDStr("A list of mix and match of object names and tag names. For tags, recursive reference is possible, but a circular reference causes a loading failure. "),
-				value=JsonArraySchema(
-					element=JsonUnionSchema(
-						options=[
-							JsonStringSchema(
-								description=MDStr("An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`."),
-								type=MINECRAFT_RESOURCE_LOCATION,
-								args=dict(schema=schema)
-							),
-							JsonObjectSchema(
-								description=MDStr("An entry with additional options. (1.16.2+) "),
-								properties=[
-									PropertySchema(
-										name='id',
-										description=MDStr("A string in one of the string formats above."),
-										value=JsonStringSchema(
-											type=MINECRAFT_RESOURCE_LOCATION,
-											args=dict(schema=schema)
-										),
-									),
-									PropertySchema(
-										name='required',
-										description=MDStr(
-											"Whether or not loading this tag should fail if this entry is not found, `true` by default (also for the string entries). "
-											"A tag that fails to load can still be referenced in any data pack and be (re)defined in other data packs. "
-											"In other words, only the entries in this JSON file is ignored if this entry cannot be found."),
-										value=JsonBoolSchema(),
-										optional=True,
-										default=True,
-									),
-								],
-							),
-						],
-					),
-				),
-			),
-		]
-	)
+@dataclass
+class _SchemaLibPath:  # todo find better name for class _SchemaLibPath
+	path: str
+	includedDefinitions: tuple[str, ...] = ()
 
 
-TAGS_BLOCKS = buildTagsSchema(ResourceLocationSchema('', 'block_type'))  # rlc.BlockContext())
-TAGS_ENTITY_TYPES = buildTagsSchema(ResourceLocationSchema('', 'entity_type'))  # rlc.EntityTypeContext())
-TAGS_FLUIDS = buildTagsSchema(ResourceLocationSchema('', 'fluid_type'))  # rlc.FluidContext())
-TAGS_FUNCTIONS = buildTagsSchema(ResourceLocationSchema('', 'function'))  # rlc.FunctionContext())
-TAGS_GAME_EVENTS = buildTagsSchema(ResourceLocationSchema('', 'game_event'))  # rlc.GameEventsContext())
-TAGS_ITEMS = buildTagsSchema(ResourceLocationSchema('', 'item_type'))  # rlc.ItemsContext())
+@dataclass
+class _SchemaDef:  # todo find better name for class _SchemaPath
+	schemas: dict[str, JsonSchema]
+
+
+@dataclass(frozen=True)
+class JsonSchemaStore:
+	_registeredSchemas: dict[str, dict[str, str]] = field(default_factory=lambda: defaultdict(dict))
+	_registeredLibraries: dict[str, dict[str, _SchemaLibPath]] = field(default_factory=lambda: defaultdict(dict))
+	_loadedSchemas: dict[str, dict[str, JsonSchema]] = field(default_factory=lambda: defaultdict(dict))
+
+	orchestrator: SchemaBuilderOrchestrator = field(default_factory=lambda: SchemaBuilderOrchestrator(''))
+
+	def get(self, name: str) -> Optional[JsonSchema]:
+		ns, _, name = name.rpartition(':')
+		return self._loadedSchemas.get(ns, {}).get(name)
+
+	def registerSchema(self, name: str, path: str):
+		ns, _, name = name.rpartition(':')
+		self._registeredSchemas[ns][name] = path
+		self._load_schema(ns, name, path)
+		self.logErrors()
+		self.clearErrors()
+
+	def registerSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> None:
+		"""
+
+		:param name:
+		:param path:
+		:param includedDefinitions: if set to None, all definitions are included.
+		:return:
+		"""
+		ns, _, name = name.rpartition(':')
+		lib_path = _SchemaLibPath(path, includedDefinitions)
+		self._registeredLibraries[ns][name] = lib_path
+		self._load_library(ns, name, lib_path)
+		self.logErrors()
+		self.clearErrors()
+
+	def _load_schema(self, ns: str, name: str, path: str):
+		schema = self.orchestrator.parseJsonSchema(path)
+		if schema is not None:
+			self._loadedSchemas[ns][name] = schema
+		else:
+			logWarning(f"Failed to load schema '{path}'")
+
+	def _load_library(self, ns: str, name: str, path: _SchemaLibPath):
+		library = self.orchestrator.getSchemaLibrary(path.path)
+		inclDefs = path.includedDefinitions or list(library.definitions.keys())
+		for defName in inclDefs:
+			if (schema := library.definitions.get(defName)) is not None:
+				self._loadedSchemas[ns][f'{name}/{defName}'] = schema
+			else:
+				logWarning(f"schema library '{path.path}' has no definition for '{defName}")
+
+	def reloadAllSchemas(self):
+		logInfo(f"reloadAllSchemas():")
+		self._loadedSchemas.clear()
+		self.orchestrator.clear()
+
+		for ns, content in self._registeredSchemas.items():
+			for name, path in content.items():
+				self._load_schema(ns, name, path)
+
+		for ns, content in self._registeredLibraries.items():
+			for name, path in content.items():
+				self._load_library(ns, name, path)
+
+		self.logErrors()
+		logInfo(f"reloadAllSchemas finished:")
+
+	def logErrors(self):
+		for path, errors in self.orchestrator.errors.items():
+			if errors:
+				logWarning(path)
+				for error in errors:
+					logWarning(error, indentLvl=1)
+
+	def clearErrors(self):
+		self.orchestrator.errors.clear()
+
+
+GLOBAL_SCHEMA_STORE = JsonSchemaStore()
+
+# GLOBAL_SCHEMA_STORE.registerSchemaLibrary('tags.json')
+# # TAGS_BLOCKS = tagsLib.definitions['block_type']
+# # TAGS_ENTITY_TYPES = tagsLib.definitions['entity_type']
+# # TAGS_FLUIDS = tagsLib.definitions['fluid_type']
+# # TAGS_FUNCTIONS = tagsLib.definitions['function']
+# # TAGS_GAME_EVENTS = tagsLib.definitions['game_event']
+# # TAGS_ITEMS = tagsLib.definitions['item_type']
+#
+# RAW_JSON_TEXT_SCHEMA = orchestrator.parseJsonSchema('rawJsonText.json')
+# PREDICATE_SCHEMA = orchestrator.parseJsonSchema('predicate.json')
+# JSON_SCHEMA_SCHEMA = orchestrator.parseJsonSchema('jsonSchema.json')
+
 
 __all__ = [
-	'TAGS_BLOCKS',
-	'TAGS_ENTITY_TYPES',
-	'TAGS_FLUIDS',
-	'TAGS_FUNCTIONS',
-	'TAGS_GAME_EVENTS',
-	'TAGS_ITEMS',
+	'JsonSchemaStore',
+	'GLOBAL_SCHEMA_STORE',
 ]

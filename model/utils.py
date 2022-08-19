@@ -58,7 +58,7 @@ class MessageAdapter:
 
 
 @final
-@dataclass(order=True, unsafe_hash=True)
+@dataclass(order=True, unsafe_hash=True, slots=True)
 class Position:
 	line: int = -1
 	column: int = -1
@@ -79,7 +79,7 @@ class Position:
 
 
 @final
-@dataclass(init=False, unsafe_hash=True)
+@dataclass(init=False, unsafe_hash=True, slots=True)
 class Span:
 	start: Position
 	end: Position
@@ -192,7 +192,7 @@ class GeneralError:  # TODO: find better & more descriptive name
 		self.style: str = style
 
 	def __str__(self):
-		return f"{self.message} at pos {self.span.start.column}, line {self.span.start.line + 1}"
+		return f"{self.message}, at pos {self.span.start.column}, line {self.span.start.line + 1}"
 
 	@property
 	def position(self) -> Position:

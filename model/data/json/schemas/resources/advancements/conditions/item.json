@@ -1,0 +1,109 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "base": "_base.json"
+  },
+  "$definitions": {
+    "item": {
+      "$type": "object",
+      "properties": {
+        "count": {
+          "optional": true,
+          "value": { "$ref": "base:valOrRange" },
+          "description": "Amount of the item."
+        },
+        "durability": {
+          "optional": true,
+          "value": { "$ref": "base:valOrRange" },
+          "description": "The durability of the item."
+        },
+        "enchantments": {
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "properties": {
+                "enchantment": {
+                  "optional": true,
+                  "value": {
+                    "$type": "string",
+                    "type": "minecraft:resource_location",
+                    "args": { "schema": "enchantment" }
+                  },
+                  "description": "An [ [Java Edition data values#Enchantments|enchantment ID] ]."
+                },
+                "levels": {
+                  "optional": true,
+                  "value": { "$ref": "base:valOrRange" },
+                  "description": "The level of the enchantment."
+                }
+              }
+            }
+          },
+          "description": "List of enchantments."
+        },
+        "stored_enchantments": {
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "properties": {
+                "enchantment": {
+                  "optional": true,
+                  "value": {
+                    "$type": "string",
+                    "type": "minecraft:resource_location",
+                    "args": { "schema": "enchantment" }
+                  },
+                  "description": "An [ [Java Edition data values#Enchantments|enchantment ID] ]."
+                },
+                "levels": {
+                  "optional": true,
+                  "value": { "$ref": "base:valOrRange" },
+                  "description": "The level of the enchantment."
+                }
+              }
+            }
+          },
+          "description": "List of stored enchantments."
+        },
+        "items": {
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "string",
+              "type": "minecraft:resource_location",
+              "args": { "schema": "item" }
+            }
+          },
+          "description": "A list of [ [Java Edition data values#Items|item IDs] ]."
+        },
+        "nbt": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:nbt_compound_tag"
+          },
+          "description": "An NBT string."
+        },
+        "potion": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:resource_location",
+            "args": { "schema": "potion" }
+          },
+          "description": "A [ [Potion#Item data|brewed potion ID] ]."
+        },
+        "tag": {
+          "optional": true,
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item_tag" } },
+          "description": "An item data pack tag."
+        }
+      }
+    }
+  }
+}

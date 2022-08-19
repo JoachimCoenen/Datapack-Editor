@@ -29,6 +29,10 @@ class InvalidTag(NBTTag[bytes]):
 	typeName: ClassVar[str] = 'invalid_tag'
 	data: bytes
 
+	@property
+	def children(self) -> Collection[NBTTag]:
+		return ()
+
 
 TTag = TypeVar('TTag', bound=NBTTag)
 
@@ -39,6 +43,10 @@ class BasicDataTag(NBTTag[_TT], Generic[_TT]):
 	data: _TT
 	raw: bytes
 	"""The raw value as read from the bytes, without any parsing, etc"""
+
+	@property
+	def children(self) -> Collection[NBTTag]:
+		return ()
 
 
 @dataclass
@@ -101,6 +109,10 @@ class ListTag(NBTTag[list[NBTTag]]):
 	typeName: ClassVar[str] = 'list_tag'
 	data: list[NBTTag]
 
+	@property
+	def children(self) -> Collection[NBTTag]:
+		return self.data
+
 
 @dataclass
 class NBTProperty(NBTTag[tuple[StringTag, NBTTag]]):
@@ -125,11 +137,19 @@ class CompoundTag(NBTTag[OrderedDict[bytes, NBTProperty]]):
 	typeName: ClassVar[str] = 'compound_tag'
 	data: OrderedDict[bytes, NBTTag]
 
+	@property
+	def children(self) -> Collection[NBTTag]:
+		return self.data.values()
+
 
 @dataclass
 class ArrayTag(NBTTag[list[_TT2]], Generic[_TT2]):
 	# typeName: ClassVar[str] = 'array_tag'
 	data: list[_TT2]
+
+	@property
+	def children(self) -> Collection[NBTTag]:
+		return self.data
 
 
 @dataclass

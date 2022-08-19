@@ -1,6 +1,6 @@
 """Lexer functions, loosely based on www.github.com/tusharsadhwani/json_parser"""
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Callable
 
 from Cat.utils import CachedProperty
 from model.json.core import TokenType, Token, JsonTokenizeError
@@ -31,22 +31,22 @@ _TOKEN_TYPE_FOR_SPECIAL = {
 }
 
 _TOKEN_TYPE_FOR_OPERATOR = {
-	ord('['): TokenType.left_bracket,
-	ord(']'): TokenType.right_bracket,
-	ord('{'): TokenType.left_brace,
-	ord('}'): TokenType.right_brace,
-	ord(','): TokenType.comma,
-	ord(':'): TokenType.colon,
+	b'[': TokenType.left_bracket,
+	b']': TokenType.right_bracket,
+	b'{': TokenType.left_brace,
+	b'}': TokenType.right_brace,
+	b',': TokenType.comma,
+	b':': TokenType.colon,
 }
-
-
-_OPERATOR_FOR_TOKEN_TYPE = {v: k for k, v in _TOKEN_TYPE_FOR_OPERATOR.items()}
 
 
 @dataclass
 class JsonTokenizer(TokenizerBase[Token]):
 	allowMultilineStr: bool
 	_errorsNextToken: list[tuple[Message, tuple, str]] = field(default_factory=list, init=False)
+
+	def __post_init__(self):
+		super(JsonTokenizer, self).__post_init__()
 
 	@property
 	def char(self) -> Char:
@@ -207,12 +207,12 @@ class JsonTokenizer(TokenizerBase[Token]):
 
 	def extract_operator(self) -> Token:
 		start = self.currentPos
-		char = self.text[self.cursor]
+		char = self.text[self.cursor:self.cursor+1]
 		self.cursor += 1
-		return self.addToken2(start, char.to_bytes(1, 'big'), _TOKEN_TYPE_FOR_OPERATOR[char])
+		return self.addToken2(start, char, _TOKEN_TYPE_FOR_OPERATOR[char])
 
 	@CachedProperty
-	def _TOKEN_EXTRACTORS_BY_CHAR(self):
+	def _TOKEN_EXTRACTORS_BY_CHAR(self) -> dict[str, Callable[[], Token]]:
 		return {
 			# **{c: extract_operator for c in '[]{},:'},
 			**{c: self.extract_string for c in b'"\''},

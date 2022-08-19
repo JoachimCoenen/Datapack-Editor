@@ -3,6 +3,7 @@ from copy import copy
 from dataclasses import dataclass, fields, Field, is_dataclass
 from typing import Optional
 
+from model.data.json.schemas.tags import JsonSchemaStore
 from model.datapack.datapackContents import EntryHandlers
 from model.json.core import JsonSchema
 
@@ -11,7 +12,7 @@ from model.json.core import JsonSchema
 class DPVersion:
 	name: str
 	structure: EntryHandlers
-	jsonSchemas: dict[str, JsonSchema]
+	jsonSchemas: JsonSchemaStore
 
 
 def _copyRecursive(data):

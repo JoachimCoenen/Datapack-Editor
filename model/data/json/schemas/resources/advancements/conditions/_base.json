@@ -1,0 +1,47 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$templates": {
+    "valOrRange": {
+      "$params": {
+        "type": { "type": "string", "default": "integer" }
+      },
+      "$body": {
+        "$type": "union",
+        "options": [
+          {
+            "$type": { "$ref": "#type" }
+          },
+          {
+            "$ref": "range",
+            "type": { "$ref": "#type"}
+          }
+        ]
+      }
+    },
+
+    "range": {
+      "$params": {
+        "type": { "type": "string", "default": "integer" }
+      },
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "max": {
+            "optional": true,
+            "value": {
+              "$type": { "$ref": "#type" }
+            },
+            "description": "The maximum value."
+          },
+          "min": {
+            "optional": true,
+            "value": {
+              "$type": { "$ref": "#type" }
+            },
+            "description": "The minimum value."
+          }
+        }
+      }
+    }
+  }
+}

@@ -22,7 +22,7 @@ class Named(ABC):
 @dataclass
 class CommandPartSchema(Schema, Named, ABC):
 	description: str = field(default='')
-	next: list[CommandPartSchema] = field(default_factory=list)
+	next: Sequence[CommandPartSchema] = field(default_factory=list)
 
 	language: ClassVar[LanguageId] = 'MCCommand'
 
@@ -144,7 +144,7 @@ _TCommandPartSchema = TypeVar('_TCommandPartSchema', bound=CommandPartSchema)
 
 
 @dataclass
-class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPartSchema]):
+class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPartSchema], ABC):
 	source: bytes = field(repr=False)
 	content: bytes = field(repr=False)
 	# @property
@@ -182,6 +182,11 @@ class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPar
 	@property
 	def end(self) -> Position:
 		return self.span.end
+
+	@property
+	def children(self) -> Collection[CommandPart]:
+		return ()
+
 
 
 @dataclass

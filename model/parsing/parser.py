@@ -5,6 +5,7 @@ from typing import Generic, TypeVar, Type, Optional, Iterator, Mapping
 from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
 from model.parsing.tree import Node, Schema, TokenLike
+from model.pathUtils import FilePath
 from model.utils import Position, GeneralError, LanguageId, MDStr, Span, ParsingError
 
 _TToken = TypeVar('_TToken', bound=TokenLike)
@@ -35,7 +36,6 @@ class IndexMapper:
 
 	# def toDecoded(self, enc: int) -> int:
 	# 	mapp = self._findEncoded(enc)
-	# 	mapp
 
 	def toEncoded(self, dec: int) -> int:
 		mapp = self._findEncodingMap(dec)
@@ -93,6 +93,7 @@ class TokenizerBase(_Base, Generic[_TToken], ABC):
 @dataclass
 class ParserBase(_Base, Generic[_TNode, _TSchema], ABC):
 	schema: Optional[_TSchema]
+	filePath: FilePath
 
 	@abstractmethod
 	def parse(self) -> Optional[_TNode]:
@@ -112,6 +113,7 @@ def allParsers() -> Mapping[LanguageId, Type[ParserBase]]:
 def parse(
 		text: bytes,
 		*,
+		filePath: FilePath,
 		language: LanguageId,
 		schema: Optional[Schema],
 		line: int = 0,
@@ -123,10 +125,10 @@ def parse(
 ) -> tuple[Optional[Node], list[GeneralError]]:
 	parserCls = getParserCls(language)
 	if parserCls is None:
-		return None, [GeneralError(MDStr(f"No Parser for language `{language}` registered."), Span(), style='info')]
+		return None, [ParsingError(MDStr(f"No Parser for language `{language}` registered."), Span(), style='info')]
 	if indexMapper is None:
 		indexMapper = IndexMapper()
-	parser: ParserBase = parserCls(text, line, lineStart, cursor, cursorOffset, indexMapper, schema, **kwargs)
+	parser: ParserBase = parserCls(text, line, lineStart, cursor, cursorOffset, indexMapper, schema, filePath, **kwargs)
 	node = parser.parse()
 	return node, parser.errors
 

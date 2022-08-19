@@ -17,6 +17,7 @@ from model.commands.utils import CommandSyntaxError
 from model.messages import *
 from model.parsing.bytesUtils import bytesToStr
 from model.parsing.contextProvider import Suggestions, Match
+from model.pathUtils import FilePath
 from model.utils import Span, Position, GeneralError, MDStr
 
 
@@ -47,7 +48,7 @@ def makeCommandPart(sr: StringReader, key: bytes) -> CommandPart:
 	return argument
 
 
-def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], *, errorsIO: list[CommandSyntaxError]) -> Optional[FilterArguments]:
+def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[FilterArguments]:
 	if sr.tryConsumeByte(ord('[')):
 		# block states:
 		arguments: FilterArguments = FilterArguments()
@@ -91,7 +92,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 				if handler is None:
 					valueNode = missingArgumentParser(sr, tsai, errorsIO=errorsIO)
 				else:
-					valueNode = handler.parse(sr, tsai, errorsIO=errorsIO)
+					valueNode = handler.parse(sr, tsai, filePath, errorsIO=errorsIO)
 				if valueNode is None:
 					remaining = sr.readUntilEndOrRegex(re.compile(rb'[],]'))
 					valueNode = makeParsedArgument(sr, tsai, value=remaining)

@@ -12,6 +12,7 @@ from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.parsing.bytesUtils import bytesToStr
 from model.parsing.contextProvider import *
+from model.pathUtils import FilePath
 from model.utils import Position, Span, GeneralError, MDStr, formatAsError
 
 
@@ -44,7 +45,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 				return getArgumentContext(schema.type)
 		return None
 
-	def prepareTree(self) -> list[GeneralError]:
+	def prepareTree(self, filePath: FilePath) -> list[GeneralError]:
 		return []
 
 	def validateTree(self, errorsIO: list[GeneralError]) -> None:
@@ -165,7 +166,7 @@ def _getCallTipsFromBefore(before: CommandPart) -> Optional[list[CommandPartSche
 
 class ArgumentContext(Context[ParsedArgument], ABC):
 	@abstractmethod
-	def parse(self, sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:

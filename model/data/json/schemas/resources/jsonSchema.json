@@ -1,0 +1,324 @@
+{
+	"$schema": "dpe/json/schema",
+	"$body": {
+		"$type": "object",
+		"properties": {
+			"$schema": {
+				"$type": "enum",
+				"options": {
+					"dpe/json/schema": "",
+					"dpe/json/schema/library": ""
+				}
+			},
+			"$libraries": {
+				"optional": true,
+				"value": {
+					"$type": "object",
+					"default-property": { "$type": "string", "type": "dpe:schema_library_path" },
+					"properties": {}
+				}
+			},
+			"$body": {
+				"decidingProp": "$schema",
+				"values": {
+					"dpe/json/schema": {
+						"$defRef": "schemaOrRef" 
+					}
+				}
+			},
+			"$templates": {
+				"optional": true,
+				"value": {
+					"$type": "object",
+					"default-property": {
+						"$type": "object",
+						"properties": {
+							"$params": {
+								"$type": "object",
+								"default-property": {
+									"$type": "object",
+									"properties": {
+										"type": {
+											"$type": "enum",
+											"options": {
+												"null": "",
+												"boolean": "",
+												"number": "",
+												"string": "",
+												"array": "",
+												"object": ""
+											}
+										}
+									}
+								},
+								"properties": {}
+							},
+							"$body": { "$defRef": "schemaOrRef" }
+						}
+					}
+				}
+			},
+			"$definitions": {
+				"optional": true,
+				"value": {
+					"$type": "object",
+					"default-property": { "$defRef": "schemaOrRef" },
+					"properties": {}
+				}
+			}
+		}
+	},
+	"$templates": {
+		"orRef": {
+			"$params": {
+				"type": { "type": "object" }
+			},
+			"$body": {
+				"$type": "union",
+				"options": [
+					{
+						"$ref": "#type"
+					},
+					{
+						"$type": "object",
+						"properties": {
+							"$ref": { "$type": "string", "type": "dpe:tmpl_ref" }
+						},
+						"default-property": { "$type": "any" }
+					}
+				]
+			}
+		}
+	},
+	"$definitions": {
+		"schema": {
+			"$type": "object",
+			"properties": {
+				"$type": {
+					"value": {
+						"$ref": "orRef",
+						"type": {
+							"$type": "enum",
+							"options": {
+								"object": "",
+								"array": "",
+								"union": "",
+								"string": "",
+								"enum": "",
+								"boolean": "",
+								"integer": "",
+								"float": "",
+								"null": "",
+								"calculated": "",
+								"any": ""
+							}
+						}
+					}
+				},
+				"description": {
+					"optional": true,
+					"default": false,
+					"value": {
+						"$ref": "orRef",
+						"type": {
+							"$type": "string",
+							"type": "markdown"
+						}
+					}
+				},
+				"deprecated": {
+					"optional": true,
+					"default": false,
+					"value": { "$ref": "orRef", "type": { "$type": "boolean" } }
+				},
+				"default-property": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"object": { "$ref": "orRef", "type": { "$defRef": "propertyOrSchema" } }
+					}
+				},
+				"properties": {
+					"description": "properties",
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"object": {
+							"$ref": "orRef",
+							"type": {
+								"$type": "object", 
+								"default-property": { "$defRef": "propertyOrSchema" }
+							}
+						}
+					}
+				},
+				"element": {
+					"decidingProp": "$type",
+					"values": {
+						"array": { "$ref": "orRef", "type": { "$defRef": "schemaOrRef" } }
+					}
+				},
+				"options": {
+					"decidingProp": "$type",
+					"values": {
+						"union": {
+							"$ref": "orRef",
+							"type": {
+								"$type": "array",
+								"element": { "$ref": "orRef", "type": { "$defRef": "schemaOrRef" } }
+							}
+						},
+						"enum": {
+							"$ref": "orRef",
+							"type": {
+								"$type": "object",
+								"default-property": {
+									"$ref": "orRef",
+									"type": {
+										"$type": "string",
+										"type": "markdown",
+										"description": "a description of the option"
+									}
+								}
+							}
+						}
+					}
+				},
+				"type": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"string": { "$ref": "orRef", "type": { "$type": "string", "type": "dpe:json_arg_type"  } }
+					}
+				},
+				"args": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"string": {
+							"$ref": "orRef",
+							"type": {
+								"$type": "object",
+								"default-property": { "$type": "any" }
+							}
+						}
+					}
+				},
+				"min": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"integer": { "$ref": "orRef", "type": { "$type": "integer" } },
+						"float": { "$ref": "orRef", "type": { "$type": "float" } }
+					}
+				},
+				"max": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"integer": { "$ref": "orRef", "type": { "$type": "integer" } },
+						"float": { "$ref": "orRef", "type": { "$type": "float" } }
+					}
+				},
+				"function": {
+					"optional": false,
+					"decidingProp": "$type",
+					"values": {
+						"calculated": { "$ref": "orRef", "type": { "$type": "string" } }
+					}
+				}
+			}
+		},
+		
+		"schemaOrRef": {
+			"$type": "union",
+			 "options": [
+				{ "$defRef": "schema" },
+				{ "$type": "object",
+					"properties": {
+						"$defRef": { "$type": "string", "type": "dpe:def_ref" }
+					}
+				}
+			]
+		},
+		
+		"property": {
+			"$type": "object",
+			"properties": {
+				"description": {
+					"optional": true,
+					"default": false,
+					"value": {
+						"$ref": "orRef",
+						"type": {
+							"$type": "string",
+							"type": "markdown"
+						}
+					}
+				},
+				"deprecated": {
+					"optional": true,
+					"default": false,
+					"value": { "$ref": "orRef", "type": { "$type": "boolean" } }
+				},
+				"optional": {
+					"optional": true,
+					"default": false,
+					"value": { "$ref": "orRef", "type": { "$type": "boolean" } }
+				},
+				"default": {
+					"optional": true,
+					"value": { "$ref": "orRef", "type": { "$type": "any" } }
+				},
+				"decidingProp": {
+					"optional": true,
+					"requires": ["values"],
+					"value": { "$ref": "orRef", "type": { "$type": "string" } }
+				},
+				"values": {
+					"requires": ["decidingProp"],
+					"value": {
+						"$ref": "orRef",
+						"type": {
+							"$type": "object",
+							"default-property": { "$ref": "orRef", "type": { "$defRef": "schemaOrRef" } },
+							"properties": {}
+						}
+					}
+				},
+				"value": {
+					"hates": ["decidingProp"],
+					"value": { "$ref": "orRef", "type": { "$defRef": "schemaOrRef" } }
+				},
+				"requires": {
+					"optional": true,
+					"value": {
+						"$ref": "orRef",
+						"type": {
+							"$type": "array",
+							"element": { "$ref": "orRef", "type": { "$type": "string" } }
+						}
+					}
+				},
+				"hates": {
+					"optional": true,
+					"value": {
+						"$ref": "orRef",
+						"type": {
+							"$type": "array",
+							"element": { "$ref": "orRef", "type": { "$type": "string" } }
+						}
+					}
+				}
+			}
+		},
+		
+		"propertyOrSchema": {
+			"$type": "union",
+			"options": [
+				{ "$defRef": "property" },
+				{ "$defRef": "schemaOrRef" }
+			]
+		}
+	}
+}

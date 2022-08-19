@@ -186,7 +186,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 							argument = missingArgumentContext(sr, possibility, errorsIO=self.errors)
 							# return firstArg, errors
 						else:
-							argument = ctx.parse(sr, possibility, errorsIO=self.errors)
+							argument = ctx.parse(sr, possibility, self.filePath, errorsIO=self.errors)
 						if argument is not None:
 							break
 						pass  # TODO isinstance(possibility, ArgumentSchema):

@@ -5,12 +5,9 @@ import re
 
 from model.data.dpVersion import registerDPVersion, DPVersion
 from model.data.json.schemas.dependency import DEPENDENCIES_SCHEMA
-from model.data.json.schemas.predicate import PREDICATE_SCHEMA
-from model.data.json.schemas.rawJsonText import RAW_JSON_TEXT_SCHEMA
-from model.data.json.schemas.tags import *
+from model.data.json.schemas.tags import GLOBAL_SCHEMA_STORE
 from model.datapack.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, DatapackContents, GenerationInfo, DefaultFileInfo, \
 	buildFunctionMeta, buildEntryHandlers, buildJsonMeta, buildNbtMeta, NAME_SPACE_CAPTURE_GROUP
-from model.json.core import JsonSchema
 
 
 def initPlugin() -> None:
@@ -59,7 +56,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/blocks'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/blocks'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.blocks
 	),
 	EntryHandlerInfo(
@@ -67,7 +64,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/entity_types'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/entity_types'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.entity_types
 	),
 	EntryHandlerInfo(
@@ -75,7 +72,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/fluids'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/fluids'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.fluids
 	),
 	EntryHandlerInfo(
@@ -83,7 +80,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/functions'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/functions'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.functions,
 		generation=GenerationInfo(
 			initialFiles=[
@@ -105,7 +102,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/game_events'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/game_events'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.game_events
 	),
 	EntryHandlerInfo(
@@ -113,7 +110,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='tags/items'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/items'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.items
 	),
 
@@ -123,7 +120,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/biome'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/biome'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.biome
 	),
 	EntryHandlerInfo(
@@ -131,7 +128,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/configured_carver'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/configured_carver'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_carver
 	),
 	EntryHandlerInfo(
@@ -139,7 +136,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/configured_feature'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/configured_feature'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_feature
 	),
 	EntryHandlerInfo(
@@ -147,7 +144,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/configured_structure_feature'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/configured_structure_feature'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_structure_feature
 	),
 	EntryHandlerInfo(
@@ -155,7 +152,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/configured_surface_builder'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/configured_surface_builder'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_surface_builder
 	),
 	EntryHandlerInfo(
@@ -163,7 +160,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/noise_settings'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/noise_settings'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.noise_settings
 	),
 	EntryHandlerInfo(
@@ -171,7 +168,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/processor_list'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/processor_list'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.processor_list
 	),
 	EntryHandlerInfo(
@@ -179,7 +176,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='worldgen/template_pool'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/template_pool'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.template_pool
 	),
 
@@ -189,7 +186,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='advancements'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:advancements'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).advancements
 	),
 	EntryHandlerInfo(
@@ -219,7 +216,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='item_modifiers'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:item_modifiers'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).item_modifiers
 	),
 	EntryHandlerInfo(
@@ -227,7 +224,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='loot_tables'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:loot_tables'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).loot_tables
 	),
 	EntryHandlerInfo(
@@ -235,7 +232,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='predicates'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:predicates'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).predicates
 	),
 	EntryHandlerInfo(
@@ -243,7 +240,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='recipes'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:recipes'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).recipes
 	),
 	EntryHandlerInfo(
@@ -259,7 +256,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='dimension'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:dimension'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).dimension
 	),
 	EntryHandlerInfo(
@@ -267,25 +264,26 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='dimension_type'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:dimension_type'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).dimension_type
 	),
 ]
 
-DATAPACK_JSON_SCHEMAS: dict[str, JsonSchema] = {
-	'rawJsonText': RAW_JSON_TEXT_SCHEMA,
-	'tags/blocks': TAGS_BLOCKS,
-	'tags/entity_types': TAGS_ENTITY_TYPES,
-	'tags/fluids': TAGS_FLUIDS,
-	'tags/functions': TAGS_FUNCTIONS,
-	'tags/game_events': TAGS_GAME_EVENTS,
-	'tags/items': TAGS_ITEMS,
-	'predicates': PREDICATE_SCHEMA,
-	'dependencies.json': DEPENDENCIES_SCHEMA,
-}
+# DATAPACK_JSON_SCHEMAS: dict[str, JsonSchema] = {
+# 	'rawJsonText': RAW_JSON_TEXT_SCHEMA,
+# 	'tags/blocks': TAGS_BLOCKS,
+# 	'tags/entity_types': TAGS_ENTITY_TYPES,
+# 	'tags/fluids': TAGS_FLUIDS,
+# 	'tags/functions': TAGS_FUNCTIONS,
+# 	'tags/game_events': TAGS_GAME_EVENTS,
+# 	'tags/items': TAGS_ITEMS,
+# 	'predicates': PREDICATE_SCHEMA,
+# 	'dependencies.json': DEPENDENCIES_SCHEMA,
+# 	'jsonSchema.json': JSON_SCHEMA_SCHEMA,
+# }
 
 version6 = DPVersion(
 	name='6',
 	structure=buildEntryHandlers(DATAPACK_CONTENTS),
-	jsonSchemas=DATAPACK_JSON_SCHEMAS
+	jsonSchemas=GLOBAL_SCHEMA_STORE
 )

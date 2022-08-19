@@ -32,10 +32,41 @@ def fileNameFromFilePath(path: FilePath) -> str:
 	return filename
 
 
+def dirFromFilePath(path: FilePath) -> FilePath:
+	if isinstance(path, tuple):
+		p1 = path[1].removesuffix('/').rpartition('/')[0]
+		p0 = path[0]
+		return p0 if not p1 else (p0, p1)
+	else:
+		return path.removesuffix('/').rpartition('/')[0]
+
+
 def extensionFromFilePath(path: FilePath) -> str:
 	pathPart = path if isinstance(path, str) else path[1]
 	_, ext = os.path.splitext(pathPart)
 	return ext
+
+
+def joinFilePath(path: FilePath, part: str) -> FilePath:
+	if isinstance(path, tuple):
+		return path[0], f"{path[1].removesuffix('/')}/{part.removeprefix('/')}"
+	else:
+		return f"{path.removesuffix('/')}/{part.removeprefix('/')}"
+
+
+def toDisplayPath(path: FilePath) -> str:
+	if isinstance(path, tuple):
+		return f"{path[0].removesuffix('/')}/!{path[1].removeprefix('/')}"
+	else:
+		return path
+
+
+def fromDisplayPath(path: str) -> FilePath:
+	l, _, r = path.partition('!')
+	if r:
+		return l, r
+	else:
+		return l
 
 
 def getAllFilesFromSearchPath(rootFolders: Union[str, list[str]], folderFilter: str, zipPathFilter: str, extensions: Union[str, tuple[str, ...]], excludes: Union[str, tuple[str, ...]] = None) -> list[FilePath]:

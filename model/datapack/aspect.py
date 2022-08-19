@@ -27,7 +27,7 @@ class DatapackAspect(ProjectAspect):
 			return dependencies
 
 		from model.data.json.schemas.dependency import DEPENDENCIES_SCHEMA
-		node, errors = parseNPrepare(file, language=LANGUAGES.JSON, schema=DEPENDENCIES_SCHEMA, allowMultilineStr=False)
+		node, errors = parseNPrepare(file, filePath=filePath, language=LANGUAGES.JSON, schema=DEPENDENCIES_SCHEMA, allowMultilineStr=False)
 		if node is not None:
 			validateTree(node, file, errors)
 

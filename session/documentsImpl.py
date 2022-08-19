@@ -5,8 +5,7 @@ from Cat.Serializable import RegisterContainer, Serialized, ComputedCached
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.utils.logging_ import logError
 from model.commands.command import MCFunctionSchema
-from model.commands.validator import getSession
-from model.datapack.datapackContents import MetaInfo, getEntryHandlerForFile, JsonMeta, getMetaInfo
+from model.datapack.datapackContents import MetaInfo, JsonMeta, getMetaInfo
 from model.json.core import JsonSchema
 from model.nbt.tags import NBTTagSchema
 from model.parsing.contextProvider import getContextProvider, parseNPrepare
@@ -14,18 +13,11 @@ from model.parsing.tree import Node, Schema
 from model.pathUtils import FilePath
 from model.utils import WrappedError, GeneralError
 from session.documents import RegisterDocument, TextDocument
+from session.session import getSession
 
 
-def init():
-	from model.commands import parser as commandsParser
-	from model.nbt import snbtParser as snbtParser
-	from model.json import parser as jsonParser
-	commandsParser.init()
-	snbtParser.init()
-	jsonParser.init()
-
-
-init()
+def initPlugin():
+	pass
 
 
 class DatapackDocument(TextDocument):
@@ -56,7 +48,7 @@ class DatapackDocument(TextDocument):
 		try:
 			schema = self.schema
 			language = schema.language if schema is not None else self.language
-			return parseNPrepare(text, language=language, schema=schema, **self.parseKwArgs)
+			return parseNPrepare(text, filePath=self.filePath, language=language, schema=schema, **self.parseKwArgs)
 		except Exception as e:
 			logError(e)
 			return None, [WrappedError(e)]
@@ -193,7 +185,3 @@ class SNBTDocument(DatapackDocument, TextDocument):
 		# 	return getSession().datapackData.jsonSchemas.get(schemaId)
 		# else:
 		# 	return None
-
-
-def init() -> None:
-	pass

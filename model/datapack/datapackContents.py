@@ -3,7 +3,7 @@ import re
 from collections import OrderedDict
 from dataclasses import dataclass, field, replace
 from itertools import chain
-from typing import Optional, TypeVar, Type, Callable, Iterable, Mapping
+from typing import Optional, TypeVar, Type, Callable, Iterable, Mapping, Collection
 
 from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from Cat.utils.profiling import logError
@@ -148,6 +148,11 @@ class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema],
 		namespace, path, isTag = cls.splitString(value)
 		return cls(namespace, path, isTag, span, schema)
 
+	@property
+	def children(self) -> Collection[ResourceLocationNode]:
+		return ()
+
+
 	__eq__ = ResourceLocation.__eq__
 	__lt__ = ResourceLocation.__lt__
 	__le__ = ResourceLocation.__le__
@@ -237,7 +242,7 @@ class JsonMeta(MetaInfo):
 			logError(e)
 			return MDStr('')
 
-		json, errors = parse(file, language=LANGUAGES.JSON, schema=None, allowMultilineStr=True)
+		json, errors = parse(file, filePath=self.filePath, language=LANGUAGES.JSON, schema=None, allowMultilineStr=True)
 
 		from model.json.core import JsonObject
 		if json is not None and isinstance(json, JsonObject):

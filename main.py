@@ -93,9 +93,22 @@ def run():
 		app.exec_()
 
 
+def loadCorePlugins():
+	from model import json, commands, nbt
+
+	json.initPlugin()
+	commands.initPlugin()
+	nbt.initPlugin()
+
+	from session import documentsImpl
+
+	documentsImpl.initPlugin()
+
+
 def loadPlugins():
-	from model.commands import argumentContextsImpl
-	argumentContextsImpl.init()  # do not remove!
+
+	from model.data import json as jsonData
+	jsonData.initPlugin()
 
 	from model.data import version1_16, version1_17, version1_18
 	version1_16.initPlugin()
@@ -137,9 +150,10 @@ def start(argv):
 
 		import gui.themes.schemesUI  # DO NOT REMOVE!
 
+		loadCorePlugins()
+
 		loadSessionFromFile()
 		showSetupDialogIfNecessary()
-
 		loadPlugins()
 
 		window = MainWindow(WindowId('0'))

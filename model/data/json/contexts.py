@@ -14,7 +14,7 @@ from model.json.jsonContext import jsonStringContext, JsonStringContext
 from model.messages import *
 from model.nbt.tags import NBTTagSchema
 from model.parsing.bytesUtils import strToBytes
-from model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getDocumentation, onIndicatorClicked, getClickableRanges, parseNPrepare
+from model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getDocumentation, onIndicatorClicked, getClickableRanges, parseNPrepare, CtxInfo
 from model.parsing.tree import Schema
 from model.utils import GeneralError, Position, Span, MDStr, LanguageId
 
@@ -32,12 +32,14 @@ class ResourceLocationHandler(JsonStringContext):
 		if schema is None:
 			schema = ResourceLocationSchema('', 'any')
 
+		if isinstance(schema, str):
+			schema = ResourceLocationSchema('', schema)
 		if not isinstance(schema, ResourceLocationSchema):
 			logError(f"invalid 'schema' argument for JsonArgType '{MINECRAFT_RESOURCE_LOCATION.name}' in JsonStringSchema: {schema}. Expected an instance of ResourceLocationContext.")
 			schema = ResourceLocationSchema('', 'any')
 		return schema
 
-	def prepare(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
+	def prepare(self, node: JsonString, info: CtxInfo[JsonString], errorsIO: list[GeneralError]) -> None:
 		data = strToBytes(node.data)
 		sr = StringReader(data, 0, 0, 0, data)
 
@@ -102,13 +104,14 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 	def getParserKwArgs(self, node: JsonString) -> dict[str, Any]:
 		return {}
 
-	def prepare(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
+	def prepare(self, node: JsonString, info: CtxInfo[JsonString], errorsIO: list[GeneralError]) -> None:
 		# remainder = sr.tryReadRemaining()
 		schema = self.getSchema(node)
 		language = self.getLanguage(node)
 
 		data, errors = parseNPrepare(
 			strToBytes(node.data),
+			filePath=info.filePath,
 			language=language,
 			schema=schema,
 			line=node.span.start.line,
@@ -174,7 +177,7 @@ class CommandJsonStrContext(ParsingJsonCtx):
 @jsonStringContext(OPTIONS_JSON_ARG_TYPE.name)
 class OptionsJsonStrContext(JsonStringContext):
 
-	def prepare(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
+	def prepare(self, node: JsonString, info: CtxInfo[JsonString], errorsIO: list[GeneralError]) -> None:
 		pass
 
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:

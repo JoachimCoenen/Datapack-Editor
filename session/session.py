@@ -97,7 +97,3 @@ def saveSessionToFile(filePath: str = None) -> None:
 		filePath = getSessionFilePath()
 	with openOrCreate(filePath, "w") as outFile:
 		getSession().toJSON(outFile)
-
-
-from model import commands
-commands.setGetSession(getSession)

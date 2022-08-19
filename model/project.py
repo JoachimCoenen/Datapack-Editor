@@ -152,9 +152,13 @@ class Project(SerializableContainer):
 		self.deepDependencies: list[Project] = []
 
 	path: str = Serialized(default='')
-	isZipped: bool = ComputedCached(getInitValue=lambda s: os.path.isfile(s.path), ependencies_=[path])
+	isArchive: bool = ComputedCached(getInitValue=lambda s: os.path.isfile(s.path), ependencies_=[path])
 	aspects: AspectDict[ProjectAspect] = Serialized(getInitValue=buildProjectAspects, shouldSerialize=False)
 	indexBundles: AspectDict[IndexBundleAspect] = Serialized(getInitValue=ft.partial(AspectDict, IndexBundleAspect), shouldSerialize=False)
+
+	@property
+	def isImmutable(self) -> bool:
+		return self.isArchive
 
 	@property
 	def isValid(self) -> bool:

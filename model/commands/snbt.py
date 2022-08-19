@@ -9,10 +9,11 @@ from model.commands.utils import CommandSyntaxError
 from model.nbt.tags import NBTTag, NBTTagSchema
 from model.parsing.bytesUtils import bytesToStr
 from model.parsing.contextProvider import parseNPrepare
+from model.pathUtils import FilePath
 from model.utils import Span, GeneralError, LanguageId
 
 
-def parseNBTTag(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
+def parseNBTTag(sr: StringReader, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
 	# parse_nbt('{foo: [hello, world], bar: [I; 1, 2, 3]}')
 	sr.save()
 	literal = sr.source[sr.cursor:]
@@ -22,6 +23,7 @@ def parseNBTTag(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[N
 
 	tag, errors = parseNPrepare(
 		sr.source[sr.cursor:],
+		filePath=filePath,
 		language=LanguageId('SNBT'),
 		schema=NBTTagSchema(''),
 		line=sr._lineNo,

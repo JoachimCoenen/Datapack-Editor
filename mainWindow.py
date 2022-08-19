@@ -20,7 +20,6 @@ from keySequences import KEY_SEQUENCES
 from model.utils import Span, GeneralError
 from session.session import getSession, WindowId, saveSessionToFile
 from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
-from session import documentsImpl
 from gui.checkAllDialog import CheckAllDialog
 from gui.searchAllDialog import SearchAllDialog
 from gui.spotlightSearch import SpotlightSearchGui
@@ -28,9 +27,6 @@ from model.pathUtils import FilePath
 from gui.datapackEditorGUI import DatapackEditorGUI
 from settings import applicationSettings
 from settings.settingsDialog import SettingsDialog
-
-
-documentsImpl.init()
 
 
 def frange(a: float, b: float, jump: float, *, includeLAst: bool = False):
