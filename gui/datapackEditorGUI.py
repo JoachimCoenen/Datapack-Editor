@@ -6,7 +6,7 @@ import functools as ft
 import os
 import re
 from dataclasses import dataclass
-from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Union, Pattern, NamedTuple, Protocol, Type
+from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Union, Pattern, NamedTuple, Protocol, Type, ClassVar
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
@@ -23,13 +23,13 @@ from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
 from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
-from Cat.Serializable import SerializedPropertyABC, SerializableContainer
+from Cat.Serializable import SerializedPropertyABC
 from Cat.icons import icons
 from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, openOrCreate, CachedProperty
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from gui import lexers
 from session.documents import Document, ErrorCounts
-from model.pathUtils import FilePath, normalizeDirSeparators
+from model.pathUtils import FilePath, normalizeDirSeparators, FilePathTpl
 from session.session import getSession
 from settings import applicationSettings
 
@@ -292,51 +292,42 @@ class LocalFilesPropInfo(NamedTuple):
 	folderName: str
 
 
-@dataclass
-class FileEntry:
-	displayPath: str
-	fullPath: FilePath
-	index: int
-	right: list[tuple[FilePath, tuple[str, ...]]]
-
-
-class FileEntry2(NamedTuple):
+class FileEntry(NamedTuple):
 	fullPath: FilePath
 	virtualPath: str  # = dataclasses.field(compare=False)
 
 
-@dataclass
+@dataclass(slots=True)
 class FilesTreeItem:
-	# __slots__ = ('label', 'commonDepth', 'filePaths', 'isImmutable')
 	label: str
-	commonDepth: int = dataclasses.field(compare=False)
-	filePaths: list[FileEntry2] = dataclasses.field(compare=False)
+	commonVPath: str = dataclasses.field(compare=False)
+	commonPath: FilePathTpl = dataclasses.field(compare=False)
+	filePaths: list[FileEntry] = dataclasses.field(compare=False)
 
 	isImmutable: bool = dataclasses.field(compare=False)
 	isArchive: bool = dataclasses.field(default=False, compare=False)
 
-	_folderPath: Optional[str] = dataclasses.field(default=None, compare=False)
-
 	@property
-	def folderPath(self) -> Optional[FilePath]:
-		if self._folderPath is not None:
-			return self._folderPath
-
-		if not self.filePaths:
+	def folderPath(self) -> Optional[FilePathTpl]:
+		if self.isFile:
 			return None
-		fe = self.filePaths[0]
-		if fe.virtualPath.endswith(fe.fullPath[1]):
-			lenDiff = len(fe.virtualPath) - len(fe.fullPath[1])
-			cd = self.commonDepth - lenDiff
-			folderPath = fe.fullPath[0], fe.fullPath[1][:cd]
-			return folderPath
-		else:
-			return None
+		return self.commonPath
 
 	@property
 	def isFile(self) -> bool:
 		filePathsCount = len(self.filePaths)
-		return (filePathsCount == 1 and len(getattr(self.filePaths[0], 'virtualPath', '')) == self.commonDepth - 1)
+		return filePathsCount == 1 and self.commonPath == self.filePaths[0].fullPath
+
+
+@dataclass
+class FilesTreeRoot:
+	projects: list[FilesTreeItem] = dataclasses.field(compare=False)
+	label: ClassVar[str] = '<ROOT>'
+	commonDepth: ClassVar[int] = 0
+	isImmutable: ClassVar[bool] = False
+	isArchive: ClassVar[bool] = False
+	folderPath: ClassVar[Optional[FilePath]] = None
+	isFile: ClassVar[bool] = False
 
 
 class DatapackEditorGUI(AutoGUI):
@@ -485,37 +476,12 @@ class DatapackEditorGUI(AutoGUI):
 		return newValue.selectedValue if isOk else value
 
 	def filterTextField(self, value: Optional[str], allChoices: Iterable[str], showPlaceholderText: bool = True, **kwargs) -> str:
-		def onKeyPressed(widget: CatTextField, event: QKeyEvent, gui=self, allChoices=allChoices):
-			# if key == Qt.Key_Down:
-			# 	context.index += 1
-			# 	result = True
-			# elif key == Qt.Key_Up:
-			# 	context.index -= 1
-			# 	if context.index < 0:
-			# 		context.value = context.filterVal
-			# 	result = True
-			# elif
+		def onKeyPressed(widget: CatTextField, event: QKeyEvent):
 			if event.key() == Qt.Key_Tab:
-				# do Tab Completion:
-				# searchStr = widget.text().lower()
-				# lowerChoices = [(c.lower(), c) for c in allChoices]
-				# filteredChoices = [(cl, c) for cl, c in lowerChoices if searchStr in cl]
-				# loweredFilteredChoices = [cl for cl, c in filteredChoices]
-				#
-				# prefix = os.path.commonprefix(loweredFilteredChoices)
-				# if prefix:
-				# 	prefix = next(iter(filteredChoices))[1][0:len(prefix)]
-				# 	widget.setText(prefix)
-				# result = True
-
 				widget.setText(autocompleteFromList(widget.text(), allChoices))
-				result = True
+				return True
 			else:
 				return False
-
-			# gui.redrawGUI()
-			# gui.redrawGUI()
-			return result
 		if showPlaceholderText:
 			kwargs.setdefault('placeholderText', 'filter... [Ctrl+F]')
 		value = self.textField(value, capturingTab=True, onKeyPressed=onKeyPressed, **kwargs)
@@ -529,7 +495,6 @@ class DatapackEditorGUI(AutoGUI):
 			*,
 			getStrChoices: Callable[[-_TT], Iterable[str]] = lambda x: x,
 			filterFunc: Callable[[FilterStr, -_TT], _TR] = filterStrChoices,
-			valuesName: str = 'choices',
 			shortcut: Optional[QKeySequence] = QKeySequence.Find,
 			roundedCorners: RoundedCorners = (True, True, False, False),
 			overlap: Overlap = (0, -1),
@@ -554,16 +519,9 @@ class DatapackEditorGUI(AutoGUI):
 			self.toolButton(f'{len(filteredChoices):,} of {len(allChoices):,}', overlap=adjustOverlap(overlap, (1, None, None, None)), roundedCorners=maskCorners(roundedCorners, CORNERS.RIGHT))  #  {valuesName} shown', alignment=Qt.AlignRight)
 		return filterStr, filteredChoices
 
-	def filteredProjectsFilesTree3(
+	def filteredProjectsFilesTree1(
 			self,
-			allIncludedProjects: list[SerializableContainer],
-			localLayoutFilesProps: list[LocalFilesPropInfo],
-			isImmutable: Callable[[SerializableContainer], bool],
-
-			labelMaker    : Callable[[FilesTreeItem, int], str] = lambda x, c: x.label,
-			iconMaker     : Optional[Callable[[FilesTreeItem, int], Optional[QIcon]]] = lambda x, c: icons.file_code if x.isFile else icons.folderInTree,
-			toolTipMaker  : Optional[Callable[[FilesTreeItem, int], Optional[str]]] = lambda x, c: (x.filePaths[0].virtualPath[:x.commonDepth] if x.filePaths and not isinstance(x.filePaths[0], FilesTreeItem) else x.label),
-			columnCount   : int = 1,
+			allIncludedProjects: list[Project],
 			onDoubleClick : Optional[Callable[[FilesTreeItem], None]] =  None,
 			onContextMenu : Optional[Callable[[FilesTreeItem, int], None]] = None,
 			onCopy        : Optional[Callable[[FilesTreeItem], Optional[str]]] = None,
@@ -576,71 +534,70 @@ class DatapackEditorGUI(AutoGUI):
 			roundedCorners: RoundedCorners = CORNERS.NONE,
 			overlap: Overlap = NO_OVERLAP
 	):
+		def labelMaker(data: FilesTreeItem, column: int) -> str:
+			return data.label
+
+		def iconMaker(data: FilesTreeItem, column: int) -> QIcon:
+			if data.isFile:
+				return icons.file_code
+			elif data.isArchive:
+				return icons.archive
+			return icons.folderInTree
+
+		def toolTipMaker(data: FilesTreeItem, column: int) -> str:
+			return data.commonVPath
 
 		def childrenMaker(data: FilesTreeItem) -> list[FilesTreeItem]:
+			if isinstance(data, FilesTreeRoot):
+				return data.projects
+
 			filePathsCount = len(data.filePaths)
 			if data.isFile or filePathsCount == 0:
 				return []
 
-			if isinstance(data.filePaths[0], FilesTreeItem):
-				return data.filePaths
-
 			children: OrderedDict[str, FilesTreeItem] = OrderedDict()
-
-			commonDepth = data.commonDepth
+			cVPathLen = len(data.commonVPath)
 			isImmutable = data.isImmutable
 			for entry in data.filePaths:
-				index2 = entry.virtualPath.find('/', commonDepth)
-				index2 = len(entry.virtualPath) if index2 == -1 else index2
-				folder = entry.virtualPath[commonDepth:index2]
+				index2 = entry.virtualPath.find('/', cVPathLen)
+				isFile = index2 == -1
+				if isFile:
+					index2 = len(entry.virtualPath)
+				label = entry.virtualPath[cVPathLen:index2]
 
-				child = children.get(folder, None)
+				child = children.get(label, None)
 				if child is None:
-					child = FilesTreeItem(folder, index2 + 1, [], isImmutable)
-					children[folder] = child
-				child.filePaths.append(entry)
+					suffix = label if isFile else f'{label}/'
+					children[label] = FilesTreeItem(
+						label,
+						f'{data.commonVPath}{suffix}',
+						(data.commonPath[0], f'{data.commonPath[1]}{suffix}'),
+						[entry],
+						isImmutable
+					)
+				else:
+					child.filePaths.append(entry)
 
 			return sorted(children.values(), key=lambda x: (x.isFile, x.label.lower()))
-			# return list(children.values())
 
-		def getRight(fullPath: FilePath, firstSplitter: str) -> str:
-			if not isinstance(fullPath, str):
-				splittingPath = fullPath[1]
-			else:
-				splittingPath = fullPath
-			if firstSplitter:
-				return splittingPath.split(firstSplitter, 1)[-1]
-			else:
-				return splittingPath.removeprefix('/')
 		# autocomplete strings:
 		allAutocompleteStrings: list[str] = []
-		allFilePaths: list[FileEntry2] = []
-		rootItem: FilesTreeItem = FilesTreeItem('<ROOT>', 0, allFilePaths, False)
+		projectItems = []
 		for proj in allIncludedProjects:
 			projPrefix = proj.name + '/'
-			projPrefixLen = len(projPrefix)
-			projIsImmutable: bool = isImmutable(proj)
-			projItem: FilesTreeItem = FilesTreeItem(proj.name, projPrefixLen, [], projIsImmutable, projIsImmutable, _folderPath=proj.path)
-			for filesPropInfo in localLayoutFilesProps:
-				fullPathsInProj = filesPropInfo.prop.get(proj)
-				firstSplitter = filesPropInfo.firstSplitter
-				virtualFolderPrefix = filesPropInfo.folderName + '/' if filesPropInfo.folderName else ''
-				virtualFolderPrefix = projPrefix + virtualFolderPrefix
-				filesForFolder: list[FileEntry2] = []
-				folderItem: FilesTreeItem = FilesTreeItem(filesPropInfo.folderName, len(virtualFolderPrefix), filesForFolder, projIsImmutable)
-				for fullPath in fullPathsInProj:
-					right = getRight(fullPath, firstSplitter)
-					virtualPath = virtualFolderPrefix + right
-					allAutocompleteStrings.append(virtualPath)
-					filesForFolder.append(FileEntry2(fullPath, virtualPath))
+			filesForProj = []
+			projItem = FilesTreeItem(proj.name, projPrefix, (proj.path, ''), filesForProj, proj.isImmutable, proj.isArchive)
 
-				if folderItem.filePaths:
-					if folderItem.label:
-						projItem.filePaths.append(folderItem)
-					else:
-						projItem.filePaths.extend(folderItem.filePaths)
+			fullPathsInProj = proj.files
+			for fullPath in fullPathsInProj:
+				# getRight:
+				right = fullPath if isinstance(fullPath, str) else fullPath[1]
+				virtualPath = projPrefix + right.removeprefix('/')
+				allAutocompleteStrings.append(virtualPath)
+				filesForProj.append(FileEntry(fullPath, virtualPath))
+
 			if projItem.filePaths:
-				rootItem.filePaths.append(projItem)
+				projectItems.append(projItem)
 
 		with self.vLayout(verticalSpacing=0):
 			with self.hLayout(horizontalSpacing=0):
@@ -650,17 +607,15 @@ class DatapackEditorGUI(AutoGUI):
 				filteredFilesCount = 0
 
 				if filterStr:
-					for projItem in rootItem.filePaths:
-						# for folderItem in projItem.filePaths:
-						# 	folderItem.filePaths = [fp for fp in folderItem.filePaths if filterStr in fp.virtualPath.lower()]
-						#
-						# 	filteredFilesCount += len(folderItem.filePaths)
-						# projItem.filePaths = [folderItem for folderItem in projItem.filePaths if folderItem.filePaths]
+					filteredProjectItems = []
+					for projItem in projectItems:
 						projItem.filePaths = [fp for fp in projItem.filePaths if filterStr in fp.virtualPath.lower()]
-						filteredFilesCount += len(projItem.filePaths)
-					rootItem.filePaths = [projItem for projItem in rootItem.filePaths if projItem.filePaths]
+						if projItem.filePaths:
+							filteredFilesCount += len(projItem.filePaths)
+							filteredProjectItems.append(projItem)
 				else:
 					filteredFilesCount = totalFilesCount
+					filteredProjectItems = projectItems
 
 				self.toolButton(
 					f'{filteredFilesCount:,} of {totalFilesCount:,}',
@@ -670,12 +625,12 @@ class DatapackEditorGUI(AutoGUI):
 
 			self.tree(
 				DataTreeBuilder(
-					rootItem,
+					FilesTreeRoot(filteredProjectItems),
 					childrenMaker,
 					labelMaker,
 					iconMaker,
 					toolTipMaker,
-					columnCount,
+					columnCount=1,
 					suppressUpdate=False,
 					showRoot=False,
 					onDoubleClick=onDoubleClick,

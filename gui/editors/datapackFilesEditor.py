@@ -1,14 +1,11 @@
 import os
 from typing import Optional
 
-from PyQt5.QtGui import QIcon
-
 from Cat.CatPythonGUI.GUI import adjustOverlap, maskCorners, CORNERS, SizePolicy, NO_MARGINS
 from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
 from Cat.icons import icons
 from Cat.utils import DeferredCallOnceMethod
-from gui.datapackEditorGUI import DatapackEditorGUI, LocalFilesPropInfo, ContextMenuEntries, FilesTreeItem, createNewFileGUI, createNewFolderGUI
-from model.project import Project
+from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, FilesTreeItem, createNewFileGUI, createNewFolderGUI
 from model.utils import Span
 from model.pathUtils import FilePath
 from session.session import getSession, Session
@@ -188,27 +185,14 @@ class DatapackFilesEditor(EditorBase[Session]):
 				menu.addSeparator()
 				menu.addItems(ContextMenuEntries.pathItems(folderPath))
 
-	def _iconMaker(self, data: FilesTreeItem, column: int) -> QIcon:
-		if data.isFile:
-			return icons.file_code
-		elif data.isArchive:
-			return icons.archive
-		return icons.folderInTree
-
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.vLayout(verticalSpacing=0):
-			gui.filteredProjectsFilesTree3(
+			gui.filteredProjectsFilesTree1(
 				self.model().project.deepDependencies,
-				[
-					LocalFilesPropInfo(Project.files, '', ''),
-				],
-				isImmutable=Project.isZipped.get,
 				onDoubleClick=self._onDoubleClick,
 				onContextMenu=self._onContextMenu,
-				iconMaker=self._iconMaker,
 				overlap=adjustOverlap(self.overlap(), (None, None, None, 0)),
 				roundedCorners=maskCorners(self.roundedCorners(), CORNERS.TOP),
-
 			)
 
 			with gui.hPanel(
