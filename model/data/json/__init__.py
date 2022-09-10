@@ -8,3 +8,5 @@ def initPlugin() -> None:
 	GLOBAL_SCHEMA_STORE.registerSchema('minecraft:raw_json_text', os.path.join(resourcesDir, 'rawJsonText.json'))
 	GLOBAL_SCHEMA_STORE.registerSchema('minecraft:predicate', os.path.join(resourcesDir, 'predicate.json'))
 	GLOBAL_SCHEMA_STORE.registerSchema('dpe:json_schema', os.path.join(resourcesDir, 'jsonSchema.json'))
+	GLOBAL_SCHEMA_STORE.registerSchema('dpe:dependencies', os.path.join(resourcesDir, 'dependencies.json'))
+	GLOBAL_SCHEMA_STORE.registerSchema('minecraft:pack', os.path.join(resourcesDir, 'pack.json'))

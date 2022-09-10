@@ -381,7 +381,7 @@ class ColumnPosHandler(ArgumentContext):
 @argumentContext(MINECRAFT_COMPONENT.name)
 class ComponentHandler(ParsingHandler):
 	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
-		return getSession().datapackData.jsonSchemas.get('rawJsonText')
+		return getSession().datapackData.jsonSchemas.get('minecraft:raw_json_text')
 
 	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
 		return LanguageId('JSON')

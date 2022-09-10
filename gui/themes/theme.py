@@ -6,7 +6,7 @@ import os
 import shutil
 import sys
 import warnings
-from dataclasses import dataclass, field, fields, Field, is_dataclass
+from dataclasses import dataclass, field, fields, Field, is_dataclass, replace
 from operator import attrgetter
 from types import ModuleType
 from typing import TypeVar, Generic, Union, Optional, Iterable
@@ -15,10 +15,11 @@ from PyQt5.QtGui import QFont, QColor
 
 from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from Cat.extensions import processRecursively
-from Cat.utils import getExePath, openOrCreate
+from Cat.utils import getExePath, openOrCreate, format_full_exc
 from Cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
-from Cat.utils.logging_ import logDebug, logWarning, logInfo
-from model.utils import LanguageId
+from Cat.utils.logging_ import logDebug, logWarning, logInfo, logError
+from Cat.utils.profiling import TimedFunction
+from model.utils import LanguageId, Message
 
 _TT = TypeVar('_TT')
 
@@ -120,6 +121,37 @@ def mergeStyle(style: Style, overridingStyle: Style) -> Style:
 
 
 @dataclass
+class GlobalStyles:
+	defaultStyle: Style = field(default_factory=lambda: replace(DEFAULT_STYLE_STYLE))
+	lineNumberStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	braceLightStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	braceBadStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	controlCharStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	indentGuideStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	calltipStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	foldDisplayTextStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	caretLineStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	caretStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+
+
+def updateGlobalStylesToMatchUIColors(scheme: ColorScheme):
+	uic = scheme.uiColors
+	gls = scheme.globalStyles
+	scheme.globalStyles = GlobalStyles(
+		defaultStyle         =gls.defaultStyle         | Style(foreground=uic.Text, background=uic.Input),
+		lineNumberStyle      =gls.lineNumberStyle      | Style(background=uic.Window),
+		braceLightStyle      =gls.braceLightStyle      | Style(),
+		braceBadStyle        =gls.braceBadStyle        | Style(),
+		controlCharStyle     =gls.controlCharStyle     | Style(foreground=uic.Icon),
+		indentGuideStyle     =gls.indentGuideStyle     | Style(),
+		calltipStyle         =gls.calltipStyle         | Style(foreground=uic.Border, background=uic.Window),
+		foldDisplayTextStyle =gls.foldDisplayTextStyle | Style(),
+		caretLineStyle       =gls.caretLineStyle       | Style(background=uic.Window),
+		caretStyle           =gls.caretStyle           | Style(background=uic.Text),
+	)
+
+
+@dataclass
 class ColorScheme:
 	name: str
 	fallback: list[str]
@@ -127,15 +159,7 @@ class ColorScheme:
 	localFallbackSchemes: list[ColorScheme] = field(init=False, default_factory=list)
 	allFallbackSchemes: list[ColorScheme] = field(init=False, default_factory=list)
 
-	defaultStyle: Style = DEFAULT_STYLE_STYLE
-	lineNumberStyle: Style = EMPTY_STYLE_STYLE
-	braceLightStyle: Style = EMPTY_STYLE_STYLE
-	braceBadStyle: Style = EMPTY_STYLE_STYLE
-	controlCharStyle: Style = EMPTY_STYLE_STYLE
-	indentGuideStyle: Style = EMPTY_STYLE_STYLE
-	calltipStyle: Style = EMPTY_STYLE_STYLE
-	foldDisplayTextStyle: Style = EMPTY_STYLE_STYLE
-	caretLineStyle: Style = EMPTY_STYLE_STYLE
+	globalStyles: GlobalStyles = field(default_factory=GlobalStyles)
 
 	uiColors: Optional[BaseColors] = None
 
@@ -271,7 +295,6 @@ def currentColorScheme() -> ColorScheme:
 	if scheme is None:
 		warnings.warn("No Color Schemes available. Not even the 'None' Color Scheme. Adding it now.", RuntimeWarning)
 		scheme = addColorScheme(ColorScheme('None', []))
-		scheme.uiColors
 	return scheme
 
 
@@ -341,35 +364,39 @@ def getColorSchemesDir() -> str:
 	return colorSchemesDir
 
 
-def _createColorSchemesDir(csDir: str) -> None:
-	# os.makedirs(csDir)
+def _ensureColorSchemesModule(csDir: str) -> None:
+	initPath = os.path.join(csDir, '__init__.py')
+	try:
+		with openOrCreate(initPath, 'w'):
+			pass
+	except OSError as e:
+		logError(e, f"Failed to open or create colorScheme module. path: '{initPath}'")
 
-	with openOrCreate(os.path.join(csDir, '__init__.py'), 'w') as f:
-		pass
 
-	defaultSchemesDir = os.path.join(
-		os.path.dirname(__file__), "colorSchemes/"
-	)
+def _copyDefaultColorSchemes(csDir: str) -> None:
+	defaultSchemesDir = os.path.join(os.path.dirname(__file__), "colorSchemes/")
 	logDebug(f"defaultSchemesDir = {defaultSchemesDir}")
-	allModulePaths: list[str] = []
-	processRecursively(defaultSchemesDir, '/**', allModulePaths.append)
-	for absPath in allModulePaths:
-		relPath = absPath.removeprefix(defaultSchemesDir)
-		logDebug(f"absPath = {absPath}")
-		logDebug(f"relPath = {relPath}")
-		dest = os.path.join(csDir, relPath)
-		logDebug(f"dest = {dest}")
-		shutil.copy2(absPath, dest)
+
+	allFilePaths: list[str] = []
+	processRecursively(defaultSchemesDir, '/**', allFilePaths.append)
+
+	for srcPath in allFilePaths:
+		relPath = srcPath.removeprefix(defaultSchemesDir)
+		dstPath = os.path.join(csDir, relPath)
+		try:
+			shutil.copy2(srcPath, dstPath)
+		except OSError as e:
+			logError(e, f"Failed to copy default color scheme from '{srcPath}' to '{dstPath}'")
 
 
 def _allColorSchemeModules() -> list[tuple[str, str]]:
 	csDir = getColorSchemesDir()
 	logInfo(f"ColorSchemesDir = {csDir}")
+
+	_ensureColorSchemesModule(csDir)
+	_copyDefaultColorSchemes(csDir)
+
 	allModulePaths: list[str] = []
-
-	if not os.path.exists(csDir):
-		_createColorSchemesDir(csDir)
-
 	processRecursively(csDir, '/**', allModulePaths.append)
 
 	allModuleNames = [(mp.removeprefix(csDir).removesuffix('.py'), mp) for mp in allModulePaths if mp.endswith('.py')]
@@ -385,17 +412,27 @@ def _importModuleFromFile(moduleName: str, path: str):
 	return foo
 
 
+_CANNOT_LOAD_MSG = Message("Color scheme module '{0}' cannot be loaded, because {1}", 2)
+
+
 def _loadColorSchemeModules(names: list[tuple[str, str]]) -> dict[str, ModuleType]:
-	colorSchemeMod = _importModuleFromFile('colorSchemes', os.path.join(getColorSchemesDir(), '__init__.py'))
+	_importModuleFromFile('colorSchemes', os.path.join(getColorSchemesDir(), '__init__.py'))
 	colorSchemeModules: dict[str, ModuleType] = {}
-	for modName, modPath in names:
-		#thisMod = importlib.import_module(modName)
-		thisMod = _importModuleFromFile(modName, modPath)
+	for moduleName, modPath in names:
+		try:
+			thisMod = _importModuleFromFile(moduleName, modPath)
+		except Exception as ex:
+			logError(
+				_CANNOT_LOAD_MSG.format(moduleName, f"the following Exception occurred while loading the python module:"),
+				format_full_exc(ex, indentLvl=1)
+			)
+			continue
+
 		if getattr(thisMod, 'enabled') is True:
-			colorSchemeModules[modName] = thisMod
-			logDebug(f"imported colorScheme {modName}")
+			colorSchemeModules[moduleName] = thisMod
+			logInfo(f"imported colorScheme {moduleName}")
 		else:
-			logDebug(f"imported colorScheme {modName}: DISABLED")
+			logInfo(f"imported colorScheme {moduleName}: DISABLED")
 	return colorSchemeModules
 
 
@@ -404,6 +441,7 @@ def _reloadModules(modules: Iterable[ModuleType]):
 		importlib.reload(module)
 
 
+@TimedFunction()
 def loadAllColorSchemes() -> None:
 	_ALL_COLOR_SCHEMES.clear()
 	addColorScheme(ColorScheme('None', []))
@@ -412,8 +450,22 @@ def loadAllColorSchemes() -> None:
 	_colorSchemeModules = _loadColorSchemeModules(colorSchemeModuleNames)
 	_reloadModules(_colorSchemeModules.values())
 
-	for module in _colorSchemeModules.values():
-		module.initPlugin()
+	for moduleName, module in _colorSchemeModules.items():
+		initPlugin = getattr(module, 'initPlugin', None)
+		if initPlugin is None:
+			logError(_CANNOT_LOAD_MSG.format(moduleName, "no 'initPlugin()' function can be found."))
+			continue
+		if not callable(initPlugin):
+			logError(_CANNOT_LOAD_MSG.format(moduleName, f" '{moduleName}.initPlugin' is not callable. ('{type(initPlugin).__name__}' object is not callable)"))
+			continue
+		try:
+			initPlugin()
+		except Exception as ex:
+			logError(
+				_CANNOT_LOAD_MSG.format(moduleName, f"the following Exception occurred while calling '{moduleName}.initPlugin()':"),
+				format_full_exc(ex, indentLvl=1)
+			)
+			continue
 	initAllColorSchemes()
 	currentColorSchemeUpdated()
 

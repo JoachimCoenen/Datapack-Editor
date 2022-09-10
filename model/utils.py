@@ -60,9 +60,9 @@ class MessageAdapter:
 @final
 @dataclass(order=True, unsafe_hash=True, slots=True)
 class Position:
-	line: int = -1
-	column: int = -1
-	index: int = field(default=-1, hash=False, compare=False)
+	line: int = field(default=-1, hash=False, compare=False)
+	column: int = field(default=-1, hash=False, compare=False)
+	index: int = field(default=-1, hash=False, compare=True)
 
 	def __iter__(self):
 		yield self.line

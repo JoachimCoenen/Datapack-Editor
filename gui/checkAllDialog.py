@@ -16,7 +16,7 @@ from Cat.utils import format_full_exc, first
 from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
 from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
 from Cat.utils.profiling import TimedMethod, logError
-from model.datapack.datapackContents import EntryHandlerInfo
+from model.datapack.datapackContents import EntryHandlerInfo, NAME_SPACE_VAR
 from model.project import Project
 from model.utils import WrappedError, GeneralError
 from session.documents import ErrorCounts, getErrorCounts, loadDocument
@@ -146,26 +146,16 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self.setWindowTitle('Validate Files')
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		self._fileTypes = self.fileTypesSelectionGUI(gui, self._fileTypes)
-
-		# print("FileTypes:")
-		# for ft in self._oldVals:
-		# 	print(f"    {ft}")  # {ft.folder}*{ft.extension}")
-		# print("--------------------------------")
-		#
-		# gui.vSeparator()
-		#
-		# with gui.vLayout(preventVStretch=False, verticalSpacing=0):
-		# 	self._fileTypes = {ft for ft in FILE_TYPES if gui.checkboxLeft(None, ft)}
-
-		gui.vSeparator()
-
 		includedProjects = []
-		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
+		with gui.vLayout(verticalSpacing=0):
 			for p in getSession().project.deepDependencies:
 				if gui.checkboxLeft(None, p.name):
 					includedProjects.append(p)
 		self._includedProjects = includedProjects
+
+		gui.vSeparator()
+
+		self._fileTypes = self.fileTypesSelectionGUI(gui, self._fileTypes)
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.hLayout():
@@ -230,17 +220,20 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		# build Folder Structure:
 		structure: _DPStructure = {}
 		for path, infos in getSession().datapackData.structure.items():
-			pathParts = path.pattern.strip('/').split('/')
+			pathParts = path.strip('/').split('/')
+			if pathParts[0] == '':
+				del pathParts[0]
 			folder = structure
 			for pathPart in pathParts:
+				if pathPart == NAME_SPACE_VAR:
+					continue
 				folder = folder.setdefault(pathPart, {})
 			for info in infos:
 				folder[info.extension] = info
 
 		# gui:
-		with gui.vLayout(preventVStretch=False, verticalSpacing=0):
+		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
 			return _innerFileTypesSelectionGUI(gui, structure, oldVals)
-
 
 	progressSignal = pyqtSignal(int)
 	errorCountsUpdateSignal = pyqtSignal()

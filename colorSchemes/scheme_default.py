@@ -1,11 +1,11 @@
 from typing import Callable
 
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor
 
 from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from Cat.utils.collections_ import AddToDictDecorator
 from model.utils import LanguageId
-from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StyleFont, StylesModifier
+from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StyleFont, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors
 
 enabled = True
 
@@ -18,18 +18,7 @@ def buildColorScheme() -> ColorScheme:
 	scheme = ColorScheme('Default', [])
 	for language, stylesGen in _STYLES_TO_ADD.items():
 		scheme.styles2[language] = stylesGen()
-
-	# scheme.defaultStyle = invertStyle(scheme.defaultStyle)
-	lightGray = QColor(0xe0, 0xe0, 0xe0)
-	scheme.lineNumberStyle = Style(background=lightGray)
-	# scheme.braceLightStyle = invertStyle(scheme.braceLightStyle)
-	# scheme.braceBadStyle = invertStyle(scheme.braceBadStyle)
-	# scheme.controlCharStyle = invertStyle(scheme.controlCharStyle)
-	scheme.indentGuideStyle = Style(foreground=lightGray, background=QColor('orange'))
-	# scheme.calltipStyle = invertStyle(scheme.calltipStyle)
-	scheme.foldDisplayTextStyle = Style(foreground=lightGray, background=QColor('orange'))
-	scheme.caretLineStyle = Style(background=lightGray)
-
+		
 	scheme.uiColors = BaseColors(
 		Icon=QColor('#606060'),  # QColor('#4b4b4b')
 		DisabledIcon=QColor('#b4b4b4'),
@@ -58,6 +47,20 @@ def buildColorScheme() -> ColorScheme:
 		Link=QColor('#0000ff'),
 		LinkVisited=QColor('#ff00ff'),
 	)
+	
+	lightGray = QColor(0xe0, 0xe0, 0xe0)
+	scheme.globalStyles = GlobalStyles(
+		defaultStyle=Style(foreground=scheme.uiColors.Text, background=scheme.uiColors.Input),
+		lineNumberStyle=Style(background=scheme.uiColors.Window),
+		braceLightStyle=Style(),
+		braceBadStyle=Style(foreground=QColor('red')),
+		controlCharStyle=Style(foreground=scheme.uiColors.Icon),
+		indentGuideStyle=Style(foreground=lightGray, background=QColor('orange')),
+		calltipStyle=Style(foreground=scheme.uiColors.Border, background=scheme.uiColors.Window),
+		foldDisplayTextStyle=Style(foreground=lightGray, background=QColor('orange')),
+		caretLineStyle=Style(background=scheme.uiColors.Window),
+	)
+	updateGlobalStylesToMatchUIColors(scheme)
 
 	return scheme
 
@@ -72,7 +75,7 @@ languageStyles = AddToDictDecorator(_STYLES_TO_ADD)
 DEFAULT_STYLE_STYLE = Style(
 	foreground=QColor(0x00, 0x00, 0x00),
 	background=QColor(0xff, 0xff, 0xff),
-	font=StyleFont("Consolas", QFont.Monospace, 8)
+	# font=StyleFont("Consolas", QFont.Monospace, 8)
 )
 
 
@@ -84,7 +87,7 @@ def lighten(fg, lightness=.975):
 def addMCCommandScheme():
 	from gui.lexers.mcFunctionStyler import StyleId
 	styles = {
-		StyleId.Default.name:        DEFAULT_STYLE_STYLE,
+		StyleId.Default.name:        Style(),
 		StyleId.Command.name:        Style(foreground=QColor(0x88, 0x0a, 0xe8)),
 		StyleId.String.name:         Style(foreground=QColor(0x7f, 0x00, 0x00)),
 		StyleId.Number.name:         Style(foreground=QColor(0x00, 0x7f, 0x7f)),
@@ -119,7 +122,7 @@ def addMCCommandScheme():
 def addJsonScheme():
 	from gui.lexers.jsonStyler import StyleId
 	styles = {
-		StyleId.default.name: DEFAULT_STYLE_STYLE,
+		StyleId.default.name: Style(),
 		StyleId.null.name:    Style(foreground=QColor(0x00, 0x00, 0xBf)),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
 		StyleId.boolean.name: Style(foreground=QColor(0x00, 0x00, 0xBf)),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
 		StyleId.number.name:  Style(foreground=QColor(0x00, 0x7f, 0x7f)),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),
@@ -146,7 +149,7 @@ def addJsonScheme():
 def addSNBTScheme():
 	from gui.lexers.snbtStyler import StyleId
 	styles = {
-		StyleId.default.name: DEFAULT_STYLE_STYLE,
+		StyleId.default.name: Style(),
 		StyleId.boolean.name:   Style(foreground=QColor(0x00, 0x00, 0xBf)),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
 		StyleId.intLike.name:   Style(foreground=QColor(0x00, 0x7f, 0x7f)),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),
 		StyleId.floatLike.name: Style(foreground=QColor(0x00, 0x7f, 0x7f)),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),

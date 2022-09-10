@@ -372,8 +372,8 @@
     "floatStr": {
       "$type": "union",
       "options": [
-        { "$type": "string" },
-        { "$type": "float", "type": "dpe:float" }
+        { "$type": "string", "type": "dpe:float" },
+        { "$type": "float" }
       ]
     }
   }

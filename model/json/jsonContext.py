@@ -340,10 +340,10 @@ class JsonKeyContext(JsonStringContext):
 		return super(JsonKeyContext, self).getDocumentation(node, pos)
 
 	def getClickableRanges(self, node: JsonString) -> Optional[Iterable[Span]]:
-		if isinstance(node.schema, JsonKeySchema) and node.schema.forProp.schema is not None:
+		if isinstance(node.schema, JsonKeySchema) and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:
 			return (node.span,)
 
 	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
-		if isinstance(node.schema, JsonKeySchema) and node.schema.forProp.schema is not None:
+		if isinstance(node.schema, JsonKeySchema) and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:
 			window._tryOpenOrSelectDocument(node.schema.forProp.schema.filePath, Span(node.schema.forProp.schema.span.start))
 

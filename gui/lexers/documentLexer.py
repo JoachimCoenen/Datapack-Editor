@@ -12,7 +12,7 @@ from Cat.utils import override, HTMLStr
 from Cat.utils.logging_ import logWarning
 from gui.lexers.styler import DEFAULT_STYLE_ID, getStyler, StyleId, StylerCtx
 from gui.themes import theme
-from gui.themes.theme import DEFAULT_STYLE_STYLE, StyleFont, Style
+from gui.themes.theme import StyleFont, Style, GlobalStyles
 from model.parsing.contextProvider import ContextProvider, getContextProvider
 from model.parsing.tree import Node
 from model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position
@@ -21,16 +21,18 @@ from session.documents import TextDocument
 TokenType = int
 
 
-_SCI_STYLE_DEFAULT = 32  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
-_SCI_STYLE_LINENUMBER = 33  # This style sets the attributes of the text used to display line numbers in a line number margin. The background colour set for this style also sets the background colour for all margins that do not have any folding mask bits set. That is, any margin for which mask & SC_MASK_FOLDERS is 0. See SCI_SETMARGINMASKN for more about masks.
-_SCI_STYLE_BRACELIGHT = 34  # This style sets the attributes used when highlighting braces with the SCI_BRACEHIGHLIGHT message and when highlighting the corresponding indentation with SCI_SETHIGHLIGHTGUIDE.
-_SCI_STYLE_BRACEBAD = 35  # This style sets the display attributes used when marking an unmatched brace with the SCI_BRACEBADLIGHT message.
-_SCI_STYLE_CONTROLCHAR = 36  # This style sets the font used when drawing control characters. Only the font, size, bold, italics, and character set attributes are used and not the colour attributes. See also: SCI_SETCONTROLCHARSYMBOL.
-_SCI_STYLE_INDENTGUIDE = 37  # This style sets the foreground and background colours used when drawing the indentation guides.
-_SCI_STYLE_CALLTIP = 38  # Call tips normally use the font attributes defined by STYLE_DEFAULT. Use of SCI_CALLTIPUSESTYLE causes call tips to use this style instead. Only the font face name, font size, foreground and background colours and character set attributes are used.
-_SCI_STYLE_FOLDDISPLAYTEXT = 39  # This is the style used for drawing text tags attached to folded text.
-_SCI_STYLE_LASTPREDEFINED = 39
-_CAT_STYLE_CARETLINE = -257
+_SCI_STYLE_DEFAULT = StyleId(32)  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
+_SCI_STYLE_LINENUMBER = StyleId(33)  # This style sets the attributes of the text used to display line numbers in a line number margin. The background colour set for this style also sets the background colour for all margins that do not have any folding mask bits set. That is, any margin for which mask & SC_MASK_FOLDERS is 0. See SCI_SETMARGINMASKN for more about masks.
+_SCI_STYLE_BRACELIGHT = StyleId(34)  # This style sets the attributes used when highlighting braces with the SCI_BRACEHIGHLIGHT message and when highlighting the corresponding indentation with SCI_SETHIGHLIGHTGUIDE.
+_SCI_STYLE_BRACEBAD = StyleId(35)  # This style sets the display attributes used when marking an unmatched brace with the SCI_BRACEBADLIGHT message.
+_SCI_STYLE_CONTROLCHAR = StyleId(36)  # This style sets the font used when drawing control characters. Only the font, size, bold, italics, and character set attributes are used and not the colour attributes. See also: SCI_SETCONTROLCHARSYMBOL.
+_SCI_STYLE_INDENTGUIDE = StyleId(37)  # This style sets the foreground and background colours used when drawing the indentation guides.
+_SCI_STYLE_CALLTIP = StyleId(38)  # Call tips normally use the font attributes defined by STYLE_DEFAULT. Use of SCI_CALLTIPUSESTYLE causes call tips to use this style instead. Only the font face name, font size, foreground and background colours and character set attributes are used.
+_SCI_STYLE_FOLDDISPLAYTEXT = StyleId(39)  # This is the style used for drawing text tags attached to folded text.
+_SCI_STYLE_LASTPREDEFINED = StyleId(39)
+_SCI_STYLE_FIRST_USER_STYLE = _SCI_STYLE_LASTPREDEFINED + 1
+_CAT_STYLE_CARETLINE = StyleId(-257)
+_CAT_STYLE_CARET = StyleId(-258)
 
 
 def QFontFromStyleFont(styleFont: StyleFont) -> QFont:
@@ -79,12 +81,16 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 
 	def setCaretLineStyle(self, style: Style):
 		editor: CodeEditor = self.editor()
-		if editor is None:
-			return
-		editor.setCaretLineBackgroundColor(style.background)
+		if editor is not None:
+			editor.setCaretLineBackgroundColor(style.background)
+
+	def setCaretStyle(self, style: Style):
+		editor: CodeEditor = self.editor()
+		if editor is not None:
+			editor.setCaretForegroundColor(style.foreground)
 
 	def initStyle(self, style: Style, id: int) -> None:
-		actualId = id + _SCI_STYLE_LASTPREDEFINED + 1
+		actualId = id + _SCI_STYLE_FIRST_USER_STYLE
 		self.setColor(style.foreground, actualId)
 		self.setPaper(style.background, actualId)
 		self.setFont(QFontFromStyleFont(style.font), actualId)
@@ -97,7 +103,8 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 		)
 		# handle default first:
 		if overwriteDefaultStyle:
-			defaultStyle = defaultStyle | styles[DEFAULT_STYLE_ID]
+			defStyle = styles[_SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE]
+			defaultStyle = defaultStyle | defStyle
 			defaultQFont = QFontFromStyleFont(defaultStyle.font)
 			# defaultQFont.setPointSize(self.defaultFont().pointSize())
 
@@ -114,6 +121,8 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 
 			if tokenType == _CAT_STYLE_CARETLINE:
 				self.setCaretLineStyle(actualStyle)
+			elif tokenType == _CAT_STYLE_CARET:
+				self.setCaretStyle(actualStyle)
 			else:
 				self.initStyle(actualStyle, tokenType)
 
@@ -179,7 +188,8 @@ class DocumentLexerBase2(DocumentLexerBase):  # this is an ABC, but there would 
 	def getStyles(self) -> dict[StyleId, Style]:
 		scheme = theme.currentColorScheme()
 
-		styleMap = {DEFAULT_STYLE_ID: scheme.defaultStyle}
+		styleMap = {}  # {DEFAULT_STYLE_ID: scheme.defaultStyle}
+		self.addGlobalStyles(scheme.globalStyles, styleMap)
 
 		languageId = self.languageId
 		if languageId is None:
@@ -199,21 +209,26 @@ class DocumentLexerBase2(DocumentLexerBase):  # this is an ABC, but there would 
 				style = innerStyles.get(name)
 				if style is None:
 					logWarning(f"Theme '{scheme.name}' is missing style '{name}' for language '{innerLanguage}'")
-					style = DEFAULT_STYLE_STYLE
+					style = styleMap[_SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE]
+				# elif styleId == DEFAULT_STYLE_ID:
+				# 	style = scheme.globalStyles.defaultStyle | style
 				styleMap[styleId] = style
-
-		revOffset = -_SCI_STYLE_LASTPREDEFINED - 1
-		styleMap[_SCI_STYLE_LINENUMBER + revOffset] = scheme.lineNumberStyle
-		styleMap[_SCI_STYLE_BRACELIGHT + revOffset] = scheme.braceLightStyle
-		styleMap[_SCI_STYLE_BRACEBAD + revOffset] = scheme.braceBadStyle
-		styleMap[_SCI_STYLE_CONTROLCHAR + revOffset] = scheme.controlCharStyle
-		styleMap[_SCI_STYLE_INDENTGUIDE + revOffset] = scheme.indentGuideStyle
-		styleMap[_SCI_STYLE_CALLTIP + revOffset] = scheme.calltipStyle
-		styleMap[_SCI_STYLE_FOLDDISPLAYTEXT + revOffset] = scheme.foldDisplayTextStyle
-
-		styleMap[_CAT_STYLE_CARETLINE] = scheme.caretLineStyle
-
 		return styleMap
+
+	def addGlobalStyles(self, globalStyles: GlobalStyles, styleMap: dict[int, Style]):
+		revOffset = -_SCI_STYLE_FIRST_USER_STYLE
+		styleMap[DEFAULT_STYLE_ID] = globalStyles.defaultStyle
+		styleMap[_SCI_STYLE_DEFAULT + revOffset] = globalStyles.defaultStyle
+
+		styleMap[_SCI_STYLE_LINENUMBER + revOffset] = globalStyles.lineNumberStyle
+		styleMap[_SCI_STYLE_BRACELIGHT + revOffset] = globalStyles.braceLightStyle
+		styleMap[_SCI_STYLE_BRACEBAD + revOffset] = globalStyles.braceBadStyle
+		styleMap[_SCI_STYLE_CONTROLCHAR + revOffset] = globalStyles.controlCharStyle
+		styleMap[_SCI_STYLE_INDENTGUIDE + revOffset] = globalStyles.indentGuideStyle
+		styleMap[_SCI_STYLE_CALLTIP + revOffset] = globalStyles.calltipStyle
+		styleMap[_SCI_STYLE_FOLDDISPLAYTEXT + revOffset] = globalStyles.foldDisplayTextStyle
+		styleMap[_CAT_STYLE_CARETLINE] = globalStyles.caretLineStyle
+		styleMap[_CAT_STYLE_CARET] = globalStyles.caretStyle
 
 	def startStyling(self, pos: int, styleBits: int = ...) -> None:
 		self._lastStylePos = pos
@@ -248,12 +263,12 @@ class StylerCtxQScintilla(StylerCtx):
 		if index > self._lastStylePos:
 			interStrLength = index - self._lastStylePos
 			assert interStrLength >= 0, interStrLength
-			self.lexer.setStyling(interStrLength, _SCI_STYLE_LASTPREDEFINED + 1 + self.defaultStyle)  # styler.offset)
+			self.lexer.setStyling(interStrLength, _SCI_STYLE_FIRST_USER_STYLE + self.defaultStyle)  # styler.offset)
 
 		if span.stop > self._lastStylePos:
 			length = span.stop - index
 			assert length >= 0, (length, style)
-			self.lexer.setStyling(length, _SCI_STYLE_LASTPREDEFINED + 1 + style)
+			self.lexer.setStyling(length, _SCI_STYLE_FIRST_USER_STYLE + style)
 			self._lastStylePos = span.stop
 
 

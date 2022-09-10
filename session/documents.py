@@ -389,7 +389,7 @@ class Document(SerializableContainer):
 		self.fromRepr(text)
 
 	def loadFromFile(self, archiveFilePool: ArchiveFilePool = None):
-		assert(self.filePath)
+		assert self.filePath, "cannot load file from empty filePath"
 		logInfo("loading File from:{}".format(self.filePath))
 		self._resetFileSystemChanged()
 

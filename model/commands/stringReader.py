@@ -1,14 +1,9 @@
 import re
-from typing import Optional, TYPE_CHECKING, final
-
-from Cython import final as cy_final
+from typing import Optional, final
 
 from Cat.utils.collections_ import Stack
 from model.parsing.bytesUtils import *
 from model.utils import Position, Span
-
-if TYPE_CHECKING:
-	def cy_final(x): x
 
 Char = bytes
 Byte = int
@@ -40,59 +35,48 @@ class StringReader:
 		self.fullSource: bytes = fullSource
 
 	@property
-	@cy_final
 	def hasReachedEnd(self) -> bool:
 		return self.cursor >= self.totalLength
 
-	@cy_final
 	def posFromColumn(self, cursor: int) -> Position:
 		actualCursor = (cursor + self._lineStart) + self.cursorOffset
 		return Position(self._lineNo, actualCursor - self._lineStart, actualCursor)
 		# return Position(self._lineNo, cursor, self._lineStart + cursor)
 
 	@property
-	@cy_final
 	def currentPos(self) -> Position:
 		return self.posFromColumn(self.cursor)
 
 	@property
-	@cy_final
 	def currentSpan(self) -> Span:
 		start = self.lastCursors.peek()
 		begin = self.posFromColumn(start)
 		end = self.posFromColumn(self.cursor)
 		return Span(begin, end)
 
-	@cy_final
 	def save(self) -> None:
 		self.lastCursors.push(self.cursor)
 
-	@cy_final
 	def mergeLastSave(self) -> None:
 		""" removes the last save, without resetting the cursor. """
 		assert self.lastCursors
 		self.lastCursors.pop()
 
-	@cy_final
 	def acceptLastSave(self) -> None:
 		""" removes the last save, without resetting the cursor. """
 		assert self.lastCursors
 		self.lastCursors.pop()
 
-	@cy_final
 	def rollback(self) -> None:
 		assert self.lastCursors
 		self.cursor = self.lastCursors.pop()
 
-	@cy_final
 	def skip(self) -> None:
 		self.cursor += 1
 
-	@cy_final
 	def skipN(self, n: int) -> None:
 		self.cursor += n
 
-	@cy_final
 	def tryConsumeWhitespace(self) -> bool:
 		cursor: int = self.cursor
 		source: bytes = self.source
@@ -119,21 +103,18 @@ class StringReader:
 	# 		return True
 	# 	return False
 
-	@cy_final
 	def tryConsumeByte(self, byte: Byte) -> bool:
 		if self.cursor < self.totalLength and self.source[self.cursor] == byte:
 			self.cursor += 1
 			return True
 		return False
 
-	@cy_final
 	def tryPeek(self) -> Optional[Byte]:
 		if self.cursor < self.totalLength:
 			return self.source[self.cursor]
 		else:
 			return None
 
-	@cy_final
 	def tryReadRemaining(self) -> Optional[bytes]:
 		if self.hasReachedEnd:
 			return None
@@ -142,7 +123,6 @@ class StringReader:
 		self.cursor = self.totalLength
 		return self.source[start:]
 
-	@cy_final
 	def readUntilEndOr(self, sub: bytes, *, includeTerminator: bool = False) -> bytes:
 		start: int = self.cursor
 		cursor: int = self.cursor
@@ -158,7 +138,6 @@ class StringReader:
 		self.cursor = cursor
 		return source[start:cursor]
 
-	@cy_final
 	def readUntilEndOrRegex(self, sub: re.Pattern[bytes], *, includeTerminator: bool = False) -> bytes:
 		start: int = self.cursor
 		cursor: int = self.cursor
@@ -178,13 +157,11 @@ class StringReader:
 		self.cursor = cursor
 		return source[start:cursor]
 
-	@cy_final
 	def readUntilEndOrWhitespace(self) -> bytes:
 		result = self.tryReadRegex(re.compile(NOT_JAVA_WHITESPACES_REGEX))
 		assert result is not None
 		return result
 
-	@cy_final
 	def tryReadRegex(self, pattern: re.Pattern[bytes]) -> Optional[bytes]:  # throws CommandSyntaxException
 		match = pattern.match(self.source, self.cursor)
 		if match is None:
@@ -194,7 +171,6 @@ class StringReader:
 		self.cursor += len(text)
 		return text
 
-	@cy_final
 	def tryReadInt(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
@@ -215,7 +191,6 @@ class StringReader:
 		self.cursor = cursor
 		return source[start:cursor]
 
-	@cy_final
 	def tryReadFloat(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
@@ -248,7 +223,6 @@ class StringReader:
 		self.cursor = cursor
 		return source[start:cursor]
 
-	@cy_final
 	def tryReadString(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
@@ -337,7 +311,6 @@ class StringReader:
 	# 		self.cursor = cursor
 	# 		return source[start:cursor]
 
-	@cy_final
 	def tryReadBoolean(self) -> Optional[bytes]:  # throws CommandSyntaxException
 		value: Optional[bytes] = self.tryReadString()
 		if not value:
@@ -348,7 +321,6 @@ class StringReader:
 			self.rollback()
 			return None  # TODO: Lexer Errors
 
-	@cy_final
 	def tryReadLiteral(self) -> Optional[bytes]:  # throws CommandSyntaxException
 		start: int = self.cursor
 		cursor: int = self.cursor
@@ -387,7 +359,6 @@ class StringReader:
 	# 	else:
 	# 		return string
 
-	@cy_final
 	def readResourceLocation(self, *, allowTag: bool = False) -> bytes:
 		# The namespace and the path of a resource location should only contain the following symbols:
 		#     0123456789 Numbers
@@ -404,7 +375,6 @@ class StringReader:
 		literal = self.tryReadRegex(re.compile(pattern))
 		return literal
 
-	@cy_final
 	def tryReadTildeNotation(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor
@@ -425,7 +395,6 @@ class StringReader:
 		else:
 			return None
 
-	@cy_final
 	def tryReadCaretNotation(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor

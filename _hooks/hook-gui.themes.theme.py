@@ -1,7 +1,7 @@
 import os
 
-colorSchemesPath = os.path.abspath(os.path.dirname(__file__) + '/../colorSchemes/scheme_*.py')
+resourcesPath = os.path.abspath(os.path.dirname(__file__) + '/../model/data/json/schemas/resources/')
 
 datas = [
-    (colorSchemesPath, 'gui/themes/colorSchemes/'),
+    (resourcesPath, 'model/data/json/schemas/resources/'),
 ]

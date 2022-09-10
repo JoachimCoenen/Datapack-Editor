@@ -552,7 +552,12 @@ class SchemaBuilderOrchestrator:
 		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=LanguageId('JSON'), schema=None)
 		schemaJson: JsonObject
 		self.errors[fullPath].extend(errors)
-		schema, builder = SchemaBuilder.parseJsonSchema(schemaJson, fullPath, self)
+		try:
+			schema, builder = SchemaBuilder.parseJsonSchema(schemaJson, fullPath, self)
+		except Exception as ex:
+			# self.errors[fullPath].extend(builder.errors)
+			self.errors[fullPath].append(WrappedError(ex))
+			return None
 		self.errors[fullPath].extend(builder.errors)
 		return schema
 
@@ -573,7 +578,12 @@ class SchemaBuilderOrchestrator:
 		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=LanguageId('JSON'), schema=None)
 		schemaJson: JsonObject
 		self.errors[fullPath].extend(errors)
-		library, builder = SchemaBuilder.parseSchemaLibrary(schemaJson, fullPath, self)
+		try:
+			library, builder = SchemaBuilder.parseSchemaLibrary(schemaJson, fullPath, self)
+		except Exception as ex:
+			# self.errors[fullPath].extend(builder.errors)
+			self.errors[fullPath].append(WrappedError(ex))
+			return SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
 		self.errors[fullPath].extend(builder.errors)
 		return library
 

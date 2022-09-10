@@ -342,7 +342,8 @@ class GenerationInfo:
 
 @dataclass(frozen=True)
 class EntryHandlerInfo:
-	folder: re.Pattern[str] = field(kw_only=True)
+	folder: str = field(kw_only=True)
+	folderPattern: re.Pattern[str] = field(init=False)
 	extension: str = field(kw_only=True)
 	isTag: bool = field(kw_only=True)
 	includeSubdirs: bool = field(kw_only=True)
@@ -350,8 +351,16 @@ class EntryHandlerInfo:
 	getIndex: Callable[[Project], Index[ResourceLocation, MetaInfo]] | None = field(kw_only=True)
 	generation: GenerationInfo = field(default_factory=GenerationInfo, kw_only=True)
 
+	def __post_init__(self):
+		object.__setattr__(self, 'folderPattern', folderPatternFromPath(self.folder))
 
-EntryHandlers = OrderedDict[re.Pattern[str], list[EntryHandlerInfo]]
+
+def folderPatternFromPath(path: str) -> re.Pattern:
+	path2 = path.replace(NAME_SPACE_VAR, NAME_SPACE_CAPTURE_GROUP)
+	return re.compile(path2)
+
+
+EntryHandlers = OrderedDict[str, list[EntryHandlerInfo]]
 
 
 def buildEntryHandlers(handlers: list[EntryHandlerInfo]) -> EntryHandlers:
@@ -428,7 +437,7 @@ def getEntryHandlersForFolder(fullPath: FilePathTpl, handlersDict: EntryHandlers
 
 	result = []
 	for pattern, handlers in handlersDict.items():
-		match = pattern.match(filePath)
+		match = folderPatternFromPath(pattern).match(filePath)
 		if match is None:
 			continue
 

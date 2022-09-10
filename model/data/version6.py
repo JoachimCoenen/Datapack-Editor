@@ -1,13 +1,11 @@
 """
 for Minecraft version 1.17
 """
-import re
 
 from model.data.dpVersion import registerDPVersion, DPVersion
-from model.data.json.schemas.dependency import DEPENDENCIES_SCHEMA
 from model.data.json.schemas.tags import GLOBAL_SCHEMA_STORE
 from model.datapack.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, DatapackContents, GenerationInfo, DefaultFileInfo, \
-	buildFunctionMeta, buildEntryHandlers, buildJsonMeta, buildNbtMeta, NAME_SPACE_CAPTURE_GROUP
+	buildFunctionMeta, buildEntryHandlers, buildJsonMeta, buildNbtMeta
 
 
 def initPlugin() -> None:
@@ -35,52 +33,52 @@ TICK_MCFUNCTION_CONTENTS = f"# add commands here..."
 
 DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 	EntryHandlerInfo(
-		folder=re.compile('/'),
+		folder='/',
 		extension='pack.mcmeta',
 		isTag=False,
 		includeSubdirs=False,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='pack.mcmeta'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:pack'),
 		getIndex=None
 	),
 	EntryHandlerInfo(
-		folder=re.compile('/'),
+		folder='/',
 		extension='dependencies.json',
 		isTag=False,
 		includeSubdirs=False,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='dependencies.json'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='dpe:dependencies'),
 		getIndex=None
 	),
 	# TagInfos:
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/blocks/'),
+		folder=f'data/{NAME_SPACE_VAR}/tags/blocks/',
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/blocks'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/block_type'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.blocks
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/entity_types/'),
+		folder=f'data/{NAME_SPACE_VAR}/tags/entity_types/',
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/entity_types'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/entity_type'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.entity_types
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/fluids/'),
+		folder=f'data/{NAME_SPACE_VAR}/tags/fluids/',
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/fluids'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/fluid_type'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.fluids
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/functions/'),
+		folder=f'data/{NAME_SPACE_VAR}/tags/functions/',
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/functions'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/function'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.functions,
 		generation=GenerationInfo(
 			initialFiles=[
@@ -98,25 +96,25 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		)
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/game_events/'),
+		folder=f'data/{NAME_SPACE_VAR}/tags/game_events/',
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/game_events'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/game_event'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.game_events
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/tags/items/'),
+		folder=f'data/{NAME_SPACE_VAR}/tags/items/',
 		extension='.json',
 		isTag=True,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/items'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/item_type'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).tags.items
 	),
 
 	# WorldGenInfos:
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/biome/'),
+		folder=f'data/{NAME_SPACE_VAR}/worldgen/biome/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -124,7 +122,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.biome
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/configured_carver/'),
+		folder=f'data/{NAME_SPACE_VAR}/worldgen/configured_carver/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -132,7 +130,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_carver
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/configured_feature/'),
+		folder=f'data/{NAME_SPACE_VAR}/worldgen/configured_feature/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -140,7 +138,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_feature
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/configured_structure_feature/'),
+		folder=f'data/{NAME_SPACE_VAR}/worldgen/configured_structure_feature/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -148,7 +146,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_structure_feature
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/configured_surface_builder/'),
+		folder=f'data/{NAME_SPACE_VAR}/worldgen/configured_surface_builder/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -156,7 +154,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.configured_surface_builder
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/noise_settings/'),
+		folder=f'data/{NAME_SPACE_VAR}/worldgen/noise_settings/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -164,7 +162,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.noise_settings
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/processor_list/'),
+		folder=f'data/{NAME_SPACE_VAR}/worldgen/processor_list/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -172,7 +170,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).worldGen.processor_list
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/worldgen/template_pool/'),
+		folder=f'data/{NAME_SPACE_VAR}/worldgen/template_pool/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -182,7 +180,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 
 	# DatapackContents:
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/advancements/'),
+		folder=f'data/{NAME_SPACE_VAR}/advancements/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -190,7 +188,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).advancements
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/functions/'),
+		folder=f'data/{NAME_SPACE_VAR}/functions/',
 		extension='.mcfunction',
 		isTag=False,
 		includeSubdirs=True,
@@ -212,7 +210,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		)
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/item_modifiers/'),
+		folder=f'data/{NAME_SPACE_VAR}/item_modifiers/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -220,7 +218,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).item_modifiers
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/loot_tables/'),
+		folder=f'data/{NAME_SPACE_VAR}/loot_tables/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -228,23 +226,23 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).loot_tables
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/predicates/'),
+		folder=f'data/{NAME_SPACE_VAR}/predicates/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:predicates'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:predicate'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).predicates
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/recipes/'),
+		folder=f'data/{NAME_SPACE_VAR}/recipes/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:recipes'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:recipe'),
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).recipes
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/structures/'),
+		folder=f'data/{NAME_SPACE_VAR}/structures/',
 		extension='.nbt',
 		isTag=False,
 		includeSubdirs=True,
@@ -252,7 +250,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).structures
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/dimension/'),
+		folder=f'data/{NAME_SPACE_VAR}/dimension/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -260,7 +258,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).dimension
 	),
 	EntryHandlerInfo(
-		folder=re.compile(f'data/{NAME_SPACE_CAPTURE_GROUP}/dimension_type/'),
+		folder=f'data/{NAME_SPACE_VAR}/dimension_type/',
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
@@ -268,19 +266,6 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		getIndex=lambda p: p.setdefaultIndex(DatapackContents).dimension_type
 	),
 ]
-
-# DATAPACK_JSON_SCHEMAS: dict[str, JsonSchema] = {
-# 	'rawJsonText': RAW_JSON_TEXT_SCHEMA,
-# 	'tags/blocks': TAGS_BLOCKS,
-# 	'tags/entity_types': TAGS_ENTITY_TYPES,
-# 	'tags/fluids': TAGS_FLUIDS,
-# 	'tags/functions': TAGS_FUNCTIONS,
-# 	'tags/game_events': TAGS_GAME_EVENTS,
-# 	'tags/items': TAGS_ITEMS,
-# 	'predicates': PREDICATE_SCHEMA,
-# 	'dependencies.json': DEPENDENCIES_SCHEMA,
-# 	'jsonSchema.json': JSON_SCHEMA_SCHEMA,
-# }
 
 version6 = DPVersion(
 	name='6',

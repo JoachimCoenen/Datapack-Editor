@@ -158,8 +158,9 @@ class MinecraftSettings(SerializableContainer):
 	)
 
 	savesLocation: str = Serialized(
-		label="Minecraft Saves Directory",
-		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/saves').replace('\\', '/'),
+		label="Datapack Dependencies Location",
+		tip="DPE will search in this directory to resolve dependencies",
+		default_factory=lambda: os.path.expanduser('~/.dpe/dependencies').replace('\\', '/'),
 		decorators=[
 			pd.FolderPath(),
 			pd.Validator(folderPathValidator)

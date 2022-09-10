@@ -52,21 +52,21 @@ def _getTemplate(library: JsonObject, name: str) -> Optional[JsonObject]:
 	return templateProp.value
 
 
-def propertiesFor_ref(stack: list[JsonData]) -> Optional[JsonObjectSchema]:
-
-	library = stack[-1]
-	if isinstance(stack[-1], JsonObject):
-		if isinstance(library, JsonObject):
-
-			template = _getTemplate(library, name)
-
-	blockVal = parent.data.get('block', None)
-	if blockVal is None or not isinstance(blockVal.value, JsonString):
-		return JsonObjectSchema(properties=[])
-	else:
-		block = blockVal.value.data
-		block = ResourceLocation.fromString(block)
-		return _propertiesFromBlockStates(block)
+# def propertiesFor_ref(stack: list[JsonData]) -> Optional[JsonObjectSchema]:
+#
+# 	library = stack[-1]
+# 	if isinstance(stack[-1], JsonObject):
+# 		if isinstance(library, JsonObject):
+#
+# 			template = _getTemplate(library, name)
+#
+# 	blockVal = parent.data.get('block', None)
+# 	if blockVal is None or not isinstance(blockVal.value, JsonString):
+# 		return JsonObjectSchema(properties=[])
+# 	else:
+# 		block = blockVal.value.data
+# 		block = ResourceLocation.fromString(block)
+# 		return _propertiesFromBlockStates(block)
 
 
 def init() -> None:

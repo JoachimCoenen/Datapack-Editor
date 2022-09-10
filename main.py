@@ -39,7 +39,20 @@ setStyles(ResizableStyles())  # .hostWidgetStyle._func, 'hostWidgetStyle'))
 
 
 class SetupDialog(CatFramelessWindowMixin, QDialog):
+	def __init__(self, **kwargs):
+		super(SetupDialog, self).__init__(**kwargs)
+		self.reset()
+
+	def reset(self):
+		applicationSettings.reset()
+		applicationSettings.appearance.colorScheme = 'Default Dark'
+
 	def OnGUI(self, gui: AutoGUI):
+		if gui.isLastRedraw:
+			for child in self.children():
+				if isinstance(child, QtWidgets.QWidget):
+					child.resize(QtCore.QSize(3, 3))  # force a proper redraw.
+
 		appearanceSettings = applicationSettings.appearance
 		minecraftSettings = applicationSettings.minecraft
 		with gui.vLayout1C(preventVStretch=True):
@@ -51,13 +64,18 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
 
 			with gui.groupBox('Appearance'):
-				# gui.propertyField(appearanceSettings, AppearanceSettings.useCompactLayout)
+				# with gui.hLayout2R(preventHStretch=True):
+				# 	gui.propertyField(appearanceSettings, AppearanceSettings.useCompactLayout)
 				# gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+				#with gui.hLayout2R():
 				gui.propertyField(appearanceSettings, AppearanceSettings.fontSize)
+				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+				gui.propertyField(appearanceSettings, AppearanceSettings.colorScheme)
 				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
 
 			with gui.groupBox('Minecraft'):
-				gui.propertyField(minecraftSettings, MinecraftSettings.version)
+				#with gui.hLayout2R():
+				gui.propertyField(minecraftSettings, MinecraftSettings.version)  # , hSizePolicy=SizePolicy.Fixed.value)
 				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
 				gui.propertyField(minecraftSettings, MinecraftSettings.executable)
 				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
@@ -71,6 +89,7 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 		gui.dialogButtons({
 			MessageBoxButton.Ok    : lambda b: self.accept(),
 			MessageBoxButton.Abort : lambda b: self.reject(),
+			MessageBoxButton.RestoreDefaults: lambda b: self.reset() or gui.redrawGUI(),
 		})
 
 

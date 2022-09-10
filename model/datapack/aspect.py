@@ -1,5 +1,6 @@
 from Cat.utils.logging_ import logError
-from model.datapack.datapackContents import DatapackContents, collectAllEntries
+from model.data.json.schemas.tags import GLOBAL_SCHEMA_STORE
+from model.datapack.datapackContents import collectAllEntries
 from model.parsing.contextProvider import parseNPrepare, validateTree
 from model.pathUtils import ZipFilePool, loadBinaryFile
 from model.project import Dependency, AspectType, ProjectAspect
@@ -26,8 +27,8 @@ class DatapackAspect(ProjectAspect):
 			logError(e)
 			return dependencies
 
-		from model.data.json.schemas.dependency import DEPENDENCIES_SCHEMA
-		node, errors = parseNPrepare(file, filePath=filePath, language=LANGUAGES.JSON, schema=DEPENDENCIES_SCHEMA, allowMultilineStr=False)
+		schema = GLOBAL_SCHEMA_STORE.get('dpe:dependencies')
+		node, errors = parseNPrepare(file, filePath=filePath, language=LANGUAGES.JSON, schema=schema, allowMultilineStr=False)
 		if node is not None:
 			validateTree(node, file, errors)
 
