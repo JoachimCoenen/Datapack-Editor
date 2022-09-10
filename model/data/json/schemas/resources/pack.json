@@ -1,0 +1,17 @@
+{
+	"$schema": "dpe/json/schema",
+	"description": "Configuration file defining the metadata of a data pack for Minecraft.",
+	"$body": {
+		"$type": "object",
+		"properties": {
+			"pack": {
+				"description": "Pack",
+				"$type": "object",
+				"properties": {
+					"pack_format": { "$type": "integer" },
+					"description": { "$type": "string" }
+				}
+			}
+		}
+	}
+}

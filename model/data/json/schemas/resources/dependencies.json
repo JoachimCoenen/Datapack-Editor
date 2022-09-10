@@ -1,0 +1,13 @@
+{
+	"$schema": "dpe/json/schema",
+	"$body": {
+		"$type": "array",
+		"element": {
+			"$type": "object",
+			"properties": {
+				"name": { "$type": "string" },
+				"mandatory": { "$type": "boolean" }
+			}
+		}
+	}
+}
