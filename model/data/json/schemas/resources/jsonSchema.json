@@ -76,9 +76,7 @@
 			"$body": {
 				"$type": "union",
 				"options": [
-					{
-						"$ref": "#type"
-					},
+					{ "$ref": "#type" },
 					{
 						"$type": "object",
 						"properties": {
@@ -130,6 +128,44 @@
 					"optional": true,
 					"default": false,
 					"value": { "$ref": "orRef", "type": { "$type": "boolean" } }
+				},
+				"inherits": {
+					"description": "this object schema inherits all properties from these schemas",
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"object": {
+							"$ref": "orRef",
+							"type": {
+								"$type": "array", 
+								"element": {
+									"$ref": "orRef",
+									"type": { 
+										"$type": "object",
+										"properties": {
+											"defRef": { "$type": "string", "type": "dpe:def_ref" },
+											"decidingProp": {
+												"optional": true,
+												"requires": ["decidingValues"],
+												"value": { "$ref": "orRef", "type": { "$type": "string" } }
+											},
+											"decidingValues": {
+												"requires": ["decidingProp"],
+												"value": {
+													"$ref": "orRef",
+													"type": {
+														"$type": "array",
+														"element": { "$ref": "orRef", "type": { "$type": "string" } },
+														"properties": {}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				},
 				"default-property": {
 					"optional": true,

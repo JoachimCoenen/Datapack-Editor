@@ -108,6 +108,7 @@ def _suggestionsForKeySchema(schema: JsonKeySchema, contained: list[JsonNode], d
 
 
 _SCHEMA_SUGGESTIONS_PROVIDERS = {
+	JsonAnySchema.typeName: lambda schema, contained, data: [],
 	JsonNullSchema.typeName: lambda schema, contained, data: ['null'],
 	JsonBoolSchema.typeName: lambda schema, contained, data: ['true', 'false'],
 	JsonNumberSchema.typeName: lambda schema, contained, data: ['0'],

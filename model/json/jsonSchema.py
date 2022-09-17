@@ -16,7 +16,7 @@ from model.json.core import *
 from model.json.core import ALL_NAMED_JSON_ARG_TYPES
 from model.parsing.bytesUtils import strToBytes
 from model.parsing.parser import parse
-from model.pathUtils import normalizeDirSeparators, FilePath, fromDisplayPath, ArchiveFilePool, loadBinaryFile, ZipFilePool
+from model.pathUtils import normalizeDirSeparators, fromDisplayPath, loadBinaryFile, ZipFilePool
 from model.utils import GeneralError, MDStr, Span, SemanticsError, LanguageId, WrappedError
 
 JSON_TYPE_NAMES = {'null', 'boolean', 'number', 'string', 'array', 'object'}
@@ -139,35 +139,31 @@ class SchemaBuilder:
 	# 	schema = self.parseBody(body)
 	# 	return schema
 
-	@classmethod
-	def parseJsonSchema(cls, root: JsonObject, filePath: str, orchestrator: SchemaBuilderOrchestrator) -> tuple[Optional[JsonSchema], SchemaBuilder]:
-		self = cls(orchestrator=orchestrator)
+	def parseJsonSchema(self, root: JsonObject, filePath: str) -> Optional[JsonSchema]:
 		ctx = TemplateContext('', filePath, self.libraries, {})
 		root2: JObject = JD(root, ctx)
 		if self.optStrVal(root2, '$schema') != 'dpe/json/schema':
 			self.error(MDStr("Not a JSON Schema"), span=root.span, ctx=ctx)
-			return None, self
+			return None
 
 		title = self.optStrVal(root2, 'title', '')
 		library = self._parseLibrary(root2, filePath, ctx)
 
 		body = self.reqObject(root2, '$body')
 		schema = self.parseBody(body)
-		return schema, self
+		return schema
 
-	@classmethod
-	def parseSchemaLibrary(cls, root: JsonObject, filePath: str, orchestrator: SchemaBuilderOrchestrator) -> tuple[Optional[SchemaLibrary], SchemaBuilder]:
-		self = cls(orchestrator=orchestrator)
+	def parseSchemaLibrary(self, root: JsonObject, filePath: str) -> Optional[SchemaLibrary]:
 		ctx = TemplateContext('', filePath, self.libraries, {})
 		root2: JObject = JD(root, ctx)
 		if self.optStrVal(root2, '$schema') != 'dpe/json/schema/library':
 			self.error(MDStr("Not a JSON Schema Library"), span=root.span, ctx=ctx)
-			return None, self
+			return None
 
 		title = self.optStrVal(root2, 'title', '')
 		library = self._parseLibrary(root2, filePath, ctx)
 
-		return root2.ctx.libraries[''], self
+		return root2.ctx.libraries['']
 
 	def _parseLibrary(self, root: JObject, filePath: str, ctx: TemplateContext) -> SchemaLibrary:
 		description = MDStr(self.optStrVal(root, 'description', ''))
@@ -262,17 +258,20 @@ class SchemaBuilder:
 				self.error(MDStr(f"missing argument for param {name!r}."), span=refNode.span, ctx=refNode.ctx)
 		return args
 
+	def resolveDefRef(self, refNode: JString) -> JsonSchema:
+		library, ns, lref = self.getNamespace(refNode)
+		if (definition := library.definitions.get(lref)) is not None:
+			return definition
+		else:
+			self.error(MDStr(f"No definition \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
+			return JsonAnySchema()
+
 	def handleTypePartial(self, node: JObject) -> Generator[JsonSchema]:
 		refNode = self.optStr(node, '$defRef')
 		if refNode.n is not None:
-			library, ns, lref = self.getNamespace(refNode)
-
-			if (definition := library.definitions.get(lref)) is not None:
-				if len(node.data) > 1:
-					self.error(MDStr(f"no additional attributes allowed for referenced definitions."), span=refNode.span, style='warning', ctx=node.ctx)
-				yield definition
-			else:
-				self.error(MDStr(f"No definition \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
+			if len(node.data) > 1:
+				self.error(MDStr(f"no additional attributes allowed for referenced definitions."), span=refNode.span, style='warning', ctx=node.ctx)
+			yield self.resolveDefRef(refNode)
 		else:
 			type_ = self.reqStr(node, '$type')
 			try:
@@ -517,7 +516,7 @@ class SchemaBuilder:
 			return V(array.n.data, array.ctx)
 		return V(default, obj.ctx)
 
-	def optArrayVal2(self, obj: JObject, key: str, type_: Type[_TJN]) -> list[JD[_TJN]]:
+	def optArrayVal2(self, obj: JObject, key: str, type_: Type[_TJSD]) -> list[JD[_TJSD]]:
 		array = self.optArrayVal(obj, key, None)
 		if array.n is not None:
 			return [self.fromRefCheckType(JD(elem, array.ctx), type_) for elem in array.n]
@@ -552,10 +551,11 @@ class SchemaBuilderOrchestrator:
 		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=LanguageId('JSON'), schema=None)
 		schemaJson: JsonObject
 		self.errors[fullPath].extend(errors)
+		builder = SchemaBuilder(orchestrator=self)
 		try:
-			schema, builder = SchemaBuilder.parseJsonSchema(schemaJson, fullPath, self)
+			schema = builder.parseJsonSchema(schemaJson, fullPath)
 		except Exception as ex:
-			# self.errors[fullPath].extend(builder.errors)
+			self.errors[fullPath].extend(builder.errors)
 			self.errors[fullPath].append(WrappedError(ex))
 			return None
 		self.errors[fullPath].extend(builder.errors)
@@ -578,13 +578,13 @@ class SchemaBuilderOrchestrator:
 		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=LanguageId('JSON'), schema=None)
 		schemaJson: JsonObject
 		self.errors[fullPath].extend(errors)
+		builder = SchemaBuilder(orchestrator=self)
 		try:
-			library, builder = SchemaBuilder.parseSchemaLibrary(schemaJson, fullPath, self)
+			library = builder.parseSchemaLibrary(schemaJson, fullPath)
 		except Exception as ex:
-			# self.errors[fullPath].extend(builder.errors)
+			self.errors[fullPath].extend(builder.errors)
 			self.errors[fullPath].append(WrappedError(ex))
 			return SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
-		self.errors[fullPath].extend(builder.errors)
 		return library
 
 
@@ -648,6 +648,24 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 	)
 
 
+def inheritanceHandler(self: SchemaBuilder, node: JObject) -> Inheritance:
+	refNode = self.reqStr(node, 'defRef')
+	decidingProp = self.optStrVal(node, 'decidingProp', None)
+	if decidingProp:
+		decidingValues = self.reqArrayVal2(node, 'decidingValues', JsonString)
+	else:
+		decidingValues = []
+
+	refSchema = self.resolveDefRef(refNode)
+	if not isinstance(refSchema, JsonObjectSchema):
+		self.error(MDStr(f"Definition \"{refNode.data}\" is not an object schema."), span=refNode.span, ctx=refNode.ctx)
+	return Inheritance(
+		schema=refSchema,
+		decidingProp=decidingProp,
+		decidingValues=tuple(dv.data for dv in decidingValues),
+	)
+
+
 typeHandler = AddToDictDecorator(_typeHandlers)
 
 
@@ -659,9 +677,13 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 		properties = self.optObjectRaw(node, 'properties')
 	else:
 		properties = self.reqObjectRaw(node, 'properties')
+
+	inherits = self.optArrayVal2(node, 'inherits', JsonObject)
+
 	objectSchema = JsonObjectSchema(
 		description=description,
 		properties=[],
+		inherits=[],
 		deprecated=deprecated
 	)
 	yield objectSchema
@@ -673,7 +695,13 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 			schemaProps.append(propertyHandler(self, name, prop).setSpan(properties.n.data[name].value.span, properties.ctx.filePath))
 	if defaultProp.n is not None:
 		schemaProps.append(propertyHandler(self, Anything(), defaultProp).setSpan(node.n.data['default-property'].value.span, node.ctx.filePath))
+
+	schemaInherits = []
+	for inherit in inherits:
+		schemaInherits.append(inheritanceHandler(self, inherit))
+
 	objectSchema.properties = tuple(schemaProps)
+	objectSchema.inherits = tuple(schemaInherits)
 	objectSchema.buildPropertiesDict()
 
 

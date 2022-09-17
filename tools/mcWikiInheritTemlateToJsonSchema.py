@@ -55,8 +55,8 @@ def convert3(text: str, name: str, *, forceOptional: bool) -> str:
 	original = text
 	text = extractOnlyinclude(text)
 	lines = text.splitlines()
-	inesStack = Stack(list(reversed(lines)))
-	schema = handleObjectSchema(inesStack, 1, None, None, forceOptional)
+	linesStack = Stack(reversed([x for x in enumerate(lines, start=1)]))
+	schema = handleObjectSchema(linesStack, 1, None, None, forceOptional)
 	schema = f"{name} = {schema}\n"
 	return addImports(schema, name)
 
@@ -65,8 +65,8 @@ def convert2(text: str, name: str, imports: str, *, forceOptional: bool) -> str:
 	original = text
 	text = extractOnlyinclude(text)
 	lines = text.splitlines()
-	inesStack = Stack(list(reversed(lines)))
-	doc, props = handleProperties(inesStack, 2, None, forceOptional=forceOptional)
+	linesStack = Stack(reversed([x for x in enumerate(lines, start=1)]))
+	doc, props = handleProperties(linesStack, 2, None, forceOptional=forceOptional)
 	propsStr = indentMultilineStr(SEP.join(props), indent=INDENT)
 	schema = buildObjectSchema([], doc)
 	schema = (
@@ -88,7 +88,7 @@ ELEMENT_PATTERN = re.compile(rf' {TYPE_MARKER}(?:: ?)?(.*)')
 PROPERTY_UNION_PATTERN = re.compile(rf' ({TYPE_MARKER}*){PROPERTY_MARKER}(?:: ?)?(.*)')
 UNION_SPLIT_PATTERN = re.compile(rf'({TYPE_MARKER}*){TYPE_MARKER}')
 
-INHERIT_PATTERN = re.compile(r' {{[Nn][Bb][Tt] inherit/([\w/]+)\|indent=\*+}}')
+INHERIT_PATTERN = re.compile(r' {{[Nn][Bb][Tt] inherit/([\w/]+)(?:\|indent=\*+)?}}')
 DEPENDANT_PROP_PATTERN = re.compile(r" '''(\w+)'''")
 
 
@@ -102,7 +102,8 @@ class Proptions(NamedTuple):
 	deprecated: bool
 
 
-def handleProp(line: str, linesStack: Stack[str], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> Union[str, Proptions]:
+def handleProp(lineNoLine: tuple[int, str], linesStack: Stack[tuple[int, str]], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> Union[str, Proptions]:
+	lineNo, line = lineNoLine
 	if (match := PROPERTY_UNION_PATTERN.match(line, depth)) is not None:
 		typeMarkers = match.group(1)
 		lastType_ = match.group(3)
@@ -120,7 +121,7 @@ def handleProp(line: str, linesStack: Stack[str], depth: int, depProp: Optional[
 		for type_ in types:
 			handler = _schemaHandlers.get(type_)
 			if handler is None:
-				print(f"[ ] no handler for type_ = {type_!r}, depProp={depProp!r}")
+				print(f"[ ] no handler for type_ = {type_!r}, depProp={depProp!r} at line {lineNo}: {line!r}")
 				return '# ' + line
 			schema = handler(linesStack, depth + 0, doc if depProp is not None else None, doc, forceOptional)
 			schemas.append(schema)
@@ -146,27 +147,27 @@ def handleProp(line: str, linesStack: Stack[str], depth: int, depProp: Optional[
 	# 	return Proptions(name, doc, schema, depProp, default, optional, deprecated)
 
 	elif (match := INHERIT_PATTERN.match(line, depth)) is not None:
-		print(f"[ ] can't mix INHERIT and normal props: {line!r}, depProp={depProp!r}")
+		print(f"[ ] can't mix INHERIT and normal props at line {lineNo}: {line!r}, depProp={depProp!r}")
 		path = match.group(1)
 		const = f"ADVANCEMENT_{path.replace('/', '_').upper()}"
 		if depProp is not None:
-			print(f"[ ] can't use depProp with INHERIT: {line!r}, depProp={depProp!r}")
+			print(f"[ ] can't use depProp with INHERIT at line {lineNo}: {line!r}, depProp={depProp!r}")
 		return f'*{const}.properties'
 
 	else:
-		print(f"[ ] line didn't match property: {line!r}, depProp={depProp!r}")
+		print(f"[ ] line didn't match property at line {lineNo}: {line!r}, depProp={depProp!r}")
 		return '# ' + line
 
 
-def handlePropertiesInner(linesStack: Stack[str], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> list[Union[str, Proptions]]:
+def handlePropertiesInner(linesStack: Stack[tuple[int, str]], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> list[Union[str, Proptions]]:
 	properties = []
 	lastProp: Optional[Proptions] = None
-	while not linesStack.isEmpty():
-		line = linesStack.peek()
+	while linesStack:
+		lineNo, line = linesStack.peek()
 		if not line.startswith('*' * depth + ' '):
 			if line.startswith('*' * depth):
 				linesStack.pop()
-				print(f"too many asterisks at start of line: {line!r}")
+				print(f"too many asterisks at start of line {lineNo}: {line!r}")
 				properties.append('# ' + line)
 				continue
 			break
@@ -183,7 +184,7 @@ def handlePropertiesInner(linesStack: Stack[str], depth: int, depProp: Optional[
 			name = match.group(1)
 			properties.extend(handlePropertiesInner(linesStack, depth + 1, (lastProp.name, name), forceOptional=forceOptional))
 		else:
-			prop = handleProp(line, linesStack, depth, depProp, forceOptional=forceOptional)
+			prop = handleProp((lineNo, line), linesStack, depth, depProp, forceOptional=forceOptional)
 			if isinstance(prop, Proptions):
 				lastProp = prop
 			properties.append(prop)
@@ -225,14 +226,14 @@ def buildObjectSchema(properties: list[str], doc: Optional[str]) -> str:
 		return f"JsonObjectSchema(properties=[\n{propertiesStr}\n])"
 
 
-_schemaHandlers: dict[str, Callable[[Stack[str], int, Optional[str], Optional[str], bool], str]] = {}
+_schemaHandlers: dict[str, Callable[[Stack[tuple[int, str]], int, Optional[str], Optional[str], bool], str]] = {}
 schemaHandler = AddToDictDecorator(_schemaHandlers)
 
 
 @schemaHandler('compound')
-def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleObjectSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	# are we inheriting anything?
-	line = linesStack.peek()
+	lineNo, line = linesStack.peek()
 	if (match := INHERIT_PATTERN.match(line, depth + 1)) is not None:
 		linesStack.pop()
 		path = match.group(1)
@@ -250,7 +251,7 @@ def handleObjectSchema(linesStack: Stack[str], depth: int, doc: Optional[str], p
 	return buildObjectSchema(propStrings, doc)
 
 
-def handleProperties(linesStack: Stack[str], depth: int, doc: Optional[str], *, forceOptional: bool) -> tuple[Optional[str], list[str]]:
+def handleProperties(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], *, forceOptional: bool) -> tuple[Optional[str], list[str]]:
 	properties = handlePropertiesInner(linesStack, depth, None, forceOptional=forceOptional)
 	propStrings = []
 	byName: OrderedMultiDict[str, Proptions] = OrderedMultiDict()
@@ -319,20 +320,20 @@ def handleProperties(linesStack: Stack[str], depth: int, doc: Optional[str], *, 
 
 @schemaHandler('bool')
 @schemaHandler('boolean')
-def handleBoolSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleBoolSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonBoolSchema({docStr})"
 
 
 @schemaHandler('int')
-def handleIntSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleIntSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonIntSchema({docStr})"
 
 
 @schemaHandler('double')
 @schemaHandler('float')
-def handleFloatSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleFloatSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonFloatSchema({docStr})"
 
@@ -344,7 +345,7 @@ NBT_MATCHER_1 = re.compile(r'(?<!{{)nbt')
 
 
 @schemaHandler('string')
-def handleStrSchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleStrSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 
 	docToAnalyze = doc if doc else parentDoc
@@ -366,13 +367,13 @@ def handleStrSchema(linesStack: Stack[str], depth: int, doc: Optional[str], pare
 
 
 @schemaHandler('list')
-def handleArraySchema(linesStack: Stack[str], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
-	if not linesStack.isEmpty():
-		line = linesStack.peek()
+def handleArraySchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+	if linesStack:
+		lineNo, line = linesStack.peek()
 		if not line.startswith('*' * (depth + 1) + ' '):
 			if line.startswith('*' * (depth + 1)):
 				linesStack.pop()
-				print(f"too many asterix at start of line: {line!r}")
+				print(f"too many asterix at start of line {lineNo}: {line!r}")
 				element = line
 			else:
 				element = None
@@ -384,12 +385,12 @@ def handleArraySchema(linesStack: Stack[str], depth: int, doc: Optional[str], pa
 				iDoc = match.group(2)
 				handler = _schemaHandlers.get(type_)
 				if handler is None:
-					print(f"[ ] no handler for type_ = {type_!r}")
+					print(f"[ ] no handler for type_ at line {lineNo}: {line!r}, type_ = {type_!r}")
 					element = line
 				else:
 					element = handler(linesStack, depth + 1, iDoc, doc, forceOptional)
 			else:
-				print(f"[ ] line didn't match element: {line!r}")
+				print(f"[ ] line {lineNo} didn't match element: {line!r}")
 				element = line
 	else:
 		element = None
@@ -408,10 +409,11 @@ def processFile(srcPath: str, dstPath: str, name: str, imports: str, *, forceOpt
 		f.write(newText)
 
 
-SRC_FOLDER = "D:/Programming/Python/MinecraftDataPackEditor/tools/mcWiki/"
-DST_FOLDER = "D:/Programming/Python/MinecraftDataPackEditor/tools/mcWikiCompiled2/"
+SRC_FOLDER = "D:/Programming/Python/MinecraftDataPackEditor/tools/mcWiki/Recipe"
+DST_FOLDER = "D:/Programming/Python/MinecraftDataPackEditor/tools/mcWikiCompiled2/Recipe"
 FOLDER_FILTER = "**"
 
+CURRENT_FILE_PATH: str = ""
 
 def run():
 	allFiles: list[str] = []
@@ -430,6 +432,7 @@ def run():
 	for srcPath in allFiles:
 		srcPath = srcPath.replace('\\', '/')
 		pathPart = srcPath.removeprefix(SRC_FOLDER).rpartition('.')[0]
+		pathPart = pathPart.strip('/')
 		dstPath = os.path.join(DST_FOLDER, pathPart).replace('\\', '/') + '.py'
 		name = pathPart.replace('/', '_').upper()
 		import_ = pathPart.replace('/', '.')
@@ -438,9 +441,13 @@ def run():
 
 	# imports = NL.join(imports)
 
+	global CURRENT_FILE_PATH
 	for i, (srcPath, dstPath, name) in enumerate(allPaths):
-		if i % 100 == 0:
-			print(f"processing file {i}")
+		CURRENT_FILE_PATH = srcPath
+		# if i % 100 == 0:
+		print(f"")
+		print(f"processing file {i}, name = {name}, path = {srcPath}")
+		print(f"==========================================================================")
 		processFile(srcPath, dstPath, name, '', forceOptional=True)
 
 
