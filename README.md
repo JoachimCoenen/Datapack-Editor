@@ -16,14 +16,14 @@ An advanced editor for Minecraft Datapacks for Minecraft 1.17 and 1.18+. _Curren
 - Syntax highlighting 
 - Error checking
 - Rich code suggestions and code completion for `.mcFunction` and `.json` files
-- custom color schemes
+- custom themes
 - Ctrl-Click to follow symbols (functions & function tags, block tags, ... )
 - Multi-tab & multi-view editor
 - Quickly find and open files
 - Search all files
 - Validate all files (for `.mcFunction` and `.json` files)
 - Add, rename and delete files and folders via the left-side tree view
-- supports multiple datapacks loaded at the same time (usefull when creating a plugin to an existing datapack)
+- supports dependencies between datapacks via `dependencies.json`
 - Program remembers last session after closing
 
 
