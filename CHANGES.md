@@ -1,3 +1,19 @@
+## next Version
+### Features
+ * Added a dark theme, and support for custom themes.
+ * Added file specific validation & suggestions for:
+   * predicate files
+   * recipe files
+   * `pack.mcmeta`
+   * `dependencies.json`
+ * migrated to a project based structure:
+   * dependencies are now specified using `dependencies.json` in the root directory of your datapack.
+   * a common search location for dependencies can be changed in settings (default location is `C:/Users/<your username>/.dpe/dependencies`).
+
+### Improvements
+ * Drag & drop files into the editor to open them
+
+
 ## Version 0.3.0-alpha
 ### Features
  * Added support for different data pack versions (separate from the MC version).
