@@ -1,4 +1,4 @@
-## next Version
+## Version 0.4.0-alpha
 ### Features
  * Added a dark theme, and support for custom themes.
  * Added file specific validation & suggestions for:
