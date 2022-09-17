@@ -5,7 +5,7 @@ from operator import attrgetter
 from typing import Optional, Sequence
 
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QCloseEvent, QKeySequence
+from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent
 from PyQt5.QtWidgets import QMainWindow, QApplication
 
 import Cat
@@ -107,6 +107,15 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		self._saveSession()
 		MainWindow.deregisterMainWindow(self.id)
 		event.accept()
+
+	def dragEnterEvent(self, e: QDragEnterEvent):
+		if e.mimeData().hasUrls() and all(url.isValid() for url in e.mimeData().urls()):
+			e.acceptProposedAction()
+
+	def dropEvent(self, e: QDropEvent):
+		for url in e.mimeData().urls():
+			filePath = url.toLocalFile()
+			self._tryOpenOrSelectDocument(filePath)
 
 	# properties:
 
