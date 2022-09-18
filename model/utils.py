@@ -134,8 +134,11 @@ MDStr = NewType('MDStr', str)
 """A Markdown string. (see: https://daringfireball.net/projects/markdown/)"""
 
 
+_MD_CONVERTER = markdown.Markdown()
+
+
 def formatMarkdown(text: str, /) -> HTMLStr:
-	html = markdown.markdown(text)
+	html = _MD_CONVERTER.convert(text)
 	return HTMLStr(html)
 
 
