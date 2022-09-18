@@ -1,6 +1,7 @@
 ## Next Version
 ### Improvements
  * Improved parsing and validation performance for files with many errors
+ * Drastically improved parsing and validation performance for json files in certain circumstances
 
 ## Version 0.4.0-alpha
 ### Features

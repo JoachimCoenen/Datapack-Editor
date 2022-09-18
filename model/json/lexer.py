@@ -173,6 +173,10 @@ class JsonTokenizer(TokenizerBase[Token]):
 
 		word = self.text[start.index - self.cursorOffset:self.cursor]
 		tkType = _TOKEN_TYPE_FOR_SPECIAL.get(word, TokenType.invalid)
+		if tkType is TokenType.invalid:
+			if self.cursor < self.totalLength and self.text[self.cursor] == ord(b'"'):
+				self.cursor += 1
+				word += self.text[self.cursor:self.cursor + 1]
 		token = self.addToken2(start, word, tkType)
 		if token.type is TokenType.invalid:
 			self.errorMsg(UNKNOWN_LITERAL_MSG, bytesToStr(token.value), span=token.span)
