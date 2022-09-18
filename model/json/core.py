@@ -632,14 +632,6 @@ def resolvePath(data: JsonData, path: tuple[str|int, ...]) -> Optional[JsonData]
 	return result
 
 
-class JsonTokenizeError(GeneralError):
-	pass
-
-
-class JsonParseError(GeneralError):
-	pass
-
-
 class JsonSemanticsError(GeneralError):
 	pass
 
@@ -715,8 +707,6 @@ __all__ = [
 
 	'resolvePath',
 
-	'JsonTokenizeError',
-	'JsonParseError',
 	'JsonSemanticsError',
 
 	'JsonArgType',

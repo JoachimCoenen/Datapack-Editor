@@ -3,18 +3,15 @@ from dataclasses import dataclass, field
 from typing import Optional, Callable
 
 from Cat.utils import CachedProperty
-from model.json.core import TokenType, Token, JsonTokenizeError
+from model.json.core import TokenType, Token
 from model.parsing.bytesUtils import *
 from model.parsing.parser import TokenizerBase
 from model.utils import Span, Position, Message
-
 
 INCOMPLETE_ESCAPE_MSG = Message("Incomplete escape at end of string", 0)
 SINGLE_QUOTED_STRING_MSG = Message("JSON standard does not allow single quoted strings", 0)
 EXPECTED_END_OF_STRING_MSG = Message("Expected end of string", 0)
 MISSING_CLOSING_QUOTE_MSG = Message("Missing closing quote", 0)
-# TOO_MANY_DECIMAL_POINTS_MSG = Message("Too many decimal points in number", 0)
-# MINUS_SIGN_INSIDE_NUMBER_MSG = Message("Minus sign in between number", 0)
 INVALID_NUMBER_MSG = Message("Minus sign in between number `{0}`", 1)
 UNKNOWN_LITERAL_MSG = Message("Unknown literal `{0}`", 1)
 ILLEGAL_CHARS_MSG = Message("Illegal characters `{0}`", 1)
@@ -59,7 +56,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 		# add errors:
 		if self._errorsNextToken:
 			for msg, args, style in self._errorsNextToken:
-				self.error(msg, *args, span=token.span, style=style)
+				self.errorMsg(msg, *args, span=token.span, style=style)
 			self._errorsNextToken.clear()
 		return token
 
@@ -70,16 +67,12 @@ class JsonTokenizer(TokenizerBase[Token]):
 		# add errors:
 		if self._errorsNextToken:
 			for msg, args, style in self._errorsNextToken:
-				self.error(msg, *args, span=token.span, style=style)
+				self.errorMsg(msg, *args, span=token.span, style=style)
 			self._errorsNextToken.clear()
 		return token
 
 	def errorNextToken(self, msg: Message, *args, style: str = 'error') -> None:
 		self._errorsNextToken.append((msg, args, style))
-
-	def error(self, msg: Message, *args, span: Span, style: str = 'error') -> None:
-		msgStr = msg.format(*args)
-		self.errors.append(JsonTokenizeError(msgStr, span, style=style))
 
 	def consumeWhitespace(self) -> None:
 		cursor: int = self.cursor
@@ -168,7 +161,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 
 		token = self.addToken(start, TokenType.number)
 		if not isValid:
-			self.error(INVALID_NUMBER_MSG, token.value, span=token.span)
+			self.errorMsg(INVALID_NUMBER_MSG, token.value, span=token.span)
 		return token
 
 	def extract_special(self) -> Token:
@@ -182,7 +175,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 		tkType = _TOKEN_TYPE_FOR_SPECIAL.get(word, TokenType.invalid)
 		token = self.addToken2(start, word, tkType)
 		if token.type is TokenType.invalid:
-			self.error(UNKNOWN_LITERAL_MSG, bytesToStr(token.value), span=token.span)
+			self.errorMsg(UNKNOWN_LITERAL_MSG, bytesToStr(token.value), span=token.span)
 		return token
 
 	def extract_illegal(self) -> Token:
@@ -191,7 +184,6 @@ class JsonTokenizer(TokenizerBase[Token]):
 		self.cursor += 1  # first character
 		while self.cursor < self.totalLength:
 			char = self.text[self.cursor]
-			# if chr(char).isalnum():
 			if char in DIGITS_RANGE or char in ASCII_LOWERCASE_RANGE or char in ASCII_UPPERCASE_RANGE:
 				break
 			if char in WHITESPACE:
@@ -202,7 +194,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 
 		token = self.addToken(start, TokenType.invalid)
 		if token.type is TokenType.invalid:
-			self.error(ILLEGAL_CHARS_MSG, repr(bytesToStr(token.value)), span=token.span)
+			self.errorMsg(ILLEGAL_CHARS_MSG, repr(bytesToStr(token.value)), span=token.span)
 		return token
 
 	def extract_operator(self) -> Token:
@@ -214,7 +206,6 @@ class JsonTokenizer(TokenizerBase[Token]):
 	@CachedProperty
 	def _TOKEN_EXTRACTORS_BY_CHAR(self) -> dict[str, Callable[[], Token]]:
 		return {
-			# **{c: extract_operator for c in '[]{},:'},
 			**{c: self.extract_string for c in b'"\''},
 			**{c: self.extract_special for c in ASCII_LETTERS},  # 'e' & 'E' will be replaced again with 'e': extract_number,
 			**{c: self.extract_number for c in b'0123456789+-.eE'},

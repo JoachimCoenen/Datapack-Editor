@@ -1,3 +1,7 @@
+## Next Version
+### Improvements
+ * Improved parsing and validation performance for files with many errors
+
 ## Version 0.4.0-alpha
 ### Features
  * Added a dark theme, and support for custom themes.

@@ -14,10 +14,6 @@ from model.utils import Message, Position, GeneralError, Span, MDStr, LanguageId
 INVALID_NUMBER_MSG: Message = Message("Invalid {0}: '`{1}`'", 2)
 
 
-class SNBTError(GeneralError):
-	pass
-
-
 class NumberInfo(NamedTuple):
 	suffix: tuple[bytes, ...]
 	min: Union[int, float]
@@ -77,24 +73,11 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 		self._current = self._tokenizer.nextToken()
 		self._last = None
 
-	# def __init__(self, source: bytes, ignoreTrailingChars: bool = False):
-	# 	self._source: bytes = source
-	# 	self._ignoreTrailingChars: bool = ignoreTrailingChars
-	#
-	# 	self._tokenizer = SNBTTokenizer(source, ignoreTrailingChars)
-	# 	self._current: Optional[Token] = self._tokenizer.nextToken()
-	# 	self._last: Optional[Token] = None
-	#
-	# 	self._errors: list[SNBTError] = []
-
-	def _error(self, message: MDStr, token: Token, style: str = 'error') -> None:
+	def _error(self, message: MDStr, token: Optional[Token], style: str = 'error') -> None:
 		if token is not None:
-			self._error2(message, token.span, style)
+			self.error(message, span=token.span, style=style)
 		else:
-			self._error2(message, Span(Position(0, 0, 0)), style)
-
-	def _error2(self, message: MDStr, span: Span, style: str = 'error') -> None:
-		self.errors.append(SNBTError(message, span, style=style))
+			self.error(message, span=Span(Position(0, 0, 0)), style=style)
 
 	def _next(self) -> None:
 		self._last = self._current
@@ -250,7 +233,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 				if next_char_str is not None:
 					chars.append(next_char_str)
 				else:
-					self.errors.append(SNBTError(MDStr(f"Unknown escape sequence: `{bytesToStr(string)}`"), span))
+					self.error(MDStr(f"Unknown escape sequence: `{bytesToStr(string)}`"), span=span)
 
 				index += 2
 				strStreakStart = index
@@ -311,7 +294,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 			if tagType is None:
 				tagType = type(tag)
 			if type(tag) != tagType:
-				self._error2(EXPECTED_BUT_GOT_MSG.format(f'`{tagType.__name__}`', type(tag).__name__), tag.span)
+				self.errorMsg(EXPECTED_BUT_GOT_MSG, f'`{tagType.__name__}`', type(tag).__name__, span=tag.span)
 			values.append(tag)
 			return True
 

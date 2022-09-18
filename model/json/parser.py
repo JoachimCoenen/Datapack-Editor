@@ -61,9 +61,6 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		self._current = self._tokenizer.nextToken()
 		self._last = None
 
-	def _error(self, message: MDStr, span: Span, style: str = 'error') -> None:
-		self.errors.append(JsonParseError(message, span, style=style))
-
 	@property
 	def hasTokens(self) -> bool:
 		return self._current is not None
@@ -88,12 +85,11 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		current = self._current
 		if current is None:
 			span = self._last.span if self._last is not None else Span()
-			self._error(UNEXPECTED_EOF_MSG.format(), span)
+			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
 			return self._last  # TODO: WTF ?????
 
 		if current.type is not tokenType:
-			msg = EXPECTED_BUT_GOT_MSG.format(tokenType.asString, bytesToStr(current.value))
-			self._error(msg, current.span)
+			self.errorMsg(EXPECTED_BUT_GOT_MSG, tokenType.asString, bytesToStr(current.value), span=current.span)
 			if advanceIfBad:
 				self._next()
 		else:
@@ -104,13 +100,12 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		current = self._current
 		if current is None:
 			span = self._last.span if self._last is not None else Span()
-			self._error(UNEXPECTED_EOF_MSG.format(), span)
+			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
 			return self._last  # TODO: WTF ?????
 
 		if current.type not in tokenTypes:
 			name = ' | '.join(tk.asString for tk in tokenTypes)
-			msg = EXPECTED_BUT_GOT_MSG.format(name, bytesToStr(current.value))
-			self._error(msg, current.span)
+			self.errorMsg(EXPECTED_BUT_GOT_MSG, name, bytesToStr(current.value), span=current.span)
 			if advanceIfBad:
 				self._next()
 		else:
@@ -121,7 +116,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		current = self._current
 		if current is None:
 			span = self._last.span if self._last is not None else Span()
-			self._error(UNEXPECTED_EOF_MSG.format(), span)
+			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
 			return self._last  # TODO: WTF ?????
 		self._next()
 		return current
@@ -207,8 +202,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			elif token.type in self._PARSERS.keys():
 				key = self._internalParseTokens()
 				if key.typeName != JsonString.typeName:
-					msg = ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG.format()
-					self._error(msg, key.span)
+					self.errorMsg(ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG, span=key.span)
 					key = JsonInvalid(key.span, None, bytesToStr(self.text[key.span.slice]))
 			elif token.type == TokenType.invalid:
 				key = self.parse_invalid()
@@ -229,16 +223,14 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 
 			# duplicate colons:
 			while (tkn2 := self.tryAccept(TokenType.colon)) is not None:
-				msg = DUPLICATE_NOT_ALLOWED_MSG.format(TokenType.colon.asString)
-				self._error(msg, tkn2.span)
+				self.errorMsg(DUPLICATE_NOT_ALLOWED_MSG, TokenType.colon.asString, span=tkn2.span)
 
 			if token is not None and token.type is TokenType.eof:
 				value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
 				objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
 				return
 			elif self._waitingForClosing[self._current.type] > 0:
-				msg = MISSING_VALUE_MSG.format()
-				self._error(msg, self._last.span)
+				self.errorMsg(MISSING_VALUE_MSG, span=self._last.span)
 				value = JsonInvalid(Span(self._last.span.end, self._current.span.start), None, '')
 				objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
 				return
@@ -288,12 +280,10 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 					return
 				else:  # now: tkn.type is delimiter:
 					while (tkn2 := self.tryAccept(delimiter)) is not None:
-						msg = DUPLICATE_NOT_ALLOWED_MSG.format(delimiter.asString)
-						self._error(msg, tkn2.span)
+						self.errorMsg(DUPLICATE_NOT_ALLOWED_MSG, delimiter.asString, span=tkn2.span)
 						tkn = tkn2
 					if self.tryAccept(closing) is not None:
-						msg = TRAILING_NOT_ALLOWED_MSG.format(delimiter.asString)
-						self._error(msg, tkn.span)
+						self.errorMsg(TRAILING_NOT_ALLOWED_MSG, delimiter.asString, span=tkn.span)
 						self._waitingForClosing[closing] -= 1
 						return
 					tryParseItem(goodValueTokens)
@@ -301,12 +291,12 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			else:
 				if self._current.type in valueTokens:
 					msg = MISSING_DELIMITER_MSG.format(delimiter.asString)
-					self._error(msg, self._current.span)
+					self.errorMsg(msg, span=self._current.span)
 					tryParseItem(goodValueTokens)
 					continue
 				elif self._waitingForClosing[self._current.type] > 0:
 					msg = MISSING_CLOSING_MSG.format(closing.asString)
-					self._error(msg, self._current.span)
+					self.errorMsg(msg, span=self._current.span)
 					return
 				else:
 					# force an error and consume the unknown token, so we don't end up
@@ -393,7 +383,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 					try:
 						unicode_char = literal_eval(f'"\\u{bytesToStr(hex_string)}"')
 					except SyntaxError:
-						self._error(MDStr(f"Invalid unicode escape: `\\u{bytesToStr(hex_string)}`"), token.span)
+						self.error(MDStr(f"Invalid unicode escape: `\\u{bytesToStr(hex_string)}`"), span=token.span)
 						unicode_char = b'\\u' + hex_string
 						encIdx = index
 					else:
@@ -412,7 +402,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 						chars += next_char_str
 						idxMap.append((encIdx, decIdx))
 					else:
-						self._error(MDStr(f"Unknown escape sequence: `{bytesToStr(string)}`"), token.span)
+						self.error(MDStr(f"Unknown escape sequence: `{bytesToStr(string)}`"), span=token.span)
 						chars += string[index:index+2]
 
 					index += 2
@@ -446,7 +436,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			return JsonNumber(token.span, None, number)
 
 		except ValueError:
-			self._error(MDStr(f"Invalid number: `{token.value}`"), token.span)
+			self.error(MDStr(f"Invalid number: `{token.value}`"), span=token.span)
 		return JsonNumber(token.span, None, 0)
 
 	def parse_boolean(self) -> JsonBool:
@@ -503,9 +493,9 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		value = self.parseJsonTokens()
 
 		if self._current is not None and self._current.type is not TokenType.eof:
-			self._error(
+			self.error(
 				MDStr(f"Invalid JSON at `{bytesToStr(self._current.value)}`"),
-				self._current.span
+				span=self._current.span
 			)
 
 		return value

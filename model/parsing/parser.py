@@ -6,7 +6,7 @@ from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
 from model.parsing.tree import Node, Schema, TokenLike
 from model.pathUtils import FilePath
-from model.utils import Position, GeneralError, LanguageId, MDStr, Span, ParsingError
+from model.utils import Position, GeneralError, LanguageId, MDStr, Span, ParsingError, Message
 
 _TToken = TypeVar('_TToken', bound=TokenLike)
 _TNode = TypeVar('_TNode', bound=Node)
@@ -51,6 +51,7 @@ class _Base(ABC):
 	cursorOffset: int
 	indexMapper: IndexMapper
 	errors: list[GeneralError] = field(default_factory=list, init=False)
+	maxErrors: int = field(default=200, init=False)
 
 	@property
 	def currentPos(self) -> Position:
@@ -62,12 +63,20 @@ class _Base(ABC):
 		return ParsingError(message, span=span, style=style)
 
 	def error(self, message: MDStr, *, span: Span = ..., style: str = 'error') -> None:
+		if len(self.errors) >= self.maxErrors > 0:
+			return  # don't generate too many errors!
 		# Provide additional information in the errors message
 		if span is ...:
 			position = self.currentPos
 			span = Span(position)
 		error = self.createError(message, span, style)
 		self.errors.append(error)
+
+	def errorMsg(self, msg: Message, *args, span: Span, style: str = 'error') -> None:
+		if len(self.errors) >= self.maxErrors > 0:
+			return  # don't generate too many errors!
+		msgStr = msg.format(*args)
+		self.error(msgStr, span=span, style=style)
 
 
 @dataclass
