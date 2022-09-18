@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QDialog, QWidget
 from Cat.CatPythonGUI.GUI import SizePolicy
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
-from Cat.utils.profiling import ProfiledAction
+from Cat.utils.profiling import ProfiledAction, TimedAction
 from gui.datapackEditorGUI import DatapackEditorGUI
 from session.documents import Document
 from session.session import getSession
@@ -40,15 +40,25 @@ class ProfileParsingDialog(CatFramelessWindowMixin, QDialog):
 		fileName = gui.textField(fileName + fileNameSuffix, label='file name', enabled=False)
 		self._repetitions = gui.intField(self._repetitions, label='repetitions', min=1, enabled=True)
 		gui.title("Parsing:")
-		if gui.button('GO!', enabled=self._selectedDocument is not None):
-			with ProfiledAction(fileName):
-				for _ in range(self._repetitions):
-					self._selectedDocument.parse(self._selectedDocument.content)
+		with gui.hLayout():
+			if gui.button('Profile!', enabled=self._selectedDocument is not None):
+				with ProfiledAction(fileName):
+					for _ in range(self._repetitions):
+						self._selectedDocument.parse(self._selectedDocument.content)
+			if gui.button('Time!', enabled=self._selectedDocument is not None):
+				with TimedAction(fileName):
+					for _ in range(self._repetitions):
+						self._selectedDocument.parse(self._selectedDocument.content)
 
 		gui.title("Validating:")
-		if gui.button('GO!', enabled=self._selectedDocument is not None):
-			with ProfiledAction(fileName):
-				for _ in range(self._repetitions):
-					self._selectedDocument.validate()
+		with gui.hLayout():
+			if gui.button('Profile!', enabled=self._selectedDocument is not None):
+				with ProfiledAction(fileName):
+					for _ in range(self._repetitions):
+						self._selectedDocument.validate()
+			if gui.button('Time!', enabled=self._selectedDocument is not None):
+				with TimedAction(fileName):
+					for _ in range(self._repetitions):
+						self._selectedDocument.validate()
 
 		gui.addVSpacer(0, SizePolicy.Expanding)
