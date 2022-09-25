@@ -53,9 +53,10 @@ def validateJsonAny(data: JsonData, schema: PropertySchema, *, errorsIO: list[Ge
 
 @schemaValidator(JsonAnySchema.typeName)
 def validateJsonAny(data: JsonData, schema: JsonAnySchema, *, errorsIO: list[GeneralError]) -> None:
-	if isinstance(data, JsonInvalid):
-		errorsIO.append(wrongTypeError(schema, data))
-		return
+	# if isinstance(data, JsonInvalid):
+	# 	errorsIO.append(wrongTypeError(schema, data))
+	# 	return
+	pass  # no error for invalid, because it's already invalid.
 
 
 @schemaValidator(JsonNullSchema.typeName)
