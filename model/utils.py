@@ -185,10 +185,10 @@ def formatAsError(message: str, /) -> MDStr:
 
 
 class GeneralError:  # TODO: find better & more descriptive name
-	def __init__(self, message: MDStr, span: Span, style: str = 'error'):
+	def __init__(self, message: MDStr, span: Span = None, style: str = 'error'):
 		super(GeneralError, self).__init__()
-		if self.__class__ is GeneralError:
-			raise RuntimeError("GeneralError should not be instantiated directly")
+		if span is None:
+			span = Span()
 		self.message: MDStr = message
 		self.htmlMessage: HTMLStr = formatMarkdown(message)
 		self.span: Span = span
@@ -220,8 +220,6 @@ class WrappedError(GeneralError):
 	satisfies protocol `Error`
 	"""
 	def __init__(self, exception: Exception, *, span: Span = None, style: str = 'error'):
-		if span is None:
-			span = Span()
 		super(WrappedError, self).__init__(MDStr(escapeForXmlTextContent(str(exception))), span=span, style=style)
 		self.wrappedEx = exception
 

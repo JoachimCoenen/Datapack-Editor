@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+import functools as ft
 import os
 from abc import ABC
+from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-import functools as ft
 from typing import NewType, Type, TypeVar, Optional, Generic, Callable
 
-from Cat.Serializable import SerializableContainer, Serialized, ComputedCached, Computed
+from Cat.Serializable import SerializableContainer, Serialized, ComputedCached
 from Cat.extensions import FilesChangedDependency
-
 from Cat.utils.abc_ import abstractmethod
 from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
+from Cat.utils.logging_ import logWarning
 from model.index import IndexBundle
 from model.pathUtils import fileNameFromFilePath, FilePathTpl, getAllFilesFromSearchPath, normalizeDirSeparators
+from model.utils import GeneralError, MDStr, Span
 
 _TT = TypeVar('_TT')
 _TS = TypeVar('_TS')
@@ -23,6 +25,7 @@ _TS = TypeVar('_TS')
 class Dependency:
 	name: str
 	mandatory: bool
+	span: Optional[Span] = None
 
 
 AspectType = NewType('AspectType', str)
@@ -168,7 +171,7 @@ class Project(SerializableContainer):
 	def name(self) -> str:
 		return fileNameFromFilePath(self.path)
 
-	@Computed()
+	@property
 	def dependencies(self) -> list[Dependency]:
 		""" for now. might change"""
 		result = {}
@@ -271,6 +274,7 @@ def resolveDependency(dep: Dependency) -> Optional[Project]:
 def collectAllDependencies(project: Project):
 	# just a cache:
 	dependencyDict: dict[str, Optional[Project]] = {}
+	errorsByProj: dict[str, list[GeneralError]] = defaultdict(list)
 
 	def getDestinations(project: Project) -> list[Project]:
 		dependencies = []
@@ -279,14 +283,27 @@ def collectAllDependencies(project: Project):
 				dependencyDict[dep.name] = resolveDependency(dep)
 			if (depProj := dependencyDict[dep.name]) is not None:
 				dependencies.append(depProj)
+			else:
+				errorsByProj[project.name].append(
+					GeneralError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span)
+					if dep.mandatory else
+					GeneralError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span, style='info')
+				)
 		return dependencies
 
 	allDependencies = collectAndSemiTopolSortAllNodes(project, getDestinations, lambda p: p.name)
+
+	if errorsByProj:
+		for projName, errors in errorsByProj.items():
+			logWarning(f"Project '{projName}':")
+			for error in errors:
+				logWarning(error, indentLvl=1)
+
 	return allDependencies
 
 
 __all__ = [
-	'Dependency',  # maybe?
+	'Dependency',
 	'AspectType',
 	'Aspect',
 	'AspectDict',
