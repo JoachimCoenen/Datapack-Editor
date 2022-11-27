@@ -14,6 +14,9 @@ from base.model.parsing.tree import Node, Schema
 from base.model.utils import GeneralError, MDStr, LanguageId, Span
 
 
+JSON_ID = LanguageId('JSON')
+
+
 class TokenType(enum.Enum):
 	default = 0
 	null = 1
@@ -665,7 +668,51 @@ OPTIONS_JSON_ARG_TYPE = JsonArgType(
 	examples=MDStr(""),
 )
 
+DPE_FLOAT = JsonArgType(
+	name='dpe:float',
+	description=MDStr("a string containing a float value"),
+	description2=MDStr(""),
+	examples=MDStr(
+		"* true\n"
+		"* false"
+	),
+)
+
+DPE_URL = JsonArgType(
+	name='dpe:url',
+	description=MDStr("a web address"),
+	description2=MDStr(""),
+	examples=MDStr(
+		"* https://www.minecraft.net\n"
+		"* https://github.com/JoachimCoenen/Datapack-Editor"
+	),
+)
+
+DPE_DEF_REF = JsonArgType(
+	name='dpe:def_ref',
+	description=MDStr("a reference to a definition in a dpe/json/schema"),
+)
+
+
+DPE_TMPL_REF = JsonArgType(
+	name='dpe:tmpl_ref',
+	description=MDStr("a reference to a template in a dpe/json/schema"),
+)
+
+DPE_JSON_ARG_TYPE = JsonArgType(
+	name='dpe:json_arg_type',
+	description=MDStr("name of a JsonArgType"),
+)
+
+DPE_LIB_PATH = JsonArgType(
+	name='dpe:schema_library_path',
+	description=MDStr("relative path to a schema library"),
+)
+
+
 __all__ = [
+	'JSON_ID',
+
 	'TokenType',
 	'VALUE_TOKENS',
 	'Token',
@@ -710,4 +757,11 @@ __all__ = [
 	'JsonSemanticsError',
 
 	'JsonArgType',
+
+	'DPE_FLOAT',
+	'DPE_URL',
+	'DPE_DEF_REF',
+	'DPE_TMPL_REF',
+	'DPE_JSON_ARG_TYPE',
+	'DPE_LIB_PATH',
 ]

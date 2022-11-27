@@ -3,12 +3,12 @@ from dataclasses import dataclass
 from typing import Optional, Callable
 
 from Cat.utils.logging_ import logWarning
+from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.project.aspect import AspectType
 from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
 from base.model.utils import LANGUAGES, GeneralError, MDStr
-from corePlugins.json import GLOBAL_SCHEMA_STORE
 from settings import applicationSettings
 
 DATAPACK_ASPECT_TYPE = AspectType('dpe:datapack')
@@ -24,7 +24,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 	def getDependencies(self, root: Root) -> list[DependencyDescr]:
 		fileName = 'dependencies.json'
 		projectPath = root.normalizedLocation
-		schema = GLOBAL_SCHEMA_STORE.get('dpe:dependencies')
+		schema = GLOBAL_SCHEMA_STORE.get2('dpe:dependencies', LANGUAGES.JSON)
 
 		if projectPath.lower().endswith('.jar'):
 			# Minecraft does not need to itself as a dependency.

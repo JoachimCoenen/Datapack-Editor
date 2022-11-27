@@ -2,7 +2,7 @@ from Cat.CatPythonGUI.GUI.codeEditor import CodeEditorLexer
 from base.gui.documentLexer import DocumentLexerBase2
 
 
-@CodeEditorLexer('MCJson', forceOverride=True)
+@CodeEditorLexer('JSON', forceOverride=True)
 class LexerJson(DocumentLexerBase2):
 	def language(self):
 		return "JSON"

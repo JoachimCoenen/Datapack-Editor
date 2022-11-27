@@ -19,9 +19,10 @@ from Cat.utils.profiling import logInfo, logError, TimedMethod
 from Cat.utils.signals import CatSignal
 from base.model import filesystemEvents
 from base.model.parsing.contextProvider import parseNPrepare, getContextProvider
+from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Node, Schema
 from base.model.pathUtils import fileNameFromFilePath, FilePath, ZipFilePool, loadTextFile, ArchiveFilePool, unitePath, toDisplayPath, unitePathTpl
-from base.model.utils import GeneralError, Position, WrappedError
+from base.model.utils import GeneralError, Position, WrappedError, LanguageId
 
 TTarget = TypeVar("TTarget")
 
@@ -535,10 +536,12 @@ class ParsedDocument(TextDocument):
 	# def metaInfo(self) -> Optional[MetaInfo]:
 	# 	return getMetaInfo(self.filePath, getSession().datapackData.structure)
 
+	schemaId: Optional[str] = Serialized(default=None)
+
 	@property
-	@abstractmethod
 	def schema(self) -> Optional[Schema]:
-		pass
+		if self.schemaId is not None:
+			return GLOBAL_SCHEMA_STORE.get2(self.schemaId, LanguageId(self.language))
 
 	@property
 	def parseKwArgs(self) -> dict[str, Any]:

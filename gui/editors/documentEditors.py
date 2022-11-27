@@ -13,7 +13,9 @@ from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
 from Cat.utils.formatters import indentMultilineStr
 from Cat.utils.profiling import logError
 from base.gui.documentLexer import DocumentLexerBase
-from base.model.documents import TextDocument, Document
+from base.model.documents import TextDocument, Document, ParsedDocument
+from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
+from base.model.utils import LanguageId
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, drawCodeField
 from settings import applicationSettings
 
@@ -129,9 +131,19 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		super(TextDocumentEditor, self).documentFooterGUI(gui)
 		gui.addHSpacer(gui.spacing * 2, SizePolicy.Expanding)
 
+		if isinstance(document, ParsedDocument):
+			gui.hSeparator()
+			gui.label(
+				f"<div>{document.schemaId}</div>",
+				tip="Schema, Right-click to change",
+				contextMenuPolicy=Qt.CustomContextMenu,
+				onCustomContextMenuRequested=self.schemaContextMenu
+			)
+
+		gui.hSeparator()
 		gui.label(
 			f"<div>{document.language}</div>",
-			tip="Right-click to change",
+			tip="Language, Right-click to change",
 			contextMenuPolicy=Qt.CustomContextMenu,
 			onCustomContextMenuRequested=self.languageContextMenu
 		)
@@ -176,7 +188,15 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		document = self.model()
 		with self._gui.popupMenu(True) as menu:
 			for language in codeEditor.getAllLanguages():
-				menu.addItem(language, lambda l=language: document.languageProp.set(document, l))
+				menu.addItem(language, lambda l=language: document.languageProp.set(document, l) or document.asyncParseNValidate())
+
+	def schemaContextMenu(self, pos):
+		document = self.model()
+		if isinstance(document, ParsedDocument):
+			with self._gui.popupMenu(True) as menu:
+				menu.addItem("None", lambda: document.schemaIdProp.set(document, None) or document.asyncParseNValidate())
+				for schemaId in GLOBAL_SCHEMA_STORE.getAllForLanguage(LanguageId(document.language)):
+					menu.addItem(schemaId, lambda l=schemaId: document.schemaIdProp.set(document, l) or document.asyncParseNValidate())
 
 
 __all__ = [

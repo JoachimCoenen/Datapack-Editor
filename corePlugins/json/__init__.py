@@ -14,7 +14,6 @@ from base.model.pathUtils import FilePath
 from base.model.utils import LanguageId
 from base.plugin import PluginBase, PLUGIN_SERVICE
 from corePlugins.json.core import JsonSchema
-from corePlugins.json.schemaStore import GLOBAL_SCHEMA_STORE
 
 
 def initPlugin() -> None:
@@ -26,12 +25,12 @@ class JsonPlugin(PluginBase):
 
 	def initPlugin(self) -> None:
 		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
-		GLOBAL_SCHEMA_STORE.registerSchema('dpe:json_schema', os.path.join(resourcesDir, 'jsonSchema.json'))
+		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
+		JSON_SCHEMA_LOADER.registerSchema('dpe:json_schema', os.path.join(resourcesDir, 'jsonSchema.json'))
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from corePlugins.json import parser
 		return {
-			LanguageId('MCJson'): parser.JsonParser,
 			LanguageId('JSON'): parser.JsonParser,
 		}
 
@@ -47,12 +46,11 @@ class JsonPlugin(PluginBase):
 			type=JsonDocument,
 			name='JSON',
 			extensions=['.json', '.mcmeta'],
-			defaultLanguage='MCJson'
+			defaultLanguage='JSON'
 		)]
 
 	def lexers(self) -> dict[LanguageId, Type[QsciLexerCustom]]:
 		return {
-			LanguageId('MCJson'): DocumentLexerBase2,
 			LanguageId('JSON'): DocumentLexerBase2
 		}
 
@@ -61,7 +59,7 @@ class JsonPlugin(PluginBase):
 		return [JsonStyler]
 
 
-# @RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='MCJson')
+# @RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='JSON')
 @RegisterContainer
 class JsonDocument(ParsedDocument, TextDocument):
 	"""docstring for Document"""
@@ -72,7 +70,6 @@ class JsonDocument(ParsedDocument, TextDocument):
 		# giving the type checker a helping hand...
 		super(JsonDocument, self).__typeCheckerInfo___()
 		self.filePath: FilePath = ''
-		self.fileChanged: bool = False
 		self.documentChanged: bool = False
 		self.encoding: str = 'utf-8'
 		self.content: bytes = b''

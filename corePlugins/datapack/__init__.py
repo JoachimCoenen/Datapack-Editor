@@ -12,9 +12,9 @@ def initPlugin() -> None:
 class DatapackPlugin(PluginBase):
 
 	def initPlugin(self):
-		from corePlugins.json.schemaStore import GLOBAL_SCHEMA_STORE
+		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
 		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
-		GLOBAL_SCHEMA_STORE.registerSchema('dpe:dependencies', os.path.join(resourcesDir, 'dependencies.json'))
+		JSON_SCHEMA_LOADER.registerSchema('dpe:dependencies', os.path.join(resourcesDir, 'dependencies.json'))
 
 	def projectAspects(self) -> list[Type[ProjectAspect]]:
 		from corePlugins.datapack.aspect import DatapackAspect
