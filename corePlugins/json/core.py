@@ -671,17 +671,11 @@ OPTIONS_JSON_ARG_TYPE = JsonArgType(
 DPE_FLOAT = JsonArgType(
 	name='dpe:float',
 	description=MDStr("a string containing a float value"),
-	description2=MDStr(""),
-	examples=MDStr(
-		"* true\n"
-		"* false"
-	),
 )
 
 DPE_URL = JsonArgType(
 	name='dpe:url',
 	description=MDStr("a web address"),
-	description2=MDStr(""),
 	examples=MDStr(
 		"* https://www.minecraft.net\n"
 		"* https://github.com/JoachimCoenen/Datapack-Editor"

@@ -98,17 +98,17 @@
 						"type": {
 							"$type": "enum",
 							"options": {
-								"object": "",
-								"array": "",
-								"union": "",
-								"string": "",
+								"object": "A Json object.",
+								"array": "A JSON array.",
+								"union": "One of a collection possible types.",
+								"string": "A text.",
 								"enum": "",
-								"boolean": "",
-								"integer": "",
-								"float": "",
-								"null": "",
-								"calculated": "",
-								"any": ""
+								"boolean": "Either `true` or `false`.",
+								"integer": "An integer.",
+								"float": "A floating point number.",
+								"null": "The `null value.",
+								"calculated": "a typecalculated at runtime.",
+								"any": "Can be anything."
 							}
 						}
 					}
