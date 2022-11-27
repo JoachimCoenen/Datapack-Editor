@@ -14,11 +14,11 @@ from model.json.core import OPTIONS_JSON_ARG_TYPE, ALL_NAMED_JSON_ARG_TYPES
 from model.json.jsonContext import jsonStringContext, JsonStringContext
 from model.messages import *
 from model.nbt.tags import NBTTagSchema
-from model.parsing.bytesUtils import strToBytes
-from model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getDocumentation, onIndicatorClicked, getClickableRanges, parseNPrepare, CtxInfo
-from model.parsing.tree import Schema
-from model.pathUtils import joinFilePath, dirFromFilePath
-from model.utils import GeneralError, Position, Span, MDStr, LanguageId
+from base.model.parsing.bytesUtils import strToBytes
+from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getDocumentation, onIndicatorClicked, getClickableRanges, parseNPrepare, CtxInfo
+from base.model.parsing.tree import Schema
+from base.model.pathUtils import joinFilePath, dirFromFilePath
+from base.model.utils import GeneralError, Position, Span, MDStr, LanguageId
 
 
 @jsonStringContext(MINECRAFT_RESOURCE_LOCATION.name)
@@ -170,7 +170,7 @@ class CommandJsonStrContext(ParsingJsonCtx):
 
 	def getSchema(self, node: JsonString) -> Optional[Schema]:
 		from model.commands.command import MCFunctionSchema
-		from session.session import getSession
+		from sessionOld.session import getSession
 		if isinstance(node.schema, JsonStringSchema):
 			schema = node.schema.args.get('schema') if node.schema.args is not None else None
 			return schema or MCFunctionSchema('', commands=getSession().minecraftData.commands)

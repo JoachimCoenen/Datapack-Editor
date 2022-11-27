@@ -2,7 +2,6 @@ from typing import Optional
 
 from PyQt5.QtCore import Qt
 
-from Cat.CatPythonGUI.GUI import NO_MARGINS, CORNERS, NO_OVERLAP, Overlap, RoundedCorners, adjustOverlap, maskCorners
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin
 from Cat.CatPythonGUI.GUI.enums import TabPosition, SizePolicy
 from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase, TabOptions
@@ -11,9 +10,9 @@ from Cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
 from gui.editors.documentEditors import getDocumentEditor
 from keySequences import KEY_SEQUENCES
-from session.documentHandling import View
-from session.documents import Document
-from session.session import getSession
+from base.model.documentHandling import View
+from base.model.documents import Document
+from base.model.session import getSession
 
 
 class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
@@ -30,22 +29,18 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		new.onSelectedDocumentChanged.reconnect('editor', self._forceFocus)
 		self._shouldForceFocus = self.model().isCurrent
 
-
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		view = self.model()
-		tabBarOverlap = (0, 0, 0, 1)
-		with gui.vLayout(verticalSpacing=0):
-			with gui.hPanel(contentsMargins=NO_MARGINS, horizontalSpacing=0, overlap=tabBarOverlap, roundedCorners=maskCorners(self.roundedCorners(), CORNERS.TOP), windowPanel=True):
-				self.documentsTabBarGUI(gui, position=TabPosition.North, overlap=tabBarOverlap, roundedCorners=maskCorners(self.roundedCorners(), CORNERS.TOP))
-			panelOverlap = NO_OVERLAP if view.documents else (0, 1, 0, 0)
-			panelCorners = maskCorners(self.roundedCorners(), CORNERS.BOTTOM)
-			with gui.vPanel(contentsMargins=NO_MARGINS, overlap=panelOverlap, roundedCorners=panelCorners, windowPanel=True):
-				self.documentsGUI(gui, overlap=panelOverlap, roundedCorners=panelCorners)
+		with gui.vPanel(seamless=True, windowPanel=True):
+			with gui.hLayout(seamless=True):
+				self.documentsTabBarGUI(gui, position=TabPosition.North)
+			with gui.vLayout(seamless=True):  # , windowPanel=True):
+				self.documentsGUI(gui)
 
-	def documentsTabBarGUI(self, gui: DatapackEditorGUI, position: TabPosition = TabPosition.North, overlap: Overlap = (0, 0), roundedCorners: RoundedCorners = CORNERS.ALL):
+	def documentsTabBarGUI(self, gui: DatapackEditorGUI, position: TabPosition = TabPosition.North):
 		view = self.model()
 		tabs = OrderedMultiDict((
-			(document, (document.fileName + (' *' if document.documentChanged else '   '), TabOptions(tip=document.filePathForDisplay)))
+			(document, TabOptions(document.fileName + (' *' if document.documentChanged else '   '), tip=document.filePathForDisplay, icon=icons.file_code))
 			for document in view.documents
 		))
 
@@ -54,33 +49,36 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		except ValueError:
 			selectedTab = None
 
-		index = gui.tabBar(
-			list(tabs.values()),
-			selectedTab=selectedTab,
-			drawBase=False,
-			documentMode=True,
-			expanding=False,
-			position=position,
-			overlap=adjustOverlap(overlap, (None, None, 0, None)),
-			roundedCorners=roundedCorners,
-			movable=True,
-			tabsClosable=True,
-			onTabMoved=self._tabMoved,
-			onTabCloseRequested=self._tabCloseRequested,
-			onContextMenuRequested=self._showFileContextMenu,
-		)
+		if tabs:
+			with gui.hPanel(seamless=True, windowPanel=True):
+				index = gui.tabBar(
+					list(tabs.values()),
+					selectedTab=selectedTab,
+					drawBase=False,
+					documentMode=True,
+					expanding=False,
+					position=position,
+					movable=True,
+					tabsClosable=True,
+					onTabMoved=self._tabMoved,
+					onTabCloseRequested=self._tabCloseRequested,
+					onContextMenuRequested=self._showFileContextMenu,
+				)
 
-		if index in range(len(tabs)):
-			if index != selectedTab:
-				view.manager.showDocument(list(tabs.keys())[index])
+			if index in range(len(tabs)):
+				if index != selectedTab:
+					view.manager.showDocument(list(tabs.keys())[index])
+			else:
+				view.selectDocument(None)
 		else:
+			gui.addHSpacer(5, SizePolicy.Expanding)
 			view.selectDocument(None)
 
 		if view.documents:
-			if gui.toolButton(icon=icons.chevronDown, overlap=adjustOverlap(overlap, (0, None, None, None)), roundedCorners=CORNERS.NONE):
+			if gui.toolButton(icon=icons.chevronDown):
 				self._showOpenedDocumentsPopup(gui)
 
-		if gui.toolButton(icon=icons.bars, overlap=adjustOverlap(overlap, (1 if view.documents else 0, None, None, None if view.documents else 0)), roundedCorners=CORNERS.NONE):
+		if gui.toolButton(icon=icons.bars):  # , overlap=adjustOverlap(overlap, (1 if view.documents else 0, None, None, None if view.documents else 0)), roundedCorners=CORNERS.NONE):
 			self._showViewsContextMenu()
 
 	def _tabCloseRequested(self, index: int) -> None:
@@ -128,7 +126,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			menu.addSeparator()
 			menu.addItem("close view", lambda: view.manager.safelyCloseView(view), enabled=len(view.documents) == 0)
 
-	def documentsGUI(self, gui: DatapackEditorGUI, overlap: Overlap, roundedCorners: RoundedCorners) -> None:
+	def documentsGUI(self, gui: DatapackEditorGUI) -> None:
 		view = self.model()
 
 		currentDocEditor = None
@@ -137,15 +135,13 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			selectedDocumentId = view.selectedDocument.filePathForDisplay if view.selectedDocument is not None else None
 			with gui.stackedWidget(selectedView=selectedDocumentId) as stacked:
 				for document in view.documents:
-					with stacked.addView(id_=document.filePathForDisplay):
+					with stacked.addView(id_=document.filePathForDisplay, seamless=True):
 						DocumentEditor = getDocumentEditor(type(document))
 						docEditor = gui.editor(
 							DocumentEditor,
 							document,
 							onEditorFocusReceived=lambda fr: view.makeCurrent(),
-							overlap=overlap,
-							roundedCorners=roundedCorners,
-							cornerRadius=self.cornerRadius(),
+							seamless=True
 						)
 						if document.filePathForDisplay == selectedDocumentId:
 							currentDocEditor = docEditor

@@ -22,8 +22,8 @@ from PyQt5.QtWidgets import QStyleFactory
 
 QFont.__deepcopy__ = lambda x, m: QFont(x)
 
-from model.data.mcVersions import ALL_MC_VERSIONS
-from model.data.dpVersion import ALL_DP_VERSIONS
+# from model.data.mcVersions import ALL_MC_VERSIONS
+# from model.data.dpVersion import ALL_DP_VERSIONS
 
 
 class ColorSchemePD(pd.PropertyDecorator):
@@ -128,44 +128,44 @@ def minecraftJarValidator(path: str) -> Optional[ValidatorResult]:
 	return result
 
 
-@RegisterContainer
-class MinecraftSettings(SerializableContainer):
-	__slots__ = ()
-	version: str = Serialized(
-		label='Minecraft Version',
-		default='1.17',
-		decorators=[
-			pd.ComboBox(choices=ALL_MC_VERSIONS.keys()),
-		],
-		shouldSerialize=True
-	)
-	dpVersion: str = Serialized(
-		label='Datapack Version',
-		default='6',
-		decorators=[
-			pd.ComboBox(choices=ALL_DP_VERSIONS.keys()),
-		],
-		shouldSerialize=True
-	)
-
-	executable: str = Serialized(
-		label='Minecraft Executable',
-		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/versions/1.17.1/1.17.1.jar').replace('\\', '/'),
-		decorators=[
-			pd.FilePath([('jar', '.jar')]),
-			pd.Validator(minecraftJarValidator)
-		]
-	)
-
-	savesLocation: str = Serialized(
-		label="Datapack Dependencies Location",
-		tip="DPE will search in this directory to resolve dependencies",
-		default_factory=lambda: os.path.expanduser('~/.dpe/dependencies').replace('\\', '/'),
-		decorators=[
-			pd.FolderPath(),
-			pd.Validator(folderPathValidator)
-		]
-	)
+# @RegisterContainer
+# class MinecraftSettings(SerializableContainer):
+# 	__slots__ = ()
+# 	version: str = Serialized(
+# 		label='Minecraft Version',
+# 		default='1.17',
+# 		decorators=[
+# 			pd.ComboBox(choices=ALL_MC_VERSIONS.keys()),
+# 		],
+# 		shouldSerialize=True
+# 	)
+# 	dpVersion: str = Serialized(
+# 		label='Datapack Version',
+# 		default='6',
+# 		decorators=[
+# 			pd.ComboBox(choices=ALL_DP_VERSIONS.keys()),
+# 		],
+# 		shouldSerialize=True
+# 	)
+#
+# 	executable: str = Serialized(
+# 		label='Minecraft Executable',
+# 		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/versions/1.17.1/1.17.1.jar').replace('\\', '/'),
+# 		decorators=[
+# 			pd.FilePath([('jar', '.jar')]),
+# 			pd.Validator(minecraftJarValidator)
+# 		]
+# 	)
+#
+# 	savesLocation: str = Serialized(
+# 		label="Datapack Dependencies Location",
+# 		tip="DPE will search in this directory to resolve dependencies",
+# 		default_factory=lambda: os.path.expanduser('~/.dpe/dependencies').replace('\\', '/'),
+# 		decorators=[
+# 			pd.FolderPath(),
+# 			pd.Validator(folderPathValidator)
+# 		]
+# 	)
 
 
 @RegisterContainer
@@ -257,7 +257,7 @@ class ApplicationSettings(SerializableContainer):
 		self.isUserSetupFinished: bool = False
 
 	appearance: AppearanceSettings = Serialized(default_factory=AppearanceSettings, label='Appearance')
-	minecraft: MinecraftSettings = Serialized(default_factory=MinecraftSettings, label='Minecraft')
+	# minecraft: MinecraftSettings = Serialized(default_factory=MinecraftSettings, label='Minecraft')
 	debugging: DebugSettings = Serialized(default_factory=DebugSettings, label='Debugging')
 	about: AboutSettings = Serialized(default_factory=AboutSettings, label='About')
 

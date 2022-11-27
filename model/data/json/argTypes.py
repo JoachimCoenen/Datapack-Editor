@@ -1,5 +1,5 @@
 from model.json.core import JsonArgType
-from model.utils import MDStr
+from base.model.utils import MDStr
 
 MINECRAFT_CHAT_COMMAND = JsonArgType(
 	name='minecraft:chat_command',

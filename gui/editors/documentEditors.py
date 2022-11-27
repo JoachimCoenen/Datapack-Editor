@@ -4,7 +4,7 @@ from typing import TypeVar, Generic, final, Optional, Type
 from PyQt5.Qsci import QsciLexer
 from PyQt5.QtCore import Qt, pyqtSignal
 
-from Cat.CatPythonGUI.GUI import NO_MARGINS, SizePolicy, getStyles, codeEditor, adjustOverlap, maskCorners, CORNERS
+from Cat.CatPythonGUI.GUI import SizePolicy, getStyles, codeEditor
 from Cat.CatPythonGUI.GUI.codeEditor import getLexer
 from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
 from Cat.utils import format_full_exc, override
@@ -12,8 +12,8 @@ from Cat.utils.abc_ import abstractmethod
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
 from Cat.utils.formatters import indentMultilineStr
 from Cat.utils.profiling import logError
-from gui.lexers.documentLexer import DocumentLexerBase
-from session.documents import TextDocument, Document
+from base.gui.documentLexer import DocumentLexerBase
+from base.model.documents import TextDocument, Document
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, drawCodeField
 from settings import applicationSettings
 
@@ -31,16 +31,15 @@ class DocumentEditorBase(EditorBase[TDoc], Generic[TDoc]):
 			old.onErrorsChanged.disconnect('editorRedraw')
 		new.onErrorsChanged.reconnect('editorRedraw', lambda d: self.redrawLater('onErrorsChanged'))
 
-
 	@final
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		document = self.model()
 
-		with gui.vLayout(verticalSpacing=0):
+		with gui.vLayout(seamless=True):
 			try:
 				if applicationSettings.debugging.showUndoRedoPane:
 					with gui.hSplitter() as splitter:
-						with splitter.addArea(contentsMargins=NO_MARGINS):
+						with splitter.addArea(seamless=True):
 							self.documentGUI(gui)
 						with splitter.addArea():
 							gui.valueField(document.undoRedoStack)
@@ -59,10 +58,7 @@ class DocumentEditorBase(EditorBase[TDoc], Generic[TDoc]):
 			with gui.hPanel(
 				windowPanel=True,
 				contentsMargins=(mg, mg, mg, mg),
-				#contentsMargins=(mg, 0, mg, space),
-				overlap=adjustOverlap(self.overlap(), (None, 1, None, None)),
-				roundedCorners=maskCorners(self.roundedCorners(), CORNERS.BOTTOM),
-				cornerRadius=self.cornerRadius(),
+				seamless=False,
 			):
 				self.documentFooterGUI(gui)
 

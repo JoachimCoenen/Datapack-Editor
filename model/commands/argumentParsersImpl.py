@@ -8,10 +8,10 @@ from model.commands.command import ParsedArgument
 from model.commands.stringReader import StringReader
 from model.datapack.datapackContents import ResourceLocationSchema, ResourceLocationNode
 from model.nbt.tags import NBTTag, CompoundTag
-from model.parsing.contextProvider import Suggestions
-from model.pathUtils import FilePath
+from base.model.parsing.contextProvider import Suggestions
+from base.model.pathUtils import FilePath
 from model.resourceLocationContext import getResourceLocationContext
-from model.utils import Position
+from base.model.utils import Position
 
 
 def _init():

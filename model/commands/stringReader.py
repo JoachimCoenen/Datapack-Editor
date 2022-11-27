@@ -2,8 +2,7 @@ import re
 from typing import Optional, final
 
 from Cat.utils.collections_ import Stack
-from model.parsing.bytesUtils import *
-from model.utils import Position, Span
+from base.model.utils import Position, Span
 
 Char = bytes
 Byte = int

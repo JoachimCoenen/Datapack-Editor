@@ -6,9 +6,9 @@ from typing import TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar, C
 
 from Cat.utils import Singleton
 from model.commands.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
-from model.parsing.bytesUtils import bytesToStr
-from model.parsing.tree import Schema, Node
-from model.utils import Position, LanguageId, Span
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.parsing.tree import Schema, Node
+from base.model.utils import Position, LanguageId, Span
 
 
 @dataclass

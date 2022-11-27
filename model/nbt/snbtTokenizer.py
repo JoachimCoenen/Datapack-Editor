@@ -5,9 +5,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Callable, ClassVar
 
-from model.parsing.bytesUtils import *
-from model.parsing.parser import TokenizerBase
-from model.utils import Position, Span
+from base.model.parsing.parser import TokenizerBase
+from base.model.utils import Position, Span
 
 
 class TokenType(Enum):

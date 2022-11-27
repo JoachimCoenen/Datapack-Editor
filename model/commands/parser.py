@@ -7,12 +7,12 @@ from model.commands.command import CommandSchema, KeywordSchema, ArgumentSchema,
 from model.commands.utils import CommandSyntaxError, EXPECTED_ARGUMENT_SEPARATOR_MSG
 from model.commands.command import MCFunction, ParsedComment, ParsedCommand, ParsedArgument
 from model.commands.stringReader import StringReader
-from model.utils import Span, Position, Message, LanguageId
+from base.model.utils import Span, Position, Message, LanguageId
 
 from . import argumentParsersImpl
 from .commandContext import makeCommandSyntaxError, makeParsedArgument, getArgumentContext, missingArgumentContext
-from ..parsing.bytesUtils import bytesToStr, strToBytes
-from ..parsing.parser import ParserBase, registerParser
+from base.model.parsing import bytesToStr, strToBytes
+from base.model.parsing import ParserBase, registerParser
 
 argumentParsersImpl._init()  # do not remove!
 

@@ -15,10 +15,10 @@ from model.commands.commandContext import getArgumentContext, missingArgumentPar
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.messages import *
-from model.parsing.bytesUtils import bytesToStr
-from model.parsing.contextProvider import Suggestions, Match
-from model.pathUtils import FilePath
-from model.utils import Span, Position, GeneralError, MDStr
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.parsing.contextProvider import Suggestions, Match
+from base.model.pathUtils import FilePath
+from base.model.utils import Span, Position, GeneralError, MDStr
 
 
 @dataclass

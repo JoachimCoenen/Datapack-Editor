@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from typing import ClassVar, Callable, Type
 
 from Cat.utils.collections_ import AddToDictDecorator
-from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum
+from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum
 from model.nbt.tags import *
-from model.parsing.tree import Node
-from model.utils import LanguageId
+from base.model.parsing.tree import Node
+from base.model.utils import LanguageId
 
 
 class StyleId(StyleIdEnum):

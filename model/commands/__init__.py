@@ -2,7 +2,7 @@
 def initPlugin() -> None:
 	from model.commands import parser, argumentContextsImpl
 
-	from session.session import getSession
+	from sessionOld.session import getSession
 	setGetSession(getSession)
 
 

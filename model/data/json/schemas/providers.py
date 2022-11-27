@@ -4,12 +4,12 @@ from typing import Optional
 from model.commands.argumentTypes import LiteralsArgumentType, BRIGADIER_BOOL, BRIGADIER_INTEGER
 from model.datapack.datapackContents import ResourceLocation
 from model.json.core import *
-from model.parsing.bytesUtils import bytesToStr
-from model.utils import MDStr
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.utils import MDStr
 
 
 def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[JsonObjectSchema]:
-	from session.session import getSession
+	from sessionOld.session import getSession
 	states = getSession().minecraftData.blockStates.get(blockId)
 	if states is None:
 		return None

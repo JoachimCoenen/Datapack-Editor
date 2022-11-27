@@ -1,5 +1,5 @@
-from Cat.CatPythonGUI.GUI.codeEditor import CodeEditorLexer, AutoCompletionTree
-from gui.lexers.documentLexer import DocumentLexerBase2
+from Cat.CatPythonGUI.GUI.codeEditor import CodeEditorLexer
+from base.gui.documentLexer import DocumentLexerBase2
 
 
 @CodeEditorLexer('MCJson', forceOverride=True)

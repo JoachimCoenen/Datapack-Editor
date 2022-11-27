@@ -6,9 +6,9 @@ from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
 from Cat.icons import icons
 from Cat.utils import DeferredCallOnceMethod
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, FilesTreeItem, createNewFileGUI, createNewFolderGUI
-from model.utils import Span
-from model.pathUtils import FilePath
-from session.session import getSession, Session
+from base.model.utils import Span
+from base.model.pathUtils import FilePath
+from sessionOld.session import getSession, Session
 
 
 class DatapackFilesEditor(EditorBase[Session]):

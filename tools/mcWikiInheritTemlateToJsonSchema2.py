@@ -11,8 +11,8 @@ from Cat.utils.logging_ import logError
 from Cat.utils.typing_ import replace_tuple
 from model.json import emitter
 from model.json.core import *
-from model.parsing.parser import IndexMapper
-from model.utils import Span
+from base.model.parsing.parser import IndexMapper
+from base.model.utils import Span
 
 INDENT = '\t'
 NL = '\n'

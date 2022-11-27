@@ -8,15 +8,15 @@ from qtpy import QtCore
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, getStyles, catWidgetMixins
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.extensions.fileSystemChangedDependency import startObserver
 from Cat.icons import icons
 from Cat.utils import getExePath, logging_
 from Cat.utils.formatters import FW
-from mainWindow import MainWindow
+from base.model import filesystemEvents
+from base.model.session import loadSessionFromFile
+from mainWindow import MainWindow, WindowId
 from Cat.utils.profiling import Timer
-from session.session import WindowId, loadSessionFromFile
 from settings import applicationSettings, saveApplicationSettings, loadApplicationSettings, AppearanceSettings
-from settings._applicationSettings import MinecraftSettings
+# from settings._applicationSettings import MinecraftSettings
 
 
 class ResizableStyles(Styles):
@@ -73,17 +73,13 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 				gui.propertyField(appearanceSettings, AppearanceSettings.colorScheme)
 				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
 
-			with gui.groupBox('Minecraft'):
-				#with gui.hLayout2R():
-				gui.propertyField(minecraftSettings, MinecraftSettings.version)  # , hSizePolicy=SizePolicy.Fixed.value)
-				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-				gui.propertyField(minecraftSettings, MinecraftSettings.executable)
-				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-				gui.propertyField(minecraftSettings, MinecraftSettings.savesLocation)
-				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-			#
-			# with gui.groupBox('Optional Settings'):
-			# 	gui.helpBox('Nothing.')
+			# with gui.groupBox('Minecraft'):
+			# 	#with gui.hLayout2R():
+			# 	gui.propertyField(minecraftSettings, MinecraftSettings.version)  # , hSizePolicy=SizePolicy.Fixed.value)
+			# 	gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+			# 	gui.propertyField(minecraftSettings, MinecraftSettings.executable)
+			# 	gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+			# 	gui.propertyField(minecraftSettings, MinecraftSettings.savesLocation)
 			# 	gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
 
 		gui.dialogButtons({
@@ -104,24 +100,31 @@ def showSetupDialogIfNecessary():
 		saveApplicationSettings()
 
 
-def run():
-	with open(os.path.join(os.path.dirname(getExePath()), 'logfile.log'), 'w', encoding='utf-8') as logFile:
-		logging_.setLoggingStream(FW(logFile))
-		startObserver()
-		app = start(argv=sys.argv)
-		app.exec_()
+def loadBasePlugins():
+
+	from basePlugins import projectPage, projectFiles
+
+	projectPage.initPlugin()
+	projectFiles.initPlugin()
 
 
 def loadCorePlugins():
-	from model import json, commands, nbt
+
+	from corePlugins import json
+	from corePlugins import datapack
 
 	json.initPlugin()
-	commands.initPlugin()
-	nbt.initPlugin()
-
-	from session import documentsImpl
-
-	documentsImpl.initPlugin()
+	datapack.initPlugin()
+	#
+	# from model import json, commands, nbt
+	#
+	# json.initPlugin()
+	# commands.initPlugin()
+	# nbt.initPlugin()
+	#
+	# from sessionOld import documentsImpl
+	#
+	# documentsImpl.initPlugin()
 
 
 def loadPlugins():
@@ -169,18 +172,31 @@ def start(argv):
 
 		import gui.themes.schemesUI  # DO NOT REMOVE!
 
+		loadBasePlugins()
 		loadCorePlugins()
-
+		#
 		loadSessionFromFile()
-		showSetupDialogIfNecessary()
-		loadPlugins()
+		# showSetupDialogIfNecessary()
+		# loadPlugins()
 
 		window = MainWindow(WindowId('0'))
 		window.show()
 		window.redraw()
 
+		# from trials import iconsPreview
+		# iconsPreview.createWindow()
+
 	print(f" << << it took {timer.elapsed:.3}, seconds to start the Application")
 	return app
+
+
+def run():
+	with open(os.path.join(os.path.dirname(getExePath()), 'logfile.log'), 'w', encoding='utf-8') as logFile:
+		logging_.setLoggingStream(FW(logFile))
+		# startObserver()
+		with filesystemEvents.FILESYSTEM_OBSERVER:
+			app = start(argv=sys.argv)
+			app.exec_()
 
 
 if __name__ == '__main__':

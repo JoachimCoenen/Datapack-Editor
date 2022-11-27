@@ -7,9 +7,9 @@ from Cat.utils.collections_ import OrderedDict
 from model.messages import *
 from model.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
 from model.nbt.tags import *
-from model.parsing.bytesUtils import bytesToStr
-from model.parsing.parser import ParserBase, registerParser
-from model.utils import Message, Position, GeneralError, Span, MDStr, LanguageId
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.parsing.parser import ParserBase, registerParser
+from base.model.utils import Message, Position, Span, MDStr, LanguageId
 
 INVALID_NUMBER_MSG: Message = Message("Invalid {0}: '`{1}`'", 2)
 

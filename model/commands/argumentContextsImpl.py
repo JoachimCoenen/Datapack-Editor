@@ -18,12 +18,12 @@ from model.commands.utils import CommandSyntaxError, CommandSemanticsError
 from model.datapack.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from model.messages import *
 from model.nbt.tags import NBTTagSchema
-from model.parsing.bytesUtils import bytesToStr, strToBytes
-from model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
-from model.parsing.tree import Schema
-from model.pathUtils import FilePath
-from model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
-from session.session import getSession
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes
+from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
+from base.model.parsing.tree import Schema
+from base.model.pathUtils import FilePath
+from base.model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
+from sessionOld.session import getSession
 
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)

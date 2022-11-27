@@ -18,10 +18,10 @@ from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import TimedMethod
 from gui.checkAllDialog import FILE_TYPES
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
-from model.pathUtils import FilePath, ZipFilePool, loadTextFile
+from base.model.pathUtils import FilePath, ZipFilePool, loadTextFile
 from model.project import Project
-from model.utils import Position, Span
-from session.session import getSession
+from base.model.utils import Position, Span
+from sessionOld.session import getSession
 
 
 @dataclass(unsafe_hash=True)

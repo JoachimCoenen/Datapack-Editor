@@ -7,11 +7,11 @@ from model.commands.commandContext import getArgumentContext
 from model.commands.utils import CommandSemanticsError
 from model.commands.command import MCFunction, CommandPart, ParsedCommand
 from model.messages import *
-from model.parsing.bytesUtils import bytesToStr
-from model.utils import Span, Message, wrapInMarkdownCode
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.utils import Span, Message, wrapInMarkdownCode
 
 if TYPE_CHECKING:
-	from session.session import Session
+	from sessionOld.session import Session
 
 	def getSession() -> Session:
 		pass

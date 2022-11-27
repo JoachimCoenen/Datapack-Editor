@@ -1,13 +1,12 @@
 from typing import Optional
 
-from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin, CORNERS, maskCorners
 from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
 from gui.datapackEditorGUI import DatapackEditorGUI
 from gui.editors import DocumentsViewEditor
-from session.documentHandling import ViewContainer
+from base.model.documentHandling import ViewContainer
 
 
-class DocumentsViewsContainerEditor(EditorBase[ViewContainer], CatFramedWidgetMixin):
+class DocumentsViewsContainerEditor(EditorBase[ViewContainer]):
 
 	def onSetModel(self, new: ViewContainer, old: Optional[ViewContainer]) -> None:
 		super(DocumentsViewsContainerEditor, self).onSetModel(new, old)
@@ -19,22 +18,13 @@ class DocumentsViewsContainerEditor(EditorBase[ViewContainer], CatFramedWidgetMi
 		viewContainer = self.model()
 		splitterFunc = gui.vSplitter if viewContainer.isVertical else gui.hSplitter
 
-		cornerFilters = [CORNERS.NONE] * len(viewContainer.views)
-		if len(cornerFilters) == 0:
-			cornerFilters = []
-		elif len(cornerFilters) == 1:
-			cornerFilters[0] = CORNERS.ALL
-		else:
-			cornerFilters[0] = CORNERS.TOP if viewContainer.isVertical else CORNERS.LEFT
-			cornerFilters[-1] = CORNERS.BOTTOM if viewContainer.isVertical else CORNERS.RIGHT
-
 		with splitterFunc(handleWidth=gui.smallSpacing) as splitter:
-			for view, cf in zip(viewContainer.views, cornerFilters):
-				with splitter.addArea(verticalSpacing=0):
+			for view in viewContainer.views:
+				with splitter.addArea(seamless=True):
 					if isinstance(view, ViewContainer):
-						gui.editor(DocumentsViewsContainerEditor, view, roundedCorners=maskCorners(self.roundedCorners(), cf)).redrawLater('DocumentsViewsContainerEditor.OnGUI(...)')
+						gui.editor(DocumentsViewsContainerEditor, view, seamless=True).redrawLater('DocumentsViewsContainerEditor.OnGUI(...)')
 					else:
-						gui.editor(DocumentsViewEditor, view, roundedCorners=maskCorners(self.roundedCorners(), cf)).redrawLater('DocumentsViewsContainerEditor.OnGUI(...)')
+						gui.editor(DocumentsViewEditor, view, seamless=True).redrawLater('DocumentsViewsContainerEditor.OnGUI(...)')
 
 
 __all__ = ['DocumentsViewsContainerEditor']

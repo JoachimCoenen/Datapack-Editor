@@ -18,11 +18,11 @@ from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
 from Cat.utils.profiling import TimedMethod, logError
 from model.datapack.datapackContents import EntryHandlerInfo, NAME_SPACE_VAR
 from model.project import Project
-from model.utils import WrappedError, GeneralError
-from session.documents import ErrorCounts, getErrorCounts, loadDocument
+from base.model.utils import WrappedError, GeneralError
+from base.model.documents import ErrorCounts, getErrorCounts, loadDocument
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
-from model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool
-from session.session import getSession
+from base.model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool
+from sessionOld.session import getSession
 
 
 def checkFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[GeneralError]:
@@ -179,7 +179,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 			for file, errors, errorCounts in errorsByFile:
 				label = ''
 				if isinstance(file, str):
-					label = f"{os.path.basename(file[1])} ('{file}')"
+					label = f"{os.path.basename(file)} ('{file}')"
 				else:
 					label = f"{os.path.basename(file[1])} ('{file[1]}') in '{file[0]}'"
 				label = f'errors: {errorCounts.parserErrors + errorCounts.configErrors:2} | warnings: {errorCounts.configWarnings:2} | hints: {errorCounts.configHints:2} | {label}'

@@ -4,7 +4,7 @@ from Cat.utils.collections_ import ChainedList
 from model.commands.argumentTypes import *
 from model.commands.command import CommandSchema, KeywordSchema, ArgumentSchema, TERMINAL, COMMANDS_ROOT, SwitchSchema
 from model.data.mcVersions import MCVersion
-from model.parsing.bytesUtils import strToBytes
+from base.model.parsing.bytesUtils import strToBytes
 
 
 def fillCommandsFor1_17(version: MCVersion) -> None:

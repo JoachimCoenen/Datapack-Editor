@@ -7,10 +7,10 @@ from Cat.utils import escapeForXml
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.nbt.tags import NBTTag, NBTTagSchema
-from model.parsing.bytesUtils import bytesToStr
-from model.parsing.contextProvider import parseNPrepare
-from model.pathUtils import FilePath
-from model.utils import Span, GeneralError, LanguageId
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.parsing.contextProvider import parseNPrepare
+from base.model.pathUtils import FilePath
+from base.model.utils import Span, GeneralError, LanguageId
 
 
 def parseNBTTag(sr: StringReader, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:

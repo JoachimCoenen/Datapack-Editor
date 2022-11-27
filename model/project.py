@@ -13,9 +13,9 @@ from Cat.extensions import FilesChangedDependency
 from Cat.utils.abc_ import abstractmethod
 from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from Cat.utils.logging_ import logWarning
-from model.index import IndexBundle
-from model.pathUtils import fileNameFromFilePath, FilePathTpl, getAllFilesFromSearchPath, normalizeDirSeparators
-from model.utils import GeneralError, MDStr, Span
+from base.model.project.index import IndexBundle
+from base.model.pathUtils import fileNameFromFilePath, FilePathTpl, getAllFilesFromSearchPath, normalizeDirSeparators
+from base.model.utils import GeneralError, MDStr, Span
 
 _TT = TypeVar('_TT')
 _TS = TypeVar('_TS')
@@ -291,7 +291,7 @@ def collectAllDependencies(project: Project):
 				)
 		return dependencies
 
-	allDependencies = collectAndSemiTopolSortAllNodes(project, getDestinations, lambda p: p.name)
+	allDependencies = collectAndSemiTopolSortAllNodes([project], getDestinations, lambda p: p.name)
 
 	if errorsByProj:
 		for projName, errors in errorsByProj.items():

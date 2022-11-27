@@ -14,9 +14,9 @@ from Cat.CatPythonGUI.utilities import connect, CrashReportWrapped
 from Cat.utils.profiling import ProfiledFunction, TimedMethod
 from Cat import utils
 from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries
-from model.pathUtils import FilePath
-from model.project import Project
-from session.session import getSession
+from base.model.pathUtils import FilePath
+from base.model.project.project import Root
+from base.model.session import getSession
 
 from settings import applicationSettings
 
@@ -27,7 +27,7 @@ class FileEntry:
 	splitPath: list[tuple[int, str]]
 	fileName: str
 	fullPath: FilePath
-	project: Project
+	project: Root
 
 	def __hash__(self):
 		return hash((56783265, self.fullPath))
@@ -294,15 +294,15 @@ class SpotlightSearchGui(CatTextField):
 		# 		translations=True,
 		# 	)
 
-		searchFileProps = [Project.files]
+		searchFileProps = [] # todo: [Root.files]
 
-		allProjects = self.getAllProjects()
+		allRoots = self.getAllRoots()
 		filePathsToSearch: list[FileEntry] = []
 
 		lastFEs: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = self.lastFEsCache
 		newFEs: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = {}
 
-		for pack in allProjects:
+		for pack in allRoots:
 			for i, searchFileProp in enumerate(searchFileProps):
 				feKey = (pack.name, i)
 				lastFE = lastFEs.pop(feKey, None)
@@ -327,7 +327,7 @@ class SpotlightSearchGui(CatTextField):
 		self.lastFEsCache = newFEs
 		self.allChoices = filePathsToSearch
 
-	def getAllProjects(self) -> list[Project]:
+	def getAllRoots(self) -> list[Root]:
 		return getSession().project.deepDependencies
 
 	def _showPopup(self):

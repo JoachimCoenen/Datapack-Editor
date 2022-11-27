@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import TypeVar, Generic, ClassVar, Optional, Collection
 
 from Cat.utils.collections_ import OrderedDict
-from model.parsing.tree import Node, Schema
-from model.utils import LanguageId
+from base.model.parsing.tree import Node, Schema
+from base.model.utils import LanguageId
 
 _TS = TypeVar('_TS')
 _TT = TypeVar('_TT')

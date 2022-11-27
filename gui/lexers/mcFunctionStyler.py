@@ -6,11 +6,11 @@ from typing import Type, Optional, ClassVar
 
 from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
-from gui.lexers.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum, StylingFunc
+from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum, StylingFunc
 from model.commands.argumentTypes import *
 from model.commands.argumentValues import ItemStack
 from model.commands.command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
-from model.utils import LanguageId
+from base.model.utils import LanguageId
 
 
 class StyleId(StyleIdEnum):

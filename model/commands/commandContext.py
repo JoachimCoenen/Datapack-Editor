@@ -10,10 +10,9 @@ from model.commands.argumentTypes import LiteralsArgumentType, ArgumentType
 from model.commands.command import *
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
-from model.parsing.bytesUtils import bytesToStr
-from model.parsing.contextProvider import *
-from model.pathUtils import FilePath
-from model.utils import Position, Span, GeneralError, MDStr, formatAsError
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.pathUtils import FilePath
+from base.model.utils import Position, Span, GeneralError, MDStr, formatAsError
 
 
 @registerContextProvider(MCFunction)
@@ -66,7 +65,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 		if before is not None:
 			return _getNextKeywords(getNextSchemas(before), hit, pos, replaceCtx)
 
-		from session.session import getSession
+		from sessionOld.session import getSession
 		return [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
 
 	def getCallTips(self, pos: Position) -> list[str]:
@@ -143,7 +142,7 @@ def _getNextKeywords(nexts: Iterable[CommandPartSchema], node: Optional[CommandP
 			if handler is not None:
 				result += handler.getSuggestions2(nx, node, pos, replaceCtx)
 		elif nx is COMMANDS_ROOT:
-			from session.session import getSession
+			from sessionOld.session import getSession
 			result += [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
 	return result
 

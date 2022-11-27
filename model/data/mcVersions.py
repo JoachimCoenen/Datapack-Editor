@@ -8,7 +8,7 @@ from model.commands.argumentTypes import ArgumentType
 from model.commands.command import CommandSchema
 from model.commands.filterArgs import FilterArgumentInfo
 from model.datapack.datapackContents import ResourceLocation
-from model.parsing.bytesUtils import strToBytes
+from base.model.parsing.bytesUtils import strToBytes
 
 
 @dataclass

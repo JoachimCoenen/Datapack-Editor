@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from Cat.utils.collections_ import OrderedDict, AddToDictDecorator
-from model.parsing.bytesUtils import bytesToStr
+from base.model.parsing.bytesUtils import bytesToStr
 
 
 @dataclass

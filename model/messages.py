@@ -1,4 +1,4 @@
-from model.utils import Message, MessageAdapter
+from base.model.utils import Message, MessageAdapter
 
 INTERNAL_ERROR_MSG: MessageAdapter = MessageAdapter("Internal Error! {msg}", 0)
 

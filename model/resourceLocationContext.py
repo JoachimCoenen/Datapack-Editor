@@ -10,10 +10,10 @@ from model.data.mcVersions import MCVersion
 from model.datapack.datapackContents import ResourceLocation, MetaInfo, choicesFromResourceLocations, metaInfoFromResourceLocation, containsResourceLocation, ResourceLocationNode, \
 	ResourceLocationSchema, DatapackContents
 from model.messages import *
-from model.parsing.contextProvider import Suggestions, registerContextProvider, ContextProvider, Match, AddContextToDictDecorator, Context
+from base.model.parsing.contextProvider import Suggestions, registerContextProvider, ContextProvider, Match, AddContextToDictDecorator, Context
 from model.project import Project
-from model.utils import Span, GeneralError, SemanticsError, MDStr, Position
-from session.session import getSession
+from base.model.utils import Span, GeneralError, SemanticsError, MDStr, Position
+from sessionOld.session import getSession
 
 
 @registerContextProvider(ResourceLocationNode)

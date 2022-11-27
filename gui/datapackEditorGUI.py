@@ -13,10 +13,9 @@ from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy
 
 from Cat.CatPythonGUI.GUI.enums import ResizeMode
-from model.datapack.datapackContents import getEntryHandlersForFolder
-from model.project import Project
-from model.utils import GeneralError
-from session import documents
+from base.model.project.project import Project
+from base.model.utils import GeneralError
+from base.model import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
@@ -25,15 +24,11 @@ from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
 from Cat.Serializable import SerializedPropertyABC
 from Cat.icons import icons
-from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, openOrCreate, CachedProperty
+from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
-from gui import lexers
-from session.documents import Document, ErrorCounts
-from model.pathUtils import FilePath, normalizeDirSeparators, FilePathTpl
-from session.session import getSession
+from base.model.documents import Document, ErrorCounts
+from base.model.pathUtils import FilePath, FilePathTpl, unitePath
 from settings import applicationSettings
-
-lexers.init()  # don't delete!
 
 
 inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})
@@ -49,70 +44,6 @@ _TT = TypeVar('_TT')
 _TR = TypeVar('_TR')
 
 
-def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
-	nsHandlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.structure)
-	extensions = [h.extension for ns, h, _ in nsHandlers]
-	CUSTOM_EXT = "[custom]"
-	extensions.append(CUSTOM_EXT)
-
-	@dataclass
-	class Context:
-		extension: int = 0
-		name: str = "untitled"
-
-	def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
-		context.name = gui.textField(context.name, "name:")
-		context.extension = gui.radioButtonGroup(context.extension, extensions, "extension:")
-		return context
-
-	context = Context()
-	context, isOk = gui.askUserInput(f"new File", context, guiFunc)
-	if not isOk:  # or not context.name:
-		return
-
-	ext = extensions[context.extension]
-	if ext == CUSTOM_EXT:
-		ext = ''
-	try:
-		filePath = createNewFile(folderPath, context.name.removesuffix(ext) + ext)
-		openFunc(filePath)
-	except OSError as e:
-		getSession().showAndLogError(e, "Cannot create file")
-
-
-def createNewFile(folderPath: FilePath, name: str) -> FilePath:
-	if isinstance(folderPath, tuple):
-		filePath = folderPath[0], os.path.join(folderPath[1], name)
-	else:
-		filePath = (folderPath, name)
-	with openOrCreate(os.path.join(*filePath), 'a'):
-		pass  # creates the File
-	return normalizeDirSeparators(filePath)
-
-
-def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
-	name, ok = gui.askUserInput('New Folder', 'New folder')
-	if not ok or not name:
-		return
-
-	try:
-		createNewFolder(folderPath, name)
-	except OSError as e:
-		getSession().showAndLogError(e, "Cannot create folder")
-
-
-def createNewFolder(folderPath: FilePath, name: str):
-	if isinstance(folderPath, tuple):
-		filePath = folderPath[0], os.path.join(folderPath[1], name)
-		joinedFilePath = os.path.join(*filePath, '_ignoreMe.txt')
-	else:
-		filePath = os.path.join(folderPath, name)
-		joinedFilePath = os.path.join(filePath, '_ignoreMe.txt')
-
-	with openOrCreate(joinedFilePath, 'w'):
-		pass  # creates the File
-
-
 class ContextMenuEntries:
 	@classmethod
 	def separator(cls):
@@ -124,7 +55,7 @@ class ContextMenuEntries:
 			raise AssertionError(f"Expected str, tuple or None, but got {type(filePath)}")
 
 		if filePath is not None:
-			filePathJoined = filePath if type(filePath) is str else os.path.join(*filePath)
+			filePathJoined = unitePath(filePath)
 		else:
 			filePathJoined = ''
 
@@ -145,24 +76,6 @@ class ContextMenuEntries:
 			entries.append(cls.separator())
 		entries.extend(cls.pathItems(filePath))
 		return entries
-
-	@classmethod
-	def folderItems(cls, filePath: FilePath, isMutable: bool, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None], *, showSeparator: bool = True) -> list[MenuItemData]:
-		entries: list[MenuItemData] = []
-		entries.append(('new File', lambda p=filePath: createNewFileGUI(p, gui, openFunc), {'enabled': filePath is not None and isMutable}))
-		if showSeparator:
-			entries.append(cls.separator())
-		entries.extend(cls.pathItems(filePath))
-		return entries
-
-	@classmethod
-	def datapackItems(cls, datapack: Project, openFunc: Callable[[FilePath], None]) -> list[MenuItemData]:
-		enabled = datapack is not None
-		return [
-			*cls.pathItems(datapack.path,),
-			cls.separator(),
-			(f'copy name', lambda p=datapack: QApplication.clipboard().setText(p.name), {'enabled': enabled}),
-		]
 
 
 def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str], Iterator[tuple[int, int]]]:
@@ -649,18 +562,19 @@ class DatapackEditorGUI(AutoGUI):
 
 	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[tuple[int, int]], bool, bool, SearchOptions]:
 		def onGUI(gui: DatapackEditorGUI, text: Optional[str], searchExpr: Optional[str], outerGUI: DatapackEditorGUI) -> None:
-			with gui.vLayout(verticalSpacing=0):
-				with gui.hLayout(horizontalSpacing=0):
-					#with gui.hLayout(horizontalSpacing=0):
-					gui.customData['prevPressed'] = gui.toolButton(icon=icons.prev, tip='previous', overlap=(0, 0, 1, 1), parentShortcut=QKeySequence.FindPrevious)
-					gui.customData['nextPressed'] = gui.toolButton(icon=icons.next, tip='next', overlap=(1, 0, 1, 1), parentShortcut=QKeySequence.FindNext)
+			with gui.vLayout(seamless=True):
+				with gui.hLayout(seamless=True):
+					with gui.hPanel(seamless=True):
+						gui.customData['prevPressed'] = gui.framelessButton(icon=icons.prev, tip='previous', margins=gui.smallDefaultMargins, parentShortcut=QKeySequence.FindPrevious)
+						gui.customData['nextPressed'] = gui.framelessButton(icon=icons.next, tip='next', margins=gui.smallDefaultMargins, parentShortcut=QKeySequence.FindNext)
 					gui.customData['searchExpr'] = searchExpr if searchExpr is not None else gui.customData.get('searchExpr', '')
 					gui.customData['searchExpr'] = gui.textField(gui.customData['searchExpr'], placeholderText='find... [Ctrl+F]', isMultiline=False, overlap=(1, 0, 1, 1), parentShortcut=QKeySequence.Find)
 
-					searchMode = SearchMode.RegEx if gui.toolButton('.*', tip='RegEx', overlap=(1, 0, 1, 1), checkable=True) else SearchMode.Normal
-					isCaseSensitive = gui.toolButton('Aa', tip='case sensitive', checkable=True, overlap=(1, -1))
-					isMultiLine = False  # gui.toggleLeft(None, 'Multiline', enabled=isRegex)
-					gui.customData['searchOptions'] = SearchOptions(searchMode, isCaseSensitive, isMultiLine)
+					with gui.hPanel(seamless=True):
+						searchMode = SearchMode.RegEx if gui.framelessButton('.*', tip='RegEx', margins=gui.smallDefaultMargins, checkable=True) else SearchMode.Normal
+						isCaseSensitive = gui.framelessButton('Aa', tip='case sensitive', margins=gui.smallDefaultMargins, checkable=True)
+						isMultiLine = False  # gui.toggleLeft(None, 'Multiline', enabled=isRegex)
+						gui.customData['searchOptions'] = SearchOptions(searchMode, isCaseSensitive, isMultiLine)
 
 					# do actual search:
 					try:
@@ -691,7 +605,8 @@ class DatapackEditorGUI(AutoGUI):
 		searchGUI = self.subGUI(
 			DatapackEditorGUI,
 			guiFunc=lambda gui, text=text, searchExpr=searchExpr, outerGUI=self: onGUI(gui, text, searchExpr, outerGUI),
-			suppressRedrawLogging=True
+			suppressRedrawLogging=True,
+			seamless=True
 			# onInit=lambda w, document=document: onInit(w, document)
 		)
 		searchGUI._name = 'searchBar'
@@ -819,9 +734,9 @@ def drawCodeField(
 
 	font = applicationSettings.appearance.monospaceFont
 
-	with gui.vLayout(verticalSpacing=0):
+	with gui.vLayout(seamless=True):
 		# actual GUI:
-		with gui.hLayout(horizontalSpacing=0):
+		with gui.hLayout(seamless=True):
 			searchExpr, searchResults, prevPressed, nextPressed, searchOptions = gui.searchBar(code, searchExpr=None)
 			highlightErrors = gui.toolButton(checked=highlightErrors, icon=icons.spellCheck, tip='highlight errors', checkable=True, overlap=(1, -1), roundedCorners=CORNERS.NONE)
 			if nextPressed or prevPressed:

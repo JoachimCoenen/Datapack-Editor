@@ -9,8 +9,8 @@ from model.commands.filterArgs import FilterArgumentInfo
 from model.commands.stringReader import StringReader
 from model.commands.utils import CommandSyntaxError
 from model.messages import *
-from model.parsing.bytesUtils import strToBytes, bytesToStr
-from model.pathUtils import FilePath
+from base.model.parsing.bytesUtils import strToBytes, bytesToStr
+from base.model.pathUtils import FilePath
 
 DPE_TARGET_SELECTOR_SCORES = ArgumentType(
 	name='dpe:target_selector_scores',

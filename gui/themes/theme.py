@@ -19,7 +19,7 @@ from Cat.utils import getExePath, openOrCreate, format_full_exc
 from Cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
 from Cat.utils.logging_ import logDebug, logWarning, logInfo, logError
 from Cat.utils.profiling import TimedFunction
-from model.utils import LanguageId, Message
+from base.model.utils import LanguageId, Message
 
 _TT = TypeVar('_TT')
 
@@ -198,7 +198,7 @@ class ColorScheme:
 
 		see: initAllColorSchemes()
 		"""
-		allFbs = collectAndSemiTopolSortAllNodes(self, attrgetter('localFallbackSchemes'), attrgetter('name'))
+		allFbs = collectAndSemiTopolSortAllNodes([self], attrgetter('localFallbackSchemes'), attrgetter('name'))
 		self.allFallbackSchemes = allFbs
 
 	styles2: dict[LanguageId, Styles] = field(default_factory=dict)
