@@ -1,5 +1,5 @@
 import os
-from typing import Type, Optional, Any
+from typing import Type, Any
 
 from PyQt5.Qsci import QsciLexerCustom
 
@@ -17,7 +17,6 @@ from corePlugins.json.core import JsonSchema
 
 
 def initPlugin() -> None:
-	# from corePlugins.json import jsonSchema
 	PLUGIN_SERVICE.registerPlugin('JsonPlugin', JsonPlugin())
 
 
@@ -59,7 +58,6 @@ class JsonPlugin(PluginBase):
 		return [JsonStyler]
 
 
-# @RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='JSON')
 @RegisterContainer
 class JsonDocument(ParsedDocument, TextDocument):
 	"""docstring for Document"""
@@ -77,22 +75,5 @@ class JsonDocument(ParsedDocument, TextDocument):
 	encoding: str = Serialized(default='utf-8')
 
 	@property
-	def schema(self) -> Optional[JsonSchema]:
-		# if isinstance(self.metaInfo, JsonMeta):
-		# 	schemaId = self.metaInfo.schemaId
-		# 	return getSession().datapackData.jsonSchemas.get(schemaId)
-		# else:
-		# 	return getSession().datapackData.jsonSchemas.get('dpe:json_schema')
-		return None
-
-	@property
 	def parseKwArgs(self) -> dict[str, Any]:
 		return dict(allowMultilineStr=True)
-
-
-# class LexerJson(DocumentLexerBase2):
-# 	def language(self):
-# 		return "JSON"
-#
-# 	def description(self, style):
-# 		return "Custom lexer for the Minecrafts .json files"
