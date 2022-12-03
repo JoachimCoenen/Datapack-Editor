@@ -8,8 +8,8 @@ from base.model.project.aspect import AspectType
 from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
-from base.model.utils import LANGUAGES, GeneralError, MDStr
-from settings import applicationSettings
+from base.model.utils import GeneralError, MDStr
+from corePlugins.json import JSON_ID
 
 DATAPACK_ASPECT_TYPE = AspectType('dpe:datapack')
 # DATAPACK_CONTENTS_TYPE = AspectType('dpe:datapack_contents')
@@ -24,7 +24,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 	def getDependencies(self, root: Root) -> list[DependencyDescr]:
 		fileName = 'dependencies.json'
 		projectPath = root.normalizedLocation
-		schema = GLOBAL_SCHEMA_STORE.get2('dpe:dependencies', LANGUAGES.JSON)
+		schema = GLOBAL_SCHEMA_STORE.get2('dpe:dependencies', JSON_ID)
 
 		if projectPath.lower().endswith('.jar'):
 			# Minecraft does not need to itself as a dependency.
@@ -40,7 +40,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 		except (OSError, KeyError) as e:
 			node, errors = None, [GeneralError(MDStr(f"{type(e).__name__}: {str(e)}"))]
 		else:
-			node, errors = parseNPrepare(file, filePath=filePath, language=LANGUAGES.JSON, schema=schema, allowMultilineStr=False)
+			node, errors = parseNPrepare(file, filePath=filePath, language=JSON_ID, schema=schema)
 
 		if node is not None:
 			validateTree(node, file, errors)
@@ -108,7 +108,6 @@ DEPENDENCY_SEARCH_LOCATIONS: list[Callable[[], list[str]]] = []
 
 
 def defaultSearchLocations():
-	from settings import applicationSettings
 	sl = os.path.expanduser('~/.dpe/dependencies').replace('\\', '/')  # TODO: applicationSettings.minecraft.savesLocation
 	if sl:
 		return [sl]

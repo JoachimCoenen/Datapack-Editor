@@ -14,9 +14,6 @@ from base.model.parsing.tree import Node, Schema
 from base.model.utils import GeneralError, MDStr, LanguageId, Span
 
 
-JSON_ID = LanguageId('JSON')
-
-
 class TokenType(enum.Enum):
 	default = 0
 	null = 1
@@ -705,7 +702,6 @@ DPE_LIB_PATH = JsonArgType(
 
 
 __all__ = [
-	'JSON_ID',
 
 	'TokenType',
 	'VALUE_TOKENS',

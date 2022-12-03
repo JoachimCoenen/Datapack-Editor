@@ -32,19 +32,19 @@ class PluginService:
 	def registerPlugin(self, name: str, plugin: PluginBase):
 		AddToDictDecorator(self.plugins)(name)(plugin)
 
-		for languageId, parserCls in plugin.parsers().items():
+		for languageId, parserCls in (plugin.parsers() or {}).items():
 			registerParser(languageId)(parserCls)
 
-		for nodeCls, ctxProviderCls in plugin.contextProviders().items():
+		for nodeCls, ctxProviderCls in (plugin.contextProviders() or {}).items():
 			registerContextProvider(nodeCls)(ctxProviderCls)
 
-		for docTypeDescr in plugin.documentTypes():
+		for docTypeDescr in (plugin.documentTypes() or ()):
 			registerDocumentTypeDescription(docTypeDescr)
 
-		for languageId, lexer in plugin.lexers().items():
+		for languageId, lexer in (plugin.lexers() or {}).items():
 			CodeEditorLexer(languageId, forceOverride=True)(lexer)
 
-		for stylerCls in plugin.stylers():
+		for stylerCls in (plugin.stylers() or ()):
 			registerStyler(stylerCls)
 
 		plugin.initPlugin()

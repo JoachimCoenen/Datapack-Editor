@@ -31,7 +31,7 @@ class SchemaStore(Generic[_TSchema]):
 		# 	byName.pop(name, None)
 		# 	if not byName:
 		# 		self._registeredSchemas.pop(ns)
-		self._registeredSchemas2.pop(name)
+		self._registeredSchemas2.pop(name, None)
 
 	# def unregisterNamespace(self, ns: str):
 	# 	self._registeredSchemas.pop(ns, None)

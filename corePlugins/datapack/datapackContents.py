@@ -14,7 +14,7 @@ from base.model.parsing.parser import parse
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePathTpl, loadBinaryFile, loadTextFile, ZipFilePool
 from model.project import IndexBundleAspect, AspectType, Project
-from base.model.utils import MDStr, Span, LANGUAGES
+from base.model.utils import MDStr, Span
 
 DATAPACK_CONTENTS_TYPE = AspectType('dpe:datapack_contents')
 
@@ -242,12 +242,12 @@ class JsonMeta(MetaInfo):
 			logError(e)
 			return MDStr('')
 
-		json, errors = parse(file, filePath=self.filePath, language=LANGUAGES.JSON, schema=None, allowMultilineStr=True)
+		from corePlugins.json import JSON_ID
+		json, errors = parse(file, filePath=self.filePath, language=JSON_ID, schema=None, allowMultilineStr=True)
 
-		from model.json.core import JsonObject
+		from corePlugins.json.core import JsonObject, JsonString
 		if json is not None and isinstance(json, JsonObject):
 			description = json.data.get('description')
-			from model.json.core import JsonString
 			if description is not None and isinstance(description.value, JsonString):
 				return MDStr(description.value.data)
 

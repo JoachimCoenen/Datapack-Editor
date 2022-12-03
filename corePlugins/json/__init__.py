@@ -16,6 +16,9 @@ from base.plugin import PluginBase, PLUGIN_SERVICE
 from corePlugins.json.core import JsonSchema
 
 
+JSON_ID = LanguageId('JSON')
+
+
 def initPlugin() -> None:
 	PLUGIN_SERVICE.registerPlugin('JsonPlugin', JsonPlugin())
 
@@ -28,9 +31,9 @@ class JsonPlugin(PluginBase):
 		JSON_SCHEMA_LOADER.registerSchema('dpe:json_schema', os.path.join(resourcesDir, 'jsonSchema.json'))
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
-		from corePlugins.json import parser
+		from corePlugins.json.parser import JsonParser
 		return {
-			LanguageId('JSON'): parser.JsonParser,
+			JSON_ID: JsonParser,
 		}
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
@@ -45,12 +48,12 @@ class JsonPlugin(PluginBase):
 			type=JsonDocument,
 			name='JSON',
 			extensions=['.json', '.mcmeta'],
-			defaultLanguage='JSON'
+			defaultLanguage=JSON_ID
 		)]
 
 	def lexers(self) -> dict[LanguageId, Type[QsciLexerCustom]]:
 		return {
-			LanguageId('JSON'): DocumentLexerBase2
+			JSON_ID: DocumentLexerBase2
 		}
 
 	def stylers(self) -> list[Type[CatStyler]]:

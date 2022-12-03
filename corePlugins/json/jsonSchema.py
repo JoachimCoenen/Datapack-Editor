@@ -11,13 +11,13 @@ from typing import Optional, TypeVar, Type, Callable, Mapping, Any, Generator, A
 from Cat.utils import Nothing, Anything
 from Cat.utils.collections_ import AddToDictDecorator
 from model.commands.argumentTypes import ArgumentType, ALL_NAMED_ARGUMENT_TYPES
-from corePlugins.json import emitter
+from corePlugins.json import emitter, JSON_ID
 from corePlugins.json.core import *
 from corePlugins.json.core import ALL_NAMED_JSON_ARG_TYPES
 from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.parser import parse
 from base.model.pathUtils import normalizeDirSeparators, fromDisplayPath, loadBinaryFile, ZipFilePool
-from base.model.utils import GeneralError, MDStr, Span, SemanticsError, LanguageId, WrappedError
+from base.model.utils import GeneralError, MDStr, Span, SemanticsError, WrappedError
 
 JSON_TYPE_NAMES = {'null', 'boolean', 'number', 'string', 'array', 'object'}
 
@@ -548,7 +548,7 @@ class SchemaBuilderOrchestrator:
 		except OSError as ex:
 			self.errors[fullPath].append(WrappedError(ex))
 			return None
-		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=LanguageId('JSON'), schema=None)
+		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
 		schemaJson: JsonObject
 		self.errors[fullPath].extend(errors)
 		builder = SchemaBuilder(orchestrator=self)
@@ -575,7 +575,7 @@ class SchemaBuilderOrchestrator:
 		except OSError as ex:
 			self.errors[fullPath].append(WrappedError(ex))
 			return SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
-		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=LanguageId('JSON'), schema=None)
+		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
 		schemaJson: JsonObject
 		self.errors[fullPath].extend(errors)
 		builder = SchemaBuilder(orchestrator=self)

@@ -10,17 +10,6 @@ from Cat.utils import escapeForXmlTextContent, strings
 LanguageId = NewType('LanguageId', str)
 
 
-class _LanguageIds:
-	SNBT = LanguageId('SNBT')
-	MCJson = LanguageId('MCJson')
-	JSON = LanguageId('JSON')
-	MCCommand = LanguageId('MCCommand')
-	MCFunction = LanguageId('MCFunction')
-
-
-LANGUAGES: _LanguageIds = _LanguageIds()
-
-
 class MessageLike(Protocol):
 	def format(self, *args) -> MDStr:
 		pass
@@ -226,7 +215,6 @@ class WrappedError(GeneralError):
 
 __all__ = [
 	'LanguageId',
-	'LANGUAGES',
 	'Message',
 	'MessageAdapter',
 	'Position',

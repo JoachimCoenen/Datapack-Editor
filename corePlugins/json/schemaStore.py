@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from Cat.utils.logging_ import logWarning, logInfo
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.pathUtils import FilePathStr
+from corePlugins.json import JSON_ID
 from corePlugins.json.jsonSchema import SchemaBuilderOrchestrator
-from corePlugins.json.core import *
 
 
 @dataclass
