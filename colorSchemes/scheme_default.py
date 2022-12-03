@@ -6,7 +6,7 @@ from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from Cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, StyleIdEnum
 from base.model.utils import LanguageId
-from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StyleFont, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors
+from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors
 
 enabled = True
 
@@ -156,7 +156,14 @@ def addJsonScheme():
 
 @languageStyles(LanguageId('SNBT'))
 def addSNBTScheme():
-	from gui.lexers.snbtStyler import StyleId
+	class StyleId(StyleIdEnum):
+		default = DEFAULT_STYLE_ID
+		boolean = DEFAULT_STYLE_ID + 1
+		intLike = DEFAULT_STYLE_ID + 2
+		floatLike = DEFAULT_STYLE_ID + 3
+		string = DEFAULT_STYLE_ID + 4
+		key = DEFAULT_STYLE_ID + 5
+		invalid = DEFAULT_STYLE_ID + 6
 	styles = {
 		StyleId.default.name: Style(),
 		StyleId.boolean.name:   Style(foreground=QColor(0x00, 0x00, 0xBf)),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),

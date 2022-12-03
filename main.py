@@ -111,9 +111,11 @@ def loadBasePlugins():
 def loadCorePlugins():
 
 	from corePlugins import json
+	from corePlugins import nbt
 	from corePlugins import datapack
 
 	json.initPlugin()
+	nbt.initPlugin()
 	datapack.initPlugin()
 	#
 	# from model import json, commands, nbt

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Callable, ClassVar
 
+from base.model.parsing.bytesUtils import WHITESPACE_CHARS
 from base.model.parsing.parser import TokenizerBase
 from base.model.utils import Position, Span
 

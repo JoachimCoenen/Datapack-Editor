@@ -5,11 +5,11 @@ from typing import Optional, Type, Union, Callable, NamedTuple, overload, TypeVa
 
 from Cat.utils.collections_ import OrderedDict
 from model.messages import *
-from model.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
-from model.nbt.tags import *
+from corePlugins.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
+from corePlugins.nbt.tags import *
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.parser import ParserBase, registerParser
-from base.model.utils import Message, Position, Span, MDStr, LanguageId
+from base.model.parsing.parser import ParserBase
+from base.model.utils import Message, Position, Span, MDStr
 
 INVALID_NUMBER_MSG: Message = Message("Invalid {0}: '`{1}`'", 2)
 
@@ -50,8 +50,6 @@ _ESCAPE_CHAR_MAP = {
 _TNumber = TypeVar('_TNumber', int, float)
 _TNBTTag = TypeVar('_TNBTTag', bound=BasicDataTag)
 
-
-@registerParser(LanguageId('SNBT'))
 @dataclass
 class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 	ignoreTrailingChars: bool = False
