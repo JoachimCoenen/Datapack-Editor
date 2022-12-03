@@ -1,19 +1,16 @@
 import os
-from typing import Type, Any
+from typing import Type
 
 from PyQt5.Qsci import QsciLexerCustom
 
-from Cat.Serializable import RegisterContainer, Serialized
 from base.gui.documentLexer import DocumentLexerBase2
 from base.gui.styler import CatStyler
-from base.model.documents import ParsedDocument, TextDocument,  DocumentTypeDescription
+from base.model.documents import ParsedDocument, DocumentTypeDescription
 from base.model.parsing.contextProvider import ContextProvider
 from base.model.parsing.parser import ParserBase
 from base.model.parsing.tree import Node
-from base.model.pathUtils import FilePath
 from base.model.utils import LanguageId
 from base.plugin import PluginBase, PLUGIN_SERVICE
-from corePlugins.json.core import JsonSchema
 
 
 JSON_ID = LanguageId('JSON')
@@ -29,6 +26,8 @@ class JsonPlugin(PluginBase):
 		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
 		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
 		JSON_SCHEMA_LOADER.registerSchema('dpe:json_schema', os.path.join(resourcesDir, 'jsonSchema.json'))
+		from corePlugins.json.argTypes import init  # load standard argument types
+		init()
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from corePlugins.json.parser import JsonParser
@@ -45,7 +44,7 @@ class JsonPlugin(PluginBase):
 
 	def documentTypes(self) -> list[DocumentTypeDescription]:
 		return [DocumentTypeDescription(
-			type=JsonDocument,
+			type=ParsedDocument,
 			name='JSON',
 			extensions=['.json', '.mcmeta'],
 			defaultLanguage=JSON_ID
@@ -59,24 +58,3 @@ class JsonPlugin(PluginBase):
 	def stylers(self) -> list[Type[CatStyler]]:
 		from corePlugins.json.jsonStyler import JsonStyler
 		return [JsonStyler]
-
-
-@RegisterContainer
-class JsonDocument(ParsedDocument, TextDocument):
-	"""docstring for Document"""
-
-	__slots__ = ()
-
-	def __typeCheckerInfo___(self):
-		# giving the type checker a helping hand...
-		super(JsonDocument, self).__typeCheckerInfo___()
-		self.filePath: FilePath = ''
-		self.documentChanged: bool = False
-		self.encoding: str = 'utf-8'
-		self.content: bytes = b''
-
-	encoding: str = Serialized(default='utf-8')
-
-	@property
-	def parseKwArgs(self) -> dict[str, Any]:
-		return dict(allowMultilineStr=True)

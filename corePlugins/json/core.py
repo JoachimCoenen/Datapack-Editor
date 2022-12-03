@@ -220,11 +220,12 @@ class JsonSchema(Schema, Generic[_TT], ABC):
 	language: ClassVar[LanguageId] = 'JSON'
 	_fields: ClassVar[dict[str, Any]] = dict(description='', deprecated=False)
 
-	def __init__(self, *, description: MDStr = '', deprecated: bool = False):
+	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		self.description: MDStr = description
 		self.deprecated: bool = deprecated
 		self.span: Span = Span()
 		self.filePath: str = ''
+		self.allowMultilineStr: Optional[bool] = allowMultilineStr
 
 	@property
 	def asString(self) -> str:
@@ -254,8 +255,8 @@ class JsonNumberSchema(JsonSchema[JsonNumber], ABC):
 	typeName: ClassVar[str] = 'number'
 	_fields: ClassVar[dict[str, Any]] = dict(min=-inf, max=inf)
 
-	def __init__(self, *, minVal: _TN = -inf, maxVal: _TN = inf, description: MDStr = '', deprecated: bool = False):
-		super(JsonNumberSchema, self).__init__(description=description, deprecated=deprecated)
+	def __init__(self, *, minVal: _TN = -inf, maxVal: _TN = inf, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
+		super(JsonNumberSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.min: _TN = minVal
 		self.max: _TN = maxVal
 
@@ -279,9 +280,10 @@ class JsonStringSchema(JsonSchema[JsonString]):
 			type: Optional[str | JsonArgType] = None,
 			args: Optional[dict[str, Union[Any, None]]] = None,
 			description: MDStr = '',
-			deprecated: bool = False
+			deprecated: bool = False,
+			allowMultilineStr: Optional[bool]
 	):
-		super(JsonStringSchema, self).__init__(description=description, deprecated=deprecated)
+		super(JsonStringSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.type: Optional[str] = getattr(type, 'name', type)
 		self.args: Optional[dict[str, Union[Any, None]]] = args or {}
 
@@ -292,13 +294,15 @@ class JsonStringOptionsSchema(JsonStringSchema):
 			*,
 			options: dict[str, MDStr],
 			description: MDStr = '',
-			deprecated: bool = False
+			deprecated: bool = False,
+			allowMultilineStr: Optional[bool]
 	):
 		super(JsonStringOptionsSchema, self).__init__(
 			type=OPTIONS_JSON_ARG_TYPE,
 			args=dict(values=options),
 			description=description,
-			deprecated=deprecated
+			deprecated=deprecated,
+			allowMultilineStr=allowMultilineStr,
 		)
 
 	def postProcessJsonStructure(self, structure: dict[str, Any]) -> None:
@@ -312,8 +316,8 @@ class JsonArraySchema(JsonSchema[JsonArray]):
 	typeName: ClassVar[str] = 'array'
 	_fields: ClassVar[dict[str, Any]] = dict(element=Nothing)
 
-	def __init__(self, *, description: MDStr = '', element: JsonSchema, deprecated: bool = False):
-		super(JsonArraySchema, self).__init__(description=description, deprecated=deprecated)
+	def __init__(self, *, description: MDStr = '', element: JsonSchema, deprecated: bool = False, allowMultilineStr: Optional[bool]):
+		super(JsonArraySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.element: JsonSchema = element
 
 
@@ -327,18 +331,20 @@ class JsonKeySchema(JsonStringSchema):
 			type: Optional[str] = 'dpe:json/key_schema',
 			args: Optional[dict[str, Union[Any, None]]] = None,
 			description: MDStr = '',
-			deprecated: bool = False
+			deprecated: bool = False,
+			allowMultilineStr: Optional[bool] = None
 	):
 		super(JsonKeySchema, self).__init__(
 			type=type,
 			args=args,
 			description=description,
 			deprecated=deprecated,
+			allowMultilineStr=allowMultilineStr,
 		)
 		self.forProp: Optional[JsonProperty] = None
 
 
-JSON_KEY_SCHEMA = JsonKeySchema()
+JSON_KEY_SCHEMA = JsonKeySchema(allowMultilineStr=None)
 
 
 class SwitchingPropertySchema(JsonSchema[JsonProperty]):
@@ -366,9 +372,10 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 			decidingProp: Optional[str] = None,
 			values: dict[Union[tuple[Union[str, int, bool], ...], Union[str, int, bool]], JsonSchema[_TT2]] = None,
 			requires: Optional[tuple[str, ...]] = None,
-			hates:tuple[str, ...] = (),
-			deprecated: bool = False):
-		super(SwitchingPropertySchema, self).__init__(description=description, deprecated=deprecated)
+			hates: tuple[str, ...] = (),
+			deprecated: bool = False,
+			allowMultilineStr: Optional[bool]):
+		super(SwitchingPropertySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.name: Union[str, Anything] = name
 		self.optional: bool = optional
 		self.default: Optional[_TT2] = default
@@ -430,8 +437,8 @@ class JsonObjectSchema(JsonSchema[Object]):
 		properties=Nothing
 	)
 
-	def __init__(self, *, description: MDStr = '', properties: list[SwitchingPropertySchema], inherits: list[Inheritance] = (), deprecated: bool = False):
-		super(JsonObjectSchema, self).__init__(description=description, deprecated=deprecated)
+	def __init__(self, *, description: MDStr = '', properties: list[SwitchingPropertySchema], inherits: list[Inheritance] = (), deprecated: bool = False, allowMultilineStr: Optional[bool]):
+		super(JsonObjectSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.inherits: tuple[Inheritance, ...] = tuple(inherits)
 		self.properties: tuple[SwitchingPropertySchema, ...] = tuple(properties)
 		# self.conditionalProperties: tuple[SwitchingPropertySchema, ...] = tuple(properties)
@@ -465,6 +472,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 						requires=prop.requires,
 						hates=prop.hates,
 						deprecated=prop.deprecated,
+						allowMultilineStr=None,
 					)
 					newProp.setSpan(prop.span, prop.filePath)
 					anythingProp = self._addProp(anythingProp, newProp, propsDict)
@@ -489,7 +497,8 @@ class JsonObjectSchema(JsonSchema[Object]):
 			propsDict[prop.name] = prop
 		return anythingProp
 
-	def _joinProps(self, prop1: SwitchingPropertySchema, prop2: SwitchingPropertySchema) -> SwitchingPropertySchema:
+	@staticmethod
+	def _joinProps(prop1: SwitchingPropertySchema, prop2: SwitchingPropertySchema) -> SwitchingPropertySchema:
 		if prop1.decidingProp != prop2.decidingProp:
 			# TODO: do better logging when deciding props don't match:
 			logWarning(f"Cannot join properties with differing deciding props {[prop1.decidingProp, prop2.decidingProp]!r}. prop.name = {prop1.name!r}")
@@ -498,12 +507,12 @@ class JsonObjectSchema(JsonSchema[Object]):
 			values = prop1.values.copy()
 			for decVal, val in prop2.values.items():
 				if decVal in values:
-					val = JsonUnionSchema(description=MDStr(''), options=[values[decVal], val])
+					val = JsonUnionSchema(description=MDStr(''), options=[values[decVal], val], allowMultilineStr=None)
 				values[decVal] = val
 			value = None
 		else:
 			values = None
-			value = JsonUnionSchema(description=MDStr(''), options=[prop1.value, prop2.value])
+			value = JsonUnionSchema(description=MDStr(''), options=[prop1.value, prop2.value], allowMultilineStr=None)
 		newProp = PropertySchema(
 			name=prop1.name,
 			description=prop1.description,
@@ -515,6 +524,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 			requires=prop1.requires,
 			hates=prop1.hates,
 			deprecated=prop1.deprecated,
+			allowMultilineStr=None,
 		)
 		if prop2.filePath:
 			newProp.setSpan(prop2.span, prop2.filePath)
@@ -551,8 +561,8 @@ class JsonUnionSchema(JsonSchema[JsonData]):
 	typeName: ClassVar[str] = 'union'
 	_fields: ClassVar[dict[str, Any]] = dict(options=Nothing)
 
-	def __init__(self, *, description: MDStr = '', options: Sequence[JsonSchema]):
-		super(JsonUnionSchema, self).__init__(description=description)
+	def __init__(self, *, description: MDStr = '', options: Sequence[JsonSchema], allowMultilineStr: Optional[bool]):
+		super(JsonUnionSchema, self).__init__(description=description, allowMultilineStr=allowMultilineStr)
 		self.options: Sequence[JsonSchema] = options
 
 	def optionsDict2(self) -> dict[Type[JsonData], JsonSchema]:
@@ -587,8 +597,8 @@ class JsonCalculatedValueSchema(JsonSchema[JsonData]):
 	typeName: ClassVar[str] = 'calculated'
 	_fields: ClassVar[dict[str, Any]] = dict(func=Nothing)
 
-	def __init__(self, *, description: MDStr = '', func: Callable[[JsonObject], Optional[JsonSchema]], deprecated: bool = False):
-		super(JsonCalculatedValueSchema, self).__init__(description=description, deprecated=deprecated)
+	def __init__(self, *, description: MDStr = '', func: Callable[[JsonObject], Optional[JsonSchema]], deprecated: bool = False, allowMultilineStr: Optional[bool]):
+		super(JsonCalculatedValueSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.func: Callable[[JsonObject], Optional[JsonSchema]] = func
 
 	# @CachedProperty
@@ -606,14 +616,14 @@ class JsonAnySchema(JsonSchema[JsonData]):
 	typeName: ClassVar[str] = 'any'
 	_fields: ClassVar[dict[str, Any]] = dict()
 
-	def __init__(self, *, description: MDStr = '', deprecated: bool = False):
-		super(JsonAnySchema, self).__init__(description=description, deprecated=deprecated)
+	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
+		super(JsonAnySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 
 
-JSON_ANY_SCHEMA = JsonAnySchema()
+JSON_ANY_SCHEMA = JsonAnySchema(allowMultilineStr=None)
 
 
-def resolvePath(data: JsonData, path: tuple[str|int, ...]) -> Optional[JsonData]:
+def resolvePath(data: JsonData, path: tuple[str | int, ...]) -> Optional[JsonData]:
 	result = data
 	for item in path:
 		if isinstance(item, str):
@@ -665,41 +675,6 @@ OPTIONS_JSON_ARG_TYPE = JsonArgType(
 	examples=MDStr(""),
 )
 
-DPE_FLOAT = JsonArgType(
-	name='dpe:float',
-	description=MDStr("a string containing a float value"),
-)
-
-DPE_URL = JsonArgType(
-	name='dpe:url',
-	description=MDStr("a web address"),
-	examples=MDStr(
-		"* https://www.minecraft.net\n"
-		"* https://github.com/JoachimCoenen/Datapack-Editor"
-	),
-)
-
-DPE_DEF_REF = JsonArgType(
-	name='dpe:def_ref',
-	description=MDStr("a reference to a definition in a dpe/json/schema"),
-)
-
-
-DPE_TMPL_REF = JsonArgType(
-	name='dpe:tmpl_ref',
-	description=MDStr("a reference to a template in a dpe/json/schema"),
-)
-
-DPE_JSON_ARG_TYPE = JsonArgType(
-	name='dpe:json_arg_type',
-	description=MDStr("name of a JsonArgType"),
-)
-
-DPE_LIB_PATH = JsonArgType(
-	name='dpe:schema_library_path',
-	description=MDStr("relative path to a schema library"),
-)
-
 
 __all__ = [
 
@@ -747,11 +722,6 @@ __all__ = [
 	'JsonSemanticsError',
 
 	'JsonArgType',
-
-	'DPE_FLOAT',
-	'DPE_URL',
-	'DPE_DEF_REF',
-	'DPE_TMPL_REF',
-	'DPE_JSON_ARG_TYPE',
-	'DPE_LIB_PATH',
+	'ALL_NAMED_JSON_ARG_TYPES',
+	'OPTIONS_JSON_ARG_TYPE',
 ]

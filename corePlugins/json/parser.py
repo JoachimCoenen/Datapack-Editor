@@ -37,7 +37,6 @@ _BOOLEAN_TOKENS = {
 
 @dataclass
 class JsonParser(ParserBase[JsonNode, JsonSchema]):
-	allowMultilineStr: bool = False
 
 	_waitingForClosing: dict[TokenType, int] = field(default_factory=lambda: defaultdict(int), init=False)
 	# tokens: deque[Token] = field(init=False)
@@ -46,6 +45,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	_last: Optional[Token] = field(init=False, default=None)
 
 	def __post_init__(self):
+		allowMultilineStr = self.schema is not None and self.schema.allowMultilineStr
 		self._tokenizer = JsonTokenizer(
 			self.text,
 			self.line,
@@ -53,11 +53,19 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			self.cursor,
 			self.cursorOffset,
 			self.indexMapper,
-			self.allowMultilineStr,
+			allowMultilineStr
 		)
 		self.errors = self._tokenizer.errors  # sync errors
 		self._current = self._tokenizer.nextToken()
 		self._last = None
+
+	@property
+	def allowMultilineStr(self) -> bool:
+		return self._tokenizer.allowMultilineStr
+
+	@allowMultilineStr.setter
+	def allowMultilineStr(self, value: bool):
+		self._tokenizer.allowMultilineStr = value
 
 	@property
 	def hasTokens(self) -> bool:

@@ -16,7 +16,8 @@ from corePlugins.json.core import *
 from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, parseNPrepare, validateTree, getSuggestions, \
 	getDocumentation, getClickableRanges, onIndicatorClicked
 from base.model.utils import Position, Span, GeneralError, MDStr, LanguageId
-from corePlugins.json.core import OPTIONS_JSON_ARG_TYPE, DPE_FLOAT, DPE_JSON_ARG_TYPE, DPE_LIB_PATH, DPE_DEF_REF, DPE_TMPL_REF, ALL_NAMED_JSON_ARG_TYPES
+from corePlugins.json.argTypes import *
+from corePlugins.json.core import ALL_NAMED_JSON_ARG_TYPES
 from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
 from model.messages import UNKNOWN_MSG
 

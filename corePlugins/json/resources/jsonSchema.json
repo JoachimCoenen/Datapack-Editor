@@ -2,6 +2,7 @@
 	"$schema": "dpe/json/schema",
 	"$body": {
 		"$type": "object",
+		"allowMultilineStr": false,
 		"properties": {
 			"$schema": {
 				"$type": "enum",
@@ -129,6 +130,11 @@
 					"default": false,
 					"value": { "$ref": "orRef", "type": { "$type": "boolean" } }
 				},
+				"allowMultilineStr": {
+					"optional": true,
+					"default": null,
+					"value": { "$ref": "orRef", "type": { "$type": "union", "options": [{"$type": "boolean"}, {"$type": "null"}] } }
+				},
 				"inherits": {
 					"description": "this object schema inherits all properties from these schemas",
 					"optional": true,
@@ -175,7 +181,7 @@
 					}
 				},
 				"properties": {
-					"description": "properties",
+					"description": "properties of the object",
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {

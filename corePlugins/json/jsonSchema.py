@@ -190,7 +190,7 @@ class SchemaBuilder:
 
 		return ctx.libraries['']
 
-	def parseBody(self, body: JObject):
+	def parseBody(self, body: JObject) -> JsonSchema:
 		return self.parseType(body)
 
 	def parseDefinitions(self, definitionsNode: JObject, ctx: TemplateContext) -> None:
@@ -264,7 +264,7 @@ class SchemaBuilder:
 			return definition
 		else:
 			self.error(MDStr(f"No definition \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
-			return JsonAnySchema()
+			return JsonAnySchema(allowMultilineStr=None)
 
 	def handleTypePartial(self, node: JObject) -> Generator[JsonSchema]:
 		refNode = self.optStr(node, '$defRef')
@@ -602,9 +602,10 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 		requires = ()
 		hates = ()
 		deprecated = False
+		allowMultilineStr = None
 		values = JD(None, node.ctx)
 	else:
-		description, deprecated = readCommonValues(self, node)
+		description, deprecated, allowMultilineStr = readCommonValues(self, node)
 		optional = self.optBoolVal(node, 'optional', False)
 		default = self._opt(node, 'default')
 		if default.n is not None:
@@ -645,6 +646,7 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 		requires=requires,
 		hates=hates,
 		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 
 
@@ -671,7 +673,7 @@ typeHandler = AddToDictDecorator(_typeHandlers)
 
 @typeHandler('object')
 def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	defaultProp = self.optType(node, 'default-property', JsonObject)
 	if defaultProp.n is not None:
 		properties = self.optObjectRaw(node, 'properties')
@@ -684,7 +686,8 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 		description=description,
 		properties=[],
 		inherits=[],
-		deprecated=deprecated
+		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
@@ -707,13 +710,14 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 
 @typeHandler('array')
 def arrayHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	partialElement = self.handleTypePartial(self.reqObject(node, 'element'))
 	element = next(partialElement)
 	objectSchema = JsonArraySchema(
 		description=description,
 		element=element,
-		deprecated=deprecated
+		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 	self.completePartialType(partialElement)
@@ -721,11 +725,12 @@ def arrayHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 
 @typeHandler('union')
 def unionHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	options = self.reqArrayVal2(node, 'options', JsonObject)
 	objectSchema = JsonUnionSchema(
 		description=description,
 		options=[],
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
@@ -738,17 +743,18 @@ def unionHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 
 @typeHandler('any')
 def anyHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	objectSchema = JsonAnySchema(
 		description=description,
 		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
 
 @typeHandler('string')
 def stringHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	type_ = self.optStr(node, 'type')
 	args = self.optObject(node, 'args')
 
@@ -756,14 +762,15 @@ def stringHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 		description=description,
 		type=_getJsonArgType(self, type_) if type_.n is not None else None,
 		args=toPyValue(self, args) if args.n is not None else None,
-		deprecated=deprecated
+		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
 
 @typeHandler('enum')
 def enumHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	options = self.reqObject(node, 'options')
 	oCtx = options.ctx
 	options2 = {self.fromRefCheckType(JD(p.key, oCtx), JsonString).data: self.fromRefCheckType(JD(p.value, oCtx), JsonString).data for p in options.data.values()}
@@ -771,30 +778,33 @@ def enumHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	objectSchema = JsonStringOptionsSchema(
 		description=description,
 		options=options2,
-		deprecated=deprecated
+		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
 
 @typeHandler('boolean')
 def boolHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	objectSchema = JsonBoolSchema(
 		description=description,
-		deprecated=deprecated
+		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
 
 def _numberHandler(self: SchemaBuilder, node: JObject, cls: Type[JsonNumberSchema]) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	minVal = self.optNumberVal(node, 'min', -math.inf)
 	maxVal = self.optNumberVal(node, 'max', math.inf)
 	objectSchema = cls(
 		description=description,
 		minVal=minVal,
 		maxVal=maxVal,
-		deprecated=deprecated
+		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
@@ -811,24 +821,26 @@ def floatHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 
 @typeHandler('null')
 def nullHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	objectSchema = JsonNullSchema(
 		description=description,
-		deprecated=deprecated
+		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
 
 @typeHandler('calculated')
 def calculatedHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
-	description, deprecated = readCommonValues(self, node)
+	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	func = self.reqStrVal(node, 'function')
 	func = lookupFunction(func)
 
 	objectSchema = JsonCalculatedValueSchema(
 		description=description,
 		func=func,
-		deprecated=deprecated
+		deprecated=deprecated,
+		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
 
@@ -843,10 +855,11 @@ def lookupFunction(qName: str) -> Callable:
 	return f
 
 
-def readCommonValues(self: SchemaBuilder, node: JObject) -> tuple[MDStr, bool]:
+def readCommonValues(self: SchemaBuilder, node: JObject) -> tuple[MDStr, bool, bool]:
 	description = MDStr(self.optStrVal(node, 'description', ''))
 	deprecated = self.optBoolVal(node, 'deprecated', False)
-	return description, deprecated
+	allowMultilineStr = self.optBoolVal(node, 'allowMultilineStr')
+	return description, deprecated, allowMultilineStr
 
 
 def _getJsonArgType(self: SchemaBuilder, type_: JString) -> Optional[JsonArgType]:

@@ -86,7 +86,7 @@ def _enrichWithAnySchema(data: JsonData):
 			_enrichWithAnySchema(v)
 	elif dataType is JsonObject:
 		for key, prop in data.data.items():
-			prop.schema = PropertySchema(name=key, value=JSON_ANY_SCHEMA)
+			prop.schema = PropertySchema(name=key, value=JSON_ANY_SCHEMA, allowMultilineStr=None)
 			_enrichWithAnySchema(prop.value)
 
 
