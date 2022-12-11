@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import math
 import os.path
 import sys
@@ -10,8 +9,7 @@ from typing import Optional, TypeVar, Type, Callable, Mapping, Any, Generator, A
 
 from Cat.utils import Nothing, Anything
 from Cat.utils.collections_ import AddToDictDecorator
-from model.commands.argumentTypes import ArgumentType, ALL_NAMED_ARGUMENT_TYPES
-from corePlugins.json import emitter, JSON_ID
+from corePlugins.json import JSON_ID
 from corePlugins.json.core import *
 from corePlugins.json.core import ALL_NAMED_JSON_ARG_TYPES
 from base.model.parsing.bytesUtils import strToBytes
@@ -867,11 +865,13 @@ def _getJsonArgType(self: SchemaBuilder, type_: JString) -> Optional[JsonArgType
 		return ALL_NAMED_JSON_ARG_TYPES[type_.data]
 	except KeyError:
 		pass
-	try:
-		return ALL_NAMED_ARGUMENT_TYPES[type_.data]
-	except KeyError:
-		self.error(MDStr(f"Unknown JsonArgType '{type_.data}'"), span=type_.span, ctx=type_.ctx, style='warning')
-		return None
+	# from model.commands.argumentTypes import ALL_NAMED_ARGUMENT_TYPES
+	# try:
+	# TODO: maybe 	return ALL_NAMED_ARGUMENT_TYPES[type_.data]
+	# except KeyError:
+	# 	pass
+	self.error(MDStr(f"Unknown JsonArgType '{type_.data}'"), span=type_.span, ctx=type_.ctx, style='warning')
+	return None
 
 
 _toPyValueHandlers: dict[str, Callable[[SchemaBuilder, JD], Any]] = {}
@@ -906,25 +906,25 @@ def bytesFromFile(srcPath: str) -> bytes:
 		return f.read()
 
 
-class ComplexEncoder(json.JSONEncoder):
-	def default(self, obj):
-		# if isinstance(obj, JsonSchema):
-		# 	raise ValueError('ComplexEncoder JsonSchema')
-		# 	dict_ = OrderedDict((attr, getattr(obj, attr)) for st in type(obj).__mro__ for attr in getattr(st, '_fields', ()))
-		# 	dict_['$type'] = obj.typeName
-		# 	dict_.move_to_end('$type', False)
-		# 	return dict_
-		from model.datapack.datapackContents import ResourceLocationSchema
-		if isinstance(obj, (JsonArgType, ResourceLocationSchema, ArgumentType)):
-			return obj.name
-		# Let the base class default method raise the TypeError
-		return json.JSONEncoder.default(self, obj)
-
-
-def emitSchema(schema: JsonSchema) -> str:
-	structure = buildJsonStructure(schema)
-	text = emitter.emitJson(structure, cls=ComplexEncoder, indent=2)
-	return text
+# class ComplexEncoder(json.JSONEncoder):
+# 	def default(self, obj):
+# 		# if isinstance(obj, JsonSchema):
+# 		# 	raise ValueError('ComplexEncoder JsonSchema')
+# 		# 	dict_ = OrderedDict((attr, getattr(obj, attr)) for st in type(obj).__mro__ for attr in getattr(st, '_fields', ()))
+# 		# 	dict_['$type'] = obj.typeName
+# 		# 	dict_.move_to_end('$type', False)
+# 		# 	return dict_
+# 		from model.datapack.datapackContents import ResourceLocationSchema
+# 		if isinstance(obj, (JsonArgType, ResourceLocationSchema, ArgumentType)):
+# 			return obj.name
+# 		# Let the base class default method raise the TypeError
+# 		return json.JSONEncoder.default(self, obj)
+#
+#
+# def emitSchema(schema: JsonSchema) -> str:
+# 	structure = buildJsonStructure(schema)
+# 	text = emitter.emitJson(structure, cls=ComplexEncoder, indent=2)
+# 	return text
 
 
 def traverse(obj, memo: dict[int, JsonSchema], onHasMemo: Callable[[JsonSchema], Any], *, skipMemoCheck: bool = False):

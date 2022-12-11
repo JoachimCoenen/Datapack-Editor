@@ -1,12 +1,12 @@
 """
 for Minecraft version 1.17
 """
-from model.commands.argumentTypes import *
-from model.data.mcVersions import registerMCVersion, MCVersion, Gamerule
-from model.data.mcd import fillFromMinecraftData
-from model.data.v1_17.commands import fillCommandsFor1_17
-from model.data.v1_17.generatedBlockStates import BLOCK_STATES_BY_BLOCK
-from model.datapack.datapackContents import ResourceLocation
+from corePlugins.mcFunction.argumentTypes import *
+from corePlugins.mcFunctionSchemaTEMP.mcVersions import registerMCVersion, MCVersion, Gamerule
+from corePlugins.mcFunctionSchemaTEMP.mcd import fillFromMinecraftData
+# from model.data.v1_17.commands import fillCommandsFor1_17
+from corePlugins.mcFunctionSchemaTEMP.generatedBlockStates1_17 import BLOCK_STATES_BY_BLOCK
+from corePlugins.datapack.datapackContents import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes
 
 
@@ -2038,8 +2038,8 @@ version1_17 = MCVersion(
 	blockStates=BLOCK_STATES_BY_BLOCK,
 	gamerules=GAMERULES,
 
-	commands={},
+	# commands={},
 )
 
-fillCommandsFor1_17(version1_17)
+# fillCommandsFor1_17(version1_17)
 fillFromMinecraftData(version1_17)

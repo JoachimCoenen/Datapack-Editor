@@ -6,20 +6,16 @@ from PyQt5.QtWidgets import QWidget
 
 from Cat.utils import escapeForXml, Decorator
 from Cat.utils.profiling import logError
-from model.commands.argumentTypes import LiteralsArgumentType, ArgumentType
-from model.commands.command import *
-from model.commands.stringReader import StringReader
-from model.commands.utils import CommandSyntaxError
+from base.model.parsing.contextProvider import ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
+from corePlugins.mcFunction.argumentTypes import LiteralsArgumentType, ArgumentType
+from corePlugins.mcFunction.command import *
+from corePlugins.mcFunction.stringReader import StringReader
+from corePlugins.mcFunction.utils import CommandSyntaxError
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.pathUtils import FilePath
 from base.model.utils import Position, Span, GeneralError, MDStr, formatAsError
 
 
-@registerContextProvider(MCFunction)
-@registerContextProvider(ParsedComment)
-@registerContextProvider(ParsedCommand)
-@registerContextProvider(ParsedArgument)
-@registerContextProvider(CommandPart)
 class CommandCtxProvider(ContextProvider[CommandPart]):
 
 	def getBestMatch(self, pos: Position) -> Match[CommandPart]:
@@ -49,12 +45,41 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 
 	def validateTree(self, errorsIO: list[GeneralError]) -> None:
 		if isinstance(self.tree, MCFunction):
-			from model.commands.validator import checkMCFunction
+			from corePlugins.mcFunction.validator import checkMCFunction
 			errorsIO += checkMCFunction(self.tree)
 		elif isinstance(self.tree, ParsedCommand):
-			from model.commands.validator import validateCommand
+			from corePlugins.mcFunction.validator import validateCommand
 			validateCommand(self.tree, errorsIO=cast(list, errorsIO))
 		pass  # TODO: validateTree for command
+
+	def _getCommandSuggestions(self) -> Suggestions:
+		schema = self.tree.schema
+		if isinstance(schema, MCFunctionSchema):
+			return [cmd.name + ' ' for cmd in schema.commands.values()]
+
+		tree = self.tree
+		while (prev := tree.prev) is not None:
+			tree = prev
+
+		schema = self.tree.schema
+		if isinstance(schema, MCFunctionSchema):
+			return [cmd.name + ' ' for cmd in schema.commands.values()]
+		return []
+
+	def _getNextKeywords(self, nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position, replaceCtx: str) -> list[str]:
+		result = []
+		for nx in nexts:
+			if isinstance(nx, KeywordSchema):
+				result.append(nx.name + ' ')
+			elif isinstance(nx, ArgumentSchema):
+				handler = getArgumentContext(nx.type)
+				if handler is not None:
+					result += handler.getSuggestions2(nx, node, pos, replaceCtx)
+			elif nx is COMMANDS_ROOT:
+				result += self._getCommandSuggestions()
+				# from sessionOld.session import getSession
+				# result += [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
+		return result
 
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
 		match = self.getBestMatch(pos)
@@ -63,10 +88,10 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 		if hit is not None:
 			before = hit.prev
 		if before is not None:
-			return _getNextKeywords(getNextSchemas(before), hit, pos, replaceCtx)
+			return self._getNextKeywords(getNextSchemas(before), hit, pos, replaceCtx)
 
-		from sessionOld.session import getSession
-		return [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
+		return self._getCommandSuggestions()
+
 
 	def getCallTips(self, pos: Position) -> list[str]:
 		match = self.getBestMatch(pos)
@@ -130,21 +155,6 @@ def _getBestMatch(tree: CommandPart, pos: Position, match: Match) -> None:
 			break
 
 		child = child.next
-
-
-def _getNextKeywords(nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position, replaceCtx: str) -> list[str]:
-	result = []
-	for nx in nexts:
-		if isinstance(nx, KeywordSchema):
-			result.append(nx.name + ' ')
-		elif isinstance(nx, ArgumentSchema):
-			handler = getArgumentContext(nx.type)
-			if handler is not None:
-				result += handler.getSuggestions2(nx, node, pos, replaceCtx)
-		elif nx is COMMANDS_ROOT:
-			from sessionOld.session import getSession
-			result += [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
-	return result
 
 
 def _getCallTipsFromHit(hit: CommandPart, pos: Position) -> Optional[list[CommandPartSchema]]:

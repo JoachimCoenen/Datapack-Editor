@@ -2,6 +2,7 @@ import re
 from typing import Optional, final
 
 from Cat.utils.collections_ import Stack
+from base.model.parsing.bytesUtils import DIGITS, ASCII_LETTERS, JAVA_WHITESPACES, JAVA_WHITESPACES_SINGLE_BYTE, JAVA_WHITESPACES_THREE_BYTES, DIGITS_RANGE
 from base.model.utils import Position, Span
 
 Char = bytes
@@ -418,7 +419,3 @@ class StringReader:
 __all__ = [
 	'StringReader'
 ]
-
-
-
-

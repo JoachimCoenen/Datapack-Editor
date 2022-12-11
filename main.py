@@ -112,10 +112,14 @@ def loadCorePlugins():
 
 	from corePlugins import json
 	from corePlugins import nbt
+	from corePlugins import mcFunction
+	from corePlugins import mcFunctionSchemaTEMP
 	from corePlugins import datapack
 
 	json.initPlugin()
 	nbt.initPlugin()
+	mcFunction.initPlugin()
+	mcFunctionSchemaTEMP.initPlugin()
 	datapack.initPlugin()
 	#
 	# from model import json, commands, nbt

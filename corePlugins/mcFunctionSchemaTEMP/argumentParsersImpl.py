@@ -1,21 +1,17 @@
 from typing import Optional
 
-from model.commands.command import ArgumentSchema
-from model.commands.commandContext import makeParsedArgument
-from model.commands.snbt import parseNBTTag
-from model.commands.utils import CommandSyntaxError
-from model.commands.command import ParsedArgument
-from model.commands.stringReader import StringReader
-from model.datapack.datapackContents import ResourceLocationSchema, ResourceLocationNode
-from model.nbt.tags import NBTTag, CompoundTag
+from corePlugins.mcFunction.command import ArgumentSchema
+from corePlugins.mcFunction.commandContext import makeParsedArgument
+from corePlugins.mcFunction.snbt import parseNBTTag
+from corePlugins.mcFunction.utils import CommandSyntaxError
+from corePlugins.mcFunction.command import ParsedArgument
+from corePlugins.mcFunction.stringReader import StringReader
+from corePlugins.datapack.datapackContents import ResourceLocationSchema, ResourceLocationNode
+from corePlugins.nbt.tags import NBTTag, CompoundTag
 from base.model.parsing.contextProvider import Suggestions
 from base.model.pathUtils import FilePath
-from model.resourceLocationContext import getResourceLocationContext
+# from model.resourceLocationContext import getResourceLocationContext
 from base.model.utils import Position
-
-
-def _init():
-	pass  # do not remove!
 
 
 def _parse2dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
@@ -98,8 +94,9 @@ def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePa
 
 
 def _parseResourceLocation(sr: StringReader, ai: ArgumentSchema, schema: ResourceLocationSchema) -> Optional[ParsedArgument]:
-	rlc = getResourceLocationContext(schema.name)
-	allowTag = rlc.allowTags
+	# todo: rlc = getResourceLocationContext(schema.name)
+	# allowTag = rlc.allowTags
+	allowTag = True  # = rlc.allowTags
 	location = sr.readResourceLocation(allowTag=allowTag)
 	location = ResourceLocationNode.fromString(location, sr.currentSpan, schema)
 	return makeParsedArgument(sr, ai, value=location)

@@ -4,9 +4,9 @@ from nbtlib import Parser, tokenize, Int, String, List, Compound, Path, ListInde
 from nbtlib.path import can_be_converted_to_int, NamedKey, extend_accessors
 
 from Cat.utils import escapeForXml
-from model.commands.stringReader import StringReader
-from model.commands.utils import CommandSyntaxError
-from model.nbt.tags import NBTTag, NBTTagSchema
+from corePlugins.mcFunction.stringReader import StringReader
+from corePlugins.mcFunction.utils import CommandSyntaxError
+from corePlugins.nbt.tags import NBTTag, NBTTagSchema
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import parseNPrepare
 from base.model.pathUtils import FilePath

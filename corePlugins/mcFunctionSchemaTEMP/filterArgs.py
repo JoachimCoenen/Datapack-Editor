@@ -8,12 +8,12 @@ from typing import Optional
 
 from PyQt5.QtWidgets import QWidget
 
-from model.commands.argumentTypes import *
-from model.commands.argumentValues import FilterArguments, FilterArgument
-from model.commands.command import ArgumentSchema, ParsedArgument, CommandPart
-from model.commands.commandContext import getArgumentContext, missingArgumentParser, makeParsedArgument
-from model.commands.stringReader import StringReader
-from model.commands.utils import CommandSyntaxError
+from corePlugins.mcFunction.argumentTypes import *
+from corePlugins.mcFunction.argumentValues import FilterArguments, FilterArgument
+from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
+from corePlugins.mcFunction.commandContext import getArgumentContext, missingArgumentParser, makeParsedArgument
+from corePlugins.mcFunction.stringReader import StringReader
+from corePlugins.mcFunction.utils import CommandSyntaxError
 from model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import Suggestions, Match

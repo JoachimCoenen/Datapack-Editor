@@ -1,23 +1,14 @@
 from dataclasses import replace
-from typing import Sequence, TYPE_CHECKING, Optional
+from typing import Sequence, Optional
 
-from model.commands.argumentTypes import *
-from model.commands.command import formatPossibilities, CommandPartSchema, TERMINAL, KeywordSchema, SwitchSchema, ArgumentSchema, CommandSchema, getNextSchemas
-from model.commands.commandContext import getArgumentContext
-from model.commands.utils import CommandSemanticsError
-from model.commands.command import MCFunction, CommandPart, ParsedCommand
+from corePlugins.mcFunction.argumentTypes import *
+from corePlugins.mcFunction.command import formatPossibilities, CommandPartSchema, TERMINAL, KeywordSchema, SwitchSchema, ArgumentSchema, CommandSchema, getNextSchemas
+from corePlugins.mcFunction.commandContext import getArgumentContext
+from corePlugins.mcFunction.utils import CommandSemanticsError
+from corePlugins.mcFunction.command import MCFunction, CommandPart, ParsedCommand
 from model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.utils import Span, Message, wrapInMarkdownCode
-
-if TYPE_CHECKING:
-	from sessionOld.session import Session
-
-	def getSession() -> Session:
-		pass
-else:
-	def getSession():
-		pass
 
 
 UNKNOWN_ARGUMENT_MSG = Message("Unknown argument: expected {0}, but got: {1}", 2)

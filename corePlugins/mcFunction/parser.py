@@ -3,18 +3,15 @@ from typing import Optional, Sequence, Union
 
 from Cat.utils import escapeForXml
 from Cat.utils.collections_ import Stack
-from model.commands.command import CommandSchema, KeywordSchema, ArgumentSchema, CommandPartSchema, TERMINAL, COMMANDS_ROOT, SwitchSchema, MCFunctionSchema
-from model.commands.utils import CommandSyntaxError, EXPECTED_ARGUMENT_SEPARATOR_MSG
-from model.commands.command import MCFunction, ParsedComment, ParsedCommand, ParsedArgument
-from model.commands.stringReader import StringReader
-from base.model.utils import Span, Position, Message, LanguageId
+from corePlugins.mcFunction.command import CommandSchema, KeywordSchema, ArgumentSchema, CommandPartSchema, TERMINAL, COMMANDS_ROOT, SwitchSchema, MCFunctionSchema
+from corePlugins.mcFunction.utils import CommandSyntaxError, EXPECTED_ARGUMENT_SEPARATOR_MSG
+from corePlugins.mcFunction.command import MCFunction, ParsedComment, ParsedCommand, ParsedArgument
+from corePlugins.mcFunction.stringReader import StringReader
+from base.model.utils import Span, Position, Message
 
-from . import argumentParsersImpl
 from .commandContext import makeCommandSyntaxError, makeParsedArgument, getArgumentContext, missingArgumentContext
-from base.model.parsing import bytesToStr, strToBytes
-from base.model.parsing import ParserBase, registerParser
-
-argumentParsersImpl._init()  # do not remove!
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes
+from base.model.parsing.parser import ParserBase
 
 
 UNKNOWN_COMMAND_MSG = Message("Unknown Command '`{0}`'", 1)
@@ -27,8 +24,6 @@ UNKNOWN_COMMAND_MSG = Message("Unknown Command '`{0}`'", 1)
 # 	return mcFunction, parser.errors
 
 
-@registerParser(LanguageId('MCCommand'))
-@registerParser(LanguageId('MCFunction'))
 @dataclass
 class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 	# def __init__(self, commands: dict[str, CommandSchema], source: str):

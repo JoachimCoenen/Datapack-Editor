@@ -2,12 +2,12 @@ import re
 from typing import Optional
 
 from Cat.utils.collections_ import OrderedMultiDict
-from model.commands.argumentTypes import *
-from model.commands.command import ArgumentSchema, ParsedArgument
-from model.commands.commandContext import argumentContext, ArgumentContext, getArgumentContext, makeParsedArgument
-from model.commands.filterArgs import FilterArgumentInfo
-from model.commands.stringReader import StringReader
-from model.commands.utils import CommandSyntaxError
+from corePlugins.mcFunction.argumentTypes import *
+from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
+from corePlugins.mcFunction.commandContext import argumentContext, ArgumentContext, getArgumentContext, makeParsedArgument
+from corePlugins.mcFunction.stringReader import StringReader
+from corePlugins.mcFunction.utils import CommandSyntaxError
+from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
 from model.messages import *
 from base.model.parsing.bytesUtils import strToBytes, bytesToStr
 from base.model.pathUtils import FilePath

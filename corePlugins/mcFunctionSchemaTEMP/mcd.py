@@ -1,9 +1,9 @@
 import minecraft_data
 
-from model.commands.argumentTypes import *
-from model.commands.filterArgs import FilterArgumentInfo
-from model.data.mcVersions import MCVersion
-from model.datapack.datapackContents import ResourceLocation
+from corePlugins.mcFunction.argumentTypes import *
+from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
+from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion
+from corePlugins.datapack.datapackContents import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes
 
 

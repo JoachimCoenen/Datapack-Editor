@@ -29,7 +29,7 @@ class JsonStyler(CatStyler[JsonNode]):
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT'), LanguageId('MCCommand')]
+		return [LanguageId('SNBT'), LanguageId('MCFunction')]
 
 	@classmethod
 	def language(cls) -> LanguageId:

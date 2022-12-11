@@ -4,10 +4,9 @@ from copy import copy
 from dataclasses import dataclass, Field, fields, is_dataclass
 from typing import Optional
 
-from model.commands.argumentTypes import ArgumentType
-from model.commands.command import CommandSchema
-from model.commands.filterArgs import FilterArgumentInfo
-from model.datapack.datapackContents import ResourceLocation
+from corePlugins.mcFunction.argumentTypes import ArgumentType
+from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
+from corePlugins.datapack.datapackContents import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes
 
 
@@ -43,7 +42,7 @@ class MCVersion:
 	blockStates: dict[ResourceLocation, list[FilterArgumentInfo]]
 	gamerules: list[Gamerule]
 
-	commands: dict[bytes, CommandSchema]
+	# commands: dict[bytes, CommandSchema]
 
 	def getBlockStatesDict(self, blockID: ResourceLocation) -> dict[bytes, FilterArgumentInfo]:
 		arguments = self.blockStates.get(blockID)

@@ -4,26 +4,32 @@ from typing import Optional, Iterable, Any
 
 from PyQt5.QtWidgets import QWidget
 
-from model.commands.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
-from model.commands.argumentTypes import *
-from model.commands.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
-from model.commands.command import ArgumentSchema, ParsedArgument, CommandPart
-from model.commands.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser, getArgumentContext
-from model.commands.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, \
-	validateFilterArgs
-from model.commands.snbt import parseNBTPath
-from model.commands.stringReader import StringReader
-from model.commands.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
-from model.commands.utils import CommandSyntaxError, CommandSemanticsError
-from model.datapack.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
-from model.messages import *
-from model.nbt.tags import NBTTagSchema
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
+from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
+from base.model.session import getSession
 from base.model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
-from sessionOld.session import getSession
+from corePlugins.datapack.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
+from corePlugins.mcFunction.argumentTypes import *
+from corePlugins.mcFunction.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
+from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
+from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser, getArgumentContext
+from corePlugins.mcFunction.snbt import parseNBTPath
+from corePlugins.mcFunction.stringReader import StringReader
+from corePlugins.mcFunction.utils import CommandSyntaxError, CommandSemanticsError
+from corePlugins.mcFunctionSchemaTEMP.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
+from corePlugins.mcFunctionSchemaTEMP.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, \
+	FilterArgumentInfo, validateFilterArgs
+from corePlugins.mcFunctionSchemaTEMP.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
+from corePlugins.nbt.tags import NBTTagSchema
+from model.messages import *
+# from sessionOld.session import getSession
+
+
+def initPlugin() -> None:
+	pass
 
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
@@ -381,7 +387,7 @@ class ColumnPosHandler(ArgumentContext):
 @argumentContext(MINECRAFT_COMPONENT.name)
 class ComponentHandler(ParsingHandler):
 	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
-		return getSession().datapackData.jsonSchemas.get('minecraft:raw_json_text')
+		return GLOBAL_SCHEMA_STORE.get2('minecraft:raw_json_text', LanguageId('JSON'))
 
 	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
 		return LanguageId('JSON')

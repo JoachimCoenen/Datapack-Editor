@@ -6,7 +6,7 @@ from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from Cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, StyleIdEnum
 from base.model.utils import LanguageId
-from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors
+from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors, StyleFont
 
 enabled = True
 
@@ -84,39 +84,51 @@ def lighten(fg, lightness=.975):
 	return QColor.fromHslF(fg.hueF(), fg.saturationF(), lightness)
 
 
-# @languageStyles(LanguageId('MCCommand'))
-# def addMCCommandScheme():
-# 	from gui.lexers.mcFunctionStyler import StyleId
-# 	styles = {
-# 		StyleId.Default.name:        Style(),
-# 		StyleId.Command.name:        Style(foreground=QColor(0x88, 0x0a, 0xe8)),
-# 		StyleId.String.name:         Style(foreground=QColor(0x7f, 0x00, 0x00)),
-# 		StyleId.Number.name:         Style(foreground=QColor(0x00, 0x7f, 0x7f)),
-# 		StyleId.Constant.name:       Style(foreground=QColor(0x00, 0x00, 0xBf)),
-# 		StyleId.TargetSelector.name: Style(foreground=QColor(0x00, 0x7f, 0x7f)),
-# 		StyleId.Operator.name:       Style(foreground=QColor(0x00, 0x00, 0x00)),
-# 		StyleId.Keyword.name:        Style(foreground=QColor(0x00, 0x00, 0x00)),
-#
-# 		StyleId.Complex.name:        Style(foreground=QColor(0x7f, 0x7f, 0x00)),
-#
-# 		StyleId.Comment.name:        Style(foreground=QColor(0x7f, 0x7f, 0x7f), font=StyleFont(italic=True)),
-# 		StyleId.Error.name:          Style(foreground=QColor(0xff, 0x00, 0x00)),
-# 	}
-#
-# 	assert len(styles) == len(StyleId)
-#
-# 	innerLanguageStyleModifiers = {
-# 		LanguageId('JSON'): StylesModifier(
-# 			modifier=Style(background=lighten(styles[StyleId.String.name].foreground, 0.95)),
-# 			# default=styles[StyleId.String.name],
-# 		),
-# 		LanguageId('SNBT'): StylesModifier(
-# 			modifier=Style(background=lighten(styles[StyleId.Complex.name].foreground, 0.925)),
-# 			# default=styles[StyleId.String.name],
-# 		),
-# 	}
-#
-# 	return Styles(styles, innerLanguageStyleModifiers)
+@languageStyles(LanguageId('MCFunction'))
+def addMCCommandScheme():
+	class StyleId(StyleIdEnum):
+		Default = DEFAULT_STYLE_ID
+		Command = DEFAULT_STYLE_ID + 1
+		String = DEFAULT_STYLE_ID + 2
+		Number = DEFAULT_STYLE_ID + 3
+		Constant = DEFAULT_STYLE_ID + 4
+		TargetSelector = DEFAULT_STYLE_ID + 5
+		Operator = DEFAULT_STYLE_ID + 6
+		Keyword = DEFAULT_STYLE_ID + 7
+
+		Complex = DEFAULT_STYLE_ID + 8
+		Comment = DEFAULT_STYLE_ID + 9
+		Error = DEFAULT_STYLE_ID + 10
+	styles = {
+		StyleId.Default.name:        Style(),
+		StyleId.Command.name:        Style(foreground=QColor(0x88, 0x0a, 0xe8)),
+		StyleId.String.name:         Style(foreground=QColor(0x7f, 0x00, 0x00)),
+		StyleId.Number.name:         Style(foreground=QColor(0x00, 0x7f, 0x7f)),
+		StyleId.Constant.name:       Style(foreground=QColor(0x00, 0x00, 0xBf)),
+		StyleId.TargetSelector.name: Style(foreground=QColor(0x00, 0x7f, 0x7f)),
+		StyleId.Operator.name:       Style(foreground=QColor(0x00, 0x00, 0x00)),
+		StyleId.Keyword.name:        Style(foreground=QColor(0x00, 0x00, 0x00)),
+
+		StyleId.Complex.name:        Style(foreground=QColor(0x7f, 0x7f, 0x00)),
+
+		StyleId.Comment.name:        Style(foreground=QColor(0x7f, 0x7f, 0x7f), font=StyleFont(italic=True)),
+		StyleId.Error.name:          Style(foreground=QColor(0xff, 0x00, 0x00)),
+	}
+
+	assert len(styles) == len(StyleId)
+
+	innerLanguageStyleModifiers = {
+		LanguageId('JSON'): StylesModifier(
+			modifier=Style(background=lighten(styles[StyleId.String.name].foreground, 0.95)),
+			# default=styles[StyleId.String.name],
+		),
+		LanguageId('SNBT'): StylesModifier(
+			modifier=Style(background=lighten(styles[StyleId.Complex.name].foreground, 0.925)),
+			# default=styles[StyleId.String.name],
+		),
+	}
+
+	return Styles(styles, innerLanguageStyleModifiers)
 
 
 @languageStyles(LanguageId('JSON'))
@@ -141,7 +153,7 @@ def addJsonScheme():
 	}
 
 	innerLanguageStyleModifiers = {
-		LanguageId('MCCommand'): StylesModifier(
+		LanguageId('MCFunction'): StylesModifier(
 			modifier=Style(background=lighten(styles[StyleId.boolean.name].foreground, 0.95)),
 			default=styles[StyleId.string.name],
 		),

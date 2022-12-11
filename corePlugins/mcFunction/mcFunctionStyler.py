@@ -4,12 +4,13 @@ from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
 from typing import Type, Optional, ClassVar
 
-from Cat.utils import Decorator
+from Cat.utils import Decorator, first
 from Cat.utils.collections_ import AddToDictDecorator
-from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum, StylingFunc
-from model.commands.argumentTypes import *
-from model.commands.argumentValues import ItemStack
-from model.commands.command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
+from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StylingFunc
+from corePlugins.mcFunction import MC_FUNCTION_ID
+from corePlugins.mcFunction.argumentTypes import *
+from corePlugins.mcFunction.argumentValues import ItemStack, BlockState, TargetSelector
+from corePlugins.mcFunction.command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
 from base.model.utils import LanguageId
 
 
@@ -109,7 +110,6 @@ _argumentStylers: dict[str, Type[ArgumentStyler]] = {}
 argumentStyler = Decorator(AddToDictDecorator(_argumentStylers))
 
 
-@registerStyler
 @dataclass
 class MCCommandStyler(CatStyler[CommandPart]):
 
@@ -129,7 +129,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 
 	@classmethod
 	def language(cls) -> LanguageId:
-		return LanguageId('MCCommand')
+		return MC_FUNCTION_ID
 
 	def __post_init__(self):
 		super(MCCommandStyler, self).__post_init__()
@@ -161,37 +161,41 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		return comment.span.end.index
 
 	def styleCommand(self, command: ParsedCommand) -> int:
-		argument: CommandPart = command
-		span = command.span.slice
-		while argument is not None:
-			if isinstance(argument, ParsedCommand):
-				style = StyleId.Command
-				span = slice(argument.start.index, argument.start.index + len(argument.name))
-			else:
-				argument: ParsedArgument
-				span = argument.span.slice
-				schema = argument.schema
-				if isinstance(schema, KeywordSchema):
-					style = StyleId.Keyword
-				elif isinstance(schema, ArgumentSchema):
-					if isinstance(schema.type, LiteralsArgumentType):
-						style = StyleId.Constant
-					else:
-						typeName = schema.typeName
-						# style = _allArgumentTypeStyles.get(typeName, StyleId.Error)
-						styler = self.argumentStylers.get(typeName, None)
-						if styler is None:
-							style = StyleId.Error
-						else:
-							styler.style(argument)
-							argument = argument.next
-							continue
-				else:
-					style = StyleId.Error
-			self.setStyling(span, style.value + self.offset)
+		return self.styleArguments(command)
 
+	def styleArguments(self, argument: CommandPart) -> int:
+		span = argument.span.slice
+		while argument is not None:
+			span = self.styleArgument(argument)
 			argument = argument.next
 		return span.stop
+
+	def styleArgument(self, argument: CommandPart) -> slice:
+		if isinstance(argument, ParsedCommand):
+			style = StyleId.Command
+			span = slice(argument.start.index, argument.start.index + len(argument.name))
+		else:
+			argument: ParsedArgument
+			span = argument.span.slice
+			schema = argument.schema
+			if isinstance(schema, KeywordSchema):
+				style = StyleId.Keyword
+			elif isinstance(schema, ArgumentSchema):
+				if isinstance(schema.type, LiteralsArgumentType):
+					style = StyleId.Constant
+				else:
+					typeName = schema.typeName
+					# style = _allArgumentTypeStyles.get(typeName, StyleId.Error)
+					styler = self.argumentStylers.get(typeName, None)
+					if styler is None:
+						style = StyleId.Error
+					else:
+						styler.style(argument)
+						return span
+			else:
+				style = StyleId.Error
+		self.setStyling(span, style.value + self.offset)
+		return span
 
 
 def addSimpleArgumentStyler(style: StyleId, *, forArgTypes: list[ArgumentType]) -> None:
@@ -304,6 +308,7 @@ class SNBTStyler(ArgumentStyler):
 
 
 @argumentStyler(MINECRAFT_ITEM_STACK.name, forceOverride=True)
+@argumentStyler(MINECRAFT_ITEM_PREDICATE.name, forceOverride=True)
 class ItemStackStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
@@ -322,6 +327,56 @@ class ItemStackStyler(ArgumentStyler):
 			idx = self.commandStyler.styleForeignNode(value.nbt)
 			if idx == value.nbt.span.start.index:
 				self.setStyling(value.nbt.span.slice, StyleId.Complex.value + self.offset)
+
+
+@argumentStyler(MINECRAFT_BLOCK_STATE.name, forceOverride=True)
+@argumentStyler(MINECRAFT_BLOCK_PREDICATE.name, forceOverride=True)
+class BlockStateStyler(ArgumentStyler):
+	@classmethod
+	def localLanguages(cls) -> list[LanguageId]:
+		return [LanguageId('SNBT')]
+
+	def style(self, argument: ParsedArgument) -> None:
+		value: BlockState = argument.value
+		if not isinstance(value, BlockState):
+			self.setStyling(argument.span.slice, StyleId.Complex.value + self.offset)
+			return
+
+		idx = self.commandStyler.styleForeignNode(value.blockId)
+		if idx == value.blockId.span.start.index:
+			self.setStyling(value.blockId.span.slice, StyleId.Complex.value + self.offset)
+		if value.states:
+			for name, state in value.states.items():
+				self.setStyling(state.key.span.slice, StyleId.Complex.value + self.offset)
+				if state.value is not None:
+					self.commandStyler.styleArguments(state.value)
+		if value.nbt is not None:
+			idx = self.commandStyler.styleForeignNode(value.nbt)
+			if idx == value.nbt.span.start.index:
+				self.setStyling(value.nbt.span.slice, StyleId.Complex.value + self.offset)
+
+
+@argumentStyler(MINECRAFT_ENTITY.name, forceOverride=True)
+@argumentStyler(MINECRAFT_GAME_PROFILE.name, forceOverride=True)
+@argumentStyler(MINECRAFT_SCORE_HOLDER.name, forceOverride=True)
+class EntityStyler(ArgumentStyler):
+	@classmethod
+	def localLanguages(cls) -> list[LanguageId]:
+		return [LanguageId('SNBT')]
+
+	def style(self, argument: ParsedArgument) -> None:
+		value: TargetSelector = argument.value
+		if not isinstance(value, TargetSelector):
+			self.setStyling(argument.span.slice, StyleId.TargetSelector.value + self.offset)
+			return
+
+		if value.arguments:
+			slice1 = slice(argument.span.start.index, first(value.arguments.values()).key.span.start.index)
+			self.setStyling(slice1, StyleId.Complex.value + self.offset)
+			for name, state in value.arguments.items():
+				self.setStyling(state.key.span.slice, StyleId.TargetSelector.value + self.offset)
+				if state.value is not None:
+					self.commandStyler.styleArguments(state.value)
 
 
 

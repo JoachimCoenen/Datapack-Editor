@@ -71,6 +71,11 @@ class Session(SerializableDataclass):
 	def showAndLogWarning(e: Optional[Exception], title: str = 'Warning') -> None:
 		GLOBAL_SIGNALS.onWarning.emit(e, title)
 
+	@property
+	def minecraftData(self):
+		# todo: remove the 'minecraftData' property and build actual version system.
+		from corePlugins.mcFunctionSchemaTEMP.mcVersions import getMCVersion
+		return getMCVersion('1.17')
 
 __session = Session()
 

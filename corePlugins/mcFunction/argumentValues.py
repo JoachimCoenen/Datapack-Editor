@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Optional
 
 from Cat.utils.collections_ import OrderedMultiDict
-from model.commands.command import ParsedArgument, CommandPart
-from model.datapack.datapackContents import ResourceLocationNode
-from model.nbt.tags import CompoundTag
+from corePlugins.mcFunction.command import ParsedArgument, CommandPart
+from corePlugins.datapack.datapackContents import ResourceLocationNode
+from corePlugins.nbt.tags import CompoundTag
 
 
 @dataclass

@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from typing import TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar, Collection
 
 from Cat.utils import Singleton
-from model.commands.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
+from corePlugins.mcFunction import MC_FUNCTION_ID
+from corePlugins.mcFunction.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.tree import Schema, Node
 from base.model.utils import Position, LanguageId, Span
@@ -24,7 +25,7 @@ class CommandPartSchema(Schema, Named, ABC):
 	description: str = field(default='')
 	next: Sequence[CommandPartSchema] = field(default_factory=list)
 
-	language: ClassVar[LanguageId] = 'MCCommand'
+	language: ClassVar[LanguageId] = MC_FUNCTION_ID
 
 
 @dataclass
@@ -156,7 +157,7 @@ class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPar
 	_next: Optional[CommandPart] = field(default=None, init=False)
 	_prev: Optional[CommandPart] = field(default=None, init=False, repr=False)
 
-	language: ClassVar[LanguageId] = 'MCCommand'
+	language: ClassVar[LanguageId] = MC_FUNCTION_ID
 
 	@property
 	def next(self) -> Optional[CommandPart]:
