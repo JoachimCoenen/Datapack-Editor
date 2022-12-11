@@ -367,7 +367,7 @@ def labelMaker(data: FilesTreeItem, column: int) -> str:
 
 
 def iconMaker(data: FilesTreeItem, column: int) -> QIcon:
-	return data.icon
+	return data.icon if column == 0 else None
 	# if data.isFile:
 	# 	return icons.file_code
 	# elif data.isArchive:

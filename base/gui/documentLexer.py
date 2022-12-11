@@ -208,6 +208,8 @@ class DocumentLexerBase2(DocumentLexerBase):  # this is an ABC, but there would 
 
 		for innerLanguage, styler in styler.innerStylers.items():
 			innerStyles = styles.getInnerLanguageStyles(innerLanguage)
+			if innerStyles is None:
+				continue
 			for name, styleId in styler.localStyles.items():
 				style = innerStyles.get(name)
 				if style is None:
