@@ -17,7 +17,7 @@ from base.model.documents import TextDocument, Document, ParsedDocument
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.utils import LanguageId
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, drawCodeField
-from settings import applicationSettings
+from base.model.applicationSettings import applicationSettings
 
 TDoc = TypeVar('TDoc', bound=Document)
 

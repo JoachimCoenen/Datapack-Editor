@@ -27,8 +27,8 @@ from gui.spotlightSearch import SpotlightSearchGui
 from base.model.pathUtils import FilePath
 from gui.datapackEditorGUI import DatapackEditorGUI
 from base.plugin import PLUGIN_SERVICE, SideBarTabGUIFunc, ToolBtnFunc
-from settings import applicationSettings
-from settings.settingsDialog import SettingsDialog
+from base.model.applicationSettings import applicationSettings
+from base.gui.settingsDialog import SettingsDialog
 
 
 def frange(a: float, b: float, jump: float, *, includeLAst: bool = False):

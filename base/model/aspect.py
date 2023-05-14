@@ -31,15 +31,18 @@ class AspectDict(Generic[_TAspect]):
 
 	def _add(self, aspectCls: Type[_TAspect2]) -> Optional[_TAspect2]:
 		"""blindly adds an aspect, possibly overwriting another one. It check the type tho"""
-		assert issubclass(aspectCls, getattr(self, '_type'))  # don't confuse the pycharm type checker
-		aspect = aspectCls()
-		self._aspects[aspectCls.getAspectType()] = aspect
-		return aspect
+		return self.replace(aspectCls, aspectCls())
 
 	def add(self, aspectCls: Type[_TAspect2]) -> _TAspect2:
 		if self._get(aspectCls) is not None:
 			raise ValueError(f"Aspect of type {aspectCls.getAspectType()!r} already assigned.")
 		return self._add(aspectCls)
+
+	def replace(self, aspectCls: Type[_TAspect2], aspect: _TAspect2) -> _TAspect2:
+		assert issubclass(aspectCls, getattr(self, '_type'))  # don't confuse the pycharm type checker
+		assert isinstance(aspect, aspectCls)
+		self._aspects[aspectCls.getAspectType()] = aspect
+		return aspect
 
 	def get(self, aspectCls: Type[_TAspect2]) -> Optional[_TAspect2]:
 		aspect = self._get(aspectCls)

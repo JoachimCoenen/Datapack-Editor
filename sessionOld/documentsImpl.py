@@ -69,7 +69,7 @@ class DatapackDocument(TextDocument):
 			return [WrappedError(e)]
 
 
-@RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='MCJson')
+@RegisterDocument('JSON', ext=['.json', '.mcmeta'], defaultLanguage='JSON')
 @RegisterContainer
 class JsonDocument(DatapackDocument, TextDocument):
 	"""docstring for Document"""

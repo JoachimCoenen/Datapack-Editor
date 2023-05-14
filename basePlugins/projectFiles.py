@@ -18,7 +18,7 @@ from Cat.utils import DeferredCallOnceMethod, openOrCreate
 from base.model import filesystemEvents
 from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDirSeparators, splitPath, normalizeDirSeparatorsStr, unitePath, \
 	fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, getAllFilesFromArchive
-from base.model.project.aspect import AspectType
+from base.model.aspect import AspectType
 from base.model.project.index import Index
 from base.model.project.project import Project, ProjectRoot, ProjectAspect, DependencyDescr, Root, IndexBundleAspect, AspectFeatures
 from base.model.session import getSession

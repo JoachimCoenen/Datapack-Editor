@@ -18,7 +18,7 @@ from base.model.pathUtils import FilePath
 from base.model.project.project import Root
 from base.model.session import getSession
 
-from settings import applicationSettings
+from base.model.applicationSettings import applicationSettings
 
 
 @dataclass

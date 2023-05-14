@@ -4,6 +4,7 @@ from copy import copy
 from dataclasses import dataclass, Field, fields, is_dataclass
 from typing import Optional
 
+from base.model.applicationSettings import getApplicationSettings
 from corePlugins.mcFunction.argumentTypes import ArgumentType
 from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
 from corePlugins.datapack.datapackContents import ResourceLocation

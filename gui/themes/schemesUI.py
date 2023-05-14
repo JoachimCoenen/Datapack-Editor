@@ -5,7 +5,7 @@ from Cat.Serializable import SerializableContainer
 from Cat.icons import icons
 from Cat.utils import showInFileSystem
 from gui.themes import theme
-from settings._applicationSettings import ColorSchemePD
+from base.model.applicationSettings import ColorSchemePD
 
 
 @registerDecoratorDrawer(ColorSchemePD)

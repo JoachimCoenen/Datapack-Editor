@@ -1,4 +1,5 @@
 import copy
+from dataclasses import fields
 from typing import NamedTuple, Optional
 
 from PyQt5.QtGui import QIcon
@@ -7,12 +8,12 @@ from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
-from Cat.Serializable import SerializableContainer
 
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
-from settings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings
-from settings._applicationSettings import AboutQt
+from Cat.Serializable.dataclassJson import SerializableDataclass, getCatMeta
+from base.model.applicationSettings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings
+from base.model.applicationSettings import AboutQt
 
 _qtIcon: Optional[QIcon] = None
 
@@ -31,7 +32,7 @@ def aboutQt(gui: AutoGUI, v: AboutQt, **kwargs) -> AboutQt:
 
 
 class _Field(NamedTuple):
-	value: SerializableContainer
+	value: SerializableDataclass
 	label: str
 	toolTip: Optional[str]
 
@@ -39,10 +40,15 @@ class _Field(NamedTuple):
 def _childrenMaker(data: _Field) -> list[_Field]:
 	value = data.value
 	children = [
-		_Field(value=v, label=prop.label_, toolTip=prop.kwargs.get('tip', None))
-		for prop, v in ((p, p.get(value)) for p in value.getSerializedProperties())
-		if isinstance(v, SerializableContainer)
+		_Field(value=v, label=getCatMeta(prop, 'label', prop.name), toolTip=getCatMeta(prop, 'tip', None))
+		for prop, v in ((f, getattr(value, f.name)) for f in fields(value))
+		if isinstance(v, SerializableDataclass)
 	]
+	if isinstance(value, ApplicationSettings):
+		children += [
+			_Field(value=aspect, label=aspect.getAspectType(), toolTip=None)
+			for aspect in value.aspects
+		]
 	return children
 
 
@@ -50,7 +56,7 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=AutoGUI, parent=parent)
 		self._settingsCopy: ApplicationSettings = applicationSettings
-		self._selectedPage: Optional[SerializableContainer] = None
+		self._selectedPage: Optional[SerializableDataclass] = None
 		self.setWindowTitle('Settings')
 		self.disableContentMargins = True
 		self.disableSidebarMargins = True
@@ -65,7 +71,7 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 			MessageBoxButton.Apply          : lambda b: self.apply(),
 			MessageBoxButton.Ok             : lambda b: self.accept(),
 			MessageBoxButton.Cancel         : lambda b: self.reject(),
-			MessageBoxButton.RestoreDefaults: lambda b: self._settingsCopy.reset() or gui.redrawGUI(),
+			# TODO: MessageBoxButton.RestoreDefaults: lambda b: self._settingsCopy.reset() or gui.redrawGUI(),
 		})
 
 	# def _mainAreaGUI(self, gui: PythonGUI, overlap: Overlap, roundedCorners: RoundedCorners):
@@ -85,13 +91,13 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 			if self._selectedPage is None:
 				gui.helpBox('Please select a category.')
 			else:
-				for prop in self._selectedPage.getSerializedProperties():
-					if isinstance(prop.decorator, pd.NoUI):
+				for field in fields(self._selectedPage):
+					if any(isinstance(d, pd.NoUI) for d in getCatMeta(field, 'decorator', [])):
 						continue
-					gui.propertyField(self._selectedPage, prop, True, enabled=True)
+					gui.propertyField(self._selectedPage, field, True, enabled=True)
 					gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer
 
-	def settingsPageSelectionGUI(self, gui: PythonGUI) -> Optional[SerializableContainer]:
+	def settingsPageSelectionGUI(self, gui: PythonGUI) -> Optional[SerializableDataclass]:
 		settings = gui.tree(
 			DataTreeBuilder(
 				_Field(value=self._settingsCopy, label='Settings', toolTip=None),

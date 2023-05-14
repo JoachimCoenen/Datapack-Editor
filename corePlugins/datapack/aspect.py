@@ -1,10 +1,13 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Callable
 
+from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
 from Cat.utils.logging_ import logWarning
+from base.model.applicationSettings import SettingsAspect, getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
-from base.model.project.aspect import AspectType
+from base.model.aspect import AspectType
 from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
@@ -108,7 +111,7 @@ DEPENDENCY_SEARCH_LOCATIONS: list[Callable[[], list[str]]] = []
 
 
 def defaultSearchLocations():
-	sl = os.path.expanduser('~/.dpe/dependencies').replace('\\', '/')  # TODO: applicationSettings.minecraft.savesLocation
+	sl = getApplicationSettings().aspects.get(DatapackSettings).dependenciesLocation
 	if sl:
 		return [sl]
 	return []
@@ -129,3 +132,47 @@ def resolveDependency(dep: DependencyDescr) -> Optional[Root]:
 			if os.path.exists(path):
 				return Root(name=dep.name, _location=normalizeDirSeparators(path))
 	return None
+
+
+ALL_DP_VERSIONS: dict[str, int] = {}
+
+
+def folderPathValidator(path: str) -> Optional[ValidatorResult]:
+	if not os.path.lexists(path):
+		return ValidatorResult('Folder not found', 'error')
+
+	if not os.path.isdir(path):
+		return ValidatorResult('Not a directory', 'error')
+
+	return None
+
+
+@dataclass()
+class DatapackSettings(SettingsAspect):
+	@classmethod
+	def getAspectType(cls) -> AspectType:
+		return DATAPACK_ASPECT_TYPE
+
+	dpVersion: str = field(
+		default='6',
+		metadata=dict(cat=dict(
+			label='Datapack Version',
+			decorators=[
+				pd.ComboBox(choices=ALL_DP_VERSIONS.keys()),
+			]
+		))
+	)
+
+	dependenciesLocation: str = field(
+		default_factory=lambda: os.path.expanduser('~/.dpe/dependencies').replace('\\', '/'),
+		metadata=dict(cat=dict(
+			kwargs=dict(
+				label="Datapack Dependencies Location",
+				tip="DPE will search in this directory to resolve dependencies",
+			),
+			decorators=[
+				pd.FolderPath(),
+				pd.Validator(folderPathValidator)
+			]
+		))
+	)

@@ -15,7 +15,7 @@ from base.model import filesystemEvents
 from base.model.session import loadSessionFromFile
 from mainWindow import MainWindow, WindowId
 from Cat.utils.profiling import Timer
-from settings import applicationSettings, saveApplicationSettings, loadApplicationSettings, AppearanceSettings
+from base.model.applicationSettings import applicationSettings, saveApplicationSettings, loadApplicationSettings, AppearanceSettings
 # from settings._applicationSettings import MinecraftSettings
 
 

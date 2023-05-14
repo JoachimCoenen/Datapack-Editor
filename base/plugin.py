@@ -9,7 +9,9 @@ from PyQt5.Qsci import QsciLexerCustom
 from Cat.CatPythonGUI.GUI.codeEditor import CodeEditorLexer
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.utils.collections_ import AddToDictDecorator
+from Cat.utils.logging_ import logError
 from base.gui.styler import registerStyler, CatStyler
+from base.model.applicationSettings import SettingsAspect, getApplicationSettings
 from base.model.documents import DocumentTypeDescription, registerDocumentTypeDescription
 from base.model.parsing.contextProvider import ContextProvider, registerContextProvider
 from base.model.parsing.parser import ParserBase, registerParser
@@ -48,6 +50,15 @@ class PluginService:
 			registerStyler(stylerCls)
 
 		plugin.initPlugin()
+
+		for settingCls in (plugin.settingsAspects() or []):
+			application_settings = getApplicationSettings()
+			application_settings.aspects.add(settingCls)
+			aspect_type = settingCls.getAspectType()
+			aspectJson = application_settings.unknownSettings.get(aspect_type)
+			if aspectJson is not None:
+				del application_settings.unknownSettings[aspect_type]
+				application_settings.loadAspectSettings(aspect_type, aspectJson, logError)
 
 	# TODO: def initializeAllPlugins(self) -> None:
 	# 	for plugin in self.activePlugins:
@@ -91,6 +102,9 @@ class PluginBase(ABC):
 		return {}
 
 	def projectAspects(self) -> list[Type[ProjectAspect]]:
+		return []
+
+	def settingsAspects(self) -> list[Type[SettingsAspect]]:
 		return []
 
 	def documentTypes(self) -> list[DocumentTypeDescription]:

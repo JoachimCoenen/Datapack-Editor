@@ -11,7 +11,7 @@ from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from Cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
 from base.model.pathUtils import FilePath, FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
-from base.model.project.aspect import AspectDict, Aspect
+from base.model.aspect import AspectDict, Aspect
 from base.model.utils import Span, GeneralError, MDStr
 
 

@@ -1,3 +1,6 @@
+from typing import Type
+
+from base.model.applicationSettings import SettingsAspect
 from base.plugin import PLUGIN_SERVICE, PluginBase
 
 
@@ -23,3 +26,7 @@ class McFunctionSchemasTEMPPlugin(PluginBase):
 
 		from .argumentContextsImpl import initPlugin as initArgumentContexts
 		initArgumentContexts()
+
+	def settingsAspects(self) -> list[Type[SettingsAspect]]:
+		from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettings
+		return [MinecraftSettings]

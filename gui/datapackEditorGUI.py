@@ -28,7 +28,7 @@ from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, Cach
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
 from base.model.documents import Document, ErrorCounts
 from base.model.pathUtils import FilePath, FilePathTpl, unitePath
-from settings import applicationSettings
+from base.model.applicationSettings import applicationSettings
 
 
 inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})
