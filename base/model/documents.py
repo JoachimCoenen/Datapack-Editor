@@ -1,6 +1,5 @@
 from __future__ import annotations
 import os
-from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional, Type, Sequence, Callable, TypeVar, Collection, Any
 
@@ -88,6 +87,7 @@ class DocumentTypeDescription:
 	extensions: list[str] = field(default_factory=list)
 	suffixesForDocTypeMatching: list[str] = field(default=None)
 	defaultLanguage: str = 'PlainText'
+	defaultSchemaId: str = ''
 
 	def __post_init__(self):
 		suffixes = self.suffixesForDocTypeMatching
@@ -96,7 +96,7 @@ class DocumentTypeDescription:
 		self.suffixesForDocTypeMatching = sorted(suffixes, key=len, reverse=True)
 
 	def newDocument(self) -> Document:
-		return self.type.create(language=self.defaultLanguage)
+		return self.type.create(language=self.defaultLanguage, schemaId=self.defaultSchemaId)
 
 	def __eq__(self, other):
 		return self is other
@@ -120,8 +120,9 @@ class RegisterDocument:
 			ext: list[str],
 			suffixes: list[str] = None,
 			defaultLanguage: str = 'PlainText',
-			icon: str=None,
-			tip: str=None
+			defaultSchemaId: str = '',
+			icon: str = None,
+			tip: str = None
 	):
 		if suffixes is None:
 			suffixes = ext
@@ -132,6 +133,7 @@ class RegisterDocument:
 		self._icon:  Optional[str] = icon
 		self._tip:  Optional[str] = tip
 		self._defaultLanguage: str = defaultLanguage
+		self._defaultSchemaId: str = defaultSchemaId
 
 	def __call__(self, documentCls: Type[Document]):
 		docTypeDescr = DocumentTypeDescription(
@@ -141,7 +143,8 @@ class RegisterDocument:
 			tip=self._tip,
 			extensions=self._extensions,
 			suffixesForDocTypeMatching=sorted(self._suffixesForDocTypeMatching, key=len, reverse=True),
-			defaultLanguage=self._defaultLanguage
+			defaultLanguage=self._defaultLanguage,
+			defaultSchemaId=self._defaultSchemaId
 		)
 		registerDocumentTypeDescription(docTypeDescr)
 		return documentCls
@@ -541,7 +544,7 @@ class ParsedDocument(TextDocument):
 	@property
 	def schema(self) -> Optional[Schema]:
 		if self.schemaId is not None:
-			return GLOBAL_SCHEMA_STORE.get2(self.schemaId, LanguageId(self.language))
+			return GLOBAL_SCHEMA_STORE.get(self.schemaId, LanguageId(self.language))
 
 	@property
 	def parseKwArgs(self) -> dict[str, Any]:

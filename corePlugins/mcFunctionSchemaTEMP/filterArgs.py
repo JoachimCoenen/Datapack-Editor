@@ -255,7 +255,7 @@ def getCursorContext2(contextStr: bytes, cursorPos: int, pos: Position, argsInfo
 		if b',' in contextStr[before.span.end.index - idxOffset:cursorPos]:
 			return CursorCtx2(None, inside=False, after=False)
 		elif b'=' in contextStr[before.span.end.index - idxOffset:cursorPos]:
-			assert match.after
+			# assert match.after
 			return CursorCtx2(match.after, inside=True, after=False)
 		else:
 			if isinstance(before, ParsedArgument):
@@ -293,7 +293,7 @@ def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes,
 
 	context = getCursorContext2(contextStr, cursorPos, pos, argsInfo, node)
 	# context = getCursorContext(contextStr, cursorPos, pos, argsInfo, node)
-	if context.value is None and context.after is False and context.inside is False and re.search(rb'\[\s*$', contextStr[:cursorPos]) is not None:
+	if context.value is None and context.after is False and context.inside is False:  # and re.search(rb'\[\s*$', contextStr[:cursorPos]) is not None:
 		return [cursorTouchesWord + ']'] + _getKeySuggestions(argsInfo, False)
 
 	suggestions: Suggestions = []

@@ -74,8 +74,8 @@ class Session(SerializableDataclass):
 	@property
 	def minecraftData(self):
 		# todo: remove the 'minecraftData' property and build actual version system.
-		from corePlugins.mcFunctionSchemaTEMP.mcVersions import getMCVersion
-		return getMCVersion('1.17')
+		from corePlugins.mcFunctionSchemaTEMP.mcVersions import getCurrentMCVersion
+		return getCurrentMCVersion()
 
 __session = Session()
 

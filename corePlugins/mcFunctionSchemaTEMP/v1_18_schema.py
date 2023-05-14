@@ -1,16 +1,15 @@
 from dataclasses import replace
 
-from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from corePlugins.mcFunction.command import KeywordSchema, MCFunctionSchema
 # temporarily copied from model/data/mcVersion.py
 from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion, getMCVersion
 from corePlugins.mcFunctionSchemaTEMP.v1_17_schema import buildMCFunctionSchemaFor_v1_17
 
 
-def initPlugin() -> None:
+def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_18 = getMCVersion('1.18')
 	schema_1_18 = buildMCFunctionSchemaFor_v1_18(version1_18)
-	GLOBAL_SCHEMA_STORE.registerSchema('Minecraft 1.18', schema_1_18)
+	return {'Minecraft 1.18': schema_1_18}
 
 
 def buildMCFunctionSchemaFor_v1_18(version: MCVersion) -> MCFunctionSchema:

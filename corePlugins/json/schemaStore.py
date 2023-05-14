@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
+from typing import Optional
 
 from Cat.utils.logging_ import logWarning, logInfo
-from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.pathUtils import FilePathStr
-from corePlugins.json import JSON_ID
+from corePlugins.json.core import JsonSchema
 from corePlugins.json.jsonSchema import SchemaBuilderOrchestrator
 
 
@@ -15,18 +15,23 @@ class _SchemaLibPath:  # todo find better name for class _SchemaLibPath
 
 @dataclass(frozen=True)
 class JsonSchemaLoader:
+	"""
+	loads JSON schemas and schema libraries, and remembers where thy have been loaded from, so they can be reloaded.
+	Also Caches them for when schemas rely on each other (see also SchemaBuilderOrchestrator).
+	"""
 	_registeredSchemas: dict[str, FilePathStr] = field(default_factory=dict)
 	_registeredLibraries: dict[str, _SchemaLibPath] = field(default_factory=dict)
 
 	orchestrator: SchemaBuilderOrchestrator = field(default_factory=lambda: SchemaBuilderOrchestrator(''))
 
-	def registerSchema(self, name: str, path: str):
+	def loadSchema(self, name: str, path: str) -> Optional[JsonSchema]:
 		self._registeredSchemas[name] = path
-		self._load_schema(name, path)
-		self.logErrors()
-		self.clearErrors()
+		schema = self._load_schema(path)
+		self.logAndClearErrors()
+		return schema
 
-	def registerSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> None:
+	# def registerSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> dict[str, JsonSchema]:
+	def loadSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> dict[str, JsonSchema]:
 		"""
 
 		:param name:
@@ -36,41 +41,44 @@ class JsonSchemaLoader:
 		"""
 		lib_path = _SchemaLibPath(path, includedDefinitions)
 		self._registeredLibraries[name] = lib_path
-		self._load_library(name, lib_path)
-		self.logErrors()
-		self.clearErrors()
+		schemas = self._load_library(name, lib_path)
+		self.logAndClearErrors()
+		return schemas
 
-	def _load_schema(self, name: str, path: FilePathStr):
-		schema = self.orchestrator.parseJsonSchema(path)
-		if schema is not None:
-			GLOBAL_SCHEMA_STORE.registerSchema(name, schema)
-		else:
+	def _load_schema(self, path: FilePathStr) -> Optional[JsonSchema]:
+		schema = self.orchestrator.getSchema(path)
+		if schema is None:
 			logWarning(f"Failed to load schema '{path}'")
-			GLOBAL_SCHEMA_STORE.unregisterSchema(name, JSON_ID)
+		return schema
 
-	def _load_library(self, name: str, path: _SchemaLibPath):
+	def _load_library(self, name: str, path: _SchemaLibPath) -> dict[str, JsonSchema]:
 		library = self.orchestrator.getSchemaLibrary(path.path)
 		inclDefs = path.includedDefinitions or list(library.definitions.keys())
+		schemas = {}
 		for defName in inclDefs:
 			fullDefName = f'{name}/{defName}'
 			if (schema := library.definitions.get(defName)) is not None:
-				GLOBAL_SCHEMA_STORE.registerSchema(fullDefName, schema)
+				schemas[fullDefName] = schema
 			else:
 				logWarning(f"schema library '{path.path}' has no definition for '{defName}")
-				GLOBAL_SCHEMA_STORE.unregisterSchema(fullDefName, JSON_ID)
+		return schemas
 
-	def reloadAllSchemas(self):
+	def reloadAllSchemas(self) -> dict[str, JsonSchema]:
 		logInfo(f"reloadAllSchemas():")
 		self.orchestrator.clear()
+		schemas = {}
 
 		for name, path in self._registeredSchemas.items():
-			self._load_schema(name, path)
+			schema = self._load_schema(path)
+			if schema is not None:
+				schemas[name] = schema
 
 		for name, path in self._registeredLibraries.items():
-			self._load_library(name, path)
+			schemas |= self._load_library(name, path)
 
-		self.logErrors()
+		self.logAndClearErrors()
 		logInfo(f"reloadAllSchemas finished:")
+		return schemas
 
 	def logErrors(self):
 		for path, errors in self.orchestrator.errors.items():
@@ -82,8 +90,12 @@ class JsonSchemaLoader:
 	def clearErrors(self):
 		self.orchestrator.errors.clear()
 
+	def logAndClearErrors(self):
+		self.logErrors()
+		self.clearErrors()
 
-JSON_SCHEMA_LOADER = JsonSchemaLoader()
+
+JSON_SCHEMA_LOADER: JsonSchemaLoader = JsonSchemaLoader()
 
 # GLOBAL_SCHEMA_STORE.registerSchemaLibrary('tags.json')
 # # TAGS_BLOCKS = tagsLib.definitions['block_type']

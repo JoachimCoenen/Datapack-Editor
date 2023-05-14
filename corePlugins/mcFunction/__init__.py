@@ -12,6 +12,7 @@ from base.model.utils import LanguageId
 from base.plugin import PLUGIN_SERVICE, PluginBase
 
 MC_FUNCTION_ID = LanguageId('MCFunction')
+MC_FUNCTION_DEFAULT_SCHEMA_ID = 'Minecraft'
 
 
 def initPlugin() -> None:
@@ -45,7 +46,8 @@ class McFunctionPlugin(PluginBase):
 			type=ParsedDocument,
 			name='MC Function',
 			extensions=['.mcfunction'],
-			defaultLanguage=MC_FUNCTION_ID
+			defaultLanguage=MC_FUNCTION_ID,
+			defaultSchemaId=MC_FUNCTION_DEFAULT_SCHEMA_ID
 		)]
 
 	def lexers(self) -> dict[LanguageId, Type[QsciLexerCustom]]:

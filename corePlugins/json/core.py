@@ -240,6 +240,34 @@ class JsonSchema(Schema, Generic[_TT], ABC):
 		pass
 
 
+# class JsonSchemaRoot(Schema, Generic[_TT], ABC):
+# 	"""
+# 	Root of a JSON schema description.
+# 	"""
+# 	typeName: ClassVar[str] = 'JsonData'
+# 	language: ClassVar[LanguageId] = 'JSON'
+# 	_fields: ClassVar[dict[str, Any]] = dict(description='', deprecated=False)
+#
+# 	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: bool):
+# 		self.description: MDStr = description
+# 		self.deprecated: bool = deprecated
+# 		self.span: Span = Span()
+# 		self.filePath: str = ''
+# 		self.allowMultilineStr: bool = allowMultilineStr
+#
+# 	@property
+# 	def asString(self) -> str:
+# 		return self.typeName
+#
+# 	def setSpan(self, newSpan: Span, filePath: str):
+# 		self.span = newSpan
+# 		self.filePath = filePath
+# 		return self
+#
+# 	def postProcessJsonStructure(self, structure: dict[str, Any]) -> None:
+# 		pass
+
+
 class JsonNullSchema(JsonSchema[JsonNull]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonNull
 	typeName: ClassVar[str] = 'null'
@@ -698,6 +726,7 @@ __all__ = [
 	'JsonProperty',
 
 	'JsonSchema',
+	# 'JsonSchemaRoot',
 	'JsonNullSchema',
 	'JsonBoolSchema',
 	'JsonNumberSchema',

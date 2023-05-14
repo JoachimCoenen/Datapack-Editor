@@ -526,20 +526,38 @@ class SchemaBuilderOrchestrator:
 	baseDir: str
 	# paths: dict[str, JsonSchema]
 	# files: dict[str, JsonSchema] = field(default_factory=dict, init=False)
+	schemas: dict[str, JsonSchema] = field(default_factory=dict, init=False)
 	libraries: dict[str, SchemaLibrary] = field(default_factory=dict, init=False)
 	errors: dict[str, list[GeneralError]] = field(default_factory=lambda: defaultdict(list), init=False)
 
 	def getSchemaLibrary(self, path: str) -> SchemaLibrary:
-		fullPath = os.path.join(self.baseDir, path)
-		fullPath = normalizeDirSeparators(fullPath)
+		fullPath = self.getFullPath(path)
 		if (library := self.libraries.get(fullPath)) is not None:
 			return library
 		library = self.libraries[fullPath] = self._loadLibrary(fullPath)
 		return library
 
-	def parseJsonSchema(self, path: str) -> Optional[JsonSchema]:
+	def getSchema(self, path: str) -> Optional[JsonSchema]:
+		fullPath = self.getFullPath(path)
+		if (schema := self.schemas.get(fullPath)) is not None:
+			return schema
+		schema = self.schemas[fullPath] = self._loadJsonSchema(fullPath)
+		return schema
+
+	def getFullPath(self, path: str) -> str:
 		fullPath = os.path.join(self.baseDir, path)
 		fullPath = normalizeDirSeparators(fullPath)
+		return fullPath
+
+	def clear(self):
+		self.schemas.clear()
+		self.libraries.clear()
+		self.errors.clear()
+
+	def clearErrors(self):
+		self.errors.clear()
+
+	def _loadJsonSchema(self, fullPath: str) -> Optional[JsonSchema]:
 		try:
 			with ZipFilePool() as pool:
 				schemaBytes = loadBinaryFile(fromDisplayPath(fullPath), pool)
@@ -558,13 +576,6 @@ class SchemaBuilderOrchestrator:
 			return None
 		self.errors[fullPath].extend(builder.errors)
 		return schema
-
-	def clear(self):
-		self.libraries.clear()
-		self.errors.clear()
-
-	def clearErrors(self):
-		self.libraries.clear()
 
 	def _loadLibrary(self, fullPath: str) -> SchemaLibrary:
 		try:

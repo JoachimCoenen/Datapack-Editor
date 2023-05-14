@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional, TypeVar, Type, Generic, Mapping
+from typing import Optional, TypeVar, Type, Generic, Mapping, overload
 
 from base.model.parsing.tree import Schema
 from base.model.utils import LanguageId
@@ -41,10 +41,16 @@ class SchemaStore(Generic[_TSchema]):
 class GlobalSchemaStore:
 	_schemaStores: dict[LanguageId, SchemaStore] = field(default_factory=lambda: defaultdict(SchemaStore))
 
-	def get1(self, name: str, schemaCls: Type[_TSchema]) -> Optional[_TSchema]:
-		return self.get2(name, schemaCls.language)
+	@overload
+	def get(self, name: str, language: LanguageId) -> Optional[Schema]: ...
+	@overload
+	def get(self, name: str, schemaCls: Type[_TSchema]) -> Optional[_TSchema]: ...
 
-	def get2(self, name: str, language: LanguageId) -> Optional[Schema]:
+	def get(self, name: str, languageSchemaCls: LanguageId | Type[_TSchema]) -> Optional[Schema]:
+		if isinstance(languageSchemaCls, str):
+			language = languageSchemaCls
+		else:
+			language = languageSchemaCls.language
 		return self._schemaStores[language].get(name)
 
 	def getAllForLanguage(self, language: LanguageId) -> Mapping[str, Schema]:
@@ -63,6 +69,7 @@ class GlobalSchemaStore:
 GLOBAL_SCHEMA_STORE: GlobalSchemaStore = GlobalSchemaStore()
 
 __all__ = [
+	'SchemaStore',
 	'GlobalSchemaStore',
 	'GLOBAL_SCHEMA_STORE',
 ]

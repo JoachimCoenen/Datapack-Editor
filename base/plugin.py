@@ -15,7 +15,8 @@ from base.model.applicationSettings import SettingsAspect, getApplicationSetting
 from base.model.documents import DocumentTypeDescription, registerDocumentTypeDescription
 from base.model.parsing.contextProvider import ContextProvider, registerContextProvider
 from base.model.parsing.parser import ParserBase, registerParser
-from base.model.parsing.tree import Node
+from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
+from base.model.parsing.tree import Node, Schema
 from base.model.project.project import ProjectAspect
 from base.model.utils import LanguageId
 
@@ -50,6 +51,9 @@ class PluginService:
 			registerStyler(stylerCls)
 
 		plugin.initPlugin()
+
+		for name, schema in (plugin.schemas() or {}).items():
+			GLOBAL_SCHEMA_STORE.registerSchema(name, schema)
 
 		for settingCls in (plugin.settingsAspects() or []):
 			application_settings = getApplicationSettings()
@@ -115,6 +119,12 @@ class PluginBase(ABC):
 
 	def stylers(self) -> list[Type[CatStyler]]:
 		return []
+
+	def schemas(self) -> dict[str, Schema]:
+		return {}
+
+	def reloadSchemas(self) -> dict[str, Schema]:
+		return {}
 
 # class DatapackAspect(ProjectAspect):
 # 	@classmethod

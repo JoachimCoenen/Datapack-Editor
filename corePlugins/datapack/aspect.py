@@ -27,10 +27,10 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 	def getDependencies(self, root: Root) -> list[DependencyDescr]:
 		fileName = 'dependencies.json'
 		projectPath = root.normalizedLocation
-		schema = GLOBAL_SCHEMA_STORE.get2('dpe:dependencies', JSON_ID)
+		schema = GLOBAL_SCHEMA_STORE.get('dpe:dependencies', JSON_ID)
 
 		if projectPath.lower().endswith('.jar'):
-			# Minecraft does not need to itself as a dependency.
+			# Minecraft does not need itself as a dependency.
 			return []
 
 		# dependencies = [Dependency(applicationSettings.minecraft.executable, mandatory=True)]

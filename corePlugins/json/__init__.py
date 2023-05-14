@@ -8,7 +8,7 @@ from base.gui.styler import CatStyler
 from base.model.documents import ParsedDocument, DocumentTypeDescription
 from base.model.parsing.contextProvider import ContextProvider
 from base.model.parsing.parser import ParserBase
-from base.model.parsing.tree import Node
+from base.model.parsing.tree import Node, Schema
 from base.model.utils import LanguageId
 from base.plugin import PluginBase, PLUGIN_SERVICE
 
@@ -23,9 +23,6 @@ def initPlugin() -> None:
 class JsonPlugin(PluginBase):
 
 	def initPlugin(self) -> None:
-		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
-		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
-		JSON_SCHEMA_LOADER.registerSchema('dpe:json_schema', os.path.join(resourcesDir, 'jsonSchema.json'))
 		from corePlugins.json.argTypes import init  # load standard argument types
 		init()
 
@@ -58,3 +55,9 @@ class JsonPlugin(PluginBase):
 	def stylers(self) -> list[Type[CatStyler]]:
 		from corePlugins.json.jsonStyler import JsonStyler
 		return [JsonStyler]
+
+	def schemas(self) -> dict[str, Schema]:
+		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
+		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
+		schemaPath = os.path.join(resourcesDir, 'jsonSchema.json')
+		return {'dpe:json_schema': JSON_SCHEMA_LOADER.loadSchema('dpe:json_schema', schemaPath)}

@@ -1,7 +1,6 @@
 from copy import copy
 
 from Cat.utils.collections_ import ChainedList
-from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunction.command import CommandSchema, KeywordSchema, ArgumentSchema, TERMINAL, COMMANDS_ROOT, SwitchSchema, MCFunctionSchema
 from base.model.parsing.bytesUtils import strToBytes
@@ -9,10 +8,10 @@ from base.model.parsing.bytesUtils import strToBytes
 from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion, getMCVersion
 
 
-def initPlugin() -> None:
+def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_17 = getMCVersion('1.17')
 	schema_1_17 = buildMCFunctionSchemaFor_v1_17(version1_17)
-	GLOBAL_SCHEMA_STORE.registerSchema('Minecraft 1.17', schema_1_17)
+	return {'Minecraft 1.17': schema_1_17}
 
 
 def buildMCFunctionSchemaFor_v1_17(version: MCVersion) -> MCFunctionSchema:

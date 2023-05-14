@@ -1,6 +1,7 @@
 from typing import Type
 
 from base.model.applicationSettings import SettingsAspect
+from base.model.parsing.tree import Schema
 from base.plugin import PLUGIN_SERVICE, PluginBase
 
 
@@ -19,14 +20,19 @@ class McFunctionSchemasTEMPPlugin(PluginBase):
 		initPlugin_1_16()
 		initPlugin_1_18()
 
-		from .v1_17_schema import initPlugin as initPluginSchema_1_17
-		from .v1_18_schema import initPlugin as initPluginSchema_1_18
-		initPluginSchema_1_17()
-		initPluginSchema_1_18()
-
 		from .argumentContextsImpl import initPlugin as initArgumentContexts
 		initArgumentContexts()
 
 	def settingsAspects(self) -> list[Type[SettingsAspect]]:
 		from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettings
 		return [MinecraftSettings]
+
+	def schemas(self) -> dict[str, Schema]:
+		schemas = {}
+
+		from .v1_17_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_17
+		from .v1_18_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_18
+
+		schemas |= buildMCFunctionSchemas_1_17()
+		schemas |= buildMCFunctionSchemas_1_18()
+		return schemas

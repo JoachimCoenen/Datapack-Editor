@@ -2,6 +2,7 @@ import os
 from typing import Type
 
 from base.model.applicationSettings import SettingsAspect
+from base.model.parsing.tree import Schema
 from base.model.project.project import ProjectAspect
 from base.plugin import PLUGIN_SERVICE, PluginBase
 
@@ -13,9 +14,7 @@ def initPlugin() -> None:
 class DatapackPlugin(PluginBase):
 
 	def initPlugin(self):
-		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
-		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
-		JSON_SCHEMA_LOADER.registerSchema('dpe:dependencies', os.path.join(resourcesDir, 'dependencies.json'))
+		pass
 
 	def projectAspects(self) -> list[Type[ProjectAspect]]:
 		from corePlugins.datapack.aspect import DatapackAspect
@@ -24,3 +23,10 @@ class DatapackPlugin(PluginBase):
 	def settingsAspects(self) -> list[Type[SettingsAspect]]:
 		from corePlugins.datapack.aspect import DatapackSettings
 		return [DatapackSettings]
+
+	def schemas(self) -> dict[str, Schema]:
+		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
+		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
+		schemaPath = os.path.join(resourcesDir, 'dependencies.json')
+		return {'dpe:dependencies': JSON_SCHEMA_LOADER.loadSchema('dpe:dependencies', schemaPath)}
+

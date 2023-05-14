@@ -366,13 +366,11 @@ class EntityStyler(ArgumentStyler):
 
 	def style(self, argument: ParsedArgument) -> None:
 		value: TargetSelector = argument.value
-		if not isinstance(value, TargetSelector):
+		if not isinstance(value, TargetSelector) or not value.arguments:
 			self.setStyling(argument.span.slice, StyleId.TargetSelector.value + self.offset)
-			return
-
-		if value.arguments:
+		else:
 			slice1 = slice(argument.span.start.index, first(value.arguments.values()).key.span.start.index)
-			self.setStyling(slice1, StyleId.Complex.value + self.offset)
+			self.setStyling(slice1, StyleId.TargetSelector.value + self.offset)
 			for name, state in value.arguments.items():
 				self.setStyling(state.key.span.slice, StyleId.TargetSelector.value + self.offset)
 				if state.value is not None:
