@@ -12,7 +12,7 @@ from Cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
 from base.model.pathUtils import FilePath, FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
 from base.model.aspect import AspectDict, Aspect
-from base.model.utils import Span, GeneralError, MDStr
+from base.model.utils import Span, GeneralError, MDStr, SemanticsError
 
 
 def _fillProjectAspects(aspectsDict: AspectDict):
@@ -116,9 +116,9 @@ def resolveDependencies(project: Project):
 					dependencies.append(dep.resolved)
 				else:
 					errorsByRoot[root.name].append(
-						GeneralError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span)
+						SemanticsError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span)
 						if dep.mandatory else
-						GeneralError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span, style='info')
+						SemanticsError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span, style='info')
 					)
 		return dependencies
 

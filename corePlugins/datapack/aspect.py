@@ -11,7 +11,7 @@ from base.model.aspect import AspectType
 from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
-from base.model.utils import GeneralError, MDStr
+from base.model.utils import WrappedError
 from corePlugins.json import JSON_ID
 
 DATAPACK_ASPECT_TYPE = AspectType('dpe:datapack')
@@ -41,7 +41,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 			with ZipFilePool() as pool:
 				file = loadBinaryFile(filePath, pool)
 		except (OSError, KeyError) as e:
-			node, errors = None, [GeneralError(MDStr(f"{type(e).__name__}: {str(e)}"))]
+			node, errors = None, [WrappedError(e)]
 		else:
 			node, errors = parseNPrepare(file, filePath=filePath, language=JSON_ID, schema=schema)
 

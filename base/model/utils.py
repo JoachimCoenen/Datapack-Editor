@@ -206,17 +206,17 @@ def formatAsError(message: str, /) -> MDStr:
 
 
 class GeneralError:  # TODO: find better & more descriptive name
-	def __init__(self, message: MDStr, span: Span = None, style: str = 'error'):
+	def __init__(self, message: MDStr, span: Span, style: str = 'error'):
 		super(GeneralError, self).__init__()
-		if span is None:
-			span = Span()
+		if self.__class__ is GeneralError:
+			raise RuntimeError("GeneralError should not be instantiated directly")
 		self.message: MDStr = message
 		self.htmlMessage: HTMLStr = formatMarkdown(message)
 		self.span: Span = span
 		self.style: str = style
 
 	def __str__(self):
-		return f"{self.message}, at pos {self.span.start.column}, line {self.span.start.line + 1}"
+		return f"{self.message} at pos {self.span.start.column}, line {self.span.start.line + 1}"
 
 	@property
 	def position(self) -> Position:
@@ -241,7 +241,9 @@ class WrappedError(GeneralError):
 	satisfies protocol `Error`
 	"""
 	def __init__(self, exception: Exception, *, span: Span = None, style: str = 'error'):
-		super(WrappedError, self).__init__(MDStr(escapeForXmlTextContent(str(exception))), span=span, style=style)
+		if span is None:
+			span = NULL_SPAN
+		super(WrappedError, self).__init__(MDStr(escapeForXmlTextContent(f"{type(exception).__name__}: {str(exception)}")), span=span, style=style)
 		self.wrappedEx = exception
 
 
