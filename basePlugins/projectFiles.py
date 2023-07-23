@@ -374,7 +374,7 @@ class DatapackFilesEditor(EditorBase[Project]):
 				loadDeferred=True,
 			)
 
-	def filterFiles(self, totalFilesCount: int, filterStr: str, projectItems: list[FilesTreeItem]) -> tuple[int, list]:
+	def filterFiles(self, totalFilesCount: int, filterStr: str, projectItems: list[AnyFilesTreeElement]) -> tuple[int, list[AnyFilesTreeElement]]:
 		if filterStr:
 			filteredFilesCount, filteredProjectItems = self._filterFilesInternal(filterStr, projectItems)
 		else:
@@ -382,7 +382,7 @@ class DatapackFilesEditor(EditorBase[Project]):
 			filteredProjectItems = projectItems
 		return filteredFilesCount, filteredProjectItems
 
-	def _filterFilesInternal(self, filterStr: str, projectItems: list[FilesTreeItem]) -> tuple[int, list]:
+	def _filterFilesInternal(self, filterStr: str, projectItems: list[AnyFilesTreeElement]) -> tuple[int, list[AnyFilesTreeElement]]:
 		filteredFilesCount = 0
 		filteredProjectItems = []
 		for projItem in projectItems:
@@ -398,10 +398,10 @@ class DatapackFilesEditor(EditorBase[Project]):
 
 		return filteredFilesCount, filteredProjectItems
 
-	def buildFilesTreeRoot(self, projectRoots: list[ProjectRoot], dependencies: list[Root]) -> tuple[list[str], list[FilesTreeItem]]:
+	def buildFilesTreeRoot(self, projectRoots: list[ProjectRoot], dependencies: list[Root]) -> tuple[list[str], list[AnyFilesTreeElement]]:
 		# autocomplete strings:
 		allAutocompleteStrings: list[str] = []
-		projectItems: list[FilesTreeItem] = []
+		projectItems: list[AnyFilesTreeElement] = []
 		for proj in projectRoots:
 			self.handleRoot(proj, allAutocompleteStrings, projectItems, icons.project)
 
@@ -416,7 +416,8 @@ class DatapackFilesEditor(EditorBase[Project]):
 		rootName = root.name
 		filesForProj = []
 		isImmutable = not isinstance(root, ProjectRoot)
-		projItem = FilesTreeItem(rootName, icon, rootName + '/', (root.normalizedLocation, ''), filesForProj, isImmutable, isImmutable)
+		isArchive = isImmutable
+		projItem = FilesTreeItem(rootName, icon, rootName + '/', (root.normalizedLocation, ''), filesForProj, isImmutable, isArchive)
 		filesIndex = root.indexBundles.setdefault(FilesIndex)
 		filesForProj.extend(filesIndex.folders.values())
 		filesForProj.extend(filesIndex.files.values())
