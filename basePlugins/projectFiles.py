@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import dataclasses
 import os
 import shutil
 from dataclasses import dataclass, field
 from operator import attrgetter
-from typing import Optional, Callable, NamedTuple, ClassVar, Type
+from typing import Optional, Callable, ClassVar, Type, final
 
 from PyQt5.QtGui import QIcon, QKeySequence
+from recordclass import as_dataclass
 from watchdog.events import FileSystemEventHandler, FileClosedEvent, FileModifiedEvent, FileDeletedEvent, FileCreatedEvent, FileMovedEvent
 
 from Cat.CatPythonGUI.GUI import SizePolicy
@@ -43,17 +43,18 @@ def projectFilesGUI(gui: DatapackEditorGUI):
 	gui.editor(DatapackFilesEditor, getSession().project, seamless=True)
 
 
-@dataclass(slots=True)
+@final
+@as_dataclass(fast_new=True, hashable=False)
 class FilesTreeItem:
 	"""Only used by the files tree GUI to denote directories and files"""
 	label: str
-	icon: Optional[QIcon] = dataclasses.field(compare=False)
-	commonVPath: str = dataclasses.field(compare=False)
-	commonPath: FilePathTpl = dataclasses.field(compare=False)
-	filePaths: list[FileEntry] = dataclasses.field(compare=False)
+	icon: Optional[QIcon]  # = dataclasses.field(compare=False)
+	commonVPath: str  # = dataclasses.field(compare=False)
+	commonPath: FilePathTpl  # = dataclasses.field(compare=False)
+	filePaths: list[FileEntry]  # = dataclasses.field(compare=False)
 
-	isImmutable: bool = dataclasses.field(compare=False)
-	isArchive: bool = dataclasses.field(default=False, compare=False)
+	isImmutable: bool  # = dataclasses.field(compare=False)
+	isArchive: bool  # = dataclasses.field(default=False, compare=False)
 
 	@property
 	def folderPath(self) -> Optional[FilePathTpl]:
@@ -74,13 +75,24 @@ class FilesTreeItem:
 		filePathsCount = len(self.filePaths)
 		return filePathsCount == 1 and self.commonPath == self.filePaths[0].fullPath and self.filePaths[0].isFile
 
+	def __eq__(self, other):
+		if type(other) is not FilesTreeItem:
+			return False
+		return self.label == other.label
 
-@dataclass
+	def __ne__(self, other):
+		if type(other) is not FilesTreeItem:
+			return True
+		return self.label != other.label
+
+
+@final
+@as_dataclass(fast_new=True, hashable=False)
 class FilesTreeRoot:
 	"""Only used by the files tree GUI to denote file roots, (i.e. ProjectRoot, Root, etc.)"""
-	projects: list[AnyFilesTreeElement] = dataclasses.field(compare=False)
+	projects: list[AnyFilesTreeElement]  # = dataclasses.field(compare=False)
 	label: str = '<ROOT>'
-	icon: Optional[QIcon] = None
+	icon: Optional[QIcon] = None  # = dataclasses.field(default=None, compare=False)
 	commonVPath: str = ''
 	# commonPath: FilePathTpl = Not Needed! :D
 
@@ -104,6 +116,16 @@ class FilesTreeRoot:
 	@property
 	def isFile(self) -> bool:
 		return False
+
+	def __eq__(self, other):
+		if type(other) is not FilesTreeItem:
+			return False
+		return self.label == other.label and self.commonVPath == other.commonVPath
+
+	def __ne__(self, other):
+		if type(other) is not FilesTreeItem:
+			return True
+		return self.label != other.label or self.commonVPath != other.commonVPath
 
 
 AnyFilesTreeElement = FilesTreeRoot | FilesTreeItem
@@ -485,7 +507,8 @@ def _filesTreeChildrenMaker(data: FilesTreeItem) -> list[AnyFilesTreeElement]:
 				f'{data.commonVPath}{suffix}',
 				(data.commonPath[0], f'{data.commonPath[1]}{suffix}'),
 				[entry],
-				isImmutable
+				isImmutable,
+				False
 			)
 		else:
 			child.filePaths.append(entry)
@@ -727,10 +750,22 @@ class FilesIndex(IndexBundleAspect):
 	folders: Index[str, FileEntry] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 
 
-class FileEntry(NamedTuple):
+@final
+@as_dataclass(fast_new=True, hashable=True)
+class FileEntry:
 	fullPath: FilePathTpl
 	virtualPath: str  # = dataclasses.field(compare=False)
 	isFile: bool
+
+	def __eq__(self, other):
+		if type(other) is not FileEntry:
+			return False
+		return self.virtualPath == other.virtualPath and self.fullPath == other.fullPath and self.isFile == other.isFile
+
+	def __ne__(self, other):
+		if type(other) is not FileEntry:
+			return True
+		return self.virtualPath != other.virtualPath or self.fullPath != other.fullPath or self.isFile != other.isFile
 
 
 def createNewFile(folderPath: FilePath, name: str) -> FilePath:

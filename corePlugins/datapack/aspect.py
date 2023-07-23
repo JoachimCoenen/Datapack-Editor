@@ -13,6 +13,7 @@ from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
 from base.model.utils import WrappedError
 from corePlugins.json import JSON_ID
+from corePlugins.json.core import JsonData
 
 DATAPACK_ASPECT_TYPE = AspectType('dpe:datapack')
 # DATAPACK_CONTENTS_TYPE = AspectType('dpe:datapack_contents')
@@ -37,6 +38,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 		dependencies: list[DependencyDescr] = []  # TODO: DependencyDescr(applicationSettings.minecraft.executable, 'minecraft', mandatory=True)]
 
 		filePath = (projectPath, fileName)
+		node: Optional[JsonData]
 		try:
 			with ZipFilePool() as pool:
 				file = loadBinaryFile(filePath, pool)
@@ -127,10 +129,10 @@ def resolveDependency(dep: DependencyDescr) -> Optional[Root]:
 		for dsl in dsls:
 			path = os.path.join(dsl, dep.name)
 			if os.path.exists(path):
-				return Root(name=dep.name, _location=normalizeDirSeparators(path))
+				return Root(_name=dep.name, _location=normalizeDirSeparators(path))
 			path = path + '.zip'
 			if os.path.exists(path):
-				return Root(name=dep.name, _location=normalizeDirSeparators(path))
+				return Root(_name=dep.name, _location=normalizeDirSeparators(path))
 	return None
 
 
