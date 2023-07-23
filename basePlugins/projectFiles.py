@@ -694,6 +694,19 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
 		pass
 
+	def onRootRenamed(self, root: Root, oldName: str, newName: str) -> None:
+		indexBundle = root.indexBundles.get(FilesIndex)
+		if indexBundle is None:
+			return
+
+		for fe in indexBundle.folders.values():
+			assert fe.virtualPath.startswith(oldName)
+			fe.virtualPath = f'{newName}/{fe.fullPath[1]}'
+
+		for fe in indexBundle.files.values():
+			assert fe.virtualPath.startswith(oldName)
+			fe.virtualPath = f'{newName}/{fe.fullPath[1]}'
+
 	def onRootAdded(self, root: Root, project: Project) -> None:
 		filesystemEvents.FILESYSTEM_OBSERVER.schedule("dpe:files_aspect", root.normalizedLocation, _FileSysytemChangeHandler(root, project))
 
@@ -731,12 +744,10 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 			return
 		idx = root.indexBundles.setdefault(FilesIndex).files
 		for jf in rawLocalFiles:
-			# TODO: fix when name of root changes the files tree breaks for that root because the virtualPaths are invalid, because it is created here:
 			idx.add(jf[1], jf, FileEntry(jf, f'{root.name}/{jf[1]}', True))
 
 		idx = root.indexBundles.get(FilesIndex).folders
 		for jf in rawLocalFolders:
-			# TODO: fix when name of root changes the files tree breaks for that root because the virtualPaths are invalid, because it is created here:
 			idx.add(jf[1], jf, FileEntry(jf, f'{root.name}/{jf[1]}', False))
 
 

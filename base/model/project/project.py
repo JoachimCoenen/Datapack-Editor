@@ -160,6 +160,7 @@ class AspectFeatures:
 	analyzeRoots: bool = False
 	"""
 	def analyzeRoot(self, root: Root) -> None: ...
+	def onRootRenamed(self, root: Root, project: Project, oldName: str, newName: str) -> None: ...
 	"""
 	analyzeFiles: bool = False
 	"""
@@ -195,6 +196,12 @@ class ProjectAspect(Aspect, ABC):
 		pass
 
 	def analyzeRoot(self, root: Root) -> None:
+		"""
+		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeRoots=True)): ...
+		"""
+		pass
+
+	def onRootRenamed(self, root: Root, oldName: str, newName: str) -> None:
 		"""
 		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeRoots=True)): ...
 		"""
