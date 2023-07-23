@@ -561,7 +561,7 @@ class ParsedDocument(TextDocument):
 			return parseNPrepare(text, filePath=self.filePath, language=language, schema=schema, **self.parseKwArgs)
 		except Exception as e:
 			logError(e)
-			return None, [WrappedError(e)]
+			return None, [WrappedError(e, style='info')]
 
 	@TimedMethod(enabled=True)
 	def validate(self) -> Sequence[GeneralError]:
@@ -574,7 +574,7 @@ class ParsedDocument(TextDocument):
 			return errors
 		except Exception as e:
 			logError(e)
-			return [WrappedError(e)]
+			return [WrappedError(e, style='info')]
 
 	def __hash__(self):
 		return hash(id(self)) + 91537521

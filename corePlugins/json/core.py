@@ -220,7 +220,7 @@ class JsonSchema(Schema, Generic[_TT], ABC):
 	language: ClassVar[LanguageId] = 'JSON'
 	_fields: ClassVar[dict[str, Any]] = dict(description='', deprecated=False)
 
-	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool] = None):
 		self.description: MDStr = description
 		self.deprecated: bool = deprecated
 		self.span: Span = NULL_SPAN
@@ -283,7 +283,7 @@ class JsonNumberSchema(JsonSchema[JsonNumber], ABC):
 	typeName: ClassVar[str] = 'number'
 	_fields: ClassVar[dict[str, Any]] = dict(min=-inf, max=inf)
 
-	def __init__(self, *, minVal: _TN = -inf, maxVal: _TN = inf, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, minVal: _TN = -inf, maxVal: _TN = inf, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool] = None):
 		super(JsonNumberSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.min: _TN = minVal
 		self.max: _TN = maxVal
@@ -529,7 +529,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 	def _joinProps(prop1: SwitchingPropertySchema, prop2: SwitchingPropertySchema) -> SwitchingPropertySchema:
 		if prop1.decidingProp != prop2.decidingProp:
 			# TODO: do better logging when deciding props don't match:
-			logWarning(f"Cannot join properties with differing deciding props {[prop1.decidingProp, prop2.decidingProp]!r}. prop.name = {prop1.name!r}")
+			logWarning(f"Cannot join properties with differing deciding props {[prop1.decidingProp, prop2.decidingProp]!r}. prop.name = {prop1.name!r}, locations = [({prop1.filePath!r}, {prop1.span}), ({prop2.filePath!r}, {prop2.span}]")
 			return prop2
 		if prop1.decidingProp:
 			values = prop1.values.copy()

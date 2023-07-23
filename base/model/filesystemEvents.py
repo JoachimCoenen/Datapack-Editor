@@ -84,7 +84,10 @@ class FilesystemObserver:
 	def _schedule(self, handlerId: str, path: str, handler: FileSystemEventHandler):
 		self._handlers.set(handlerId, path, handler)
 		if not self.__observer._handlers.get(ObservedWatch(path, True), None):
-			self.__observer.schedule(_CombinedEventHandler(path, self._handlers), path, True)
+			try:
+				self.__observer.schedule(_CombinedEventHandler(path, self._handlers), path, True)
+			except FileNotFoundError:
+				pass
 
 	def _unschedule(self, handlerId: str, path: str):
 		handler = self._handlers.pop(handlerId, path)

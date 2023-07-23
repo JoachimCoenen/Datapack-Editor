@@ -120,6 +120,12 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		self.redraw('TextDocumentEditor.postInit(...)')  # force a second redraw!
 
 	@override
+	def onSetModel(self, new: TextDocument, old: Optional[TextDocument]) -> None:
+		super(TextDocumentEditor, self).onSetModel(new, old)
+		if new.tree is None:
+			new.asyncParseNValidate()
+
+	@override
 	def documentGUI(self, gui: DatapackEditorGUI) -> None:
 		self.codeEditorForDoc(gui, self.model())
 		self.setFocusProxy(gui.lastTabWidget)
@@ -194,9 +200,9 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		document = self.model()
 		if isinstance(document, ParsedDocument):
 			with self._gui.popupMenu(True) as menu:
-				menu.addItem("None", lambda: setattr(document, 'schema', None) or document.asyncParseNValidate())
+				menu.addItem("None", lambda: setattr(document, 'schemaId', None) or document.asyncParseNValidate())
 				for schemaId in GLOBAL_SCHEMA_STORE.getAllForLanguage(LanguageId(document.language)):
-					menu.addItem(schemaId, lambda l=schemaId: setattr(document, 'schema', l) or document.asyncParseNValidate())
+					menu.addItem(schemaId, lambda l=schemaId: setattr(document, 'schemaId', l) or document.asyncParseNValidate())
 
 
 def _setCursorPos(a, b, d: Document):

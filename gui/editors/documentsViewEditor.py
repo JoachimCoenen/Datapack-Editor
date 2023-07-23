@@ -30,7 +30,6 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		self._shouldForceFocus = self.model().isCurrent
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
-		view = self.model()
 		with gui.vPanel(seamless=True, windowPanel=True):
 			with gui.hLayout(seamless=True):
 				self.documentsTabBarGUI(gui, position=TabPosition.North)
@@ -136,9 +135,9 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			with gui.stackedWidget(selectedView=selectedDocumentId) as stacked:
 				for document in view.documents:
 					with stacked.addView(id_=document.filePathForDisplay, seamless=True):
-						DocumentEditor = getDocumentEditor(type(document))
+						documentEditorCls = getDocumentEditor(type(document))
 						docEditor = gui.editor(
-							DocumentEditor,
+							documentEditorCls,
 							document,
 							onEditorFocusReceived=lambda fr: view.makeCurrent(),
 							seamless=True
