@@ -12,7 +12,7 @@ from corePlugins.json.lexer import JsonTokenizer
 from corePlugins.json.schema import enrichWithSchema, pathify
 from model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.parser import ParserBase, IndexMapper
+from base.model.parsing.parser import ParserBase, IndexMapBuilder
 from base.model.utils import Span, MDStr, Message, NULL_SPAN
 
 ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG = Message("JSON standard allows only double quoted string as property key", 0)
@@ -53,6 +53,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			self.cursor,
 			self.cursorOffset,
 			self.indexMapper,
+			self.maxEncIndex,
 			allowMultilineStr
 		)
 		self.errors = self._tokenizer.errors  # sync errors
@@ -362,11 +363,12 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 
 	def parse_string(self) -> JsonString:
 		"""Parses a string out of a JSON token"""
-
+		# TODO: usage of IndexMapBuilder needs a thorough testing. It is completely untested. [23-7-2023]
 		token = self._last
 		string = token.value
 
-		idxMap = []
+		idxMap = IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(token.span.start.index) + 1 - self.cursorOffset)  # + 1 because of opening quotation marks?
+		# idxMap = IndexMapBuilder(self.indexMapper, self.cursor + self.cursorOffset) TODO: decide: IndexMapBuilder(self.indexMapper, self.cursor) OR IndexMapBuilder(self.indexMapper, self.cursor + self.cursorOffset)
 
 		if b'\\' in string:
 			chars: bytes = b''  # list[str] = []
@@ -397,7 +399,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 						encIdx = index - 1 + 5
 
 					chars += unicode_char
-					idxMap.append((encIdx, decIdx))
+					idxMap.addMarker(encIdx, decIdx)
 					index += 6
 					strStreakStart = index
 					continue
@@ -406,7 +408,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 					if next_char_str is not None:
 						encIdx = index - 1 + 1
 						chars += next_char_str
-						idxMap.append((encIdx, decIdx))
+						idxMap.addMarker(encIdx, decIdx)
 					else:
 						self.error(MDStr(f"Unknown escape sequence: `{bytesToStr(string)}`"), span=token.span)
 						chars += string[index:index+2]
@@ -416,15 +418,18 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 
 			chars += (string[strStreakStart:index])
 			value = bytesToStr(chars)
+			decPosLastChar = len(chars)  # = index
 		elif string:
 			if string[0] == ord('"'):
-				string = string[1:].removesuffix(b'"')
+				string = string[1:].removesuffix(b'"')  # todo probably to be removed. INVESTIGATE
 			elif string[0] == ord("'"):
-				string = string[1:].removesuffix(b"'")
+				string = string[1:].removesuffix(b"'")  # todo probably to be removed. INVESTIGATE
 			value = bytesToStr(string)
+			decPosLastChar = len(string)
 		else:
 			value = ''
-		return JsonString(token.span, None, value, IndexMapper(idxMap))
+			decPosLastChar = len(string)
+		return JsonString(token.span, None, value, idxMap.completeIndexMapper(len(string), decPosLastChar))
 
 	def parse_number(self) -> JsonNumber:
 		"""Parses a number out of a JSON token"""

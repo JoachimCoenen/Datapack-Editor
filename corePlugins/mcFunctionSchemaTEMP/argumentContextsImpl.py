@@ -392,9 +392,6 @@ class ComponentHandler(ParsingHandler):
 	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
 		return LanguageId('JSON')
 
-	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
-		return dict(allowMultilineStr=False)
-
 
 @argumentContext(MINECRAFT_DIMENSION.name)
 class DimensionHandler(ResourceLocationLikeHandler):

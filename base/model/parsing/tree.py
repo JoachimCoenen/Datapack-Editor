@@ -22,20 +22,12 @@ def _walkTree(children: Iterable[_TNode]) -> Iterator[_TNode]:
 			yield from _walkTree(innerChildren)
 
 
-@dataclass
+@dataclass  # (slots=True) because: TypeError: multiple bases have instance layout conflict FOR ResourceLocationNode
 class Node(Generic[_TNode, _TSchema], ABC):
 	span: Span = field(hash=False, compare=False)
 	schema: Optional[_TSchema] = field(hash=False, compare=False)
 
 	language: ClassVar[LanguageId] = ''
-
-	# @property
-	# @abstractmethod
-	# def documentation(self) -> str:
-	# 	"""
-	# 	:return: a markdown string or an empty string, never None
-	# 	"""
-	# 	pass
 
 	@property
 	@abstractmethod

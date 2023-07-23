@@ -42,7 +42,7 @@ class Context(Generic[_TNode]):
 		:param replaceCtx: the string that will be replaced
 		:return:
 		"""
-		pass
+		return []
 
 	@abstractmethod
 	def getDocumentation(self, node: _TNode, pos: Position) -> MDStr:
@@ -246,6 +246,7 @@ def parseNPrepare(
 		cursor: int = 0,
 		cursorOffset: int = 0,
 		indexMapper: IndexMapper = None,
+		maxIndex: int = None,
 		**kwargs
 ) -> tuple[Optional[Node], list[GeneralError]]:
 	node, errors = parse(
@@ -258,6 +259,7 @@ def parseNPrepare(
 		cursor=cursor,
 		cursorOffset=cursorOffset,
 		indexMapper=indexMapper,
+		maxIndex=maxIndex,
 		**kwargs
 	)
 	if node is not None:

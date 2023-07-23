@@ -65,6 +65,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 			self.cursor,
 			self.cursorOffset,
 			self.indexMapper,
+			self.maxEncIndex,
 			self.ignoreTrailingChars,
 		)
 		self.errors = self._tokenizer.errors  # sync errors
