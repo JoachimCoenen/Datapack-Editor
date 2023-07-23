@@ -175,8 +175,8 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			currentCursorPos=document.cursorPosition,
 			selectionTo=document.selection[2:] if document.selection[0] != -1 else None,
 			highlightErrors=document.highlightErrors,
-			onCursorPositionChanged=lambda a, b, d=document: type(d).cursorPosition.set(d, (a, b)),
-			onSelectionChanged2=lambda a1, b1, a2, b2, d=document: type(d).selection.set(d, (a1, b1, a2, b2)),
+			onCursorPositionChanged=lambda a, b, d=document: _setCursorPos(a, b, d),
+			onSelectionChanged2=lambda a1, b1, a2, b2, d=document: _setSelection(a1, b1, a2, b2, d),
 			onFocusReceived=lambda fr: self.editorFocusReceived.emit(fr),
 			focusPolicy=Qt.StrongFocus,
 			autoIndent=autoIndent,
@@ -188,16 +188,23 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		document = self.model()
 		with self._gui.popupMenu(True) as menu:
 			for language in codeEditor.getAllLanguages():
-				menu.addItem(language, lambda l=language: document.languageProp.set(document, l) or document.asyncParseNValidate())
+				menu.addItem(language, lambda l=language: setattr(document, 'language', l) or document.asyncParseNValidate())
 
 	def schemaContextMenu(self, pos):
 		document = self.model()
 		if isinstance(document, ParsedDocument):
 			with self._gui.popupMenu(True) as menu:
-				menu.addItem("None", lambda: document.schemaIdProp.set(document, None) or document.asyncParseNValidate())
+				menu.addItem("None", lambda: setattr(document, 'schema', None) or document.asyncParseNValidate())
 				for schemaId in GLOBAL_SCHEMA_STORE.getAllForLanguage(LanguageId(document.language)):
-					menu.addItem(schemaId, lambda l=schemaId: document.schemaIdProp.set(document, l) or document.asyncParseNValidate())
+					menu.addItem(schemaId, lambda l=schemaId: setattr(document, 'schema', l) or document.asyncParseNValidate())
 
+
+def _setCursorPos(a, b, d: Document):
+	d.cursorPosition = (a, b)
+
+
+def _setSelection(a1, b1, a2, b2, d: Document):
+	d.selection = (a1, b1, a2, b2)
 
 __all__ = [
 	'DocumentEditorBase',

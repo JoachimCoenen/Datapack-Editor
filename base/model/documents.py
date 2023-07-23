@@ -1,15 +1,15 @@
 from __future__ import annotations
 import os
 from dataclasses import dataclass, field
-from typing import Optional, Type, Sequence, Callable, TypeVar, Collection, Any
+from typing import Optional, Type, Sequence, Callable, TypeVar, Collection, Any, ClassVar
 
 from PyQt5.QtCore import QTimer
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileModifiedEvent, FileDeletedEvent, FileMovedEvent, FileClosedEvent
 
 from Cat import undoRedo
 from Cat.CatPythonGUI.GUI import codeEditor
-from Cat.Serializable import Computed, RegisterContainer, Serialized, SerializableContainer, Transient
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.Serializable.dataclassJson import SerializableDataclass
 from Cat.undoRedo import UndoRedoStack2, MakeMementoIfDiffFunc
 from Cat.utils import utils, Decorator
 from Cat.utils.logging_ import logWarning
@@ -96,7 +96,7 @@ class DocumentTypeDescription:
 		self.suffixesForDocTypeMatching = sorted(suffixes, key=len, reverse=True)
 
 	def newDocument(self) -> Document:
-		return self.type.create(language=self.defaultLanguage, schemaId=self.defaultSchemaId)
+		return self.type(language=self.defaultLanguage, schemaId=self.defaultSchemaId)
 
 	def __eq__(self, other):
 		return self is other
@@ -106,6 +106,7 @@ class DocumentTypeDescription:
 
 	def __hash__(self):
 		return id(self)
+
 
 _documentTypes: list[DocumentTypeDescription] = []
 _documentTypesByName: dict[str, DocumentTypeDescription] = {}
@@ -236,27 +237,17 @@ class FileChangedHandler(FileSystemEventHandler):
 		pass
 
 
-@RegisterContainer
-class Document(SerializableContainer):
-	__slots__ = ('undoRedoStack', 'inUndoRedoMode')
-	"""docstring for Document"""
-	def __typeCheckerInfo___(self):
-		# giving the type checker a helping hand...
-		self._filePath: FilePath = ''
-		self.documentChanged: bool = False
-		self.encoding: str = 'utf-8'
-		self.content: ~TTarget = None
-		self.highlightErrors: bool = True
-		self.errors: Sequence[GeneralError] = []
+@dataclass(repr=False, slots=True)
+class Document(SerializableDataclass):
 
-	def __init__(self):
-		super().__init__()
+	def __post_init__(self):
+		self._initUndoRedoStack(undoRedo.makesSnapshotMementoIfDiff)
 		self.undoRedoStack: Optional[UndoRedoStack2] = None  # must be set with _initUndoRedoStack(...) in constructor of subclasses
 		self.inUndoRedoMode: bool = False
-		type(self)._originalContent.get(self)  # init _originalContent
+		self._resetDocumentChanged()
 
-	_filePath: FilePath = Serialized(default='')
-	_fileChangedHandler: FileChangedHandler = Serialized(default_factory=FileChangedHandler, shouldSerialize=False, shouldPrint=False)
+	_filePath: FilePath = field(default='')
+	_fileChangedHandler: FileChangedHandler = field(default_factory=FileChangedHandler, metadata=dict(cat=dict(serialize=False, print=False)))
 
 	@property
 	def filePath(self) -> FilePath:
@@ -286,31 +277,45 @@ class Document(SerializableContainer):
 		else:
 			return path[0]
 
-	language: str = Serialized(default='PlainText', decorators=[pd.ComboBox(choices=Computed(default_factory=codeEditor.getAllLanguages))])
+	@property
+	def _languageChoices(self):
+		return codeEditor.getAllLanguages
+
+	language: str = field(
+		default='PlainText',
+		metadata=dict(cat=dict(
+			decorators=[pd.ComboBox(choices=_languageChoices)]
+		))
+	)
 
 	def _initUndoRedoStack(self, makeMementoIfDiff: MakeMementoIfDiffFunc[TTarget]):
-		self.undoRedoStack = UndoRedoStack2(self, self.contentProp, makeMementoIfDiff)
+		self.undoRedoStack = UndoRedoStack2(self, 'content', makeMementoIfDiff)
 
-	@Computed()
+	@property
 	def documentChanged(self) -> bool:
 		"""Whether the document has been changed (and may need to be saved)."""
 		return self.content != self._originalContent
 
-	encoding: str = Serialized(default='utf-8')
-	_undoRedoStackInitialized: bool = Serialized(default=False, shouldSerialize=False)
-	content: TTarget = Serialized(default=None, decorators=[pd.NoUI()])
-	_originalContent: TTarget = Serialized(getInitValue=lambda s: s.content, decorators=[pd.NoUI()])
+	encoding: str = field(default='utf-8')
+	_undoRedoStackInitialized: bool = field(default=False, metadata=dict(cat=dict(serialize=False)))
+	_content: TTarget = field(default=None, metadata=dict(cat=dict(decorators=[pd.NoUI()])))
 
-	# tree: Optional[Node] = Serialized(default=None, shouldSerialize=False, shouldPrint=False, decorators=[pd.NoUI()])
-	@Serialized(shouldSerialize=False)
-	def tree(self) -> Optional[Node]:
-		tree, self.parserErrors = self.parse(self.content)
-		return tree
+	@property
+	def content(self) -> bytes:
+		return self._content
 
-	@content.onSet
-	def content(self, newVal: bytes, oldVal: Optional[bytes]) -> bytes:
-		self.contentOnSet(newVal, oldVal)
-		return newVal
+	@content.setter
+	def content(self, newVal: bytes) -> None:
+		self.contentOnSet(newVal, self._content)
+		self._content = newVal
+
+	_originalContent: Optional[TTarget] = field(default=None, metadata=dict(cat=dict(decorators=[pd.NoUI()])))
+
+	tree: Optional[Node] = field(default=None, metadata=dict(cat=dict(serialize=False, print=False)))
+	# @Serialized(shouldSerialize=False)
+	# def tree(self) -> Optional[Node]:
+	# 	tree, self.parserErrors = self.parse(self.content)
+	# 	return tree
 
 	def contentOnSet(self, newVal: bytes, oldVal: Optional[bytes]) -> None:
 		if not self._undoRedoStackInitialized:
@@ -332,34 +337,45 @@ class Document(SerializableContainer):
 
 		self._asyncTakeSnapshot()
 
-	highlightErrors: bool = Serialized(default=True)
-	onErrorsChanged: CatSignal[Callable[[Document], None]] = CatSignal('onErrorsChanged')
-	parserErrors: Sequence[GeneralError] = Serialized(default_factory=list, shouldSerialize=False)
-	validationErrors: Sequence[GeneralError] = Serialized(default_factory=list, shouldSerialize=False)
+	highlightErrors: bool = field(default=True)
+	onErrorsChanged: ClassVar[CatSignal[Callable[[Document], None]]] = CatSignal('onErrorsChanged')
+	_parserErrors: list[GeneralError] = field(default_factory=list, metadata=dict(cat=dict(serialize=False, print=False)))
+	_validationErrors: list[GeneralError] = field(default_factory=list, metadata=dict(cat=dict(serialize=False, print=False)))
 	# validationErrors: Sequence[GeneralError] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
-	errors: Sequence[GeneralError] = Computed(getInitValue=addErrors, shouldSerialize=False)
 
-	@parserErrors.onSet
-	def parserErrors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
-		if newVal != oldVal:
-			QTimer.singleShot(0, lambda self=self: self.onErrorsChanged.emit(self))
-		return newVal
+	@property
+	def parserErrors(self) -> list[GeneralError]:
+		return self._parserErrors
 
-	@validationErrors.onSet
-	def validationErrors(self, newVal: Sequence[GeneralError], oldVal: Optional[Sequence[GeneralError]]) -> Sequence[GeneralError]:
-		if newVal != oldVal:
-			QTimer.singleShot(0, lambda self=self: self.onErrorsChanged.emit(self))
-		return newVal
+	@parserErrors.setter
+	def parserErrors(self, newVal: list[GeneralError]):
+		if newVal != self._parserErrors:
+			self._validationErrors = newVal
+			QTimer.singleShot(0, lambda s=self: s.onErrorsChanged.emit(s))
 
-	cursorPosition: tuple[int, int] = Serialized(default=(0, 0))
-	selection: tuple[int, int, int, int] = Serialized(default=(-1, -1, -1, -1))
-	hasSelection: bool = Computed(getInitValue=lambda s: s.selection != (-1, -1, -1, -1))
-	forceLocate: bool = Serialized(default=True, shouldSerialize=False)
+	@property
+	def validationErrors(self) -> list[GeneralError]:
+		return self._validationErrors
+
+	@validationErrors.setter
+	def validationErrors(self, newVal: list[GeneralError]):
+		if newVal != self._validationErrors:
+			self._validationErrors = newVal
+			QTimer.singleShot(0, lambda s=self: s.onErrorsChanged.emit(s))
+
+	@property
+	def errors(self) -> Sequence[GeneralError]:
+		return self.parserErrors + self.validationErrors
+
+	cursorPosition: tuple[int, int] = field(default=(0, 0))
+	selection: tuple[int, int, int, int] = field(default=(-1, -1, -1, -1))
+	hasSelection: bool = property(lambda self: self.selection != (-1, -1, -1, -1))
+	forceLocate: bool = field(default=True, metadata=dict(cat=dict(serialize=False, print=False)))
 
 	def locatePosition(self, position: Position, end: Optional[Position] = None) -> None:
 		self.cursorPosition = position.line, position.column
 		if end is None:
-			self.selectionProp.reset(self)
+			self.selection = (-1, -1, -1, -1)
 		else:
 			self.selection = position.line, position.column, end.line, end.column
 		self.forceLocate = True
@@ -386,6 +402,7 @@ class Document(SerializableContainer):
 		self._fileChangedHandler.fileChanged = False
 
 	__MISSING = object()
+
 	def _resetDocumentChanged(self, content: TTarget = __MISSING):
 		if content is Document.__MISSING:
 			content = self.content
@@ -470,54 +487,44 @@ class Document(SerializableContainer):
 	def __del__(self):
 		self._unscheduleFileChangedHandler(self.filePath)
 
+	def __hash__(self):
+		return hash(id(self)) + 91537523
+
 
 @RegisterDocument('text', ext=['.txt'])
-@RegisterContainer
+@dataclass(repr=False, slots=True)
 class TextDocument(Document):
-	"""docstring for Document"""
-	__slots__ = ()
 
-	def __typeCheckerInfo___(self):
-		# giving the type checker a helping hand...
-		super(TextDocument, self).__typeCheckerInfo___()
-		self.filePath: FilePath = ''
-		self.fileChanged: bool = False
-		self.documentChanged: bool = False
-		self.encoding: str = 'utf-8'
-		self.content: bytes = b''
-		self.strContent: str = ''
-
-	def __init__(self):
-		super().__init__()
+	def __post_init__(self):
+		super(TextDocument, self).__post_init__()
 		self._initUndoRedoStack(undoRedo.makesSnapshotMementoIfDiff)
 
-	filePath: FilePath = Serialized(default='', decorators=[
-		pd.FilePath(filters=[('Text', '.txt')])
-	])
-	content: bytes = Serialized(
+	_content: bytes = field(
 		default=b'',
-		decode=lambda s, v: bytes(v, encoding=s.encoding, errors='replace'),
-		encode=lambda s, v: str(v, encoding=s.encoding, errors='replace'),
-		shouldSerialize=True,
-		decorators=[pd.NoUI()]
-	)
-	_originalContent: bytes = Serialized(
-		getInitValue=lambda s: s.content,
-		decode=lambda s, v: bytes(v, encoding=s.encoding, errors='replace') if isinstance(v, str) else v,
-		encode=lambda s, v: str(v, encoding=s.encoding, errors='replace'),
-		decorators=[pd.NoUI()]
+		metadata=dict(cat=dict(
+			decode=lambda s, v: bytes(v, encoding=s.encoding, errors='replace'),
+			encode=lambda s, v: str(v, encoding=s.encoding, errors='replace'),
+			deferLoading=True,
+			decorators=[pd.NoUI()]
+		)
+	))
+	_originalContent: Optional[bytes] = field(
+		default=False,
+		metadata=dict(cat=dict(
+			decode=lambda s, v: bytes(v, encoding=s.encoding, errors='replace') if isinstance(v, str) else v,
+			encode=lambda s, v: str(v, encoding=s.encoding, errors='replace'),
+			deferLoading=True,
+			decorators=[pd.NoUI()]
+		))
 	)
 
-	@content.onSet
-	def content(self, newVal: bytes, oldVal: Optional[bytes]) -> bytes:
-		self.contentOnSet(newVal, oldVal)
-		return newVal
+	@property
+	def strContent(self) -> str:
+		return str(self.content, encoding=self.encoding, errors='replace')
 
-	strContent: str = Transient(
-		getter=lambda s: str(s.content, encoding=s.encoding, errors='replace'),
-		setter=lambda s, v: s.contentProp.set(s, bytes(v, encoding=s.encoding, errors='replace')),
-		shouldSerialize=False,
-		decorators=[pd.NoUI()])
+	@strContent.setter
+	def strContent(self, value: str):
+		self.content = bytes(value, encoding=self.encoding, errors='replace')
 
 	def toRepr(self) -> str:
 		return self.strContent
@@ -525,21 +532,17 @@ class TextDocument(Document):
 	def fromRepr(self, string: str):
 		self.strContent = string
 
+	def __hash__(self):
+		return hash(id(self)) + 91537522
 
+
+@dataclass(repr=False, slots=True)
 class ParsedDocument(TextDocument):
-	__slots__ = ()
 
-	def __typeCheckerInfo___(self):
-		# giving the type checker a helping hand...
-		super(ParsedDocument, self).__typeCheckerInfo___()
-		self.tree: Optional[Node] = None
-		# self.metaInfo: Optional[MetaInfo] = None
+	def __post_init__(self):
+		super(ParsedDocument, self).__post_init__()
 
-	# @ComputedCached(shouldSerialize=False)
-	# def metaInfo(self) -> Optional[MetaInfo]:
-	# 	return getMetaInfo(self.filePath, getSession().datapackData.structure)
-
-	schemaId: Optional[str] = Serialized(default=None)
+	schemaId: Optional[str] = field(default=None)
 
 	@property
 	def schema(self) -> Optional[Schema]:
@@ -572,4 +575,7 @@ class ParsedDocument(TextDocument):
 		except Exception as e:
 			logError(e)
 			return [WrappedError(e)]
+
+	def __hash__(self):
+		return hash(id(self)) + 91537521
 
