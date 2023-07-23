@@ -6,7 +6,7 @@ from recordclass import as_dataclass
 
 import markdown
 
-from Cat.utils import escapeForXmlTextContent, strings
+from Cat.utils import escapeForXmlTextContent, GlobalGeneratingCache, strings
 
 LanguageId = NewType('LanguageId', str)
 
@@ -155,15 +155,14 @@ MDStr = NewType('MDStr', str)
 """A Markdown string. (see: https://daringfireball.net/projects/markdown/)"""
 
 
-_MD_CONVERTER = markdown.Markdown()
+_FORMAT_MARKDOWN_CACHE: GlobalGeneratingCache[str, HTMLStr] = GlobalGeneratingCache("_FORMAT_MARKDOWN_CACHE", lambda text: HTMLStr(markdown.markdown(text)), maxSize=32)
 
 
 def formatMarkdown(text: str, /) -> HTMLStr:
-	html = _MD_CONVERTER.convert(text)
-	return HTMLStr(html)
+	return _FORMAT_MARKDOWN_CACHE.getOrGenerate(text)
 
 
-def wrapInMarkdownCode(text: str) -> str:
+def wrapInMarkdownCode(text: str) -> MDStr:
 	lenText = len(text)
 	needsDouble = False
 	if (idx := text.find('`')) >= 0:
@@ -184,7 +183,7 @@ def wrapInMarkdownCode(text: str) -> str:
 		text = f'``{text}``'
 	else:
 		text = f'`{text}`'
-	return text
+	return MDStr(text)
 
 
 def addStyle(message: str, /, style: str) -> MDStr:
