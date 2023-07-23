@@ -363,7 +363,7 @@ class ArchiveFilePool:
 
 
 class ZipFilePool(ArchiveFilePool):
-	def _openArchive(self, normPath: str, mode: str) -> ZipFile:
+	def _openArchive(self, normPath: str, mode: Literal["r", "w", "x", "a"]) -> ZipFile:
 		try:
 			return ZipFile(normPath, mode)
 		except BadZipFile as e:
