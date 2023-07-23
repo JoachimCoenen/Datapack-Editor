@@ -1,19 +1,19 @@
 from __future__ import annotations
 import re
-from collections import OrderedDict
 from dataclasses import dataclass, field, replace
 from itertools import chain
-from typing import Optional, TypeVar, Type, Callable, Iterable, Mapping, Collection
+from typing import Optional, TypeVar, Type, Iterable, Mapping, Collection
 
 from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from Cat.utils.profiling import logError
 from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty
+from base.model.aspect import AspectType
 from base.model.project.index import Index, IndexBundle
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.parser import parse
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePathTpl, loadBinaryFile, loadTextFile, ZipFilePool
-from model.project import IndexBundleAspect, AspectType, Project
+from base.model.project.project import IndexBundleAspect
 from base.model.utils import MDStr, Span
 
 DATAPACK_CONTENTS_TYPE = AspectType('dpe:datapack_contents')
@@ -129,7 +129,7 @@ class ResourceLocation:
 		return hash(self._asTuple)
 
 
-@dataclass
+@dataclass(slots=True)
 class ResourceLocationSchema(Schema):
 	name: str
 

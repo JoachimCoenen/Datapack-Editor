@@ -5,7 +5,7 @@ from Cat.utils.collections_ import OrderedDict, AddToDictDecorator
 from base.model.parsing.bytesUtils import bytesToStr
 
 
-@dataclass
+@dataclass(unsafe_hash=True)  # unsafe_hash=True is required, because in py3.11 the module dataclasses uses the existence of __hash__() to detect mutable default values :(
 class ArgumentType:
 	def __post_init__(self):
 		if type(self) is ArgumentType:

@@ -15,11 +15,13 @@ from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from Cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
 from base.model.pathUtils import fileNameFromFilePath, FilePathTpl, getAllFilesFromSearchPath, normalizeDirSeparators
-from base.model.utils import GeneralError, MDStr, Span
+from base.model.utils import GeneralError, MDStr, Span, SemanticsError
+
+
+do not use!
 
 _TT = TypeVar('_TT')
 _TS = TypeVar('_TS')
-
 
 @dataclass
 class Dependency:
@@ -285,9 +287,9 @@ def collectAllDependencies(project: Project):
 				dependencies.append(depProj)
 			else:
 				errorsByProj[project.name].append(
-					GeneralError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span)
+					SemanticsError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span)
 					if dep.mandatory else
-					GeneralError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span, style='info')
+					SemanticsError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span, style='info')
 				)
 		return dependencies
 

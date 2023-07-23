@@ -16,12 +16,13 @@ from Cat.icons import icons
 from Cat.utils import escapeForXml
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import TimedMethod
+from base.model.project.project import Root
+from base.model.session import getSession
+from basePlugins.projectFiles import FilesIndex
 from gui.checkAllDialog import FILE_TYPES
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
 from base.model.pathUtils import FilePath, ZipFilePool, loadTextFile
-from model.project import Project
 from base.model.utils import Position, Span
-from sessionOld.session import getSession
 
 
 @dataclass(unsafe_hash=True)
@@ -44,7 +45,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=PythonGUI, parent=parent)
 
-		self._includedProjects: list[Project] = []
+		self._includedRoots: list[Root] = []
 		self.searchExpr: str = ''
 		self.searchOptions: SearchOptions = SearchOptions(
 			searchMode=SearchMode.Normal,
@@ -69,12 +70,12 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 			self._fileTypes = tuple(ft for ft in FILE_TYPES if gui.checkboxLeft(None, ft))
 
 		gui.vSeparator()
-		includedProjects = []
+		includedRoots = []
 		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
-			for dp in getSession().project.deepDependencies:
+			for dp in getSession().project.roots:
 				if gui.checkboxLeft(None, dp.name):
-					includedProjects.append(dp)
-		self._includedProjects = includedProjects
+					includedRoots.append(dp)
+		self._includedRoots = includedRoots
 
 	def OnGUI(self, gui: PythonGUI):
 		with gui.vLayout(preventVStretch=False):
@@ -169,14 +170,16 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 	@property
 	def filePathsToSearch(self) -> list[FilePath]:
 		filePathsToSearch: list[FilePath] = []
-		for p in self._includedProjects:
-			for f in p.files:
-				if isinstance(f, tuple):
-					fn = f[1]
-				else:
-					fn = f
-				if fn.endswith(tuple(self._fileTypes)):
-					filePathsToSearch.append(f)
+		for p in self._includedRoots:
+			if (filesIndex := p.indexBundles.get(FilesIndex)) is not None:
+				for fe in filesIndex.files.values():
+					f = fe.fullPath
+					if isinstance(f, tuple):
+						fn = f[1]
+					else:
+						fn = f
+					if fn.endswith(tuple(self._fileTypes)):
+						filePathsToSearch.append(f)
 
 		return filePathsToSearch
 
