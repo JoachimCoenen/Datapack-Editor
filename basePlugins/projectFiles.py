@@ -43,6 +43,72 @@ def projectFilesGUI(gui: DatapackEditorGUI):
 	gui.editor(DatapackFilesEditor, getSession().project, seamless=True)
 
 
+@dataclass(slots=True)
+class FilesTreeItem:
+	"""Only used by the files tree GUI to denote directories and files"""
+	label: str
+	icon: Optional[QIcon] = dataclasses.field(compare=False)
+	commonVPath: str = dataclasses.field(compare=False)
+	commonPath: FilePathTpl = dataclasses.field(compare=False)
+	filePaths: list[FileEntry] = dataclasses.field(compare=False)
+
+	isImmutable: bool = dataclasses.field(compare=False)
+	isArchive: bool = dataclasses.field(default=False, compare=False)
+
+	@property
+	def folderPath(self) -> Optional[FilePathTpl]:
+		""":return: path of the folder if isFile is False, else None"""
+		if self.isFile:
+			return None
+		return self.commonPath
+
+	@property
+	def filePath(self) -> Optional[FilePathTpl]:
+		""":return: path of the file if isFile is True, else None"""
+		if not self.isFile:
+			return None
+		return self.filePaths[0].fullPath
+
+	@property
+	def isFile(self) -> bool:
+		filePathsCount = len(self.filePaths)
+		return filePathsCount == 1 and self.commonPath == self.filePaths[0].fullPath and self.filePaths[0].isFile
+
+
+@dataclass
+class FilesTreeRoot:
+	"""Only used by the files tree GUI to denote file roots, (i.e. ProjectRoot, Root, etc.)"""
+	projects: list[AnyFilesTreeElement] = dataclasses.field(compare=False)
+	label: str = '<ROOT>'
+	icon: Optional[QIcon] = None
+	commonVPath: str = ''
+	# commonPath: FilePathTpl = Not Needed! :D
+
+	@property
+	def filePaths(self) -> list[FileEntry]:
+		return []
+
+	isImmutable: ClassVar[bool] = False
+	isArchive: ClassVar[bool] = False
+
+	@property
+	def folderPath(self) -> Optional[FilePathTpl]:
+		""":return: path of the folder if isFile is False, else None"""
+		return None
+
+	@property
+	def filePath(self) -> Optional[FilePathTpl]:
+		""":return: path of the file if isFile is True, else None"""
+		return None
+
+	@property
+	def isFile(self) -> bool:
+		return False
+
+
+AnyFilesTreeElement = FilesTreeRoot | FilesTreeItem
+
+
 class DatapackFilesEditor(EditorBase[Project]):
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
@@ -81,7 +147,6 @@ class DatapackFilesEditor(EditorBase[Project]):
 		return False
 
 	def _renameFileOrFolder(self, data: FilesTreeItem):
-
 		if data.isFile:
 			path = data.filePaths[0].fullPath
 		else:
@@ -142,17 +207,16 @@ class DatapackFilesEditor(EditorBase[Project]):
 			else:
 				if self._gui.askUser(f"Delete folder '{name}' and all its contents?", 'This cannot be undone!'):
 					shutil.rmtree(unitedPath)
+			# TODO: maybe close opened files?
 		except OSError as e:
 			getSession().showAndLogError(e)
 		self.redraw('DatapackFilesEditor._deleteFileFunc(...)')
-		# TODO: maybe close opened files?
 
 	def _newDatapackDialog(self):
-		pass
+		pass  # todo: _newDatapackDialog(...)?
 
 	def _createNewDatapackGUI(self) -> None:
 		self._gui.showWarningDialog("Out of Order", "This feature is currently out of order.")
-		return
 		# TODO: _createNewDatapackGUI()
 		# def datapackPathFromName(name: str):
 		# 	return normalizeDirSeparators(os.path.join(getSession().world.path, 'datapacks', name))
@@ -217,6 +281,7 @@ class DatapackFilesEditor(EditorBase[Project]):
 		# 	getSession().showAndLogError(e)
 		# else:
 		# 	self.redraw('DatapackFilesEditor._createNewDatapackGUI(...)')
+		return
 
 	def _refreshDependencies(self) -> None:
 		self.model().analyzeRoots()
@@ -283,16 +348,17 @@ class DatapackFilesEditor(EditorBase[Project]):
 		with gui.vLayout(seamless=True):
 			with gui.hLayout(seamless=True):
 				filterStr = gui.filterTextField(None, allAutocompleteStrings, shortcut=QKeySequence.Find).lower()
-				filteredFilesCount, filteredProjectItems, totalFilesCount = self.filterFiles(allAutocompleteStrings, filterStr, projectItems)
+				totalFilesCount = len(allAutocompleteStrings)
+				filteredFilesCount, filteredProjectItems = self.filterFiles(totalFilesCount, filterStr, projectItems)
 				gui.toolButton(f'{filteredFilesCount:,} of {totalFilesCount:,}',)
 
 			gui.tree(
 				DataTreeBuilder(
 					FilesTreeRoot(filteredProjectItems),
-					childrenMaker,
-					labelMaker,
-					iconMaker,
-					toolTipMaker,
+					_filesTreeChildrenMaker,
+					_labelMaker,
+					_iconMaker,
+					_toolTipMaker,
 					columnCount=2,
 					suppressUpdate=False,
 					showRoot=False,
@@ -308,20 +374,29 @@ class DatapackFilesEditor(EditorBase[Project]):
 				loadDeferred=True,
 			)
 
-	def filterFiles(self, allAutocompleteStrings: list[str], filterStr: str, projectItems: list[FilesTreeItem]) -> tuple[int, list, int]:
-		totalFilesCount = len(allAutocompleteStrings)
-		filteredFilesCount = 0
+	def filterFiles(self, totalFilesCount: int, filterStr: str, projectItems: list[FilesTreeItem]) -> tuple[int, list]:
 		if filterStr:
-			filteredProjectItems = []
-			for projItem in projectItems:
+			filteredFilesCount, filteredProjectItems = self._filterFilesInternal(filterStr, projectItems)
+		else:
+			filteredFilesCount = totalFilesCount
+			filteredProjectItems = projectItems
+		return filteredFilesCount, filteredProjectItems
+
+	def _filterFilesInternal(self, filterStr: str, projectItems: list[FilesTreeItem]) -> tuple[int, list]:
+		filteredFilesCount = 0
+		filteredProjectItems = []
+		for projItem in projectItems:
+			if isinstance(projItem, FilesTreeRoot):
+				filteredFilesCount2, _ = self._filterFilesInternal(filterStr, projItem.projects)
+				filteredFilesCount += filteredFilesCount2
+				filteredProjectItems.append(projItem)
+			else:
 				projItem.filePaths = [fp for fp in projItem.filePaths if filterStr in fp.virtualPath.lower()]
 				if projItem.filePaths:
 					filteredFilesCount += len(projItem.filePaths)
 					filteredProjectItems.append(projItem)
-		else:
-			filteredFilesCount = totalFilesCount
-			filteredProjectItems = projectItems
-		return filteredFilesCount, filteredProjectItems, totalFilesCount
+
+		return filteredFilesCount, filteredProjectItems
 
 	def buildFilesTreeRoot(self, projectRoots: list[ProjectRoot], dependencies: list[Root]) -> tuple[list[str], list[FilesTreeItem]]:
 		# autocomplete strings:
@@ -362,11 +437,11 @@ class DatapackFilesEditor(EditorBase[Project]):
 			projectItemsIO.append(projItem)
 
 
-def labelMaker(data: FilesTreeItem, column: int) -> str:
+def _labelMaker(data: FilesTreeItem, column: int) -> str:
 	return (data.label, str(len(data.filePaths)))[column]
 
 
-def iconMaker(data: FilesTreeItem, column: int) -> QIcon:
+def _iconMaker(data: FilesTreeItem, column: int) -> QIcon:
 	return data.icon if column == 0 else None
 	# if data.isFile:
 	# 	return icons.file_code
@@ -375,11 +450,11 @@ def iconMaker(data: FilesTreeItem, column: int) -> QIcon:
 	# return icons.folderInTree
 
 
-def toolTipMaker(data: FilesTreeItem, column: int) -> str:
+def _toolTipMaker(data: FilesTreeItem, column: int) -> str:
 	return data.commonVPath
 
 
-def childrenMaker(data: FilesTreeItem) -> list[FilesTreeItem]:
+def _filesTreeChildrenMaker(data: FilesTreeItem) -> list[AnyFilesTreeElement]:
 	if isinstance(data, FilesTreeRoot):
 		return data.projects
 
@@ -417,13 +492,61 @@ def childrenMaker(data: FilesTreeItem) -> list[FilesTreeItem]:
 	return sorted(children.values(), key=lambda x: (x.isFile, x.label.lower()))
 
 
-class Handler(FileSystemEventHandler):
+def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
+	# todo: createNewFileGUI(...)
+	getSession().showAndLogWarning(None, "createNewFileGUI()... not yet implemented")
+	# nsHandlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.structure)
+	# extensions = [h.extension for ns, h, _ in nsHandlers]
+	# CUSTOM_EXT = "[custom]"
+	# extensions.append(CUSTOM_EXT)
+	#
+	# @dataclass
+	# class Context:
+	# 	extension: int = 0
+	# 	name: str = "untitled"
+	#
+	# def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
+	# 	context.name = gui.textField(context.name, "name:")
+	# 	context.extension = gui.radioButtonGroup(context.extension, extensions, "extension:")
+	# 	return context
+	#
+	# context = Context()
+	# context, isOk = gui.askUserInput(f"new File", context, guiFunc)
+	# if not isOk:  # or not context.name:
+	# 	return
+	#
+	# ext = extensions[context.extension]
+	# if ext == CUSTOM_EXT:
+	# 	ext = ''
+	# try:
+	# 	filePath = createNewFile(folderPath, context.name.removesuffix(ext) + ext)
+	# 	openFunc(filePath)
+	# except OSError as e:
+	# 	getSession().showAndLogError(e, "Cannot create file")
+	return
+
+
+def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
+	name, ok = gui.askUserInput('New Folder', 'New folder')
+	if not ok or not name:
+		return
+
+	try:
+		createNewFolder(folderPath, name)
+	except OSError as e:
+		getSession().showAndLogError(e, "Cannot create folder")
+
+
+# Non-GUI stuff:
+
+
+class _FileSysytemChangeHandler(FileSystemEventHandler):
 	"""
 	Base file system event handler that you can override methods from.
 	"""
 
 	def __init__(self, root: Root, project: Project):
-		super(Handler, self).__init__()
+		super(_FileSysytemChangeHandler, self).__init__()
 		self._project: Project = project
 		self._root: Root = root
 
@@ -548,7 +671,7 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 		pass
 
 	def onRootAdded(self, root: Root, project: Project) -> None:
-		filesystemEvents.FILESYSTEM_OBSERVER.schedule("dpe:files_aspect", root.normalizedLocation, Handler(root, project))
+		filesystemEvents.FILESYSTEM_OBSERVER.schedule("dpe:files_aspect", root.normalizedLocation, _FileSysytemChangeHandler(root, project))
 
 	def onRootRemoved(self, root: Root, project: Project) -> None:
 		filesystemEvents.FILESYSTEM_OBSERVER.unschedule("dpe:files_aspect", root.normalizedLocation)
@@ -584,10 +707,12 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 			return
 		idx = root.indexBundles.setdefault(FilesIndex).files
 		for jf in rawLocalFiles:
+			# TODO: fix when name of root changes the files tree breaks for that root because the virtualPaths are invalid, because it is created here:
 			idx.add(jf[1], jf, FileEntry(jf, f'{root.name}/{jf[1]}', True))
 
 		idx = root.indexBundles.get(FilesIndex).folders
 		for jf in rawLocalFolders:
+			# TODO: fix when name of root changes the files tree breaks for that root because the virtualPaths are invalid, because it is created here:
 			idx.add(jf[1], jf, FileEntry(jf, f'{root.name}/{jf[1]}', False))
 
 
@@ -607,88 +732,6 @@ class FileEntry(NamedTuple):
 	isFile: bool
 
 
-@dataclass(slots=True)
-class FilesTreeItem:
-	label: str
-	icon: Optional[QIcon] = dataclasses.field(compare=False)
-	commonVPath: str = dataclasses.field(compare=False)
-	commonPath: FilePathTpl = dataclasses.field(compare=False)
-	filePaths: list[FileEntry] = dataclasses.field(compare=False)
-
-	isImmutable: bool = dataclasses.field(compare=False)
-	isArchive: bool = dataclasses.field(default=False, compare=False)
-
-	@property
-	def folderPath(self) -> Optional[FilePathTpl]:
-		""":return: path of the folder if isFile is False, else None"""
-		if self.isFile:
-			return None
-		return self.commonPath
-
-	@property
-	def filePath(self) -> Optional[FilePathTpl]:
-		""":return: path of the file if isFile is True, else None"""
-		if not self.isFile:
-			return None
-		return self.filePaths[0].fullPath
-
-	@property
-	def isFile(self) -> bool:
-		filePathsCount = len(self.filePaths)
-		return filePathsCount == 1 and self.commonPath == self.filePaths[0].fullPath and self.filePaths[0].isFile
-
-
-@dataclass
-class FilesTreeRoot:
-	projects: list[FilesTreeItem] = dataclasses.field(compare=False)
-	label: str = '<ROOT>'
-	icon: Optional[QIcon] = None
-	commonDepth: ClassVar[int] = 0
-	isImmutable: ClassVar[bool] = False
-	isArchive: ClassVar[bool] = False
-	folderPath: ClassVar[Optional[FilePath]] = None
-	filePath: ClassVar[Optional[FilePathTpl]] = None
-	isFile: ClassVar[bool] = False
-	commonVPath: str = ''
-
-	@property
-	def filePaths(self) -> list[FileEntry]:
-		return []
-
-
-def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
-	# todo: createNewFileGUI(...)
-	getSession().showAndLogWarning(None, "createNewFileGUI()... not yet implemented")
-	# nsHandlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.structure)
-	# extensions = [h.extension for ns, h, _ in nsHandlers]
-	# CUSTOM_EXT = "[custom]"
-	# extensions.append(CUSTOM_EXT)
-	#
-	# @dataclass
-	# class Context:
-	# 	extension: int = 0
-	# 	name: str = "untitled"
-	#
-	# def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
-	# 	context.name = gui.textField(context.name, "name:")
-	# 	context.extension = gui.radioButtonGroup(context.extension, extensions, "extension:")
-	# 	return context
-	#
-	# context = Context()
-	# context, isOk = gui.askUserInput(f"new File", context, guiFunc)
-	# if not isOk:  # or not context.name:
-	# 	return
-	#
-	# ext = extensions[context.extension]
-	# if ext == CUSTOM_EXT:
-	# 	ext = ''
-	# try:
-	# 	filePath = createNewFile(folderPath, context.name.removesuffix(ext) + ext)
-	# 	openFunc(filePath)
-	# except OSError as e:
-	# 	getSession().showAndLogError(e, "Cannot create file")
-
-
 def createNewFile(folderPath: FilePath, name: str) -> FilePath:
 	if isinstance(folderPath, tuple):
 		filePath = folderPath[0], os.path.join(folderPath[1], name)
@@ -697,17 +740,6 @@ def createNewFile(folderPath: FilePath, name: str) -> FilePath:
 	with openOrCreate(os.path.join(*filePath), 'a'):
 		pass  # creates the File
 	return normalizeDirSeparators(filePath)
-
-
-def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
-	name, ok = gui.askUserInput('New Folder', 'New folder')
-	if not ok or not name:
-		return
-
-	try:
-		createNewFolder(folderPath, name)
-	except OSError as e:
-		getSession().showAndLogError(e, "Cannot create folder")
 
 
 def createNewFolder(folderPath: FilePath, name: str):
