@@ -1,7 +1,8 @@
 from __future__ import annotations
 import builtins
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass
 from typing import final, Iterator, NewType, Protocol
+from recordclass import as_dataclass
 
 import markdown
 
@@ -47,11 +48,12 @@ class MessageAdapter:
 
 
 @final
-@dataclass(order=True, unsafe_hash=True, slots=True)
-class Position:
-	line: int = field(default=-1, hash=False, compare=False)
-	column: int = field(default=-1, hash=False, compare=False)
-	index: int = field(default=-1, hash=False, compare=True)
+#@dataclass(order=True, unsafe_hash=False, slots=True)
+@as_dataclass(fast_new=True, hashable=True)
+class Position:  # (dataobject, fast_new=True):  # (NamedTuple):
+	line: int  # = -1
+	column: int  # = -1
+	index: int  # = field(default=-1, hash=False, compare=False)
 
 	def __iter__(self):
 		yield self.line
@@ -61,20 +63,46 @@ class Position:
 		return 2
 
 	def __add__(self, other: int) -> Position:
-		return replace(self, column=self.column + other, index=self.index + other)
+		return Position(self.line, column=self.column + other, index=self.index + other)
 
 	def __sub__(self, other: int) -> Position:
-		return replace(self, column=self.column - other, index=self.index - other)
+		return Position(self.line, column=self.column - other, index=self.index - other)
+
+	def __lt__(self, other):
+		return (self.line, self.column) < (other.line, other.column)
+
+	def __gt__(self, other):
+		return (self.line, self.column) > (other.line, other.column)
+
+	def __le__(self, other):
+		return (self.line, self.column) <= (other.line, other.column)
+
+	def __ge__(self, other):
+		return (self.line, self.column) >= (other.line, other.column)
+
+	def __eq__(self, other):
+		if type(other) is not Position:
+			return False
+		return self.line == other.line and self.column == other.column
+
+	def __ne__(self, other):
+		if type(other) is not Position:
+			return True
+		return self.line != other.line or self.column != other.column
+
+	def __hash__(self):
+		return (hash(self.line) + 31 * hash(self.column)) // 32
 
 
 @final
-@dataclass(init=False, unsafe_hash=True, slots=True)
-class Span:
+# @dataclass(init=False, unsafe_hash=True, slots=True)
+@as_dataclass(hashable=True, fast_new=True)
+class Span:  # (dataobject, fast_new=True):
 	start: Position
 	end: Position
 
 	def __init__(self, start: Position = None, end: Position = None):
-		self.start = Position() if start is None else start
+		self.start = NULL_POSITION if start is None else start
 		self.end = self.start if end is None else end
 		assert isinstance(self.start, Position)
 		assert isinstance(self.end, Position)
@@ -114,6 +142,10 @@ class Span:
 	@staticmethod
 	def encompassing(start: Span, end: Span) -> Span:
 		return Span(start.start, end.end)
+
+
+NULL_POSITION = Position(-1, -1, -1)
+NULL_SPAN = Span()
 
 
 HTMLStr = strings.HTMLStr
@@ -219,6 +251,8 @@ __all__ = [
 	'MessageAdapter',
 	'Position',
 	'Span',
+	'NULL_POSITION',
+	'NULL_SPAN',
 	'HTMLStr',
 	'MDStr',
 	'formatMarkdown',

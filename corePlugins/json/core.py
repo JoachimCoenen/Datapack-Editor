@@ -11,7 +11,7 @@ from Cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecor
 from Cat.utils.logging_ import logWarning
 from base.model.parsing.parser import IndexMapper
 from base.model.parsing.tree import Node, Schema
-from base.model.utils import GeneralError, MDStr, LanguageId, Span
+from base.model.utils import GeneralError, MDStr, LanguageId, Span, NULL_SPAN
 
 
 class TokenType(enum.Enum):
@@ -223,7 +223,7 @@ class JsonSchema(Schema, Generic[_TT], ABC):
 	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		self.description: MDStr = description
 		self.deprecated: bool = deprecated
-		self.span: Span = Span()
+		self.span: Span = NULL_SPAN
 		self.filePath: str = ''
 		self.allowMultilineStr: Optional[bool] = allowMultilineStr
 
@@ -251,7 +251,7 @@ class JsonSchema(Schema, Generic[_TT], ABC):
 # 	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: bool):
 # 		self.description: MDStr = description
 # 		self.deprecated: bool = deprecated
-# 		self.span: Span = Span()
+# 		self.span: Span = NULL_SPAN
 # 		self.filePath: str = ''
 # 		self.allowMultilineStr: bool = allowMultilineStr
 #

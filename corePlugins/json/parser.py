@@ -13,7 +13,7 @@ from corePlugins.json.schema import enrichWithSchema, pathify
 from model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.parser import ParserBase, IndexMapper
-from base.model.utils import Span, MDStr, Message
+from base.model.utils import Span, MDStr, Message, NULL_SPAN
 
 ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG = Message("JSON standard allows only double quoted string as property key", 0)
 MISSING_VALUE_MSG = Message("Missing value for property", 0)
@@ -90,7 +90,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	def accept(self, tokenType: TokenType, advanceIfBad: bool = True) -> Optional[Token]:
 		current = self._current
 		if current is None:
-			span = self._last.span if self._last is not None else Span()
+			span = self._last.span if self._last is not None else NULL_SPAN
 			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
 			return self._last  # TODO: WTF ?????
 
@@ -105,7 +105,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType], advanceIfBad: bool = True) -> Optional[Token]:
 		current = self._current
 		if current is None:
-			span = self._last.span if self._last is not None else Span()
+			span = self._last.span if self._last is not None else NULL_SPAN
 			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
 			return self._last  # TODO: WTF ?????
 
@@ -121,7 +121,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	def acceptAny(self) -> Optional[Token]:
 		current = self._current
 		if current is None:
-			span = self._last.span if self._last is not None else Span()
+			span = self._last.span if self._last is not None else NULL_SPAN
 			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
 			return self._last  # TODO: WTF ?????
 		self._next()
