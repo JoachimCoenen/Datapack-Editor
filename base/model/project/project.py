@@ -153,7 +153,18 @@ class IndexBundleAspect(Aspect, IndexBundle, ABC):
 @dataclass(kw_only=True)
 class AspectFeatures:
 	dependencies: bool = False
+	"""
+	def getDependencies(self, root: Root) -> list[DependencyDescr]: ...
+	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]: ...
+	"""
 	analyzeRoots: bool = False
+	"""
+	def analyzeRoot(self, root: Root) -> None: ...
+	"""
+	analyzeFiles: bool = False
+	"""
+	def analyzeFile(self, root: Root, path: FilePathTpl) -> None: ...
+	"""
 
 
 @dataclass
@@ -170,29 +181,47 @@ class ProjectAspect(Aspect, ABC):
 		cls.aspectFeatures = features
 
 	def getDependencies(self, root: Root) -> list[DependencyDescr]:
-		""" for now. might change"""
+		"""
+		for now. might change.
+		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
+		"""
 		pass
 
 	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
-		""" for now. might change"""
+		"""
+		for now. might change.
+		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
+		"""
 		pass
 
 	def analyzeRoot(self, root: Root) -> None:
-		pass
-
-	def analyzeFile(self, root: Root, path: FilePathTpl) -> None:
+		"""
+		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeRoots=True)): ...
+		"""
 		pass
 
 	def onRootAdded(self, root: Root, project: Project) -> None:
+		"""
+		enabled with: <always enabled>
+		"""
 		pass
 
 	def onRootRemoved(self, root: Root, project: Project) -> None:
+		"""
+		enabled with: <always enabled>
+		"""
+		pass
+
+	def analyzeFile(self, root: Root, path: FilePathTpl) -> None:
+		"""
+		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeFiles=True)): ...
+		"""
 		pass
 
 
 @dataclass
 class Root(SerializableDataclass):
-	name: str
+	_name: str = field(metadata=dict(cat=dict(serializedName='name')))
 	_location: str  # =FilePathStr  # maybe?
 	dependencies: list[DependencyDescr] = field(default_factory=list, metadata=dict(cat=dict(serialize=False)))
 	indexBundles: AspectDict[IndexBundleAspect] = field(default_factory=lambda: AspectDict(IndexBundleAspect), metadata=dict(cat=dict(serialize=False)))
@@ -204,6 +233,20 @@ class Root(SerializableDataclass):
 	@property
 	def normalizedLocation(self) -> FilePathStr:
 		return normalizeDirSeparatorsStr(self.location).rstrip('/')
+
+	@property
+	def name(self) -> str:
+		return self._name
+
+	@name.setter
+	def name(self, newName: str):
+		oldName = self._name
+		if oldName != newName:
+			from base.model.session import getSession
+			for aspect in getSession().project.aspects:
+				if aspect.aspectFeatures.analyzeRoots:
+					aspect.onRootRenamed(self, oldName, newName)
+		self._name = newName
 
 
 @dataclass

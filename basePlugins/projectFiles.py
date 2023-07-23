@@ -587,7 +587,7 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 				index = self._root.indexBundles.setdefault(FilesIndex).files
 				index.add(jf[1], jf, FileEntry(jf, f'{self._root.name}/{jf[1]}', True))
 				for aspect in self._project.aspects:
-					if aspect.aspectFeatures.analyzeRoots:
+					if aspect.aspectFeatures.analyzeFiles:
 						aspect.analyzeFile(self._root, jf)
 
 	def on_created(self, event: FileCreatedEvent):
@@ -605,7 +605,7 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 			index = self._root.indexBundles.setdefault(FilesIndex).files
 			index.add(path[1], path, FileEntry(path, f'{self._root.name}/{path[1]}', True))
 			for aspect in self._project.aspects:
-				if aspect.aspectFeatures.analyzeRoots:
+				if aspect.aspectFeatures.analyzeFiles:
 					aspect.analyzeFile(self._root, path)
 
 	def on_deleted(self, event: FileDeletedEvent):
@@ -645,7 +645,7 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 			index = self._root.indexBundles.setdefault(FilesIndex).files
 			index.add(path[1], path, FileEntry(path,  f'{self._root.name}/{path[1]}', True))
 			for aspect in self._project.aspects:
-				if aspect.aspectFeatures.analyzeRoots:
+				if aspect.aspectFeatures.analyzeFiles:
 					aspect.analyzeFile(self._root, path)
 
 	def on_closed(self, event: FileClosedEvent):
