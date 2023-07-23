@@ -74,7 +74,7 @@ def _setMinecraftVersion(self, newVal: str) -> None:
 	applicationSettings = getApplicationSettings()
 	if applicationSettings is not None and applicationSettings.aspects.get(MinecraftSettings) is self:
 		oldVal = getattr(self, '_minecraftVersion', None)
-		if newVal != oldVal:
+		if True or newVal != oldVal:
 			mcVersion = getMCVersion(oldVal)
 			if mcVersion is not None:
 				mcVersion.deactivate()

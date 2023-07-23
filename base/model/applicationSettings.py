@@ -371,7 +371,7 @@ def copyAppSettings(self: SerializableDataclass, other: SerializableDataclass) -
 	if not isinstance(other, SerializableDataclass):
 		raise ValueError(f"expected a SerializableDataclass, but got {other}")
 	for aField in fields(self):
-		if shouldSerialize(aField, self):
+		if shouldSerialize(aField, None):
 			otherVal = getattr(other, aField.name)
 			selfValIt = createCopy(otherVal)
 			setattr(self, aField.name, next(selfValIt))
@@ -381,9 +381,7 @@ def copyAppSettings(self: SerializableDataclass, other: SerializableDataclass) -
 		assert isinstance(other, ApplicationSettings)
 		for aspect in self.aspects._aspects.copy().values():
 			otherAspect = other.aspects.get(type(aspect))
-			selfValIt = createCopy(otherAspect)
-			self.aspects.replace(type(aspect), next(selfValIt))
-			next(selfValIt, None)
+			copyAppSettings(aspect, otherAspect)
 		self.unknownSettings = other.unknownSettings.copy()
 
 
