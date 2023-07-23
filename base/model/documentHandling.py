@@ -3,15 +3,15 @@ open document, close document, select document, move to view, etc. ...
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import NewType, Optional, Callable, Iterator, cast, Sequence
+from dataclasses import dataclass, field
+from typing import NewType, Optional, Callable, Iterator, cast, Sequence, ClassVar
 
-from Cat.Serializable import SerializableContainer, RegisterContainer, Serialized, Computed
+from Cat.Serializable.dataclassJson import SerializableDataclass
 from Cat.utils import abstract, override
 from Cat.utils.abc_ import abstractmethod
 from Cat.utils.collections_ import Stack
 from Cat.utils.profiling import logInfo
-from Cat.utils.signals import CatSignal, CatBoundSignal
+from Cat.utils.signals import CatSignal
 from base.model.utils import Span
 from base.model.pathUtils import FilePath, toDisplayPath
 from base.model.documents import Document, DocumentTypeDescription, loadDocument
@@ -24,36 +24,27 @@ class ViewId:
 	window: WindowId
 
 
-@RegisterContainer
+@dataclass(repr=False, slots=True)
 @abstract
-class ViewBase(SerializableContainer):
-	__slots__ = ()
-	parent: Optional[ViewContainer] = Serialized(default=None)
-	manager: DocumentsManager = Serialized(default=None)
-
-	# def __init__(self, parent: Optional[ViewContainer] = None):
-	# 	super(ViewBase, self).__init__()
-	# 	self.parent = parent
-	# 	if parent is not None:
-	# 		self.manager = parent.manager
-
-	def __init__(self, manager: DocumentsManager = None):
-		super(ViewBase, self).__init__()
-		if manager is not None:
-			self.manager = manager
+class ViewBase(SerializableDataclass):
+	parent: Optional[ViewContainer] = field(default=None, init=False, metadata=dict(cat=dict(serialize=True)))
+	manager: DocumentsManager
 
 	@abstractmethod
 	def getViewForDocument(self, doc: Document) -> Optional[View]:
 		...
 
+	def __hash__(self):
+		return hash(id(self)) + 17948354
 
-@RegisterContainer
+
+@dataclass(repr=False, slots=True)
 class ViewContainer(ViewBase):
-	__slots__ = ()
 
-	isVertical: bool = Serialized(default=False)
-	views: list[ViewBase] = Serialized(default_factory=list)
-	onViewsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onViewsChanged')
+	isVertical: bool = False
+	views: list[ViewBase] = field(default_factory=list, metadata=dict(cat=dict(deferLoading=True)))
+	onViewsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onViewsChanged')
+	# onViewsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onViewsChanged')
 
 	@staticmethod
 	def _setParentFor(view: ViewBase, newParent: Optional[ViewContainer]):
@@ -173,18 +164,25 @@ class ViewContainer(ViewBase):
 				return view
 		return None
 
+	def __hash__(self):
+		return hash(id(self)) + 17948353
 
-@RegisterContainer
+
+@dataclass(repr=False, slots=True)
 class View(ViewBase):
-	__slots__ = ()
-	documents: list[Document] = Serialized(default_factory=list)
-	selectedDocument: Optional[Document] = Serialized(default=None)
+	documents: list[Document] = field(default_factory=list)
+	selectedDocument: Optional[Document] = None
 
-	onDocumentsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onDocumentsChanged')
-	onMadeCurrent: CatBoundSignal[Callable[[], None]] = CatSignal('onMadeCurrent')
-	onSelectedDocumentChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onSelectedDocumentChanged')
+	onDocumentsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onDocumentsChanged')
+	# onDocumentsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onDocumentsChanged')
+	onMadeCurrent: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onMadeCurrent')
+	# onMadeCurrent: CatBoundSignal[Callable[[], None]] = CatSignal('onMadeCurrent')
+	onSelectedDocumentChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onSelectedDocumentChanged')
+	# onSelectedDocumentChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onSelectedDocumentChanged')
 
-	isCurrent: bool = Computed(getInitValue=lambda s: s.manager.currentView is s)
+	@property
+	def isCurrent(self) -> bool:
+		return self.manager.currentView is self
 
 	# documents related:
 	def insertDocument(self, doc: Document, pos: Optional[int]) -> None:
@@ -267,19 +265,19 @@ class View(ViewBase):
 			return self
 		return None
 
+	def __hash__(self):
+		return hash(id(self)) + 17948352
 
-@RegisterContainer
-class DocumentsManager(SerializableContainer):
-	__slots__ = ()
 
-	__ALWAYS_TRUE = True
+@dataclass(repr=False, slots=True)
+class DocumentsManager(SerializableDataclass):
 	"""used in `DocumentsManager.safelyCloseDocument(...)` to overcome a bug with PyCharm 2021.2's type checker :'("""
 
-	def __typeCheckerInfo___(self):
-		# giving the type checker a helping hand...
-		pass
+	def __post_init__(self):
+		self.viewsC = ViewContainer(self)
+		self.currentView = self._getFirstView()
 
-	viewsC: ViewContainer = Serialized(getInitValue=ViewContainer)
+	viewsC: ViewContainer = field(init=False, metadata=dict(cat=dict(serialize=True)))
 
 	@property
 	def views(self) -> Sequence[View]:
@@ -302,12 +300,14 @@ class DocumentsManager(SerializableContainer):
 		else:
 			view = self.views[0]
 		return view
-	currentView: View = Serialized(getInitValue=_getFirstView)
+	currentView: View = field(init=False, metadata=dict(cat=dict(serialize=True)))
 
 	# callbacks (must be set externally, for prompting the user, etc...):
-	onCanCloseModifiedDocument: Callable[[Document], bool] = Serialized(default=lambda d: True, shouldSerialize=False)
-	onCurrentViewChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onCurrentViewChanged')
-	onSelectedDocumentChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onSelectedDocumentChanged')
+	onCanCloseModifiedDocument: Callable[[Document], bool] = field(default=lambda d: True, metadata=dict(cat=dict(serialize=False)))
+	onCurrentViewChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onCurrentViewChanged')
+	# onCurrentViewChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onCurrentViewChanged')
+	onSelectedDocumentChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onSelectedDocumentChanged')
+	# onSelectedDocumentChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onSelectedDocumentChanged')
 
 	# views:
 
@@ -330,8 +330,8 @@ class DocumentsManager(SerializableContainer):
 		# 	idx = -1
 		# logInfo(f"selecting View #{idx}.")
 		# print(f"~ ~ ~ ~ ~ selecting View #{idx}.")
-		if self.currentView is not view:
-			logInfo(f"selecting View {view}.")
+		if getattr(self, 'currentView', None) is not view:
+			logInfo(f"selecting View <{type(view).__qualname__} 0x{id(view):x}>.")
 			self.currentView = view
 			view.onMadeCurrent.emit()
 			self.onCurrentViewChanged.emit()
@@ -383,9 +383,7 @@ class DocumentsManager(SerializableContainer):
 
 	def safelyCloseDocument(self, doc: Document) -> bool:
 		if doc.documentChanged:
-			cb: Callable[[Document], bool] = lambda x: True
-			if self.__ALWAYS_TRUE:  # used to overcome a bug with PyCharm 2021.2's type checker :'(
-				cb: Callable[[Document], bool] = self.onCanCloseModifiedDocument
+			cb: Callable[[Document], bool] = self.onCanCloseModifiedDocument
 			if cb(doc):
 				self.forceCloseDocument(doc)
 				return True
@@ -442,3 +440,6 @@ class DocumentsManager(SerializableContainer):
 	def allOpenedDocuments(self) -> Iterator[Document]:
 		for view in self.views:
 			yield from view.documents
+
+	def __hash__(self):
+		return hash(id(self)) + 17948351
