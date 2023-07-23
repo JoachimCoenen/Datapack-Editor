@@ -350,7 +350,7 @@ class Document(SerializableDataclass):
 	@parserErrors.setter
 	def parserErrors(self, newVal: list[GeneralError]):
 		if newVal != self._parserErrors:
-			self._validationErrors = newVal
+			self._parserErrors = newVal
 			QTimer.singleShot(0, lambda s=self: s.onErrorsChanged.emit(s))
 
 	@property
