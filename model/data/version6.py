@@ -10,7 +10,7 @@ from model.datapack.datapackContents import NAME_SPACE_VAR, EntryHandlerInfo, Da
 
 def initPlugin() -> None:
 	registerDPVersion(version6)
-	from model.data.json import contexts
+	from corePlugins.datapackSchemas import contexts
 	contexts.init()
 
 

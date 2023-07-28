@@ -1,4 +1,4 @@
-from model.json.core import JsonArgType
+from corePlugins.json.core import JsonArgType
 from base.model.utils import MDStr
 
 MINECRAFT_CHAT_COMMAND = JsonArgType(

@@ -1,9 +1,9 @@
 from math import inf
 from typing import Optional
 
-from model.commands.argumentTypes import LiteralsArgumentType, BRIGADIER_BOOL, BRIGADIER_INTEGER
-from model.datapack.datapackContents import ResourceLocation
-from model.json.core import *
+from corePlugins.mcFunction.argumentTypes import LiteralsArgumentType, BRIGADIER_BOOL, BRIGADIER_INTEGER
+from corePlugins.datapack.datapackContents import ResourceLocation
+from corePlugins.json.core import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.utils import MDStr
 
@@ -18,23 +18,23 @@ def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[JsonObject
 	for state in states:
 		valueDescr: MDStr = state.type.description
 		if isinstance(state.type, LiteralsArgumentType):
-			value = JsonStringOptionsSchema(options={bytesToStr(opt): MDStr("") for opt in state.type.options}, description=valueDescr)
+			value = JsonStringOptionsSchema(options={bytesToStr(opt): MDStr("") for opt in state.type.options}, description=valueDescr, allowMultilineStr=False)
 		elif state.type.name == BRIGADIER_BOOL.name:
 			value = JsonBoolSchema(description=valueDescr)
 		elif state.type.name == BRIGADIER_INTEGER.name:
 			args = state.args or {}
 			value = JsonIntSchema(minVal=args.get('min', -inf), maxVal=args.get('max', inf), description=valueDescr)
 		else:
-			value = JsonStringSchema(type=state.type, description=valueDescr)
-		properties.append(PropertySchema(name=state.name, value=value, optional=True, description=state.description))
+			value = JsonStringSchema(type=state.type, description=valueDescr, allowMultilineStr=False)
+		properties.append(PropertySchema(name=state.name, value=value, optional=True, description=state.description, allowMultilineStr=None))
 
-	return JsonObjectSchema(properties=properties)
+	return JsonObjectSchema(properties=properties, allowMultilineStr=None)
 
 
 def propertiesFor_block_state_property(parent: JsonObject) -> Optional[JsonObjectSchema]:
 	blockVal = parent.data.get('block', None)
 	if blockVal is None or not isinstance(blockVal.value, JsonString):
-		return JsonObjectSchema(properties=[])
+		return JsonObjectSchema(properties=[], allowMultilineStr=None)
 	else:
 		block = blockVal.value.data
 		block = ResourceLocation.fromString(block)
