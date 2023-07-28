@@ -9,7 +9,7 @@ from PyQt5.Qsci import QsciLexerCustom
 from Cat.CatPythonGUI.GUI.codeEditor import CodeEditorLexer
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.utils.collections_ import AddToDictDecorator
-from Cat.utils.logging_ import logError
+from Cat.utils.logging_ import logError, logWarning
 from base.gui.styler import registerStyler, CatStyler
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings
 from base.model.documents import DocumentTypeDescription, registerDocumentTypeDescription
@@ -52,8 +52,12 @@ class PluginService:
 
 		plugin.initPlugin()
 
-		for name, schema in (plugin.schemas() or {}).items():
-			GLOBAL_SCHEMA_STORE.registerSchema(name, schema)
+		schemas = plugin.schemas() or {}
+		for name, schema in schemas.items():
+			if schema is not None:
+				GLOBAL_SCHEMA_STORE.registerSchema(name, schema)
+			else:
+				logWarning(f"Schema with name'{name}' was null. it won't be added to the GLOBAL_SCHEMA_STORE.")
 
 		for settingCls in (plugin.settingsAspects() or []):
 			application_settings = getApplicationSettings()
