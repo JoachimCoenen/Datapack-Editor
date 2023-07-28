@@ -375,7 +375,7 @@ def loadTextFile(filePath: FilePath, archiveFilePool: ArchiveFilePool, encoding:
 	text = None
 	if isinstance(filePath, (str, bytes)):
 		# path is a normal file:
-		with open(filePath) as f:  # open file
+		with open(filePath, encoding=encoding, errors=errors) as f:  # open file
 			text = f.read()
 	elif os.path.isdir(filePath[0]):
 		with open(f'{filePath[0]}/{filePath[1]}', encoding=encoding, errors=errors) as f:  # open file
