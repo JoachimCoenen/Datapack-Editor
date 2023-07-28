@@ -69,28 +69,35 @@ class Position:  # (dataobject, fast_new=True):  # (NamedTuple):
 		return Position(self.line, column=self.column - other, index=self.index - other)
 
 	def __lt__(self, other):
+		return self.index < other.index
 		return (self.line, self.column) < (other.line, other.column)
 
 	def __gt__(self, other):
+		return self.index > other.index
 		return (self.line, self.column) > (other.line, other.column)
 
 	def __le__(self, other):
+		return self.index <= other.index
 		return (self.line, self.column) <= (other.line, other.column)
 
 	def __ge__(self, other):
+		return self.index >= other.index
 		return (self.line, self.column) >= (other.line, other.column)
 
 	def __eq__(self, other):
 		if type(other) is not Position:
 			return False
+		return self.index == other.index
 		return self.line == other.line and self.column == other.column
 
 	def __ne__(self, other):
 		if type(other) is not Position:
 			return True
+		return self.index != other.index
 		return self.line != other.line or self.column != other.column
 
 	def __hash__(self):
+		return hash(self.index) + 31
 		return (hash(self.line) + 31 * hash(self.column)) // 32
 
 

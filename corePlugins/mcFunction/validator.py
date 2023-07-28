@@ -1,4 +1,3 @@
-from dataclasses import replace
 from typing import Sequence, Optional
 
 from corePlugins.mcFunction.argumentTypes import *
@@ -8,8 +7,7 @@ from corePlugins.mcFunction.utils import CommandSemanticsError
 from corePlugins.mcFunction.command import MCFunction, CommandPart, ParsedCommand
 from model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.utils import Span, Message, wrapInMarkdownCode
-
+from base.model.utils import Span, Message, wrapInMarkdownCode, Position
 
 UNKNOWN_ARGUMENT_MSG = Message("Unknown argument: expected {0}, but got: {1}", 2)
 TOO_MANY_ARGUMENTS_MSG = Message("Too many arguments: {0}", 1)
@@ -58,7 +56,7 @@ def _missingArgumentError(command: ParsedCommand, lastCommandPart: CommandPart, 
 	errorStart = lastCommandPart.end
 	errorEnd = command.span.end
 	if errorStart.index >= errorEnd.index:
-		errorStart = replace(errorEnd, column=max(0, errorEnd.column - 1), index=max(0, errorEnd.index - 1))
+		errorStart = Position(errorEnd.line, max(0, errorEnd.column - 1), max(0, errorEnd.index - 1))
 
 	possibilitiesStr = formatPossibilities(possibilities)
 	return CommandSemanticsError(MISSING_ARGUMENTS_MSG.format(possibilitiesStr), Span(errorStart, errorEnd))

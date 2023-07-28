@@ -318,11 +318,11 @@ class BlockStateHandler(ArgumentContext):
 			blockStatesDict = self._getBlockStatesDict(blockID)
 			suggestions += suggestionsForFilterArgs(blockState.states, node.source[argsStart.index:node.end.index], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
 
-		if pos in blockID.span:
+		if blockID.span.__contains__(pos):
 			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
 			# suggestions += rlc.BlockContext(self._allowTag).getSuggestions(contextStr, cursorPos, replaceCtx)
 
-		if blockState.nbt is not None and pos in blockState.nbt.span:
+		if blockState.nbt is not None and blockState.nbt.span.__contains__(pos):
 			suggestions += getSuggestions(blockState.nbt, node.source, pos, replaceCtx)
 
 		return suggestions
@@ -342,9 +342,9 @@ class BlockStateHandler(ArgumentContext):
 
 	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
 		blockState: BlockState = node.value
-		if position in blockState.blockId.span:
+		if blockState.blockId.span.__contains__(position):
 			onIndicatorClicked(blockState.blockId, node.source, position, window)
-		elif blockState.nbt is not None and position in blockState.nbt.span:
+		elif blockState.nbt is not None and blockState.nbt.span.__contains__(position):
 			onIndicatorClicked(blockState.nbt, node.source, position, window)
 		else:
 			onIndicatorClickedForFilterArgs(blockState.states, position, window)
@@ -573,10 +573,10 @@ class ItemStackHandler(ArgumentContext):
 			return []
 
 		suggestions = []
-		if pos in itemStack.itemId.span:
+		if itemStack.itemId.span.__contains__(pos):
 			suggestions += getSuggestions(itemStack.itemId, node.source, pos, replaceCtx)
 
-		if itemStack.nbt is not None and pos in itemStack.nbt.span:
+		if itemStack.nbt is not None and itemStack.nbt.span.__contains__(pos):
 			suggestions += getSuggestions(itemStack.nbt, node.source, pos, replaceCtx)
 
 		return suggestions
@@ -596,9 +596,9 @@ class ItemStackHandler(ArgumentContext):
 
 	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
 		itemStack: ItemStack = node.value
-		if position in itemStack.itemId.span:
+		if itemStack.itemId.span.__contains__(position):
 			onIndicatorClicked(itemStack.itemId, node.source, position, window)
-		elif itemStack.nbt is not None and position in itemStack.nbt.span:
+		elif itemStack.nbt is not None and itemStack.nbt.span.__contains__(position):
 			onIndicatorClicked(itemStack.nbt, node.source, position, window)
 
 

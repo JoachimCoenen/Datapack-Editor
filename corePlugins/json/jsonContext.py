@@ -54,7 +54,7 @@ def _getBestMatchInObject(tree: JsonObject, pos: Position, matches: Match) -> No
 		else:
 			matches.after = elem
 			break
-		# if pos in prop.span:
+		# if prop.span.__contains__(pos):
 		# 	_getBestMatch(prop, pos, matches)
 		# 	return
 
@@ -140,7 +140,7 @@ class JsonCtxProvider(ContextProvider[JsonNode]):
 	def getBestMatch(self, pos: Position) -> Match[JsonNode]:
 		tree = self.tree
 		matches = Match(None, None, None, [])
-		if pos in tree.span:
+		if tree.span.__contains__(pos):
 			_getBestMatch(tree, pos, matches)
 			if matches.before is not None and matches.hit is not None:
 				if matches.before.span.end > matches.hit.span.start:

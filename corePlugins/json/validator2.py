@@ -1,4 +1,3 @@
-from dataclasses import replace
 from typing import Protocol
 
 from Cat.utils.collections_ import AddToDictDecorator
@@ -6,7 +5,7 @@ from corePlugins.json.core import *
 from corePlugins.json.core import JsonInvalid, JsonSemanticsError
 # from model.json.jsonContext import getJsonStringContext
 from model.messages import *
-from base.model.utils import Message, Span, GeneralError
+from base.model.utils import Message, Span, GeneralError, Position
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG = Message("Expected whitespace to end one argument, but found trailing data: `{0}`", 1)
 NO_JSON_SCHEMA_MSG = Message("No JSON Schema for {0}", 1)
@@ -156,7 +155,7 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 			if isMandatory:
 				msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(propSchema.name))
 				end = data.span.end
-				start = replace(end, column=end.column - 1, index=end.index - 1)
+				start = Position(end.line, end.column - 1, end.index - 1)
 				errorsIO.append(JsonSemanticsError(msg, Span(start, end)))
 
 
