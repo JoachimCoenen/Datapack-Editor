@@ -200,6 +200,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			caretLineVisible=False,
 			tabWidth=document.indentationSettings.tabWidth,
 			indentationsUseTabs=not document.indentationSettings.useSpaces,
+			whitespaceVisibility=applicationSettings.appearance.whitespaceVisibility,
 			**kwargs
 		)
 

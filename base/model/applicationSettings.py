@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import enum
 import os
 import traceback
 from abc import ABC
@@ -8,6 +9,7 @@ from dataclasses import dataclass, field, fields
 from json import JSONDecodeError
 from typing import final, Iterator, TypeVar, Any, Callable, cast
 
+from PyQt5.Qsci import QsciScintillaBase
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontDatabase
 
@@ -29,6 +31,13 @@ from base.model.aspect import AspectDict, Aspect, AspectType
 
 class ColorSchemePD(pd.PropertyDecorator):
 	pass
+
+
+class WhitespaceVisibility(enum.IntEnum):
+	Invisible = QsciScintillaBase.SCWS_INVISIBLE
+	AlwaysVisible = QsciScintillaBase.SCWS_VISIBLEALWAYS
+	VisibleAfterIndent = QsciScintillaBase.SCWS_VISIBLEAFTERINDENT
+	VisibleOnlyInIndent = QsciScintillaBase.SCWS_VISIBLEONLYININDENT
 
 
 @dataclass()
@@ -77,11 +86,22 @@ class AppearanceSettings(SerializableDataclass):
 		font.setPointSizeF(self.fontSize)
 		return font
 
+	colorScheme: str = field(
+		default='',
+		metadata=catMeta(
+			kwargs=dict(label='Color Scheme'),
+			decorators=[ColorSchemePD()],
+		)
+	)
+
 	monospaceFontFamily: str = field(
 		default='Consolas',
 		metadata=catMeta(
 			kwargs=dict(label='Monospace Font'),
-			decorators=[pd.FontFamily(QFontDatabase.Latin, smoothlyScalable=True, fixedPitch=True)],
+			decorators=[
+				pd.FontFamily(QFontDatabase.Latin, smoothlyScalable=True, fixedPitch=True),
+				pd.Title("Code View")
+			],
 		)
 	)
 
@@ -91,11 +111,13 @@ class AppearanceSettings(SerializableDataclass):
 		font.setPointSizeF(self.fontSize)
 		return font
 
-	colorScheme: str = field(
-		default='',
+	whitespaceVisibility: WhitespaceVisibility = field(
+		default=WhitespaceVisibility.VisibleOnlyInIndent,
 		metadata=catMeta(
-			kwargs=dict(label='Color Scheme'),
-			decorators=[ColorSchemePD()],
+			kwargs=dict(
+				label='Whitespace Visibility',
+				tip="How whitespace should be displayed.",
+			),
 		)
 	)
 
