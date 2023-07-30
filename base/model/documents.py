@@ -9,7 +9,7 @@ from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileModifi
 from Cat import undoRedo
 from Cat.CatPythonGUI.GUI import codeEditor
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
-from Cat.Serializable.dataclassJson import SerializableDataclass
+from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.undoRedo import UndoRedoStack2, MakeMementoIfDiffFunc
 from Cat.utils import utils, Decorator
 from Cat.utils.logging_ import logWarning
@@ -153,7 +153,7 @@ class RegisterDocument:
 
 def registerDocumentTypeDescription(docTypeDescr: DocumentTypeDescription):
 	assert issubclass(docTypeDescr.type, Document)
-	assert not docTypeDescr.type is Document
+	assert docTypeDescr.type is not Document
 	docName = docTypeDescr.name
 	assert docName not in _documentTypesByName, f"A document type named '{docName}' is already registered ({_documentTypesByName[docName]})."
 	_documentTypes.append(docTypeDescr)
@@ -247,7 +247,7 @@ class Document(SerializableDataclass):
 		self._resetDocumentChanged()
 
 	_filePath: FilePath = field(default='')
-	_fileChangedHandler: FileChangedHandler = field(default_factory=FileChangedHandler, metadata=dict(cat=dict(serialize=False, print=False)))
+	_fileChangedHandler: FileChangedHandler = field(default_factory=FileChangedHandler, repr=False, metadata=catMeta(serialize=False))
 
 	@property
 	def filePath(self) -> FilePath:
@@ -283,9 +283,7 @@ class Document(SerializableDataclass):
 
 	language: str = field(
 		default='PlainText',
-		metadata=dict(cat=dict(
-			decorators=[pd.ComboBox(choices=_languageChoices)]
-		))
+		metadata=catMeta(decorators=[pd.ComboBox(choices=_languageChoices)])
 	)
 
 	def _initUndoRedoStack(self, makeMementoIfDiff: MakeMementoIfDiffFunc[TTarget]):
@@ -297,8 +295,8 @@ class Document(SerializableDataclass):
 		return self.content != self._originalContent
 
 	encoding: str = field(default='utf-8')
-	_undoRedoStackInitialized: bool = field(default=False, metadata=dict(cat=dict(serialize=False)))
-	_content: TTarget = field(default=None, metadata=dict(cat=dict(decorators=[pd.NoUI()])))
+	_undoRedoStackInitialized: bool = field(default=False, metadata=catMeta(serialize=False))
+	_content: TTarget = field(default=None, metadata=catMeta(decorators=[pd.NoUI()]))
 
 	@property
 	def content(self) -> bytes:
@@ -309,9 +307,9 @@ class Document(SerializableDataclass):
 		self.contentOnSet(newVal, self._content)
 		self._content = newVal
 
-	_originalContent: Optional[TTarget] = field(default=None, metadata=dict(cat=dict(decorators=[pd.NoUI()])))
+	_originalContent: Optional[TTarget] = field(default=None, metadata=catMeta(decorators=[pd.NoUI()]))
 
-	tree: Optional[Node] = field(default=None, metadata=dict(cat=dict(serialize=False, print=False)))
+	tree: Optional[Node] = field(default=None, repr=False, metadata=catMeta(serialize=False))
 	# @Serialized(shouldSerialize=False)
 	# def tree(self) -> Optional[Node]:
 	# 	tree, self.parserErrors = self.parse(self.content)
@@ -339,8 +337,8 @@ class Document(SerializableDataclass):
 
 	highlightErrors: bool = field(default=True)
 	onErrorsChanged: ClassVar[CatSignal[Callable[[Document], None]]] = CatSignal('onErrorsChanged')
-	_parserErrors: list[GeneralError] = field(default_factory=list, metadata=dict(cat=dict(serialize=False, print=False)))
-	_validationErrors: list[GeneralError] = field(default_factory=list, metadata=dict(cat=dict(serialize=False, print=False)))
+	_parserErrors: list[GeneralError] = field(default_factory=list, repr=False, metadata=catMeta(serialize=False))
+	_validationErrors: list[GeneralError] = field(default_factory=list, repr=False, metadata=catMeta(serialize=False))
 	# validationErrors: Sequence[GeneralError] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
 
 	@property
@@ -370,7 +368,7 @@ class Document(SerializableDataclass):
 	cursorPosition: tuple[int, int] = field(default=(0, 0))
 	selection: tuple[int, int, int, int] = field(default=(-1, -1, -1, -1))
 	hasSelection: bool = property(lambda self: self.selection != (-1, -1, -1, -1))
-	forceLocate: bool = field(default=True, metadata=dict(cat=dict(serialize=False, print=False)))
+	forceLocate: bool = field(default=True, repr=False, metadata=catMeta(serialize=False))
 
 	def locatePosition(self, position: Position, end: Optional[Position] = None) -> None:
 		self.cursorPosition = position.line, position.column
@@ -501,21 +499,21 @@ class TextDocument(Document):
 
 	_content: bytes = field(
 		default=b'',
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			decode=lambda s, v: bytes(v, encoding=s.encoding, errors='replace'),
 			encode=lambda s, v: str(v, encoding=s.encoding, errors='replace'),
 			deferLoading=True,
 			decorators=[pd.NoUI()]
 		)
-	))
+	)
 	_originalContent: Optional[bytes] = field(
-		default=False,
-		metadata=dict(cat=dict(
+		default=None,
+		metadata=catMeta(
 			decode=lambda s, v: bytes(v, encoding=s.encoding, errors='replace') if isinstance(v, str) else v,
 			encode=lambda s, v: str(v, encoding=s.encoding, errors='replace'),
 			deferLoading=True,
 			decorators=[pd.NoUI()]
-		))
+		)
 	)
 
 	@property

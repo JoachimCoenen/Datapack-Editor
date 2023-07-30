@@ -5,6 +5,7 @@ from zipfile import ZipFile
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
+from Cat.Serializable.dataclassJson import catMeta
 
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings
 from base.model.aspect import AspectType
@@ -46,23 +47,23 @@ class MinecraftSettings(SettingsAspect):
 
 	minecraftVersion: str = field(
 		default='1.17',
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(label='Minecraft Version'),
 			decorators=[
 				pd.ComboBox(choices=ALL_MC_VERSIONS.keys()),
 			]
-		))
+		)
 	)
 
 	minecraftExecutable: str = field(
 		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/versions/1.17.1/1.17.1.jar').replace('\\', '/'),
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(label='Minecraft Executable'),
 			decorators=[
 				pd.FilePath([('jar', '.jar')]),
 				pd.Validator(minecraftJarValidator)
 			]
-		))
+		)
 	)
 
 

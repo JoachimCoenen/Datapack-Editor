@@ -6,7 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional, ClassVar
 
-from Cat.Serializable.dataclassJson import SerializableDataclass
+from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from Cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
@@ -27,9 +27,9 @@ class Project(SerializableDataclass, ABC):
 	name: str = 'new Project'
 	path: FilePath = ''  # save path for the project, might also be usd for git, etc.
 	roots: list[ProjectRoot] = field(default_factory=list)
-	deepDependencies: list[Root] = field(default_factory=list, metadata=dict(cat=dict(serialize=False)))
+	deepDependencies: list[Root] = field(default_factory=list, metadata=catMeta(serialize=False))
 	# projectSettings: ProjectSettings
-	aspects: AspectDict[ProjectAspect] = field(default_factory=lambda: AspectDict(ProjectAspect), metadata=dict(cat=dict(serialize=False)))
+	aspects: AspectDict[ProjectAspect] = field(default_factory=lambda: AspectDict(ProjectAspect), metadata=catMeta(serialize=False))
 
 	@property
 	def isValid(self) -> bool:
@@ -96,7 +96,7 @@ def resolveDependencies(project: Project):
 
 	# just a cache:
 	dependencyDict: dict[str, Optional[Root]] = {}
-	seenDependencies: set[str] = set()
+	# seenDependencies: set[str] = set()
 	errorsByRoot: dict[str, list[GeneralError]] = defaultdict(list)
 
 	def getDestinations(root: Root) -> list[Root]:
@@ -228,10 +228,10 @@ class ProjectAspect(Aspect, ABC):
 
 @dataclass
 class Root(SerializableDataclass):
-	_name: str = field(metadata=dict(cat=dict(serializedName='name')))
+	_name: str = field(metadata=catMeta(serializedName='name'))
 	_location: str  # =FilePathStr  # maybe?
-	dependencies: list[DependencyDescr] = field(default_factory=list, metadata=dict(cat=dict(serialize=False)))
-	indexBundles: AspectDict[IndexBundleAspect] = field(default_factory=lambda: AspectDict(IndexBundleAspect), metadata=dict(cat=dict(serialize=False)))
+	dependencies: list[DependencyDescr] = field(default_factory=list, metadata=catMeta(serialize=False))
+	indexBundles: AspectDict[IndexBundleAspect] = field(default_factory=lambda: AspectDict(IndexBundleAspect), metadata=catMeta(serialize=False))
 
 	@property
 	def location(self) -> str:

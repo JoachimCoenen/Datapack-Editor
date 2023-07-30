@@ -13,7 +13,7 @@ from PyQt5.QtGui import QFont, QFontDatabase
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.GUI import getStyles
-from Cat.Serializable.dataclassJson import SerializableDataclass, shouldSerialize
+from Cat.Serializable.dataclassJson import SerializableDataclass, shouldSerialize, catMeta
 from Cat.utils import getExePath
 from Cat.utils.formatters import formatVal
 from Cat.utils.profiling import logError
@@ -35,40 +35,40 @@ class ColorSchemePD(pd.PropertyDecorator):
 class AppearanceSettings(SerializableDataclass):
 	applicationStyle: str = field(
 		default='Fusion',
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(label='Application Style'),
 			decorators=[
 				pd.ComboBox(choices=QStyleFactory.keys()),
 				pd.NoUI()
 			]
-		))
+		)
 	)
 
 	useCompactLayout: bool = field(
 		default=False,
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(
 				label='Compact layout',
 				tip="Merges title bar & toolbar.",
 			),
 			decorators=[pd.ToggleSwitch()]
-		))
+		)
 	)
 
 	fontSize: float = field(
 		default=10.,
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(label='Font Size', min=4, max=36, step=1.0, decimals=0, suffix=' pt'),
 			decorators=[],
-		))
+		)
 	)
 
 	fontFamily: str = field(
 		default='Segoe UI',
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(label='Font'),
 			decorators=[pd.FontFamily(QFontDatabase.Latin, smoothlyScalable=True)],
-		))
+		)
 	)
 
 	@property
@@ -79,10 +79,10 @@ class AppearanceSettings(SerializableDataclass):
 
 	monospaceFontFamily: str = field(
 		default='Consolas',
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(label='Monospace Font'),
 			decorators=[pd.FontFamily(QFontDatabase.Latin, smoothlyScalable=True, fixedPitch=True)],
-		))
+		)
 	)
 
 	@property
@@ -93,10 +93,10 @@ class AppearanceSettings(SerializableDataclass):
 
 	colorScheme: str = field(
 		default='',
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(label='Color Scheme'),
 			decorators=[ColorSchemePD()],
-		))
+		)
 	)
 
 
@@ -161,22 +161,22 @@ class DebugSettings(SerializableDataclass):
 
 	isDeveloperMode: bool = field(
 		default=False,
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			decorators=[
 				pd.ToggleSwitch(),
 				pd.Title('Developer Mode')
 			]
-		))
+		)
 	)
 
-	showUndoRedoPane: bool = field(default=False, metadata=dict(cat=dict(decorators=[pd.ToggleSwitch()])))
+	showUndoRedoPane: bool = field(default=False, metadata=catMeta(decorators=[pd.ToggleSwitch()]))
 
 	test: str = field(
 		default='Test',
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			decorators=[pd.Title('Test')],
 			serialize=False
-		))
+		)
 	)
 
 
@@ -192,30 +192,30 @@ class AboutQt:
 class AboutSettings(SerializableDataclass):
 	pass  # TODO AboutSettings
 
-	title: str = field(default="Datapack Editor", metadata=dict(cat=dict(serialize=False, kwargs=dict(wordWrap=False, label=' ', style=getStyles().title), decorators=[pd.ReadOnlyLabel()])))
+	title: str = field(default="Datapack Editor", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', style=getStyles().title), decorators=[pd.ReadOnlyLabel()]))
 
-	version: str = field(default="""0.3.0-alpha""", metadata=dict(cat=dict(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()])))
+	version: str = field(default="""0.3.0-alpha""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()]))
 
 	# @pd.NoUI()
 	@property
 	def organization(self) -> str:
 		return """Joachim Coenen"""
 
-	copyright: str = field(default="""<font>© 2021 Joachim Coenen. All Rights Reserved</font>""", metadata=dict(cat=dict(serialize=False, kwargs=dict(wordWrap=True, label='Copyright'), decorators=[pd.ReadOnlyLabel()])))
-	about: str = field(default="""<font>Written and maintained by <a href="https://www.github.com/JoachimCoenen">Joachim Coenen</a>.\n<br/>If you have any questions, bugs or improvements, please share them on GitHub.\n</font>""", metadata=dict(cat=dict(serialize=False, kwargs=dict(wordWrap=True, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()])))
+	copyright: str = field(default="""<font>© 2021 Joachim Coenen. All Rights Reserved</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=True, label='Copyright'), decorators=[pd.ReadOnlyLabel()]))
+	about: str = field(default="""<font>Written and maintained by <a href="https://www.github.com/JoachimCoenen">Joachim Coenen</a>.\n<br/>If you have any questions, bugs or improvements, please share them on GitHub.\n</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=True, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
 	# @pd.ReadOnlyLabel()
 	# @Serialized(serialize=False, wordWrap=True, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True)
 	# def about(self) -> str:
 	# 	return """<font>Written and maintained by <a href="https://www.github.com/JoachimCoenen">Joachim Coenen</a>.\n<br/>If you have any questions, bugs or improvements, please share them on GitHub.\n</font>"""
 
-	homepage: str = field(default="""<font><a href="https://www.github.com/JoachimCoenen/Datapack-Editor">github.com/JoachimCoenen/Datapack-Editor</a></font>""", metadata=dict(cat=dict(serialize=False, kwargs=dict(wordWrap=False, label='Homepage', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()])))
+	homepage: str = field(default="""<font><a href="https://www.github.com/JoachimCoenen/Datapack-Editor">github.com/JoachimCoenen/Datapack-Editor</a></font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Homepage', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
-	disclaimer: str = field(default="""<font>Some information is taken from the Minecraft Wiki (see <a href="https://minecraft.gamepedia.com/Minecraft_Wiki:General_disclaimer">Minecraft Wiki:General disclaimer</a>).</font>""", metadata=dict(cat=dict(serialize=False, kwargs=dict(wordWrap=False, label='Disclaimer', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()])))
+	disclaimer: str = field(default="""<font>Some information is taken from the Minecraft Wiki (see <a href="https://minecraft.gamepedia.com/Minecraft_Wiki:General_disclaimer">Minecraft Wiki:General disclaimer</a>).</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Disclaimer', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
-	affiliation: str = field(default="""<font>This program is not affiliated with Mojang Studios.</font>""", metadata=dict(cat=dict(serialize=False, kwargs=dict(wordWrap=False, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()])))
+	affiliation: str = field(default="""<font>This program is not affiliated with Mojang Studios.</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
-	aboutQt: AboutQt = field(default_factory=AboutQt, metadata=dict(cat=dict(serialize=False, kwargs=dict(label=' '))))
+	aboutQt: AboutQt = field(default_factory=AboutQt, metadata=catMeta(serialize=False, kwargs=dict(label=' ')))
 
 
 def _fillSettingsAspects(aspectsDict: AspectDict):
@@ -233,8 +233,8 @@ class SettingsAspect(Aspect, SerializableDataclass, ABC):
 
 @dataclass()
 class ApplicationSettings(SerializableDataclass):
-	aspects: AspectDict[SettingsAspect] = field(default_factory=lambda: AspectDict(SettingsAspect), metadata=dict(cat=dict(serialize=False)))
-	unknownSettings: dict[str, Any] = field(default_factory=dict, metadata=dict(cat=dict(serialize=False)))
+	aspects: AspectDict[SettingsAspect] = field(default_factory=lambda: AspectDict(SettingsAspect), metadata=catMeta(serialize=False))
+	unknownSettings: dict[str, Any] = field(default_factory=dict, metadata=catMeta(serialize=False))
 
 	# def __post_init__(self):
 	# 	_fillSettingsAspects(self.aspects)
@@ -281,12 +281,12 @@ class ApplicationSettings(SerializableDataclass):
 				return
 		self.unknownSettings[aspectType] = aspectJson  # we could not find an appropriate settingsAspect, so, just remember the, values
 
-	appearance: AppearanceSettings = field(default_factory=AppearanceSettings, metadata=dict(cat=dict(label='Appearance')))
+	appearance: AppearanceSettings = field(default_factory=AppearanceSettings, metadata=catMeta(kwargs=dict(label='Appearance')))
 	# minecraft: MinecraftSettings = Serialized(default_factory=MinecraftSettings, label='Minecraft')
-	debugging: DebugSettings = field(default_factory=DebugSettings, metadata=dict(cat=dict(label='Debugging')))
-	about: AboutSettings = field(default_factory=AboutSettings, metadata=dict(cat=dict(label='About')))
+	debugging: DebugSettings = field(default_factory=DebugSettings, metadata=catMeta(kwargs=dict(label='Debugging')))
+	about: AboutSettings = field(default_factory=AboutSettings, metadata=catMeta(kwargs=dict(label='About')))
 
-	applicationName: str = field(default='Minecraft Datapack Editor', metadata=dict(cat=dict(decorators=[pd.NoUI()])))
+	applicationName: str = field(default='Minecraft Datapack Editor', metadata=catMeta(decorators=[pd.NoUI()]))
 
 	@property
 	def version(self) -> str:
@@ -296,7 +296,7 @@ class ApplicationSettings(SerializableDataclass):
 	def organization(self) -> str:
 		return self.about.organization
 
-	isUserSetupFinished: bool = field(default=False, metadata=dict(cat=dict(decorators=[pd.NoUI()])))
+	isUserSetupFinished: bool = field(default=False, metadata=catMeta(decorators=[pd.NoUI()]))
 
 
 applicationSettings = None

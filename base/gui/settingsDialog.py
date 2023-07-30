@@ -11,7 +11,7 @@ from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
-from Cat.Serializable.dataclassJson import SerializableDataclass, getCatMeta
+from Cat.Serializable.dataclassJson import SerializableDataclass, getDecorators, getKWArg
 from base.model.applicationSettings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings
 from base.model.applicationSettings import AboutQt
 
@@ -40,7 +40,7 @@ class _Field(NamedTuple):
 def _childrenMaker(data: _Field) -> list[_Field]:
 	value = data.value
 	children = [
-		_Field(value=v, label=getCatMeta(prop, 'label', prop.name), toolTip=getCatMeta(prop, 'tip', None))
+		_Field(value=v, label=getKWArg(prop, 'label', prop.name), toolTip=getKWArg(prop, 'tip', None))
 		for prop, v in ((f, getattr(value, f.name)) for f in fields(value))
 		if isinstance(v, SerializableDataclass)
 	]
@@ -92,7 +92,7 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 				gui.helpBox('Please select a category.')
 			else:
 				for field in fields(self._selectedPage):
-					if any(isinstance(d, pd.NoUI) for d in getCatMeta(field, 'decorator', [])):
+					if any(isinstance(d, pd.NoUI) for d in getDecorators(field)):
 						continue
 					gui.propertyField(self._selectedPage, field, True, enabled=True)
 					gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer

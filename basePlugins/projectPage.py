@@ -77,7 +77,6 @@ def _refreshRoots(project: Project):
 	project.analyzeDependencies()
 
 
-
 def projectPanelGUI(gui: DatapackEditorGUI):  # , *, roundedCorners: RoundedCorners, cornerRadius: float):
 	with gui.scrollBox(contentsMargins=(gui.panelMargins, gui.panelMargins, gui.panelMargins, gui.panelMargins), preventVStretch=True):  # , roundedCorners=roundedCorners, cornerRadius=cornerRadius):
 		project = getSession().project

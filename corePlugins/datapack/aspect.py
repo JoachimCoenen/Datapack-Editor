@@ -4,6 +4,7 @@ from typing import Optional, Callable
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
+from Cat.Serializable.dataclassJson import catMeta
 from Cat.utils.logging_ import logWarning
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
@@ -157,17 +158,17 @@ class DatapackSettings(SettingsAspect):
 
 	dpVersion: str = field(
 		default='6',
-		metadata=dict(cat=dict(
-			label='Datapack Version',
+		metadata=catMeta(
+			kwargs=dict(label='Datapack Version'),
 			decorators=[
 				pd.ComboBox(choices=ALL_DP_VERSIONS.keys()),
 			]
-		))
+		)
 	)
 
 	dependenciesLocation: str = field(
 		default_factory=lambda: os.path.expanduser('~/.dpe/dependencies').replace('\\', '/'),
-		metadata=dict(cat=dict(
+		metadata=catMeta(
 			kwargs=dict(
 				label="Datapack Dependencies Location",
 				tip="DPE will search in this directory to resolve dependencies",
@@ -176,5 +177,5 @@ class DatapackSettings(SettingsAspect):
 				pd.FolderPath(),
 				pd.Validator(folderPathValidator)
 			]
-		))
+		)
 	)

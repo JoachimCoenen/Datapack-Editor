@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import NewType, Optional, Callable, Iterator, cast, Sequence, ClassVar
 
-from Cat.Serializable.dataclassJson import SerializableDataclass
+from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.utils import abstract, override
 from Cat.utils.abc_ import abstractmethod
 from Cat.utils.collections_ import Stack
@@ -27,7 +27,7 @@ class ViewId:
 @dataclass(repr=False, slots=True)
 @abstract
 class ViewBase(SerializableDataclass):
-	parent: Optional[ViewContainer] = field(default=None, init=False, metadata=dict(cat=dict(serialize=True)))
+	parent: Optional[ViewContainer] = field(default=None, init=False, metadata=catMeta(serialize=True))
 	manager: DocumentsManager
 
 	@abstractmethod
@@ -42,7 +42,7 @@ class ViewBase(SerializableDataclass):
 class ViewContainer(ViewBase):
 
 	isVertical: bool = False
-	views: list[ViewBase] = field(default_factory=list, metadata=dict(cat=dict(deferLoading=True)))
+	views: list[ViewBase] = field(default_factory=list, metadata=catMeta(deferLoading=True))
 	onViewsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onViewsChanged')
 	# onViewsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onViewsChanged')
 
@@ -277,7 +277,7 @@ class DocumentsManager(SerializableDataclass):
 		self.viewsC = ViewContainer(self)
 		self.currentView = self._getFirstView()
 
-	viewsC: ViewContainer = field(init=False, metadata=dict(cat=dict(serialize=True)))
+	viewsC: ViewContainer = field(init=False, metadata=catMeta(serialize=True))
 
 	@property
 	def views(self) -> Sequence[View]:
@@ -300,10 +300,10 @@ class DocumentsManager(SerializableDataclass):
 		else:
 			view = self.views[0]
 		return view
-	currentView: View = field(init=False, metadata=dict(cat=dict(serialize=True)))
+	currentView: View = field(init=False, metadata=catMeta(serialize=True))
 
 	# callbacks (must be set externally, for prompting the user, etc...):
-	onCanCloseModifiedDocument: Callable[[Document], bool] = field(default=lambda d: True, metadata=dict(cat=dict(serialize=False)))
+	onCanCloseModifiedDocument: Callable[[Document], bool] = field(default=lambda d: True, metadata=catMeta(serialize=False))
 	onCurrentViewChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onCurrentViewChanged')
 	# onCurrentViewChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onCurrentViewChanged')
 	onSelectedDocumentChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onSelectedDocumentChanged')
