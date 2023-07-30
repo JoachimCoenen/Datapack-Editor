@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Optional, Type, Sequence, Callable, TypeVar, Collection, Any, ClassVar
 
@@ -489,6 +490,12 @@ class Document(SerializableDataclass):
 		return hash(id(self)) + 91537523
 
 
+@dataclass(frozen=True)
+class IndentationSettings(SerializableDataclass):
+	tabWidth: int = 4
+	useSpaces: bool = False
+
+
 @RegisterDocument('text', ext=['.txt'])
 @dataclass(repr=False, slots=True)
 class TextDocument(Document):
@@ -516,6 +523,14 @@ class TextDocument(Document):
 		)
 	)
 
+	indentationSettings: IndentationSettings = field(
+		default_factory=IndentationSettings,
+		metadata=catMeta(
+			deferLoading=True,
+			decorators=[pd.NoUI()]
+		)
+	)
+
 	@property
 	def strContent(self) -> str:
 		return str(self.content, encoding=self.encoding, errors='replace')
@@ -532,6 +547,38 @@ class TextDocument(Document):
 
 	def __hash__(self):
 		return hash(id(self)) + 91537522
+
+	def convertIndentationsToUseTabsSettings(self):
+		lines = self.content.split(b'\n')
+		oldTab, newTab = b' '*self.indentationSettings.tabWidth, b'\t'
+		toTabs = oldTab, newTab
+		fromTabs = newTab, oldTab
+		useSpaces = self.indentationSettings.useSpaces
+
+		pattern = re.compile(rb'^(\s*)(.*)')
+		pattern2 = re.compile(rb'[^\t]+\t')
+		newLines = []
+		for line in lines:
+			match = pattern.match(line)
+			indent, trailing = match.group(1, 2)
+			# indent = match.group(1)
+			# trailing = match.group(2)
+
+			# 1. convert everything to tabs
+			indent2 = indent.replace(*toTabs)
+
+			# 2. Fix superfluous spaces
+			#    This ensures correct handling of too few spaces before a tab.
+			indent3 = pattern2.sub(b'\t', indent2)
+
+			# 3. convert back to spaces, if necessary.
+			if useSpaces:
+				indent3 = indent3.replace(*fromTabs)
+
+			newLines.append(indent3 + trailing)
+
+		text = b'\n'.join(newLines)
+		self.content = text
 
 
 @dataclass(repr=False, slots=True)
@@ -576,4 +623,3 @@ class ParsedDocument(TextDocument):
 
 	def __hash__(self):
 		return hash(id(self)) + 91537521
-

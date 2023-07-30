@@ -1,4 +1,5 @@
 import functools as ft
+from dataclasses import replace
 from typing import TypeVar, Generic, final, Optional, Type
 
 from PyQt5.Qsci import QsciLexer
@@ -137,6 +138,16 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		super(TextDocumentEditor, self).documentFooterGUI(gui)
 		gui.addHSpacer(gui.spacing * 2, SizePolicy.Expanding)
 
+		gui.hSeparator()
+		indentation = document.indentationSettings
+		tabLabel = f"Spaces: {indentation.tabWidth}" if indentation.useSpaces else f"Tab Width: {indentation.tabWidth}"
+		gui.label(
+			f"<div>{tabLabel}</div>",
+			tip="Indentation Settings, Right-click to change",
+			contextMenuPolicy=Qt.CustomContextMenu,
+			onCustomContextMenuRequested=self.tabSettingsContextMenu
+		)
+
 		if isinstance(document, ParsedDocument):
 			gui.hSeparator()
 			gui.label(
@@ -187,6 +198,8 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			focusPolicy=Qt.StrongFocus,
 			autoIndent=autoIndent,
 			caretLineVisible=False,
+			tabWidth=document.indentationSettings.tabWidth,
+			indentationsUseTabs=not document.indentationSettings.useSpaces,
 			**kwargs
 		)
 
@@ -203,6 +216,17 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 				menu.addItem("None", lambda: setattr(document, 'schemaId', None) or document.asyncParseNValidate())
 				for schemaId in GLOBAL_SCHEMA_STORE.getAllForLanguage(LanguageId(document.language)):
 					menu.addItem(schemaId, lambda l=schemaId: setattr(document, 'schemaId', l) or document.asyncParseNValidate())
+
+	def tabSettingsContextMenu(self, pos):
+		document = self.model()
+		indentation = document.indentationSettings
+		with self._gui.popupMenu(True) as menu:
+			for i in range(1, 8+1):
+				menu.addItem(f"Tab Width: {i}", lambda t=i: setattr(document, 'indentationSettings', replace(indentation, tabWidth=t)), checkable=True, checked=indentation.tabWidth == i)
+			menu.addSeparator()
+			menu.addItem(f"Indent Using Spaces", lambda t=i: setattr(document, 'indentationSettings', replace(indentation, useSpaces=not indentation.useSpaces)), checkable=True, checked=indentation.useSpaces)
+			menu.addSeparator()
+			menu.addItem(f"ConvertIndentation", lambda t=i: document.convertIndentationsToUseTabsSettings())
 
 
 def _setCursorPos(a, b, d: Document):
