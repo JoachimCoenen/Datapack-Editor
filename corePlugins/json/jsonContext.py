@@ -103,8 +103,10 @@ def _suggestionsForUnionSchema(schema: JsonUnionSchema, contained: list[JsonNode
 def _getPropsForObject(container: JsonObject, schema: JsonObjectSchema | JsonUnionSchema, prefix: str, suffix: str) -> list[str]:
 	if isinstance(schema, JsonUnionSchema):
 		return [n for opt in schema.allOptions for n in _getPropsForObject(container, opt, prefix, suffix)]
-	else:
+	elif isinstance(schema, JsonObjectSchema):
 		return [f'{prefix}{p.name}{suffix}' for p in schema.propertiesDict.values() if p.name not in container.data and p.valueForParent(container) is not None]
+	else:
+		return []
 
 
 def _suggestionsForKeySchema(schema: JsonKeySchema, contained: list[JsonNode], data: bytes):
