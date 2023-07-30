@@ -1,7 +1,8 @@
 ## Next Version
+### Features
+ * added whitespace visibility setting
+ * added indentation settings for documents
 ### Improvements
- * Improved parsing and validation performance for files with many errors
- * Drastically improved parsing and validation performance for json files in certain circumstances
 
 ## Version 0.4.0-alpha
 ### Features
@@ -16,6 +17,8 @@
    * a common search location for dependencies can be changed in settings (default location is `C:/Users/<your username>/.dpe/dependencies`).
 
 ### Improvements
+ * Improved parsing and validation performance for files with many errors
+ * Drastically improved parsing and validation performance for json files in certain circumstances
  * Drag & drop files into the editor to open them
 
 

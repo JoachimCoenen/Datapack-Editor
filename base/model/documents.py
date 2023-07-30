@@ -165,6 +165,10 @@ def getDocumentTypes() -> list[DocumentTypeDescription]:
 	return _documentTypes
 
 
+def getDocTypeByName(name: str, default: Optional[DocumentTypeDescription] = None) -> Optional[DocumentTypeDescription]:
+	return _documentTypesByName.get(name, default)
+
+
 def getDocumentTypeForFilePath(path: FilePath, default: Optional[DocumentTypeDescription] = None) -> Optional[DocumentTypeDescription]:
 	fileName = fileNameFromFilePath(path).lower()
 	bestDocTypeGuess: Optional[DocumentTypeDescription] = None
@@ -177,10 +181,6 @@ def getDocumentTypeForFilePath(path: FilePath, default: Optional[DocumentTypeDes
 					bestDocTypeGuess = dt
 					break
 	return bestDocTypeGuess if bestDocTypeGuess is not None else default
-
-
-def getDocTypeByName(name: str, default: Optional[DocumentTypeDescription] = None) -> Optional[DocumentTypeDescription]:
-	return _documentTypesByName.get(name, default)
 
 
 def loadDocument(filePath: FilePath, archiveFilePool: ArchiveFilePool = None) -> Document:  # throws OSError
