@@ -104,13 +104,13 @@ class DocumentTypeDescription:
 	def fileExtensionFilter(self) -> FileExtensionFilter:
 		return self.name, self.extensions
 
-	def newDocument(self) -> Document:
+	def newDocument(self, *, observeFileSystem: bool = True) -> Document:
 		kwArgs = {}
 		if self.encoding is not None:
 			kwArgs['encoding'] = self.encoding
 		if self.defaultContentFactory is not None:
 			kwArgs['content'] = self.defaultContentFactory()
-		return self.type(language=self.defaultLanguage, schemaId=self.defaultSchemaId, **kwArgs)
+		return self.type(language=self.defaultLanguage, schemaId=self.defaultSchemaId, _observeFileSystem=observeFileSystem, **kwArgs)
 
 	def __eq__(self, other):
 		return self is other
@@ -238,9 +238,9 @@ def getDocumentTypeForDocument(document: Document, default: Optional[DocumentTyp
 	return bestDocTypeGuess if bestDocTypeGuess is not None else default
 
 
-def loadDocument(filePath: FilePath, archiveFilePool: ArchiveFilePool = None) -> Document:  # throws OSError
+def loadDocument(filePath: FilePath, archiveFilePool: ArchiveFilePool = None, *, observeFileSystem: bool = True) -> Document:  # throws OSError
 	docType = getDocumentTypeForFilePath(filePath, default=getDocTypeByName('text'))
-	doc = docType.newDocument()
+	doc = docType.newDocument(observeFileSystem=observeFileSystem)
 	doc.filePath = filePath
 	doc.loadFromFile(archiveFilePool)
 	return doc
@@ -315,6 +315,7 @@ class Document(SerializableDataclass):
 
 	_filePath: FilePath = field(default='')
 	_isUntitled: bool = field(default=False, kw_only=True)
+	_observeFileSystem: bool = field(default=True, kw_only=True)
 	_fileChangedHandler: FileChangedHandler = field(default_factory=FileChangedHandler, repr=False, metadata=catMeta(serialize=False))
 
 	@property
@@ -351,6 +352,8 @@ class Document(SerializableDataclass):
 		pass
 
 	def _rescheduleFileChangedHandler(self, oldPath: FilePath, newPath: FilePath):
+		if not self._observeFileSystem:
+			return
 		oldListenerPath = self._getListenerPath(oldPath)
 		newListenerPath = self._getListenerPath(newPath)
 		filesystemEvents.FILESYSTEM_OBSERVER.reschedule("dpe:file_changed", oldListenerPath, newListenerPath, self._fileChangedHandler)

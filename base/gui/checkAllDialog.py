@@ -28,7 +28,7 @@ from base.model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool
 
 def checkFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[GeneralError]:
 	try:
-		document = loadDocument(filePath, archiveFilePool)
+		document = loadDocument(filePath, archiveFilePool, observeFileSystem=False)
 		document.asyncValidate.callNow()
 		errors = document.errors
 		return errors
