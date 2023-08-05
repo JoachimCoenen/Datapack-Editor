@@ -57,74 +57,74 @@ FILE_TYPES = [
 ]
 
 
-_DPStructure = dict[str, Union[EntryHandlerInfo, '_DPStructure']]
-
-
-def _getKey(value: EntryHandlerInfo) -> str:
-	key = f'{value.folder}/*{value.extension}'
-	return key
-
-
-def _getAllInnerKeys(structure: _DPStructure) -> dict[str, EntryHandlerInfo]:
-	result = {}
-	for value in structure.values():
-		if isinstance(value, EntryHandlerInfo):
-			result[_getKey(value)] = value
-		else:
-			result.update(_getAllInnerKeys(value))
-	return result
-
-
-def _chb(gui: DatapackEditorGUI, isChecked: Optional[BoolOrCheckState], label: Optional[str], returnTristate: bool, showSpoiler: bool, **kwargs) -> tuple[bool, BoolOrCheckState]:
-	with gui.hLayout(preventHStretch=True, horizontalSpacing=0):
-		isOpen = gui.spoiler(drawDisabled=not showSpoiler)
-		checkState = gui.checkboxLeft(isChecked, label, returnTristate=returnTristate, **kwargs)
-	return isOpen, checkState
-
-
-def _innerFileTypesSelectionGUI(gui: DatapackEditorGUI, structure: _DPStructure, oldVals: dict[str, EntryHandlerInfo]) -> dict[str, EntryHandlerInfo]:
-	result: dict[str, EntryHandlerInfo] = {}
-	for name, value in structure.items():
-		# merge if only one subCategory:
-		isSingleEHF = isinstance(value, EntryHandlerInfo)
-		while not isSingleEHF and len(value) == 1:
-			suffix, value = first(value.items())
-			isSingleEHF = isinstance(value, EntryHandlerInfo)
-			if isSingleEHF:
-				name = f'{name} ({suffix})'
-			else:
-				name = f'{name}/{suffix}'
-
-		if isSingleEHF:
-			key = _getKey(value)
-			if _chb(gui, key in oldVals, name, returnTristate=False, showSpoiler=False)[1]:
-				result[key] = value
-		else:
-			allInnerKeys = _getAllInnerKeys(value)
-			innerSelection = {key: iValue for key, iValue in allInnerKeys.items() if key in oldVals}
-
-			if len(innerSelection) == len(allInnerKeys):
-				innerCheckState = ToggleCheckState.Checked
-			elif not innerSelection:
-				innerCheckState = ToggleCheckState.Unchecked
-			else:
-				innerCheckState = ToggleCheckState.PartiallyChecked
-
-			isOpen, innerCheckState = _chb(gui, innerCheckState, name, returnTristate=True, showSpoiler=True)
-
-			if innerCheckState is ToggleCheckState.Checked:
-				innerSelection = allInnerKeys
-			elif innerCheckState is ToggleCheckState.Unchecked:
-				innerSelection = {}
-
-			with gui.indentation():
-				if isOpen:
-					innerSelection = _innerFileTypesSelectionGUI(gui, value, innerSelection)
-				else:
-					pass
-				result.update(innerSelection)
-
-	return result
+# _DPStructure = dict[str, Union[EntryHandlerInfo, '_DPStructure']]
+#
+#
+# def _getKey(value: EntryHandlerInfo) -> str:
+# 	key = f'{value.folder}/*{value.extension}'
+# 	return key
+#
+#
+# def _getAllInnerKeys(structure: _DPStructure) -> dict[str, EntryHandlerInfo]:
+# 	result = {}
+# 	for value in structure.values():
+# 		if isinstance(value, EntryHandlerInfo):
+# 			result[_getKey(value)] = value
+# 		else:
+# 			result.update(_getAllInnerKeys(value))
+# 	return result
+#
+#
+# def _chb(gui: DatapackEditorGUI, isChecked: Optional[BoolOrCheckState], label: Optional[str], returnTristate: bool, showSpoiler: bool, **kwargs) -> tuple[bool, BoolOrCheckState]:
+# 	with gui.hLayout(preventHStretch=True, horizontalSpacing=0):
+# 		isOpen = gui.spoiler(drawDisabled=not showSpoiler)
+# 		checkState = gui.checkboxLeft(isChecked, label, returnTristate=returnTristate, **kwargs)
+# 	return isOpen, checkState
+#
+#
+# def _innerFileTypesSelectionGUI(gui: DatapackEditorGUI, structure: _DPStructure, oldVals: dict[str, EntryHandlerInfo]) -> dict[str, EntryHandlerInfo]:
+# 	result: dict[str, EntryHandlerInfo] = {}
+# 	for name, value in structure.items():
+# 		# merge if only one subCategory:
+# 		isSingleEHF = isinstance(value, EntryHandlerInfo)
+# 		while not isSingleEHF and len(value) == 1:
+# 			suffix, value = first(value.items())
+# 			isSingleEHF = isinstance(value, EntryHandlerInfo)
+# 			if isSingleEHF:
+# 				name = f'{name} ({suffix})'
+# 			else:
+# 				name = f'{name}/{suffix}'
+#
+# 		if isSingleEHF:
+# 			key = _getKey(value)
+# 			if _chb(gui, key in oldVals, name, returnTristate=False, showSpoiler=False)[1]:
+# 				result[key] = value
+# 		else:
+# 			allInnerKeys = _getAllInnerKeys(value)
+# 			innerSelection = {key: iValue for key, iValue in allInnerKeys.items() if key in oldVals}
+#
+# 			if len(innerSelection) == len(allInnerKeys):
+# 				innerCheckState = ToggleCheckState.Checked
+# 			elif not innerSelection:
+# 				innerCheckState = ToggleCheckState.Unchecked
+# 			else:
+# 				innerCheckState = ToggleCheckState.PartiallyChecked
+#
+# 			isOpen, innerCheckState = _chb(gui, innerCheckState, name, returnTristate=True, showSpoiler=True)
+#
+# 			if innerCheckState is ToggleCheckState.Checked:
+# 				innerSelection = allInnerKeys
+# 			elif innerCheckState is ToggleCheckState.Unchecked:
+# 				innerSelection = {}
+#
+# 			with gui.indentation():
+# 				if isOpen:
+# 					innerSelection = _innerFileTypesSelectionGUI(gui, value, innerSelection)
+# 				else:
+# 					pass
+# 				result.update(innerSelection)
+#
+# 	return result
 
 
 class CheckAllDialog(CatFramelessWindowMixin, QDialog):
