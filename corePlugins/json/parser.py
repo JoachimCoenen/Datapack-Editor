@@ -297,13 +297,11 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 					continue
 			else:
 				if self._current.type in valueTokens:
-					msg = MISSING_DELIMITER_MSG.format(delimiter.asString)
-					self.errorMsg(msg, span=self._current.span)
+					self.errorMsg(MISSING_DELIMITER_MSG, delimiter.asString, span=self._current.span)
 					tryParseItem(goodValueTokens)
 					continue
 				elif self._waitingForClosing[self._current.type] > 0:
-					msg = MISSING_CLOSING_MSG.format(closing.asString)
-					self.errorMsg(msg, span=self._current.span)
+					self.errorMsg(MISSING_CLOSING_MSG, closing.asString, span=self._current.span)
 					return
 				else:
 					# force an error and consume the unknown token, so we don't end up
