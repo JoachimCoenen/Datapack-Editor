@@ -10,7 +10,7 @@ from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent
 from PyQt5.QtWidgets import QMainWindow, QApplication
 
 from Cat.CatPythonGUI.GUI import CORNERS, NO_OVERLAP, SizePolicy, RoundedCorners, maskCorners, adjustOverlap, pythonGUI, catWidgetMixins, Widgets
-from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton
+from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton, FileExtensionFilter
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.icons import icons
@@ -20,7 +20,7 @@ from gui.themes import theme
 from keySequences import KEY_SEQUENCES
 from base.model.utils import Span, GeneralError
 from base.model.session import getSession, saveSessionToFile, GLOBAL_SIGNALS
-from base.model.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
+from base.model.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts, getAllFileExtensionFilters, getDocumentTypeForDocument
 # from gui.checkAllDialog import CheckAllDialog
 # from gui.searchAllDialog import SearchAllDialog
 from gui.spotlightSearch import SpotlightSearchGui
@@ -29,6 +29,8 @@ from gui.datapackEditorGUI import DatapackEditorGUI
 from base.plugin import PLUGIN_SERVICE, SideBarTabGUIFunc, ToolBtnFunc
 from base.model.applicationSettings import applicationSettings
 from base.gui.settingsDialog import SettingsDialog
+
+ALL_FILES_FILTER: FileExtensionFilter = ('All files', '*')
 
 
 def frange(a: float, b: float, jump: float, *, includeLAst: bool = False):
@@ -207,7 +209,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				self._createNewDocument(gui)
 
 			if button(icon=icons.open, tip='Open File', **btnKwArgs, windowShortcut=QKeySequence.Open):
-				filePath = gui.showFileDialog(self._lastOpenPath, [('All files', '*')], style='open')
+				filePath = gui.showFileDialog(self._lastOpenPath, [*getAllFileExtensionFilters(), ALL_FILES_FILTER], selectedFilter=ALL_FILES_FILTER, style='open')
 				if filePath:
 					self._tryOpenOrSelectDocument(filePath)
 
@@ -384,8 +386,13 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			QApplication.setStyle(newStyle)
 
 	def _saveAsDialog(self, gui: DatapackEditorGUI, document: Document) -> str:
-		# TODO: better save dialog (with proper filters)
-		filePath = gui.showFileDialog(document.unitedFilePath, [('All files', '*')], style='save')
+		dt = getDocumentTypeForDocument(document)
+		if dt is not None:
+			selectedFilter = dt.fileExtensionFilter
+			selectedFilter = [(selectedFilter[0], f) for f in selectedFilter[1]][0]
+		else:
+			selectedFilter = ALL_FILES_FILTER
+		filePath = gui.showFileDialog(document.unitedFilePath, [*getAllFileExtensionFilters(expanded=True), ALL_FILES_FILTER], selectedFilter=selectedFilter, style='save')
 		if filePath:
 			self._lastOpenPath = os.path.dirname(filePath)
 		return filePath

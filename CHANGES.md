@@ -4,6 +4,9 @@
  * added indentation settings for documents
 ### Improvements
 
+### Fixes
+ * Save As now selects correct file extension by default.
+
 ## Version 0.4.0-alpha
 ### Features
  * Added a dark theme, and support for custom themes.

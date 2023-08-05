@@ -10,9 +10,10 @@ from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileModifi
 from Cat import undoRedo
 from Cat.CatPythonGUI.GUI import codeEditor
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.CatPythonGUI.GUI.enums import FileExtensionFilter
 from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.undoRedo import UndoRedoStack2, MakeMementoIfDiffFunc
-from Cat.utils import utils, Decorator
+from Cat.utils import utils
 from Cat.utils.logging_ import logWarning
 from Cat.utils.profiling import logInfo, logError, TimedMethod
 
@@ -89,6 +90,8 @@ class DocumentTypeDescription:
 	suffixesForDocTypeMatching: list[str] = field(default=None)
 	defaultLanguage: str = 'PlainText'
 	defaultSchemaId: str = ''
+	encoding: Optional[str] = None
+	defaultContentFactory: Optional[Callable[[], bytes]] = None
 
 	def __post_init__(self):
 		suffixes = self.suffixesForDocTypeMatching
@@ -96,8 +99,17 @@ class DocumentTypeDescription:
 			suffixes = self.extensions
 		self.suffixesForDocTypeMatching = sorted(suffixes, key=len, reverse=True)
 
+	@property
+	def fileExtensionFilter(self) -> FileExtensionFilter:
+		return self.name, self.extensions
+
 	def newDocument(self) -> Document:
-		return self.type(language=self.defaultLanguage, schemaId=self.defaultSchemaId)
+		kwArgs = {}
+		if self.encoding is not None:
+			kwArgs['encoding'] = self.encoding
+		if self.defaultContentFactory is not None:
+			kwArgs['content'] = self.defaultContentFactory()
+		return self.type(language=self.defaultLanguage, schemaId=self.defaultSchemaId, **kwArgs)
 
 	def __eq__(self, other):
 		return self is other
@@ -108,45 +120,38 @@ class DocumentTypeDescription:
 	def __hash__(self):
 		return id(self)
 
-
 _documentTypes: list[DocumentTypeDescription] = []
 _documentTypesByName: dict[str, DocumentTypeDescription] = {}
 
 
-@Decorator
+@dataclass
 class RegisterDocument:
-	def __init__(
-			self,
-			name: str,
-			*,
-			ext: list[str],
-			suffixes: list[str] = None,
-			defaultLanguage: str = 'PlainText',
-			defaultSchemaId: str = '',
-			icon: str = None,
-			tip: str = None
-	):
-		if suffixes is None:
-			suffixes = ext
-		self._documentName: str = name
-		self._extensions: list[str] = ext
-		self._extensionsForDocTypeSelection: list[str] = ext
-		self._suffixesForDocTypeMatching: list[str] = suffixes
-		self._icon:  Optional[str] = icon
-		self._tip:  Optional[str] = tip
-		self._defaultLanguage: str = defaultLanguage
-		self._defaultSchemaId: str = defaultSchemaId
+	name: str
+	ext: list[str] = field(kw_only=True)
+	suffixes: list[str] = None
+	defaultLanguage: str = field(default='PlainText', kw_only=True)
+	defaultSchemaId: str = field(default='', kw_only=True)
+	encoding: Optional[str] = field(default=None, kw_only=True)
+	icon: str = field(default=None, kw_only=True)
+	tip: str = field(default=None, kw_only=True)
+	defaultContentFactory: Optional[Callable[[], bytes]] = field(default=None, kw_only=True)
+
+	def __post_init__(self):
+		if self.suffixes is None:
+			self.suffixes = self.ext
 
 	def __call__(self, documentCls: Type[Document]):
 		docTypeDescr = DocumentTypeDescription(
 			type=documentCls,
-			name=self._documentName,
-			icon=self._icon,
-			tip=self._tip,
-			extensions=self._extensions,
-			suffixesForDocTypeMatching=sorted(self._suffixesForDocTypeMatching, key=len, reverse=True),
-			defaultLanguage=self._defaultLanguage,
-			defaultSchemaId=self._defaultSchemaId
+			name=self.name,
+			icon=self.icon,
+			tip=self.tip,
+			extensions=self.ext,
+			suffixesForDocTypeMatching=sorted(self.suffixes, key=len, reverse=True),
+			defaultLanguage=self.defaultLanguage,
+			defaultSchemaId=self.defaultSchemaId,
+			encoding=self.encoding,
+			defaultContentFactory=self.defaultContentFactory,
 		)
 		registerDocumentTypeDescription(docTypeDescr)
 		return documentCls
@@ -169,17 +174,66 @@ def getDocTypeByName(name: str, default: Optional[DocumentTypeDescription] = Non
 	return _documentTypesByName.get(name, default)
 
 
-def getDocumentTypeForFilePath(path: FilePath, default: Optional[DocumentTypeDescription] = None) -> Optional[DocumentTypeDescription]:
+def _chooseDocumentTypeByFilePath(choices: Collection[DocumentTypeDescription], path: FilePath) -> Optional[DocumentTypeDescription]:
 	fileName = fileNameFromFilePath(path).lower()
 	bestDocTypeGuess: Optional[DocumentTypeDescription] = None
 	bestDocTypeMatchQuality: int = 0
-	for dt in _documentTypes:
+	for dt in choices:
 		for suffix in dt.suffixesForDocTypeMatching:
 			if fileName.endswith(suffix.lower()):
 				if len(suffix) > bestDocTypeMatchQuality:
 					bestDocTypeMatchQuality = len(suffix)
 					bestDocTypeGuess = dt
 					break
+	return bestDocTypeGuess
+
+
+def _chooseDocumentTypeByLanguage(choices: Collection[DocumentTypeDescription], languageId: LanguageId, schemaId: Optional[str]) -> Optional[DocumentTypeDescription]:
+	bestDocTypeGuess: Optional[DocumentTypeDescription] = None
+	bestDocTypeMatchQuality: int = -1
+	for dt in choices:
+		if dt.defaultLanguage == languageId:
+			if dt.defaultSchemaId == schemaId:
+				matchQuality = 3
+			elif dt.defaultSchemaId is None:
+				matchQuality = 2
+			elif schemaId is None:
+				matchQuality = 1
+			else:
+				matchQuality = 0
+			if matchQuality > bestDocTypeMatchQuality:
+				bestDocTypeMatchQuality = matchQuality
+				bestDocTypeGuess = dt
+	return bestDocTypeGuess
+
+
+def getDocumentTypeForFilePath(path: FilePath, default: Optional[DocumentTypeDescription] = None) -> Optional[DocumentTypeDescription]:
+	bestDocTypeGuess = _chooseDocumentTypeByFilePath(_documentTypes, path)
+	return bestDocTypeGuess if bestDocTypeGuess is not None else default
+
+
+_docTypeGuessers = [
+	lambda guesses, allDocTypes, document: _chooseDocumentTypeByFilePath(guesses, document.filePath),
+	lambda guesses, allDocTypes, document: _chooseDocumentTypeByFilePath(allDocTypes, document.filePath),
+	lambda guesses, allDocTypes, document: _chooseDocumentTypeByLanguage(guesses, document.language, document.schemaId),
+	lambda guesses, allDocTypes, document: _chooseDocumentTypeByLanguage(allDocTypes, document.language, document.schemaId),
+	lambda guesses, allDocTypes, document: guesses[0] if guesses else None,
+]
+
+
+def getDocumentTypeForDocument(document: Document, default: Optional[DocumentTypeDescription] = None) -> Optional[DocumentTypeDescription]:
+	allDocTypes = _documentTypes
+	guesses: list[DocumentTypeDescription] = []
+	documentCls = type(document)
+	for dt in allDocTypes:
+		if documentCls is dt.type:
+			guesses.append(dt)
+
+	bestDocTypeGuess = None
+	for guesser in _docTypeGuessers:
+		bestDocTypeGuess = guesser(guesses, allDocTypes, document)
+		if bestDocTypeGuess is not None:
+			break
 	return bestDocTypeGuess if bestDocTypeGuess is not None else default
 
 
@@ -189,6 +243,17 @@ def loadDocument(filePath: FilePath, archiveFilePool: ArchiveFilePool = None) ->
 	doc.filePath = filePath
 	doc.loadFromFile(archiveFilePool)
 	return doc
+
+
+def getAllFileExtensionFilters(expanded: bool = False) -> Sequence[FileExtensionFilter]:
+	if expanded:
+		filters: list[FileExtensionFilter] = []
+		for dt in _documentTypes:
+			filterName, extensions = dt.fileExtensionFilter
+			filters.extend([(filterName, f) for f in extensions])
+		return filters
+	else:
+		return [dt.fileExtensionFilter for dt in _documentTypes]
 
 
 def addErrors(self):
@@ -282,10 +347,12 @@ class Document(SerializableDataclass):
 	def _languageChoices(self):
 		return codeEditor.getAllLanguages
 
-	language: str = field(
+	language: LanguageId = field(
 		default='PlainText',
 		metadata=catMeta(decorators=[pd.ComboBox(choices=_languageChoices)])
 	)
+
+	schemaId: Optional[str] = field(default=None)
 
 	def _initUndoRedoStack(self, makeMementoIfDiff: MakeMementoIfDiffFunc[TTarget]):
 		self.undoRedoStack = UndoRedoStack2(self, 'content', makeMementoIfDiff)
@@ -586,8 +653,6 @@ class ParsedDocument(TextDocument):
 
 	def __post_init__(self):
 		super(ParsedDocument, self).__post_init__()
-
-	schemaId: Optional[str] = field(default=None)
 
 	@property
 	def schema(self) -> Optional[Schema]:
