@@ -19,6 +19,7 @@ from Cat.utils.profiling import logInfo, logError, TimedMethod
 
 from Cat.utils.signals import CatSignal
 from base.model import filesystemEvents
+from base.model.defaultSchemaProvider import getSchemaMapping
 from base.model.parsing.contextProvider import parseNPrepare, getContextProvider
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Node, Schema
@@ -335,6 +336,19 @@ class Document(SerializableDataclass):
 		else:
 			self._rescheduleFileChangedHandler(oldPath, filePath)
 		self._isUntitled = isUntitled
+
+		schemaMapping = getSchemaMapping(filePath, LanguageId(self.language))
+		if schemaMapping is not None:
+			self.schemaId = schemaMapping.schemaId
+
+		self.onFilePathChanged(filePath, oldPath)
+
+	def onFilePathChanged(self, newPath: FilePath, oldPath: FilePath):
+		"""
+		gets called whenever the filePath changes.
+		:return: Nothing
+		"""
+		pass
 
 	def _rescheduleFileChangedHandler(self, oldPath: FilePath, newPath: FilePath):
 		oldListenerPath = self._getListenerPath(oldPath)

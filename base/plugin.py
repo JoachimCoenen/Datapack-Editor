@@ -12,6 +12,7 @@ from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.logging_ import logError, logWarning
 from base.gui.styler import registerStyler, CatStyler
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings
+from base.model.defaultSchemaProvider import SchemaMapping, addSchemaMapping
 from base.model.documents import DocumentTypeDescription, registerDocumentTypeDescription
 from base.model.parsing.contextProvider import ContextProvider, registerContextProvider
 from base.model.parsing.parser import ParserBase, registerParser
@@ -58,6 +59,11 @@ class PluginService:
 				GLOBAL_SCHEMA_STORE.registerSchema(name, schema)
 			else:
 				logWarning(f"Schema with name'{name}' was null. it won't be added to the GLOBAL_SCHEMA_STORE.")
+
+		schemaMappings = plugin.schemaMappings() or {}
+		for languageId, mappings in schemaMappings.items():
+			for mapping in mappings:
+				addSchemaMapping(languageId, mapping)
 
 		for settingCls in (plugin.settingsAspects() or []):
 			application_settings = getApplicationSettings()
@@ -127,7 +133,7 @@ class PluginBase(ABC):
 	def schemas(self) -> dict[str, Schema]:
 		return {}
 
-	def reloadSchemas(self) -> dict[str, Schema]:
+	def schemaMappings(self) -> dict[LanguageId, list[SchemaMapping]]:
 		return {}
 
 # class DatapackAspect(ProjectAspect):
