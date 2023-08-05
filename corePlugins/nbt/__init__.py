@@ -16,10 +16,10 @@ SNBT_ID = LanguageId('SNBT')
 
 
 def initPlugin() -> None:
-	PLUGIN_SERVICE.registerPlugin('NbtPlugin', JsonPlugin())
+	PLUGIN_SERVICE.registerPlugin('NbtPlugin', SNBTPlugin())
 
 
-class JsonPlugin(PluginBase):
+class SNBTPlugin(PluginBase):
 
 	def initPlugin(self) -> None:
 		pass
