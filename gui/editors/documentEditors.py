@@ -76,6 +76,9 @@ class DocumentEditorBase(EditorBase[TDoc], Generic[TDoc]):
 			with gui.popupMenu(True) as menu:
 				menu.addItems(ContextMenuEntries.pathItems(document.filePath))
 
+		if document.isUntitled:
+			gui.label('🖉', onCustomContextMenuRequested=fileContextMenu)
+
 		gui.elidedLabel(
 			document.filePathForDisplay,
 			elideMode=Qt.ElideMiddle,
@@ -84,7 +87,7 @@ class DocumentEditorBase(EditorBase[TDoc], Generic[TDoc]):
 			onCustomContextMenuRequested=fileContextMenu
 		)
 		if document.documentChanged:
-			gui.label('*', style=getStyles().bold)
+			gui.label('*', style=getStyles().bold, onCustomContextMenuRequested=fileContextMenu)
 
 		self.checkForFileSystemChanges(gui)
 

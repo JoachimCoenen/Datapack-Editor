@@ -220,13 +220,9 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			if button(icon=icons.saveAs, tip='Save As', **btnKwArgs, enabled=bool(document), windowShortcut=KEY_SEQUENCES.SAVE_AS):
 				self._saveAs(gui, document)
 
-			if button(icon=icons.refresh, tip='Reload File', **btnKwArgs, enabled=bool(document), windowShortcut=QKeySequence.Refresh):
-				filePath = document.filePath
-				if filePath:
-					try:
-						document.loadFromFile()
-					except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-						getSession().showAndLogError(e)
+			if button(icon=icons.refresh, tip='Reload File', **btnKwArgs, enabled=bool(document) and not document.isNew, windowShortcut=QKeySequence.Refresh):
+				if not document.isNew:
+					getSession().reloadDocument(document)
 
 			with gui.hLayout(horizontalSpacing=0):
 				if button(icon=icons.undo, tip='Undo', roundedCorners=maskCorners(btnCorners, CORNERS.LEFT), overlap=btnOverlap, margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Undo):
@@ -455,39 +451,18 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		filePath = self._saveAsDialog(gui, document)
 		if filePath:
 			document.filePath = filePath
-			try:
-				document.saveToFile()
-			except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-				getSession().showAndLogError(e)
-				return False
-			return True
+			getSession().saveDocument(document)
 		return False
 
 	def _saveOrSaveAs(self, gui: DatapackEditorGUI, document: Document) -> bool:
-		filePath = document.filePath
-		if not filePath:
+		if document.isNew:
 			return self._saveAs(gui, document)
 		else:
-			try:
-				document.saveToFile()
-			except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-				getSession().showAndLogError(e)
-				return False
-			return True
+			return getSession().saveDocument(document)
 
 	def _tryOpenOrSelectDocument(self, filePath: FilePath, selectedSpan: Optional[Span] = None):
 		warn(f"Use getSession().tryOpenOrSelectDocument(...) instead.", DeprecationWarning, 1)
-		# find Document if is already open:
-		if filePath is None:
-			cd = getSession().documents.currentDocument
-			if cd is None:
-				return
-			filePath = cd.filePath
-		try:
-			QTimer.singleShot(250, lambda: getSession().documents.openOrShowDocument(filePath, selectedSpan))
-			self._gui.redrawGUILater()
-		except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-			getSession().showAndLogError(e)
+		getSession().tryOpenOrSelectDocument(filePath, selectedSpan)
 
 	def _safelyCloseDocument(self, gui: DatapackEditorGUI, document: Document):
 		getSession().documents.safelyCloseDocument(document)

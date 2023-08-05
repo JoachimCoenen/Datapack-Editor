@@ -313,6 +313,7 @@ class Document(SerializableDataclass):
 		self._resetDocumentChanged()
 
 	_filePath: FilePath = field(default='')
+	_isUntitled: bool = field(default=False, kw_only=True)
 	_fileChangedHandler: FileChangedHandler = field(default_factory=FileChangedHandler, repr=False, metadata=catMeta(serialize=False))
 
 	@property
@@ -321,9 +322,19 @@ class Document(SerializableDataclass):
 
 	@filePath.setter
 	def filePath(self, filePath: FilePath):
+		self._setFilePath(filePath, isUntitled=False)
+
+	def setUntitledFilePath(self, filePath: str):
+		self._setFilePath(filePath, isUntitled=True)
+
+	def _setFilePath(self, filePath: FilePath, *, isUntitled: bool):
 		oldPath = self._filePath
 		self._filePath = filePath
-		self._rescheduleFileChangedHandler(oldPath, filePath)
+		if isUntitled:
+			self._unscheduleFileChangedHandler(oldPath)
+		else:
+			self._rescheduleFileChangedHandler(oldPath, filePath)
+		self._isUntitled = isUntitled
 
 	def _rescheduleFileChangedHandler(self, oldPath: FilePath, newPath: FilePath):
 		oldListenerPath = self._getListenerPath(oldPath)
@@ -356,11 +367,6 @@ class Document(SerializableDataclass):
 
 	def _initUndoRedoStack(self, makeMementoIfDiff: MakeMementoIfDiffFunc[TTarget]):
 		self.undoRedoStack = UndoRedoStack2(self, 'content', makeMementoIfDiff)
-
-	@property
-	def documentChanged(self) -> bool:
-		"""Whether the document has been changed (and may need to be saved)."""
-		return self.content != self._originalContent
 
 	encoding: str = field(default='utf-8')
 	_undoRedoStackInitialized: bool = field(default=False, metadata=catMeta(serialize=False))
@@ -458,6 +464,21 @@ class Document(SerializableDataclass):
 	def fileName(self) -> str:
 		filePathForDisplay = self.filePathForDisplay
 		return os.path.split(filePathForDisplay)[1] if filePathForDisplay else 'untitled'
+
+	@property
+	def isUntitled(self) -> bool:
+		"""aka. Document.isNew, Whether the document is new and needs a path before saving. (Save As instead of Save)"""
+		return self._isUntitled
+
+	@property
+	def isNew(self) -> bool:
+		"""aka. Document.isUntitled, Whether the document is new and needs a path before saving. (Save As instead of Save)"""
+		return self.isUntitled
+
+	@property
+	def documentChanged(self) -> bool:
+		"""Whether the document has been changed (and may need to be saved)."""
+		return self.content != self._originalContent
 
 	@property
 	def fileChanged(self) -> bool:

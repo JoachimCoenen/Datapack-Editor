@@ -367,7 +367,7 @@ class DocumentsManager(SerializableDataclass):
 	def selectDocument(self, doc: Document, cursor: Span = None) -> None:
 		self.showDocument(doc, cursor)
 
-	def openOrShowDocument(self, filePath: FilePath, cursor: Span = None) -> None:  # throws OSError
+	def _openOrShowDocument(self, filePath: FilePath, cursor: Span = None) -> None:  # throws OSError
 		doc = self.getDocument(filePath)
 		if doc is None:  # open it:
 			doc = self._openDocument(filePath, None)
@@ -378,8 +378,19 @@ class DocumentsManager(SerializableDataclass):
 		doc = loadDocument(filePath)
 		view = view or self.currentView
 		self._insertDocument(doc, view, None)
-
 		return doc
+
+	def _saveDocument(self, document: Document) -> None:
+		if document.isNew:
+			raise ValueError("a path must be set before saving a document (document.isNew must be False)")
+		else:
+			document.saveToFile()
+
+	def _reloadDocument(self, document: Document) -> None:
+		if document.isNew:
+			raise ValueError("a path must be set before reloading a document (document.isNew must be False)")
+		else:
+			document.loadFromFile()
 
 	def safelyCloseDocument(self, doc: Document) -> bool:
 		if doc.documentChanged:
@@ -398,23 +409,29 @@ class DocumentsManager(SerializableDataclass):
 			view.removeDocument(doc)
 			doc.close()
 
-	def createNewDocument(self, docType: DocumentTypeDescription, filePath: Optional[str]) -> Document:
-		if filePath is None:
+	def createNewDocument(self, docType: DocumentTypeDescription, filePath: Optional[FilePath]) -> Document:
+		isUntitled = filePath is None
+		if isUntitled:
 			# find a new file name:
-			existingDocNames = {doc.filePathForDisplay for view in self.views for doc in view.documents}
-			i: int = 0
-			while True:
-				i += 1
-				docName = f'untitled {i}'
-				if docName not in existingDocNames:
-					filePath = docName
-					break
+			filePath = self._getNewUntitledFileName()
 		# create document:
 		doc = docType.newDocument()
-		doc.filePath = filePath
+		if isUntitled:
+			doc.setUntitledFilePath(filePath)
+		else:
+			doc.filePath = filePath
 		view = self.currentView
 		self._insertDocument(doc, view, None)
 		return doc
+
+	def _getNewUntitledFileName(self) -> str:
+		existingDocNames = {doc.filePathForDisplay for view in self.views for doc in view.documents}
+		i: int = 0
+		while True:
+			i += 1
+			docName = f'untitled {i}'
+			if docName not in existingDocNames:
+				return docName
 
 	def moveDocument(self, document: Document, newView: View, newPosition: Optional[int] = None) -> None:
 		oldView = self._getViewForDocument(document)

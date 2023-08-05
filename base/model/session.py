@@ -11,6 +11,7 @@ from Cat.Serializable.dataclassJson import SerializableDataclass
 from Cat.utils import format_full_exc, getExePath, openOrCreate, Singleton
 from Cat.utils.logging_ import logError
 from Cat.utils.signals import CatBoundSignal, CatSignal
+from base.model.documents import Document
 from base.model.pathUtils import FilePath
 from base.model.project.project import Project
 from base.model.documentHandling import DocumentsManager
@@ -39,11 +40,25 @@ class Session(SerializableDataclass):
 
 		def safeOpenOrShowDocument():
 			try:
-				self.documents.openOrShowDocument(filePath, selectedSpan)
+				self.documents._openOrShowDocument(filePath, selectedSpan)
 			except OSError as e:
 				getSession().showAndLogError(e)
 
 		QTimer.singleShot(250, safeOpenOrShowDocument)
+
+	def saveDocument(self, document: Document) -> bool:
+		try:
+			self.documents._saveDocument(document)
+			return True
+		except OSError as e:
+			getSession().showAndLogError(e)
+			return False
+
+	def reloadDocument(self, document: Document) -> None:
+		try:
+			self.documents._reloadDocument(document)
+		except OSError as e:
+			getSession().showAndLogError(e)
 
 	def closeProject(self) -> None:
 		project = self.project
