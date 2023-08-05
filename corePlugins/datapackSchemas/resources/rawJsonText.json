@@ -140,7 +140,10 @@
             },
             "color": {
               "optional": true,
-              "value": { "$type": "string" },
+              "value": {
+                "$type": "string",
+                "type": "minecraft:color"
+              },
               "description": "The color to render the content in. Valid values are `\"black\"`, `\"dark_blue\"`, `\"dark_green\"`, `\"dark_aqua\"`, `\"dark_red\"`, `\"dark_purple\"`, `\"gold\"`, `\"gray\"`, `\"dark_gray\"`, `\"blue\"`, `\"green\"`, `\"aqua\"`, `\"red\"`, `\"light_purple\"`, `\"yellow\"`, `\"white\"`, and `\"reset\"` (cancels out the effects of colors used by parent objects). \nSet to `\"#<hex>\"` to insert any color in the hexadecimal color format. Example: Using `\"#FF0000\"` makes the component red. Must be a full 6-digit value, not 3-digit."
             },
             "font": {
