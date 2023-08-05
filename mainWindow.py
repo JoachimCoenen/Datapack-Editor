@@ -23,7 +23,7 @@ from base.model.session import getSession, saveSessionToFile, GLOBAL_SIGNALS
 from base.model.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts, getAllFileExtensionFilters, getDocumentTypeForDocument
 from base.gui.checkAllDialog import CheckAllDialog
 from base.gui.searchAllDialog import SearchAllDialog
-from gui.spotlightSearch import SpotlightSearchGui
+from base.gui.spotlightSearch import SpotlightSearchGui
 from base.model.pathUtils import FilePath
 from gui.datapackEditorGUI import DatapackEditorGUI
 from base.plugin import PLUGIN_SERVICE, SideBarTabGUIFunc, ToolBtnFunc

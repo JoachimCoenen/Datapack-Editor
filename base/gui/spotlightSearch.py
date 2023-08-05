@@ -1,10 +1,10 @@
-import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from PyQt5.QtCore import QPoint, Qt, QSize
 from PyQt5.QtGui import QFocusEvent, QFont, QKeyEvent, QMoveEvent, QResizeEvent
 from PyQt5.QtWidgets import QWidget, QLayout
+from recordclass import as_dataclass
 
 from Cat.CatPythonGUI.GUI import SizePolicy
 from Cat.CatPythonGUI.GUI.catWidgetMixins import CORNERS, NO_MARGINS, NO_OVERLAP, Overlap, RoundedCorners
@@ -13,78 +13,35 @@ from Cat.CatPythonGUI.GUI.Widgets import CatTextField
 from Cat.CatPythonGUI.utilities import connect, CrashReportWrapped
 from Cat.utils.profiling import ProfiledFunction, TimedMethod
 from Cat import utils
+from base.model.utils import FuzzyMatch, SearchTerms, getSearchTerms, getFuzzyMatch2
+from basePlugins.projectFiles import FilesIndex, FileEntry
 from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries
-from base.model.pathUtils import FilePath
 from base.model.project.project import Root
 from base.model.session import getSession
 
 from base.model.applicationSettings import applicationSettings
 
 
-@dataclass
-class FileEntry:
-	path: str
-	splitPath: list[tuple[int, str]]
-	fileName: str
-	fullPath: FilePath
-	project: Root
-
-	def __hash__(self):
-		return hash((56783265, self.fullPath))
-
-
-@dataclass
-class SearchTerms:
-	searchTerm: str
-	subTerms: list[tuple[int, str]]
-	lowerSubTerms: list[str]
-
-
-
-@dataclass
-class FuzzyMatch:
-	#indices: OrderedMultiDict[int, slice] = field(default_factory=OrderedMultiDict)
-	indices: list[tuple[int, slice]]# = field(default_factory=list)
-	matchQuality: tuple[float, float]  # = (fullMatches / partsCnt, partialMatches / partsCnt)
-
-	@property
-	def anyMatch(self) -> bool:
-		return bool(self.indices)
-
-	def clear(self) -> None:
-		self.indices.clear()
-
-
-@dataclass
+@as_dataclass(fast_new=True)
 class SearchResult:
 	fe: FileEntry
-	match_: FuzzyMatch = field(compare=False)
+	match_: FuzzyMatch # = field(compare=False)
+
+	def __eq__(self, other):
+		if type(other) is not FileEntry:
+			return False
+		return self.fe == other.fe
+
+	def __ne__(self, other):
+		if type(other) is not FileEntry:
+			return True
+		return self.fe != other.fe
+
 
 @dataclass
 class SearchResults:
 	searchTerm: str
 	results: list[SearchResult]
-
-
-def splitStringForSearch(string: str) -> list[tuple[int, str]]:
-	# subTerms = [st for st in re.split(r'(?=[^a-z0-9])', string.strip())]
-	# subTerms = [st.lower() for st in re.split(r'(?=[A-Z])|\b', string.strip()) if st]
-
-	subTerms: list[tuple[int, str]] = []
-	idx = 0
-	for i, st in enumerate(re.split(r'((?=[A-Z])|[\W_]+)', string.strip())):
-		if st:
-			if i % 2 == 0: # we don't have a separator:
-				subTerms.append((idx, st.lower()))
-			idx += len(st)
-
-	return subTerms
-
-
-def getSearchTerms(searchTerm: str) -> SearchTerms:
-	subTerms = splitStringForSearch(searchTerm)
-	lowerSubTerms = [s[1].lower() for s in subTerms]
-	return SearchTerms(searchTerm, subTerms, lowerSubTerms)
 
 
 def getFuzzyMatch(searchTerms: SearchTerms, string: str, *, strict: bool) -> Optional[FuzzyMatch]:
@@ -104,82 +61,6 @@ def getFuzzyMatch(searchTerms: SearchTerms, string: str, *, strict: bool) -> Opt
 	return FuzzyMatch(indices, (.5, .5))
 
 
-def getFuzzyMatch2(allSearchTerms: SearchTerms, splitStrs: list[tuple[int, str]], *, strict: bool) -> Optional[FuzzyMatch]:
-	if not allSearchTerms.lowerSubTerms:
-		return None
-
-	indices: list[tuple[int, slice]] = []
-	fullMatchCount: int = 0
-	partialMatchCount: int = 0
-
-	#splitStrs = splitStringForSearch(string)
-	splitStrsLen = len(splitStrs)
-	splitIdx = 0
-
-	searchTerms = allSearchTerms.lowerSubTerms
-	searchTermsLen = len(searchTerms)
-	stIdx = 0
-	st: str = searchTerms[stIdx]
-	while stIdx < searchTermsLen and splitIdx < splitStrsLen:
-		splitStartIdx, subStr = splitStrs[splitIdx]
-		if st.startswith(subStr):
-			oldStartIdx = splitStartIdx
-			oldSplitIdx = splitIdx
-			while True:
-				fullMatchCount += 1
-				splitIdx += 1
-				if splitIdx >= splitStrsLen:
-					break
-				idxInSt = len(subStr)
-				splitStartIdx, subStr = splitStrs[splitIdx]
-				st = st[idxInSt:]
-				if not st or not st.startswith(subStr):
-					break
-			if st:  # we have some leftovers:
-				if subStr.startswith(st):  # leftovers could be matched:
-					partialMatchCount += 1
-					indices.append((stIdx, slice(oldStartIdx, splitStartIdx)))
-					splitIdx += 1
-					stIdx += 1
-					if stIdx < searchTermsLen:
-						st = searchTerms[stIdx]
-						continue
-					else:
-						break
-				else:  # leftovers couldn't be matched, so do a rollback:
-					splitIdx = oldSplitIdx + 1  # bc. splitStrs[splitIdx] was a failure
-					st = searchTerms[stIdx]
-					continue
-			else:  # we have NO leftovers:
-				indices.append((stIdx, slice(oldStartIdx, splitStartIdx)))
-				stIdx += 1
-				if stIdx < searchTermsLen:
-					st = searchTerms[stIdx]
-					continue
-				else:
-					break
-		elif subStr.startswith(st):
-			partialMatchCount += 1
-			indices.append((stIdx, slice(splitStartIdx, splitStartIdx + len(st))))
-			splitIdx += 1
-			stIdx += 1
-			if stIdx < searchTermsLen:
-				st = searchTerms[stIdx]
-				continue
-			else:
-				break
-			pass
-		else:
-			splitIdx += 1
-
-	if stIdx < searchTermsLen:
-		return None
-
-	#assert len(indices) == len(searchTerms)
-	assert stIdx == len(searchTerms)
-	return FuzzyMatch(indices, (fullMatchCount / splitStrsLen, partialMatchCount / splitStrsLen))
-
-
 class SpotlightSearchGui(CatTextField):
 	def __init__(self):
 		super().__init__()
@@ -189,7 +70,7 @@ class SpotlightSearchGui(CatTextField):
 		self.focusEndOfText: bool = False
 
 		self.allChoices: list[FileEntry] = []
-		self.lastFEsCache: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = {}
+		#self.lastFEsCache: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = {}
 		#self.updateAllChoices()
 
 		self.setRoundedCorners(CORNERS.ALL)
@@ -215,7 +96,7 @@ class SpotlightSearchGui(CatTextField):
 			return self._resultsPopup.onKeyPressed(event)
 		elif key == Qt.Key_Tab:
 			# do Tab Completion:
-			prefix = autocompleteFromList(self.text().strip(), [c.path for c in self.allChoices])
+			prefix = autocompleteFromList(self.text().strip(), [c.virtualPath for c in self.allChoices])
 			if prefix:
 				self.setText(prefix)
 			return
@@ -276,7 +157,7 @@ class SpotlightSearchGui(CatTextField):
 
 			searchResults = [
 				sr
-				for sr in (SearchResult(fe, getFuzzyMatch2(searchTerms, fe.splitPath, strict=True)) for fe in self.allChoices)
+				for sr in (SearchResult(fe, getFuzzyMatch2(searchTerms, fe.splitNameForSearch, strict=True)) for fe in self.allChoices)
 				if sr.match_ is not None
 			]
 			searchResults.sort(key=lambda x: x.match_.matchQuality, reverse=True)
@@ -299,32 +180,10 @@ class SpotlightSearchGui(CatTextField):
 		allRoots = self.getAllRoots()
 		filePathsToSearch: list[FileEntry] = []
 
-		lastFEs: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = self.lastFEsCache
-		newFEs: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = {}
-
 		for pack in allRoots:
-			for i, searchFileProp in enumerate(searchFileProps):
-				feKey = (pack.name, i)
-				lastFE = lastFEs.pop(feKey, None)
-				fullPaths = searchFileProp.get(pack)
-				if lastFE is not None and lastFE[0] == fullPaths:
-					newFEs[feKey] = lastFE
-					filePathsToSearch += lastFE[1]
-				else:
-					newFE = []
-					for fullPath in fullPaths:
-						path = fullPath[1] if isinstance(fullPath, tuple) else fullPath
-						newFE.append(FileEntry(
-							path,
-							splitStringForSearch(path.rpartition('/')[2]),
-							path.rpartition('/')[2],
-							fullPath,
-							pack
-						))
-					newFEs[feKey] = (fullPaths, newFE)
-					filePathsToSearch += newFE
+			if (filesIndex := pack.indexBundles.get(FilesIndex)) is not None:
+				filePathsToSearch.extend(filesIndex.files.values())
 
-		self.lastFEsCache = newFEs
 		self.allChoices = filePathsToSearch
 
 	def getAllRoots(self) -> list[Root]:
@@ -464,11 +323,10 @@ class FileSearchPopup(PythonGUIDialog):
 		@CrashReportWrapped
 		def onContextMenu(x: FileEntry, *, s=self):
 			with gui.popupMenu(atMousePosition=True) as menu:
-				menu.addItems(ContextMenuEntries.fileItems(x.fullPath, s.parent().window()._tryOpenOrSelectDocument))
+				menu.addItems(ContextMenuEntries.fileItems(x.fullPath, getSession().tryOpenOrSelectDocument))
 
 		fe = sr.fe
 		isSelected = self.selectedItem is not None and fe == self.selectedItem.fe
-
 
 		if isSelected:
 			fileNameStyle = f'font-size: {int(round(applicationSettings.appearance.fontSize * 1.3333))}pt; color: #ffffff;'
@@ -491,10 +349,10 @@ class FileSearchPopup(PythonGUIDialog):
 				if gui.doubleClickLabel(labelMaker1(fe.fileName, sr.match_, fileNameStyle), font=font):
 					self.selectedItem = sr
 					self.accept()
-				if gui.doubleClickLabel(labelMaker2(fe.project.name, pathStyle), alignment=Qt.AlignRight, font=font):
+				if gui.doubleClickLabel(labelMaker2(fe.projectName, pathStyle), alignment=Qt.AlignRight, font=font):
 					self.selectedItem = sr
 					self.accept()
-			if gui.doubleClickLabel(labelMaker2(fe.path, pathStyle), font=font):
+			if gui.doubleClickLabel(labelMaker2(fe.virtualPath, pathStyle), font=font):
 				self.selectedItem = sr
 				self.accept()
 
@@ -508,7 +366,7 @@ class FileSearchPopup(PythonGUIDialog):
 
 	@CrashReportWrapped
 	def openDocument(self, x: FileEntry):
-		self.parent().window()._tryOpenOrSelectDocument(x.fullPath)
+		getSession().tryOpenOrSelectDocument(x.fullPath)
 
 	@CrashReportWrapped
 	def accept(self) -> None:

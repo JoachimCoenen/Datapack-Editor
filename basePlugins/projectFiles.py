@@ -22,7 +22,7 @@ from base.model.aspect import AspectType
 from base.model.project.index import Index
 from base.model.project.project import Project, ProjectRoot, ProjectAspect, DependencyDescr, Root, IndexBundleAspect, AspectFeatures
 from base.model.session import getSession
-from base.model.utils import Span
+from base.model.utils import Span, splitStringForSearch
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
 
@@ -448,13 +448,13 @@ class DatapackFilesEditor(EditorBase[Project]):
 		# 	# getRight:
 		# 	# virtualPath = rootName + fullPath[1]
 		# 	# allAutocompleteStringsIO.append(virtualPath)
-		# 	# filesForProj.append(FileEntry(fullPath, rootName + fullPath[1], False))
+		# 	# filesForProj.append(makeFileEntry(fullPath, root, False))
 		# 	filesForProj.append(fullPath)
 		# for fullPath in filesIndex.files.values():
 		# 	# getRight:
 		# 	# virtualPath = rootName + fullPath[1]
 		# 	# allAutocompleteStringsIO.append(virtualPath)
-		# 	# filesForProj.append(FileEntry(fullPath, rootName + fullPath[1], True))
+		# 	# filesForProj.append(makeFileEntry(fullPath, root, True))
 		# 	filesForProj.append(fullPath)
 		if True or projItem.filePaths:
 			projectItemsIO.append(projItem)
@@ -601,14 +601,14 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 			index = self._root.indexBundles.setdefault(FilesIndex).folders
 			index.discardSource(event.split_src_path)
 			if (jf := splitPath(event.dest_path, self._root.normalizedLocation)) is not None:
-				index.add(jf[1], jf, FileEntry(jf, f'{self._root.name}/{jf[1]}', False))
+				index.add(jf[1], jf, makeFileEntry(jf, self._root, False))
 			# TODO: analyze Files for DirMovedEvent
 		else:
 			for index in self._root.indexBundles:
 				index.discardSource(event.split_src_path)
 			if (jf := splitPath(event.dest_path, self._root.normalizedLocation)) is not None:
 				index = self._root.indexBundles.setdefault(FilesIndex).files
-				index.add(jf[1], jf, FileEntry(jf, f'{self._root.name}/{jf[1]}', True))
+				index.add(jf[1], jf, makeFileEntry(jf, self._root, True))
 				for aspect in self._project.aspects:
 					if aspect.aspectFeatures.analyzeFiles:
 						aspect.analyzeFile(self._root, jf)
@@ -623,10 +623,10 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 		"""
 		path = event.split_src_path
 		if event.is_directory:
-			self._root.indexBundles.setdefault(FilesIndex).folders.add(path[1], path, FileEntry(path, f'{self._root.name}/{path[1]}', False))
+			self._root.indexBundles.setdefault(FilesIndex).folders.add(path[1], path, makeFileEntry(path, self._root, False))
 		else:
 			index = self._root.indexBundles.setdefault(FilesIndex).files
-			index.add(path[1], path, FileEntry(path, f'{self._root.name}/{path[1]}', True))
+			index.add(path[1], path, makeFileEntry(path, self._root, True))
 			for aspect in self._project.aspects:
 				if aspect.aspectFeatures.analyzeFiles:
 					aspect.analyzeFile(self._root, path)
@@ -666,7 +666,7 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 			for index in self._root.indexBundles:
 				index.discardSource(path)
 			index = self._root.indexBundles.setdefault(FilesIndex).files
-			index.add(path[1], path, FileEntry(path,  f'{self._root.name}/{path[1]}', True))
+			index.add(path[1], path, makeFileEntry(path,  self._root, True))
 			for aspect in self._project.aspects:
 				if aspect.aspectFeatures.analyzeFiles:
 					aspect.analyzeFile(self._root, path)
@@ -744,11 +744,11 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 			return
 		idx = root.indexBundles.setdefault(FilesIndex).files
 		for jf in rawLocalFiles:
-			idx.add(jf[1], jf, FileEntry(jf, f'{root.name}/{jf[1]}', True))
+			idx.add(jf[1], jf, makeFileEntry(jf, root, True))
 
 		idx = root.indexBundles.get(FilesIndex).folders
 		for jf in rawLocalFolders:
-			idx.add(jf[1], jf, FileEntry(jf, f'{root.name}/{jf[1]}', False))
+			idx.add(jf[1], jf, makeFileEntry(jf, root, False))
 
 
 @dataclass
@@ -766,7 +766,16 @@ class FilesIndex(IndexBundleAspect):
 class FileEntry:
 	fullPath: FilePathTpl
 	virtualPath: str  # = dataclasses.field(compare=False)
+	splitNameForSearch: list[tuple[int, str]]
 	isFile: bool
+
+	@property
+	def fileName(self) -> str:
+		return self.virtualPath.rpartition('/')[2]
+
+	@property
+	def projectName(self) -> str:
+		return self.virtualPath.partition('/')[0]
 
 	def __eq__(self, other):
 		if type(other) is not FileEntry:
@@ -777,6 +786,15 @@ class FileEntry:
 		if type(other) is not FileEntry:
 			return True
 		return self.virtualPath != other.virtualPath or self.fullPath != other.fullPath or self.isFile != other.isFile
+
+	def __hash__(self):
+		return hash((56783265, self.fullPath))
+
+
+def makeFileEntry(fullPath: FilePathTpl, root: Root, isFile: bool) -> FileEntry:
+	virtualPath = f'{root.name}/{fullPath[1]}'
+	splitNameForSearch = splitStringForSearch(virtualPath.rpartition('/')[2])
+	return FileEntry(fullPath, virtualPath, splitNameForSearch, isFile)
 
 
 def createNewFile(folderPath: FilePath, name: str) -> FilePath:

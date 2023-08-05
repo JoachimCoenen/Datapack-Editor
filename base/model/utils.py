@@ -1,7 +1,8 @@
 from __future__ import annotations
 import builtins
+import re
 from dataclasses import dataclass
-from typing import final, Iterator, NewType, Protocol
+from typing import final, Iterator, NewType, Protocol, Optional
 from recordclass import as_dataclass
 
 import markdown
@@ -252,6 +253,126 @@ class WrappedError(GeneralError):
 		super(WrappedError, self).__init__(MDStr(escapeForXmlTextContent(f"{type(exception).__name__}: {str(exception)}")), span=span, style=style)
 		self.wrappedEx = exception
 
+# Search related:
+
+
+@dataclass
+class SearchTerms:
+	searchTerm: str
+	subTerms: list[tuple[int, str]]
+	lowerSubTerms: list[str]
+
+
+@as_dataclass(fast_new=True)
+class FuzzyMatch:
+	#indices: OrderedMultiDict[int, slice] = field(default_factory=OrderedMultiDict)
+	indices: list[tuple[int, slice]]# = field(default_factory=list)
+	matchQuality: tuple[float, float]  # = (fullMatches / partsCnt, partialMatches / partsCnt)
+
+	@property
+	def anyMatch(self) -> bool:
+		return bool(self.indices)
+
+	def clear(self) -> None:
+		self.indices.clear()
+
+
+def splitStringForSearch(string: str) -> list[tuple[int, str]]:
+	# subTerms = [st for st in re.split(r'(?=[^a-z0-9])', string.strip())]
+	# subTerms = [st.lower() for st in re.split(r'(?=[A-Z])|\b', string.strip()) if st]
+
+	subTerms: list[tuple[int, str]] = []
+	idx = 0
+	for i, st in enumerate(re.split(r'((?=[A-Z])|[\W_]+)', string.strip())):
+		if st:
+			if i % 2 == 0: # we don't have a separator:
+				subTerms.append((idx, st.lower()))
+			idx += len(st)
+
+	return subTerms
+
+
+def getSearchTerms(searchTerm: str) -> SearchTerms:
+	subTerms = splitStringForSearch(searchTerm)
+	lowerSubTerms = [s[1].lower() for s in subTerms]
+	return SearchTerms(searchTerm, subTerms, lowerSubTerms)
+
+
+def getFuzzyMatch2(allSearchTerms: SearchTerms, splitStrs: list[tuple[int, str]], *, strict: bool) -> Optional[FuzzyMatch]:
+	if not allSearchTerms.lowerSubTerms:
+		return None
+
+	indices: list[tuple[int, slice]] = []
+	fullMatchCount: int = 0
+	partialMatchCount: int = 0
+
+	#splitStrs = splitStringForSearch(string)
+	splitStrsLen = len(splitStrs)
+	splitIdx = 0
+
+	searchTerms = allSearchTerms.lowerSubTerms
+	searchTermsLen = len(searchTerms)
+	stIdx = 0
+	st: str = searchTerms[stIdx]
+	while stIdx < searchTermsLen and splitIdx < splitStrsLen:
+		splitStartIdx, subStr = splitStrs[splitIdx]
+		if st.startswith(subStr):
+			oldStartIdx = splitStartIdx
+			oldSplitIdx = splitIdx
+			while True:
+				fullMatchCount += 1
+				splitIdx += 1
+				if splitIdx >= splitStrsLen:
+					break
+				idxInSt = len(subStr)
+				splitStartIdx, subStr = splitStrs[splitIdx]
+				st = st[idxInSt:]
+				if not st or not st.startswith(subStr):
+					break
+			if st:  # we have some leftovers:
+				if subStr.startswith(st):  # leftovers could be matched:
+					partialMatchCount += 1
+					indices.append((stIdx, slice(oldStartIdx, splitStartIdx)))
+					splitIdx += 1
+					stIdx += 1
+					if stIdx < searchTermsLen:
+						st = searchTerms[stIdx]
+						continue
+					else:
+						break
+				else:  # leftovers couldn't be matched, so do a rollback:
+					splitIdx = oldSplitIdx + 1  # bc. splitStrs[splitIdx] was a failure
+					st = searchTerms[stIdx]
+					continue
+			else:  # we have NO leftovers:
+				indices.append((stIdx, slice(oldStartIdx, splitStartIdx)))
+				stIdx += 1
+				if stIdx < searchTermsLen:
+					st = searchTerms[stIdx]
+					continue
+				else:
+					break
+		elif subStr.startswith(st):
+			partialMatchCount += 1
+			indices.append((stIdx, slice(splitStartIdx, splitStartIdx + len(st))))
+			splitIdx += 1
+			stIdx += 1
+			if stIdx < searchTermsLen:
+				st = searchTerms[stIdx]
+				continue
+			else:
+				break
+			pass
+		else:
+			splitIdx += 1
+
+	if stIdx < searchTermsLen:
+		return None
+
+	#assert len(indices) == len(searchTerms)
+	assert stIdx == len(searchTerms)
+	return FuzzyMatch(indices, (fullMatchCount / splitStrsLen, partialMatchCount / splitStrsLen))
+
 
 __all__ = [
 	'LanguageId',
@@ -273,4 +394,10 @@ __all__ = [
 	'ParsingError',
 	'SemanticsError',
 	'WrappedError',
+
+	'SearchTerms',
+	'FuzzyMatch',
+	'splitStringForSearch',
+	'getSearchTerms',
+	'getFuzzyMatch2',
 ]
