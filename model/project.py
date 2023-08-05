@@ -299,7 +299,7 @@ def collectAllDependencies(project: Project):
 		for projName, errors in errorsByProj.items():
 			logWarning(f"Project '{projName}':")
 			for error in errors:
-				logWarning(error, indentLvl=1)
+				logWarning(str(error), indentLvl=1)
 
 	return allDependencies
 

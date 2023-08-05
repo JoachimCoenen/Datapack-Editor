@@ -138,7 +138,7 @@ def loadSessionFromFile(filePath: str = None) -> None:
 	try:
 		with open(filePath, "r") as inFile:
 			session = getSession().fromJson(inFile.read(), onError=_logError)
-	except (JSONDecodeError, FileNotFoundError, AttributeError, TypeError, RuntimeError) as e:
+	except (JSONDecodeError, OSError, AttributeError, TypeError, RuntimeError) as e:
 		logError(f'Unable to load session: \n{format_full_exc(e)}')
 	else:
 		setSession(session)

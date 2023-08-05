@@ -63,7 +63,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 		if errors:
 			logWarning(f"Failed to read '{fileName}' for project '{projectPath}':")
 			for error in errors:
-				logWarning(error, indentLvl=1)
+				logWarning(str(error), indentLvl=1)
 
 		return dependencies
 

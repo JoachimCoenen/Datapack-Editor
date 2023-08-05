@@ -34,7 +34,7 @@ def minecraftJarValidator(path: str) -> Optional[ValidatorResult]:
 		try:
 			with ZipFile(path, 'r'):
 				pass
-		except (FileNotFoundError, PermissionError) as e:
+		except OSError as e:
 			result = ValidatorResult(str(e), 'error')
 	return result
 

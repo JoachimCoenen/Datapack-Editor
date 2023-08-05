@@ -417,7 +417,7 @@ def loadApplicationSettings():
 		with open(_getSettingsPath(), "r", encoding='utf-8') as settingsFile:
 			newSettings = applicationSettings.fromJson(settingsFile.read(), onError=logError)
 		setApplicationSettings(newSettings)
-	except (JSONDecodeError, FileNotFoundError, AttributeError, TypeError, RuntimeError) as e:
+	except (JSONDecodeError, OSError, AttributeError, TypeError, RuntimeError) as e:
 		logError(f'Unable to load settings: \n{traceback.format_exc()}')
 
 

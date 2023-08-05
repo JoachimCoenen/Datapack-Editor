@@ -131,7 +131,7 @@ def resolveDependencies(project: Project):
 		for rootName, errors in errorsByRoot.items():
 			logWarning(f"Project '{rootName}':")
 			for error in errors:
-				logWarning(error, indentLvl=1)
+				logWarning(str(error), indentLvl=1)
 
 	return deepDependencies
 

@@ -7,6 +7,7 @@
 ### Fixes
  * Save As now selects correct file extension by default.
  * Saving an untitled file now correctly opens the Save As dialog instead of just saving the file to `untitled n`.
+ * fixed potential crashes when loading or saving files, settings, etc.
 
 ## Version 0.4.0-alpha
 ### Features

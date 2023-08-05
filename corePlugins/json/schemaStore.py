@@ -85,7 +85,7 @@ class JsonSchemaLoader:
 			if errors:
 				logWarning(path)
 				for error in errors:
-					logWarning(error, indentLvl=1)
+					logWarning(str(error), indentLvl=1)
 
 	def clearErrors(self):
 		self.orchestrator.errors.clear()

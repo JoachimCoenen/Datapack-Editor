@@ -7,6 +7,8 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
 
+from Cat.utils.logging_ import logInfo, logDebug
+
 
 class _Watches:
 	def __init__(self):
@@ -85,15 +87,21 @@ class FilesystemObserver:
 		self._handlers.set(handlerId, path, handler)
 		if not self.__observer._handlers.get(ObservedWatch(path, True), None):
 			try:
-				self.__observer.schedule(_CombinedEventHandler(path, self._handlers), path, True)
-			except FileNotFoundError:
-				pass
+				event_handler = _CombinedEventHandler(path, self._handlers)
+				self.__observer.schedule(event_handler, path, True)
+			except FileNotFoundError as e:
+				logDebug(e)
+			except OSError as e:
+				logInfo(e)
 
 	def _unschedule(self, handlerId: str, path: str):
 		handler = self._handlers.pop(handlerId, path)
 		if handler is not None:
 			if not self._handlers.getByPath(path):
-				self.__observer.unschedule(ObservedWatch(path, True))
+				observedWatch = ObservedWatch(path, True)
+				if observedWatch in self.__observer._emitter_for_watch:
+					self.__observer.unschedule(observedWatch)
+				self.__observer._handlers.pop(observedWatch, None)  # safety net, necessary when path was invalid while scheduling.
 
 	def __del__(self):
 		with self._lock:
