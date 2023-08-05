@@ -186,6 +186,7 @@ def qGrayF(color: QColor) -> float:
 def colorToStr(c: QColor):
 	return c.name()
 
+
 class _MaxFuncCallError(RuntimeError):
 	pass
 

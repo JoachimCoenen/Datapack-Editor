@@ -4,7 +4,7 @@ from typing import Optional, cast, Sequence
 
 from PyQt5.Qsci import QsciLexerCustom, QsciLexer, QsciScintilla
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QColor
 
 from Cat.CatPythonGUI.GUI.codeEditor import CodeEditor, MyQsciAPIs, AutoCompletionTree, Position as CEPosition, CallTipInfo
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
@@ -17,8 +17,6 @@ from base.model.parsing.contextProvider import ContextProvider, getContextProvid
 from base.model.parsing.tree import Node
 from base.model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position
 from base.model.documents import TextDocument
-
-TokenType = int
 
 
 _SCI_STYLE_DEFAULT = StyleId(32)  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
@@ -33,6 +31,14 @@ _SCI_STYLE_LASTPREDEFINED = StyleId(39)
 _SCI_STYLE_FIRST_USER_STYLE = _SCI_STYLE_LASTPREDEFINED + 1
 _CAT_STYLE_CARETLINE = StyleId(-257)
 _CAT_STYLE_CARET = StyleId(-258)
+_CAT_STYLE_WHITE_SPACE = StyleId(-300)
+
+_SC_ELEMENT_WHITE_SPACE = 60
+_SC_ELEMENT_WHITE_SPACE_BACK = 61
+
+_CAT_SCI_ELEMENT_COLOR_IDS = {
+	_CAT_STYLE_WHITE_SPACE: (_SC_ELEMENT_WHITE_SPACE, _SC_ELEMENT_WHITE_SPACE_BACK)
+}
 
 
 def QFontFromStyleFont(styleFont: StyleFont) -> QFont:
@@ -56,6 +62,19 @@ def StyleFontFromQFont(qFont: QFont) -> StyleFont:
 	return StyleFont(**values)
 
 
+def _twosComp32(n: int) -> int:
+	# Thanks c, that we have to do this. :/
+	return n - 0x100000000 if n & 0x80000000 else n
+
+
+def _qColorToSciRGB(c: QColor) -> int:
+	return _twosComp32(c.red() + (c.green() << 8) + (c.blue() << 16))
+
+
+def _qColorToSciRGBA(c: QColor) -> int:
+	return _twosComp32(c.red() + (c.green() << 8) + (c.blue() << 16) + (c.alpha() << 24))
+
+
 class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be a metaclass conflict.
 
 	def __init__(self, parent=None):
@@ -76,7 +95,7 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 		self._api.autoCompletionTree = value
 
 	@abstractmethod
-	def getStyles(self) -> dict[TokenType, Style]:
+	def getStyles(self) -> dict[StyleId, Style]:
 		pass
 
 	def setCaretLineStyle(self, style: Style):
@@ -89,13 +108,26 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 		if editor is not None:
 			editor.setCaretForegroundColor(style.foreground)
 
-	def initStyle(self, style: Style, id: int) -> None:
-		actualId = id + _SCI_STYLE_FIRST_USER_STYLE
+	def setElementStyle(self, styleId: StyleId, style: Style):
+		editor: CodeEditor = self.editor()
+		if editor is not None:
+			if styleId == _CAT_STYLE_WHITE_SPACE:
+				editor.SendScintilla(CodeEditor.SCI_SETWHITESPACEFORE, True, _qColorToSciRGB(style.foreground))
+				editor.SendScintilla(CodeEditor.SCI_SETWHITESPACEBACK, False, _qColorToSciRGB(style.background))
+			else:
+				elementIds = _CAT_SCI_ELEMENT_COLOR_IDS[styleId]
+				if elementIds[0] is not None:
+					editor.SendScintilla(CodeEditor.SCI_SETELEMENTCOLOUR, elementIds[0], _qColorToSciRGBA(style.foreground))
+				if elementIds[1] is not None:
+					editor.SendScintilla(CodeEditor.SCI_SETELEMENTCOLOUR, elementIds[1], _qColorToSciRGBA(style.background))
+
+	def initStyle(self, style: Style, styleId: int) -> None:
+		actualId = styleId + _SCI_STYLE_FIRST_USER_STYLE
 		self.setColor(style.foreground, actualId)
 		self.setPaper(style.background, actualId)
 		self.setFont(QFontFromStyleFont(style.font), actualId)
 
-	def initStyles(self, styles: dict[TokenType, Style], overwriteDefaultStyle: bool = False):
+	def initStyles(self, styles: dict[StyleId, Style], overwriteDefaultStyle: bool = False):
 		defaultStyle = Style(
 			foreground=self.defaultColor(),
 			background=self.defaultPaper(),
@@ -103,7 +135,7 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 		)
 		# handle default first:
 		if overwriteDefaultStyle:
-			defStyle = styles[_SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE]
+			defStyle = styles[StyleId(_SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE)]
 			defaultStyle = defaultStyle | defStyle
 			defaultQFont = QFontFromStyleFont(defaultStyle.font)
 			# defaultQFont.setPointSize(self.defaultFont().pointSize())
@@ -123,6 +155,8 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 				self.setCaretLineStyle(actualStyle)
 			elif tokenType == _CAT_STYLE_CARET:
 				self.setCaretStyle(actualStyle)
+			elif tokenType in _CAT_SCI_ELEMENT_COLOR_IDS:
+				self.setElementStyle(tokenType, actualStyle)
 			else:
 				self.initStyle(actualStyle, tokenType)
 
@@ -234,6 +268,7 @@ class DocumentLexerBase2(DocumentLexerBase):  # this is an ABC, but there would 
 		styleMap[_SCI_STYLE_FOLDDISPLAYTEXT + revOffset] = globalStyles.foldDisplayTextStyle
 		styleMap[_CAT_STYLE_CARETLINE] = globalStyles.caretLineStyle
 		styleMap[_CAT_STYLE_CARET] = globalStyles.caretStyle
+		styleMap[_CAT_STYLE_WHITE_SPACE] = globalStyles.whiteSpaceStyle
 
 	def startStyling(self, pos: int, styleBits: int = ...) -> None:
 		self._lastStylePos = pos

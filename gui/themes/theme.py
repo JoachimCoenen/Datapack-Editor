@@ -64,6 +64,16 @@ class Style:
 	# def __ior__(self, other: Style) -> Style:
 	# 	return self | other
 
+	def __str__(self):
+		contents = []
+		if self.foreground is not None:
+			contents.append(f"foreground={self.foreground.name()}")
+		if self.background is not None:
+			contents.append(f"background={self.background.name()}")
+		if self.font is not None:
+			contents.append(f"font={self.font}")
+		return f"Style({', '.join(contents)})"
+
 
 EMPTY_STYLE_STYLE = Style()
 
@@ -132,6 +142,7 @@ class GlobalStyles:
 	foldDisplayTextStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 	caretLineStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 	caretStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	whiteSpaceStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 
 
 def updateGlobalStylesToMatchUIColors(scheme: ColorScheme):
@@ -148,6 +159,7 @@ def updateGlobalStylesToMatchUIColors(scheme: ColorScheme):
 		foldDisplayTextStyle =gls.foldDisplayTextStyle | Style(),
 		caretLineStyle       =gls.caretLineStyle       | Style(background=uic.Window),
 		caretStyle           =gls.caretStyle           | Style(background=uic.Text),
+		whiteSpaceStyle      =gls.whiteSpaceStyle      | Style(),
 	)
 
 

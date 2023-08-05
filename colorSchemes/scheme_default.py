@@ -49,7 +49,7 @@ def buildColorScheme() -> ColorScheme:
 		LinkVisited=QColor('#ff00ff'),
 	)
 	
-	lightGray = QColor(0xe0, 0xe0, 0xe0)
+	lightGray = QColor('#b4b4b4')
 	scheme.globalStyles = GlobalStyles(
 		defaultStyle=Style(foreground=scheme.uiColors.Text, background=scheme.uiColors.Input),
 		lineNumberStyle=Style(background=scheme.uiColors.Window),
@@ -60,6 +60,7 @@ def buildColorScheme() -> ColorScheme:
 		calltipStyle=Style(foreground=scheme.uiColors.Border, background=scheme.uiColors.Window),
 		foldDisplayTextStyle=Style(foreground=lightGray, background=QColor('orange')),
 		caretLineStyle=Style(background=scheme.uiColors.Window),
+		whiteSpaceStyle=Style(foreground=lightGray)
 	)
 	updateGlobalStylesToMatchUIColors(scheme)
 

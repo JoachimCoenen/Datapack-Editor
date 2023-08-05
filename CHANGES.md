@@ -1,7 +1,10 @@
 ## Next Version
 ### Features
- * added whitespace visibility setting
- * added indentation settings for documents
+ * Indentation & Whitespace:
+   * Added indentation settings for documents.
+   * Added whitespace visibility setting.
+   * Added `globalStyles.whiteSpaceStyle` setting to color schemes.
+
 ### Improvements
 
 ### Fixes
