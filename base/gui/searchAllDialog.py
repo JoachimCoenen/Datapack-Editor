@@ -19,7 +19,6 @@ from Cat.utils.profiling import TimedMethod
 from base.model.project.project import Root
 from base.model.session import getSession
 from basePlugins.projectFiles import FilesIndex
-from gui.checkAllDialog import FILE_TYPES
 from gui.datapackEditorGUI import ContextMenuEntries, makeTextSearcher
 from base.model.pathUtils import FilePath, ZipFilePool, loadTextFile
 from base.model.utils import Position, Span
@@ -53,6 +52,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 			isMultiLine=False,
 		)
 
+		self._fileTypesStr: str = ""
 		self._fileTypes: tuple[str, ...] = ()
 		self._searchResult: SearchResult = SearchResult()
 		self.htmlDelegate = HTMLDelegate()
@@ -66,15 +66,20 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 		self._searchResult = SearchResult(allFilePaths)
 
 	def OnSidebarGUI(self, gui: PythonGUI):
-		with gui.vLayout(preventVStretch=False, verticalSpacing=0):
-			self._fileTypes = tuple(ft for ft in FILE_TYPES if gui.checkboxLeft(None, ft))
+		with gui.vLayout1C(preventVStretch=False):
+			self._fileTypesStr = gui.codeField(self._fileTypesStr, label="File Extensions:", isMultiline=False, placeholderText="All Extensions")
+			self._fileTypes = tuple(ext.strip() for ext in self._fileTypesStr.split(',') if ext.strip())
 
 		gui.vSeparator()
 		includedRoots = []
 		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
-			for dp in getSession().project.roots:
-				if gui.checkboxLeft(None, dp.name):
-					includedRoots.append(dp)
+			for root in getSession().project.roots:
+				if gui.checkboxLeft(None, root.name):
+					includedRoots.append(root)
+			gui.vSeparator()
+			for root in getSession().project.deepDependencies:
+				if gui.checkboxLeft(None, root.name):
+					includedRoots.append(root)
 		self._includedRoots = includedRoots
 
 	def OnGUI(self, gui: PythonGUI):
@@ -132,17 +137,17 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 
 		def openDocument(x: Union[FilePath, Occurrence], *, s=self):
 			if isinstance(x, Occurrence):
-				s.parent()._tryOpenOrSelectDocument(x.file, x.span)
+				getSession().tryOpenOrSelectDocument(x.file, x.span)
 			else:
-				s.parent()._tryOpenOrSelectDocument(x)
+				getSession().tryOpenOrSelectDocument(x)
 
 		def onContextMenu(x: Union[SearchResult, FilePath, Occurrence], column: int, *, s=self):
 			if isinstance(x, Occurrence):
 				with gui.popupMenu(atMousePosition=True) as menu:
-					menu.addItems(ContextMenuEntries.fileItems(x.file, s.parent()._tryOpenOrSelectDocument))
+					menu.addItems(ContextMenuEntries.fileItems(x.file, getSession().tryOpenOrSelectDocument))
 			elif not isinstance(x, SearchResult):
 				with gui.popupMenu(atMousePosition=True) as menu:
-					menu.addItems(ContextMenuEntries.fileItems(x, s.parent()._tryOpenOrSelectDocument))
+					menu.addItems(ContextMenuEntries.fileItems(x, getSession().tryOpenOrSelectDocument))
 
 		def childrenMaker(x: Union[SearchResult, FilePath, Occurrence], *, s=self) -> Sequence:
 			if isinstance(x, SearchResult):
@@ -169,6 +174,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 
 	@property
 	def filePathsToSearch(self) -> list[FilePath]:
+		fileTypes = self._fileTypes
 		filePathsToSearch: list[FilePath] = []
 		for p in self._includedRoots:
 			if (filesIndex := p.indexBundles.get(FilesIndex)) is not None:
@@ -178,7 +184,7 @@ class SearchAllDialog(CatFramelessWindowMixin, QDialog):
 						fn = f[1]
 					else:
 						fn = f
-					if fn.endswith(tuple(self._fileTypes)):
+					if not fileTypes or fn.endswith(fileTypes):
 						filePathsToSearch.append(f)
 
 		return filePathsToSearch

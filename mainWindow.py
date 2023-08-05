@@ -22,7 +22,7 @@ from base.model.utils import Span, GeneralError
 from base.model.session import getSession, saveSessionToFile, GLOBAL_SIGNALS
 from base.model.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts, getAllFileExtensionFilters, getDocumentTypeForDocument
 # from gui.checkAllDialog import CheckAllDialog
-# from gui.searchAllDialog import SearchAllDialog
+from base.gui.searchAllDialog import SearchAllDialog
 from gui.spotlightSearch import SpotlightSearchGui
 from base.model.pathUtils import FilePath
 from gui.datapackEditorGUI import DatapackEditorGUI
@@ -92,7 +92,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 
 		#GUI
 		self.checkAllDialog = None  # CheckAllDialog(self)
-		self.searchAllDialog = None  # SearchAllDialog(self)
+		self.searchAllDialog = SearchAllDialog(self)
 		self.settingsDialog = SettingsDialog(self)
 		self.profileParsingDialog = ProfileParsingDialog(self)
 		self.currentDocumenSubGUI: Optional[DatapackEditorGUI] = None

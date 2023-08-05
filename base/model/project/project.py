@@ -28,6 +28,7 @@ class Project(SerializableDataclass, ABC):
 	path: FilePath = ''  # save path for the project, might also be usd for git, etc.
 	roots: list[ProjectRoot] = field(default_factory=list)
 	deepDependencies: list[Root] = field(default_factory=list, metadata=catMeta(serialize=False))
+	"""all dependencies recursively, excluding all ProjectRoots."""
 	# projectSettings: ProjectSettings
 	aspects: AspectDict[ProjectAspect] = field(default_factory=lambda: AspectDict(ProjectAspect), metadata=catMeta(serialize=False))
 
