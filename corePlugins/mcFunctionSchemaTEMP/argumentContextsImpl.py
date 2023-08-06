@@ -2,8 +2,6 @@ import re
 from abc import abstractmethod, ABC
 from typing import Optional, Iterable, Any
 
-from PyQt5.QtWidgets import QWidget
-
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare, CtxInfo, \
 	prepareTree
@@ -85,8 +83,8 @@ class ResourceLocationLikeHandler(ArgumentContext, ABC):
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		return getClickableRanges(node.value, node.source, node.span)
 
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
-		return onIndicatorClicked(node.value, node.source, position, window)
+	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
+		return onIndicatorClicked(node.value, node.source, position)
 
 
 class ParsingHandler(ArgumentContext, ABC):
@@ -173,8 +171,8 @@ class ParsingHandler(ArgumentContext, ABC):
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		return getClickableRanges(node.value, node.source)
 
-	def onIndicatorClicked(self, node: ParsedArgument, pos: Position, window: QWidget) -> None:
-		onIndicatorClicked(node.value, node.source, pos, window)
+	def onIndicatorClicked(self, node: ParsedArgument, pos: Position) -> None:
+		onIndicatorClicked(node.value, node.source, pos)
 
 
 @argumentContext(BRIGADIER_BOOL.name)
@@ -344,14 +342,14 @@ class BlockStateHandler(ArgumentContext):
 
 		return ranges
 
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
 		blockState: BlockState = node.value
 		if blockState.blockId.span.__contains__(position):
-			onIndicatorClicked(blockState.blockId, node.source, position, window)
+			onIndicatorClicked(blockState.blockId, node.source, position)
 		elif blockState.nbt is not None and blockState.nbt.span.__contains__(position):
-			onIndicatorClicked(blockState.nbt, node.source, position, window)
+			onIndicatorClicked(blockState.nbt, node.source, position)
 		else:
-			onIndicatorClickedForFilterArgs(blockState.states, position, window)
+			onIndicatorClickedForFilterArgs(blockState.states, position)
 
 
 @argumentContext(MINECRAFT_BLOCK_PREDICATE.name)
@@ -440,8 +438,8 @@ class EntityHandler(ArgumentContext):
 		ranges = clickableRangesForFilterArgs(targetSelector.arguments)
 		return ranges
 
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
-		onIndicatorClickedForFilterArgs(node.value.arguments, position, window)
+	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
+		onIndicatorClickedForFilterArgs(node.value.arguments, position)
 
 
 @argumentContext(MINECRAFT_ENTITY_SUMMON.name)
@@ -598,12 +596,12 @@ class ItemStackHandler(ArgumentContext):
 
 		return ranges
 
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
 		itemStack: ItemStack = node.value
 		if itemStack.itemId.span.__contains__(position):
-			onIndicatorClicked(itemStack.itemId, node.source, position, window)
+			onIndicatorClicked(itemStack.itemId, node.source, position)
 		elif itemStack.nbt is not None and itemStack.nbt.span.__contains__(position):
-			onIndicatorClicked(itemStack.nbt, node.source, position, window)
+			onIndicatorClicked(itemStack.nbt, node.source, position)
 
 
 @argumentContext(MINECRAFT_ITEM_PREDICATE.name)

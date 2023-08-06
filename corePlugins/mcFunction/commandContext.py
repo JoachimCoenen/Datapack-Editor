@@ -2,8 +2,6 @@ import re
 from abc import abstractmethod, ABC
 from typing import Iterable, Optional, Any, cast
 
-from PyQt5.QtWidgets import QWidget
-
 from Cat.utils import escapeForXml, Decorator
 from Cat.utils.profiling import logError
 from base.model.parsing.contextProvider import ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
@@ -200,7 +198,7 @@ class ArgumentContext(Context[ParsedArgument], ABC):
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		pass
 
-	def onIndicatorClicked(self, node: ParsedArgument, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: ParsedArgument, pos: Position) -> None:
 		pass
 
 

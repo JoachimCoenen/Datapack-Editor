@@ -1,8 +1,6 @@
 from abc import abstractmethod, ABC
 from typing import Optional, Iterable, Any
 
-from PyQt5.QtWidgets import QWidget
-
 from Cat.utils.logging_ import logError
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
@@ -90,8 +88,8 @@ class ResourceLocationHandler(JsonStringContext):
 	def getClickableRanges(self, node: JsonString) -> Optional[Iterable[Span]]:
 		return getClickableRanges(node.parsedValue, b'')
 
-	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
-		return onIndicatorClicked(node.parsedValue, b'', pos, window)
+	def onIndicatorClicked(self, node: JsonString, pos: Position) -> None:
+		return onIndicatorClicked(node.parsedValue, b'', pos)
 
 
 class ParsingJsonCtx(JsonStringContext, ABC):
@@ -146,9 +144,9 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 		if node.parsedValue is not None:
 			return getClickableRanges(node.parsedValue, b'')
 
-	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: JsonString, pos: Position) -> None:
 		if node.parsedValue is not None:
-			onIndicatorClicked(node.parsedValue, b'', pos, window)
+			onIndicatorClicked(node.parsedValue, b'', pos)
 
 
 @jsonStringContext(MINECRAFT_NBT_COMPOUND_TAG.name)

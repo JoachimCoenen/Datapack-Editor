@@ -485,4 +485,4 @@ class DocumentQsciAPIs(MyQsciAPIs):
 			return
 
 		if (ctxProvider := self.contextProvider) is not None:
-			ctxProvider.onIndicatorClicked(position, editor.window())
+			ctxProvider.onIndicatorClicked(position)

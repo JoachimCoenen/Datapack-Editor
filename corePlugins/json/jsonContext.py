@@ -5,12 +5,11 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import Iterable, Optional, Callable, cast, Any
 
-from PyQt5.QtWidgets import QWidget
-
 from Cat.utils import Decorator, flatmap
 from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import joinFilePath, dirFromFilePath
+from base.model.session import getSession
 from corePlugins.json import validator2
 from corePlugins.json.core import *
 from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, parseNPrepare, validateTree, getSuggestions, \
@@ -309,7 +308,7 @@ class JsonContext(Context[JsonNode]):
 	def getClickableRanges(self, node: JsonString) -> Optional[Iterable[Span]]:
 		return None
 
-	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: JsonString, pos: Position) -> None:
 		pass
 
 
@@ -387,9 +386,9 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 		if node.parsedValue is not None:
 			return getClickableRanges(node.parsedValue, b'')
 
-	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: JsonString, pos: Position) -> None:
 		if node.parsedValue is not None:
-			onIndicatorClicked(node.parsedValue, b'', pos, window)
+			onIndicatorClicked(node.parsedValue, b'', pos)
 
 
 @jsonStringContext('dpe:json/key_schema')
@@ -411,9 +410,9 @@ class JsonKeyContext(JsonStringContext):
 		if isinstance(node.schema, JsonKeySchema) and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:
 			return (node.span,)
 
-	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: JsonString, pos: Position) -> None:
 		if isinstance(node.schema, JsonKeySchema) and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:
-			window._tryOpenOrSelectDocument(node.schema.forProp.schema.filePath, Span(node.schema.forProp.schema.span.start))
+			getSession().tryOpenOrSelectDocument(node.schema.forProp.schema.filePath, Span(node.schema.forProp.schema.span.start))
 
 
 @jsonStringContext(OPTIONS_JSON_ARG_TYPE.name)
@@ -535,9 +534,9 @@ class LibPathJsonStrContext(JsonStringContext):
 		if node.parsedValue is not None and node.parsedValue[1] is not None:
 			return (node.span,)
 
-	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: JsonString, pos: Position) -> None:
 		if node.parsedValue is not None and node.parsedValue[1] is not None:
-			window._tryOpenOrSelectDocument(node.parsedValue[1])
+			getSession().tryOpenOrSelectDocument(node.parsedValue[1])
 
 
 @jsonStringContext(DPE_DEF_REF.name, propKey='$definitions', libraryAttr='definitions', unknownMsg="definition")
@@ -615,9 +614,9 @@ class TmplRefJsonStrContext(JsonStringContext):
 		if node.parsedValue is not None and node.parsedValue[0] is not None:
 			return (node.span,)
 
-	def onIndicatorClicked(self, node: JsonString, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: JsonString, pos: Position) -> None:
 		if node.parsedValue is not None and node.parsedValue[0] is not None:
-			window._tryOpenOrSelectDocument(node.parsedValue[2], Span(node.parsedValue[0].span.start))
+			getSession().tryOpenOrSelectDocument(node.parsedValue[2], Span(node.parsedValue[0].span.start))
 
 
 

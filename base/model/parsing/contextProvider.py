@@ -3,8 +3,6 @@ from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeVar, Iterable, Optional, Type, final
 
-from PyQt5.QtWidgets import QWidget
-
 from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.collections_.collections_ import IfKeyIssubclassGetter
@@ -57,7 +55,7 @@ class Context(Generic[_TNode]):
 		pass
 
 	@abstractmethod
-	def onIndicatorClicked(self, node: _TNode, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: _TNode, pos: Position) -> None:
 		pass
 
 	# @abstractmethod
@@ -192,11 +190,11 @@ class ContextProvider(Generic[_TNode], ABC):
 					ranges.extend(partRanges)
 		return ranges
 
-	def onIndicatorClicked(self, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, pos: Position) -> None:
 		match = self.getBestMatch(pos)
 		if match.hit is not None:
 			if (ctx := self.getContext(match.hit)) is not None:
-				ctx.onIndicatorClicked(match.hit, pos, window)
+				ctx.onIndicatorClicked(match.hit, pos)
 
 	@property
 	def defaultWordCharacters(self) -> str:
@@ -310,9 +308,9 @@ def getClickableRanges(node: Node, text: bytes, span: Span = ...) -> Iterable[Sp
 	return []
 
 
-def onIndicatorClicked(node: Node, text: bytes, pos: Position, window: QWidget) -> None:
+def onIndicatorClicked(node: Node, text: bytes, pos: Position) -> None:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
-		return ctxProvider.onIndicatorClicked(pos, window)
+		return ctxProvider.onIndicatorClicked(pos)
 
 
 def getWordCharacters(node: Node, text: bytes, pos: Position) -> Optional[str]:

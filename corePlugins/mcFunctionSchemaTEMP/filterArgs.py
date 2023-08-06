@@ -339,12 +339,12 @@ def clickableRangesForFilterArgs(filterArgs: FilterArguments) -> list[Span]:
 	return ranges
 
 
-def onIndicatorClickedForFilterArgs(filterArgs: FilterArguments, position: Position, window: QWidget) -> None:
+def onIndicatorClickedForFilterArgs(filterArgs: FilterArguments, position: Position) -> None:
 	if (match := getBestFAMatch(filterArgs, position.index)) is not None:
 		argInfo = match.schema
 		if isinstance(argInfo, ArgumentSchema):
 			if (handler := getArgumentContext(argInfo.type)) is not None:
-				handler.onIndicatorClicked(match, position, window)
+				handler.onIndicatorClicked(match, position)
 
 
 __all__ = [

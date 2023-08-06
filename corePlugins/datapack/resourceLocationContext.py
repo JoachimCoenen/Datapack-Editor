@@ -3,8 +3,6 @@ from abc import abstractmethod, ABC
 from dataclasses import replace
 from typing import Iterable, Mapping, Optional, final, Collection
 
-from PyQt5.QtWidgets import QWidget
-
 from Cat.utils import Decorator, Deprecated
 from base.model.pathUtils import FilePath
 from base.model.project.project import Root
@@ -174,7 +172,7 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 			return ()
 		return [node.span] if node.pointsToFile else ()
 
-	def onIndicatorClicked(self, node: ResourceLocationNode, pos: Position, window: QWidget) -> None:
+	def onIndicatorClicked(self, node: ResourceLocationNode, pos: Position) -> None:
 		if not self.checkCorrectNodeType(node, ResourceLocationNode):
 			return None
 		if self.onlyTags:
