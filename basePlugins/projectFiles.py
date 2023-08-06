@@ -20,9 +20,9 @@ from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDir
 	fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, getAllFilesFromArchive
 from base.model.aspect import AspectType
 from base.model.project.index import Index
-from base.model.project.project import Project, ProjectRoot, ProjectAspect, DependencyDescr, Root, IndexBundleAspect, AspectFeatures
+from base.model.project.project import Project, ProjectRoot, ProjectAspect, DependencyDescr, Root, IndexBundleAspect, AspectFeatures, FileEntry, makeFileEntry
 from base.model.session import getSession
-from base.model.utils import Span, splitStringForSearch
+from base.model.utils import Span
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
 
@@ -608,10 +608,11 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 				index.discardSource(event.split_src_path)
 			if (jf := splitPath(event.dest_path, self._root.normalizedLocation)) is not None:
 				index = self._root.indexBundles.setdefault(FilesIndex).files
-				index.add(jf[1], jf, makeFileEntry(jf, self._root, True))
+				fileEntry = makeFileEntry(jf, self._root, True)
+				index.add(jf[1], jf, fileEntry)
 				for aspect in self._project.aspects:
 					if aspect.aspectFeatures.analyzeFiles:
-						aspect.analyzeFile(self._root, jf)
+						aspect.analyzeFile(self._root, fileEntry)
 
 	def on_created(self, event: FileCreatedEvent):
 		"""Called when a file or directory is created.
@@ -626,10 +627,11 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 			self._root.indexBundles.setdefault(FilesIndex).folders.add(path[1], path, makeFileEntry(path, self._root, False))
 		else:
 			index = self._root.indexBundles.setdefault(FilesIndex).files
-			index.add(path[1], path, makeFileEntry(path, self._root, True))
+			fileEntry = makeFileEntry(path, self._root, True)
+			index.add(path[1], path, fileEntry)
 			for aspect in self._project.aspects:
 				if aspect.aspectFeatures.analyzeFiles:
-					aspect.analyzeFile(self._root, path)
+					aspect.analyzeFile(self._root, fileEntry)
 
 	def on_deleted(self, event: FileDeletedEvent):
 		"""Called when a file or directory is deleted.
@@ -666,10 +668,11 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 			for index in self._root.indexBundles:
 				index.discardSource(path)
 			index = self._root.indexBundles.setdefault(FilesIndex).files
-			index.add(path[1], path, makeFileEntry(path,  self._root, True))
+			fileEntry = makeFileEntry(path, self._root, True)
+			index.add(path[1], path, fileEntry)
 			for aspect in self._project.aspects:
 				if aspect.aspectFeatures.analyzeFiles:
-					aspect.analyzeFile(self._root, path)
+					aspect.analyzeFile(self._root, fileEntry)
 
 	def on_closed(self, event: FileClosedEvent):
 		"""Called when a file opened for writing is closed.
@@ -713,12 +716,12 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 	def onRootRemoved(self, root: Root, project: Project) -> None:
 		filesystemEvents.FILESYSTEM_OBSERVER.unschedule("dpe:files_aspect", root.normalizedLocation)
 
-	def analyzeFile(self, root: Root, path: FilePathTpl) -> None:
+	def analyzeFile(self, root: Root, path: FileEntry) -> None:
 		pass
 		# idx = root.indexBundles.setdefault(FilesIndex).files
 		# idx.add(path[1], path, path)
 
-	def analyzeRoot(self, root: Root) -> None:
+	def analyzeRoot(self, root: Root, project: Project) -> None:
 		location = root.normalizedLocation
 		if location.endswith('.jar'):  # we don't need '.class' files. This is not a Java IDE.
 			pathInFolder = 'data/**'
@@ -742,9 +745,14 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 			rawLocalFolders = []
 		else:
 			return
+		aspects = [a for a in project.aspects if a.aspectFeatures.analyzeFiles]
 		idx = root.indexBundles.setdefault(FilesIndex).files
 		for jf in rawLocalFiles:
-			idx.add(jf[1], jf, makeFileEntry(jf, root, True))
+			fileEntry = makeFileEntry(jf, root, True)
+			for aspect in aspects:
+				if aspect.aspectFeatures.analyzeFiles:
+					aspect.analyzeFile(root, fileEntry)
+			idx.add(jf[1], jf, fileEntry)
 
 		idx = root.indexBundles.get(FilesIndex).folders
 		for jf in rawLocalFolders:
@@ -759,42 +767,6 @@ class FilesIndex(IndexBundleAspect):
 
 	files: Index[str, FileEntry] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 	folders: Index[str, FileEntry] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
-
-
-@final
-@as_dataclass(fast_new=True, hashable=True)
-class FileEntry:
-	fullPath: FilePathTpl
-	virtualPath: str  # = dataclasses.field(compare=False)
-	splitNameForSearch: list[tuple[int, str]]
-	isFile: bool
-
-	@property
-	def fileName(self) -> str:
-		return self.virtualPath.rpartition('/')[2]
-
-	@property
-	def projectName(self) -> str:
-		return self.virtualPath.partition('/')[0]
-
-	def __eq__(self, other):
-		if type(other) is not FileEntry:
-			return False
-		return self.virtualPath == other.virtualPath and self.fullPath == other.fullPath and self.isFile == other.isFile
-
-	def __ne__(self, other):
-		if type(other) is not FileEntry:
-			return True
-		return self.virtualPath != other.virtualPath or self.fullPath != other.fullPath or self.isFile != other.isFile
-
-	def __hash__(self):
-		return hash((56783265, self.fullPath))
-
-
-def makeFileEntry(fullPath: FilePathTpl, root: Root, isFile: bool) -> FileEntry:
-	virtualPath = f'{root.name}/{fullPath[1]}'
-	splitNameForSearch = splitStringForSearch(virtualPath.rpartition('/')[2])
-	return FileEntry(fullPath, virtualPath, splitNameForSearch, isFile)
 
 
 def createNewFile(folderPath: FilePath, name: str) -> FilePath:

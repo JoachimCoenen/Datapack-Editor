@@ -14,9 +14,9 @@ from Cat.CatPythonGUI.utilities import connect, CrashReportWrapped
 from Cat.utils.profiling import ProfiledFunction, TimedMethod
 from Cat import utils
 from base.model.utils import FuzzyMatch, SearchTerms, getSearchTerms, getFuzzyMatch2
-from basePlugins.projectFiles import FilesIndex, FileEntry
+from basePlugins.projectFiles import FilesIndex
 from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries
-from base.model.project.project import Root
+from base.model.project.project import Root, FileEntry
 from base.model.session import getSession
 
 from base.model.applicationSettings import applicationSettings

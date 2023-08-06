@@ -4,7 +4,9 @@ import os
 from abc import ABC
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional, ClassVar
+from typing import Optional, ClassVar, final
+
+from recordclass import as_dataclass
 
 from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
@@ -12,7 +14,7 @@ from Cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
 from base.model.pathUtils import FilePath, FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
 from base.model.aspect import AspectDict, Aspect
-from base.model.utils import Span, GeneralError, MDStr, SemanticsError
+from base.model.utils import Span, GeneralError, MDStr, SemanticsError, splitStringForSearch
 
 
 def _fillProjectAspects(aspectsDict: AspectDict):
@@ -77,7 +79,7 @@ class Project(SerializableDataclass, ABC):
 		for idxBundle in root.indexBundles:
 			idxBundle.clear()
 		for a in aspects:
-			a.analyzeRoot(root)
+			a.analyzeRoot(root, self)
 
 	def setup(self):
 		""" only call once!"""
@@ -200,7 +202,7 @@ class ProjectAspect(Aspect, ABC):
 		"""
 		pass
 
-	def analyzeRoot(self, root: Root) -> None:
+	def analyzeRoot(self, root: Root, project: Project) -> None:
 		"""
 		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeRoots=True)): ...
 		"""
@@ -224,7 +226,7 @@ class ProjectAspect(Aspect, ABC):
 		"""
 		pass
 
-	def analyzeFile(self, root: Root, path: FilePathTpl) -> None:
+	def analyzeFile(self, root: Root, fileEntry: FileEntry) -> None:
 		"""
 		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeFiles=True)): ...
 		"""
@@ -264,3 +266,39 @@ class Root(SerializableDataclass):
 @dataclass
 class ProjectRoot(Root):
 	pass
+
+
+@final
+@as_dataclass(fast_new=True, hashable=True)
+class FileEntry:
+	fullPath: FilePathTpl
+	virtualPath: str  # = dataclasses.field(compare=False)
+	splitNameForSearch: list[tuple[int, str]]
+	isFile: bool
+
+	@property
+	def fileName(self) -> str:
+		return self.virtualPath.rpartition('/')[2]
+
+	@property
+	def projectName(self) -> str:
+		return self.virtualPath.partition('/')[0]
+
+	def __eq__(self, other):
+		if type(other) is not FileEntry:
+			return False
+		return self.virtualPath == other.virtualPath and self.fullPath == other.fullPath and self.isFile == other.isFile
+
+	def __ne__(self, other):
+		if type(other) is not FileEntry:
+			return True
+		return self.virtualPath != other.virtualPath or self.fullPath != other.fullPath or self.isFile != other.isFile
+
+	def __hash__(self):
+		return hash((56783265, self.fullPath))
+
+
+def makeFileEntry(fullPath: FilePathTpl, root: Root, isFile: bool) -> FileEntry:
+	virtualPath = f'{root.name}/{fullPath[1]}'
+	splitNameForSearch = splitStringForSearch(virtualPath.rpartition('/')[2])
+	return FileEntry(fullPath, virtualPath, splitNameForSearch, isFile)
