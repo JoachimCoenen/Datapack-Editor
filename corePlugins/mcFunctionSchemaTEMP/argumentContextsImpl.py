@@ -5,7 +5,8 @@ from typing import Optional, Iterable, Any
 from PyQt5.QtWidgets import QWidget
 
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
+from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare, CtxInfo, \
+	prepareTree
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
@@ -64,6 +65,9 @@ class ResourceLocationLikeHandler(ArgumentContext, ABC):
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		return _parseResourceLocation(sr, ai, self.schema)
+
+	def prepare(self, node: ParsedArgument, info: CtxInfo[ParsedArgument], errorsIO: list[GeneralError]) -> None:
+		prepareTree(node.value, node.source, info.filePath)
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		validateTree(node.value, node.source, errorsIO)

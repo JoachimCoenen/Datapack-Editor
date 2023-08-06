@@ -40,6 +40,10 @@ class Project(SerializableDataclass, ABC):
 	def isEmpty(self) -> bool:
 		return not self.roots
 
+	@property
+	def allRoots(self) -> list[Root]:
+		return self.roots + self.deepDependencies
+
 	def resolveDependencies(self):
 		self.deepDependencies = resolveDependencies(self)
 

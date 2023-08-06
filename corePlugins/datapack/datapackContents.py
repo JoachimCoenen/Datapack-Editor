@@ -141,6 +141,9 @@ class ResourceLocationSchema(Schema):
 class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema], ResourceLocation):
 	# TODO: maybe move to different module, or move ResourceLocationContext implementations?
 
+	isValid: bool = field(default=True, compare=False, kw_only=True)
+	pointsToFile: bool = field(default=False, compare=False, kw_only=True)
+
 	@classmethod
 	def fromString(cls, value: bytes, span: Span, schema: Optional[ResourceLocationSchema]) -> ResourceLocationNode:
 		assert isinstance(value, bytes)
@@ -486,8 +489,3 @@ def containsResourceLocation(rl: ResourceLocation, container: Iterable[ResourceL
 	if rl.namespace == 'minecraft':
 		rl = replace(rl, namespace=None)
 	return rl in container
-
-
-def metaInfoFromResourceLocation(rl: ResourceLocation, values: Mapping[ResourceLocation, MetaInfo]) -> Optional[MetaInfo]:
-	# TODO: show prompt, when there are multiple files this applies to.
-	return values.get(rl)

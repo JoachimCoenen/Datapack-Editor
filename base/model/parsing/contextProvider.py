@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QWidget
 from Cat.utils import Decorator
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.collections_.collections_ import IfKeyIssubclassGetter
+from Cat.utils.logging_ import logWarning
 from base.model.parsing.parser import parse, IndexMapper
 from base.model.parsing.tree import Node, Schema
 from base.model.pathUtils import FilePath
@@ -66,6 +67,12 @@ class Context(Generic[_TNode]):
 	# @abstractmethod
 	def getAutoCompletionWordSeparators(self, node: _TNode, pos: Position) -> list[str]:
 		return []  # ['.', '::', '->']
+
+	def checkCorrectNodeType(self, node: _TNode, expectedNodeType: Type[_TNode] | tuple[Type[_TNode], ...]) -> bool:
+		if not isinstance(node, expectedNodeType):
+			logWarning(f"checkCorrectNodeType() failed", f"expectedNodeType={expectedNodeType}", f"received type was {type(node)}" )
+			return False
+		return True
 
 
 def defaultDocumentationProvider(argument: Node) -> MDStr:

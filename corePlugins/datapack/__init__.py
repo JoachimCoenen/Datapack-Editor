@@ -2,7 +2,8 @@ import os
 from typing import Type
 
 from base.model.applicationSettings import SettingsAspect
-from base.model.parsing.tree import Schema
+from base.model.parsing.contextProvider import ContextProvider
+from base.model.parsing.tree import Schema, Node
 from base.model.project.project import ProjectAspect
 from base.plugin import PLUGIN_SERVICE, PluginBase
 
@@ -15,6 +16,13 @@ class DatapackPlugin(PluginBase):
 
 	def initPlugin(self):
 		pass
+
+	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
+		from corePlugins.datapack.resourceLocationContext import ResourceLocationCtxProvider
+		from corePlugins.datapack.datapackContents import ResourceLocationNode
+		return {
+			ResourceLocationNode: ResourceLocationCtxProvider
+		}
 
 	def projectAspects(self) -> list[Type[ProjectAspect]]:
 		from corePlugins.datapack.aspect import DatapackAspect
