@@ -102,10 +102,11 @@ def showSetupDialogIfNecessary():
 
 def loadBasePlugins():
 
-	from basePlugins import projectPage, projectFiles
+	from basePlugins import projectPage, projectFiles, pluginDebug
 
 	projectPage.initPlugin()
 	projectFiles.initPlugin()
+	pluginDebug.initPlugin()
 
 
 def loadCorePlugins():

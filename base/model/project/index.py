@@ -151,6 +151,16 @@ class Index(Mapping[_TK, _TV], Generic[_TK, _TV]):
 class IndexBundle(ABC):
 
 	@property
+	def subIndicesByName(self) -> dict[str, Index | IndexBundle]:
+		indices = {}
+		for f in fields(self):
+			if (dpe := f.metadata.get('dpe')) is None:
+				continue
+			if dpe.get('isIndex'):
+				indices[f.name] = getattr(self, f.name)
+		return indices
+
+	@property
 	def _subIndices(self) -> Iterator[Index | IndexBundle]:
 		for f in fields(self):
 			if (dpe := f.metadata.get('dpe')) is None:
