@@ -6,7 +6,7 @@ from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.datapackSchemas.argTypes import *
-from corePlugins.datapack.datapackContents import ResourceLocationNode, ResourceLocationSchema
+from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, ResourceLocationNode
 from corePlugins.json.core import *
 from corePlugins.json.jsonContext import jsonStringContext, JsonStringContext
 from corePlugins.nbt.tags import NBTTagSchema

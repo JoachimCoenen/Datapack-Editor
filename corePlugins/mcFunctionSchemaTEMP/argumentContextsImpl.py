@@ -10,7 +10,7 @@ from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
 from base.model.session import getSession
 from base.model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
-from corePlugins.datapack.datapackContents import ResourceLocation, ResourceLocationNode, ResourceLocationSchema
+from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode
 from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunction.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart

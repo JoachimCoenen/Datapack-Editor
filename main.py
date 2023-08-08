@@ -101,7 +101,6 @@ def showSetupDialogIfNecessary():
 
 
 def loadBasePlugins():
-
 	from basePlugins import projectPage, projectFiles, pluginDebug
 
 	projectPage.initPlugin()
@@ -110,9 +109,9 @@ def loadBasePlugins():
 
 
 def loadCorePlugins():
-
 	from corePlugins import json
 	from corePlugins import nbt
+	from corePlugins import minecraft
 	from corePlugins import mcFunction
 	from corePlugins import mcFunctionSchemaTEMP
 	from corePlugins import datapack
@@ -120,20 +119,11 @@ def loadCorePlugins():
 
 	json.initPlugin()
 	nbt.initPlugin()
+	minecraft.initPlugin()
 	mcFunction.initPlugin()
 	mcFunctionSchemaTEMP.initPlugin()
 	datapack.initPlugin()
 	datapackSchemas.initPlugin()
-	#
-	# from model import json, commands, nbt
-	#
-	# json.initPlugin()
-	# commands.initPlugin()
-	# nbt.initPlugin()
-	#
-	# from sessionOld import documentsImpl
-	#
-	# documentsImpl.initPlugin()
 
 
 def loadPlugins():

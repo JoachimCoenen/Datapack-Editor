@@ -6,7 +6,7 @@ from corePlugins.mcFunctionSchemaTEMP.mcVersions import registerMCVersion, MCVer
 from corePlugins.mcFunctionSchemaTEMP.mcd import fillFromMinecraftData
 # from model.data.v1_17.commands import fillCommandsFor1_17
 from corePlugins.mcFunctionSchemaTEMP.generatedBlockStates1_17 import BLOCK_STATES_BY_BLOCK
-from corePlugins.datapack.datapackContents import ResourceLocation
+from corePlugins.minecraft.resourceLocation import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes
 
 

@@ -4,7 +4,8 @@
 """
 from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
-from corePlugins.datapack.datapackContents import ResourceLocation
+from corePlugins.minecraft.resourceLocation import ResourceLocation
+
 # Argument types:
 
 AGE_1 = FilterArgumentInfo(

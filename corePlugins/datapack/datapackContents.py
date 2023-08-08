@@ -1,178 +1,19 @@
 from __future__ import annotations
 import re
-from dataclasses import dataclass, field, replace
-from itertools import chain
-from typing import Optional, TypeVar, Type, Iterable, Mapping, Collection
+from dataclasses import dataclass, field
+from typing import Optional, TypeVar, Type, Callable, OrderedDict
 
-from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from Cat.utils.profiling import logError
 from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty
 from base.model.aspect import AspectType
 from base.model.project.index import Index, IndexBundle
-from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.parser import parse
-from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePathTpl, loadBinaryFile, loadTextFile, ZipFilePool
 from base.model.project.project import IndexBundleAspect
-from base.model.utils import MDStr, Span
+from base.model.utils import MDStr
+from corePlugins.minecraft.resourceLocation import ResourceLocation, MetaInfo
 
 DATAPACK_CONTENTS_TYPE = AspectType('dpe:datapack_contents')
-
-
-def isNamespaceValid(namespace: str) -> bool:
-	pattern = r'[0-9a-z_.-]+'
-	return re.fullmatch(pattern, namespace) is not None
-
-
-@dataclass(order=False, eq=False, unsafe_hash=False, frozen=True)
-class ResourceLocation:
-	__slots__ = ('namespace', 'path', 'isTag')
-	namespace: Optional[str]
-	path: str
-	isTag: bool
-
-	def __post_init__(self):
-		assert self.namespace is None or self.namespace.strip()
-
-	@property
-	def isMCNamespace(self) -> bool:
-		return self.namespace is None or self.namespace == 'minecraft'
-
-	@property
-	def actualNamespace(self) -> str:
-		return 'minecraft' if self.namespace is None else self.namespace
-
-	@property
-	def asString(self) -> str:
-		"""
-		ResourceLocation.fromString('end_rod').asString == 'end_rod'
-		ResourceLocation.fromString('minecraft:end_rod').asString == 'minecraft:end_rod'
-		:return: The pure string representation
-		"""
-		tag = '#' if self.isTag else ''
-		if self.namespace is None:
-			return f'{tag}{self.path}'
-		else:
-			return f'{tag}{self.namespace}:{self.path}'
-
-	@property
-	def asCompactString(self) -> str:
-		"""
-		Omits the 'minecraft:' namespace if possible.
-
-			ResourceLocation.fromString('end_rod').asString == 'end_rod'
-			ResourceLocation.fromString('minecraft:end_rod').asString == 'end_rod'
-		"""
-		tag = '#' if self.isTag else ''
-		namespace = self.namespace
-		if namespace is None or namespace == 'minecraft':
-			return f'{tag}{self.path}'
-		else:
-			return f'{tag}{namespace}:{self.path}'
-
-	@property
-	def asQualifiedString(self) -> str:
-		"""
-		Always prepends the namespace, even if it could be omitted.
-
-			ResourceLocation.fromString('end_rod').asString == 'minecraft:end_rod'
-			ResourceLocation.fromString('minecraft:end_rod').asString == 'minecraft:end_rod'
-		"""
-		tag = '#' if self.isTag else ''
-		return f'{tag}{self.actualNamespace}:{self.path}'
-
-	@classmethod
-	def splitString(cls, value: str) -> tuple[Optional[str], str, bool]:
-		namespace, _, path = value.partition(':')
-		isTag = namespace.startswith('#')
-		if isTag:
-			namespace = namespace[1:]
-		if not _:
-			path = namespace
-			namespace = None
-		return namespace, path, isTag
-
-	@classmethod
-	def fromString(cls, value: str) -> ResourceLocation:
-		return cls(*cls.splitString(value))
-
-	@property
-	def _asTuple(self) -> tuple[bool, str, str]:
-		return self.isTag, self.actualNamespace, self.path,
-
-	def __eq__(self, other):
-		if hasattr(other, '_asTuple'):
-			return self._asTuple == other._asTuple
-		return NotImplemented
-
-	def __lt__(self, other):
-		if hasattr(other, '_asTuple'):
-			return self._asTuple < other._asTuple
-		return NotImplemented
-
-	def __le__(self, other):
-		if hasattr(other, '_asTuple'):
-			return self._asTuple <= other._asTuple
-		return NotImplemented
-
-	def __gt__(self, other):
-		if hasattr(other, '_asTuple'):
-			return self._asTuple > other._asTuple
-		return NotImplemented
-
-	def __ge__(self, other):
-		if hasattr(other, '_asTuple'):
-			return self._asTuple >= other._asTuple
-		return NotImplemented
-
-	def __hash__(self):
-		return hash(self._asTuple)
-
-
-@dataclass(slots=True)
-class ResourceLocationSchema(Schema):
-	name: str
-
-	def asString(self) -> str:
-		return self.name
-
-
-@dataclass(order=False, eq=False, unsafe_hash=False, frozen=True)
-class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema], ResourceLocation):
-	# TODO: maybe move to different module, or move ResourceLocationContext implementations?
-
-	isValid: bool = field(default=True, compare=False, kw_only=True)
-	pointsToFile: bool = field(default=False, compare=False, kw_only=True)
-
-	@classmethod
-	def fromString(cls, value: bytes, span: Span, schema: Optional[ResourceLocationSchema]) -> ResourceLocationNode:
-		assert isinstance(value, bytes)
-		value = bytesToStr(value)
-		namespace, path, isTag = cls.splitString(value)
-		return cls(namespace, path, isTag, span, schema)
-
-	@property
-	def children(self) -> Collection[ResourceLocationNode]:
-		return ()
-
-
-	__eq__ = ResourceLocation.__eq__
-	__lt__ = ResourceLocation.__lt__
-	__le__ = ResourceLocation.__le__
-	__gt__ = ResourceLocation.__gt__
-	__ge__ = ResourceLocation.__ge__
-	__hash__ = ResourceLocation.__hash__
-
-
-@dataclass
-class MetaInfo:
-	filePath: FilePathTpl = FilePathTpl(('', ''))
-	# resourceLocation: ResourceLocation = ResourceLocation(None, '', False)
-
-	@property
-	def documentation(self) -> MDStr:
-		return MDStr('')
-
 
 _TMetaInfo = TypeVar('_TMetaInfo', bound=MetaInfo)
 
@@ -471,21 +312,3 @@ def collectAllEntries(files: list[FilePathTpl], handlers: EntryHandlers, project
 			metaInfo = handler.buildMetaInfo(fullPath)
 			if handler.getIndex is not None:
 				handler.getIndex(project).add(resLoc, fullPath, metaInfo)
-
-
-def autoCompletionTreeForResourceLocations(locations: Iterable[ResourceLocation]) -> AutoCompletionTree:
-	locationStrs = [l.asString for l in locations]
-	mcLocationStrs = [l.asCompactString for l in locations if l.isMCNamespace]
-	tree = buildSimpleAutoCompletionTree(chain(locationStrs, mcLocationStrs), (':', '/'))
-	return tree
-
-
-def choicesFromResourceLocations(text: str, locations: Iterable[ResourceLocation]) -> list[str]:
-	tree = autoCompletionTreeForResourceLocations(locations)
-	return choicesFromAutoCompletionTree(tree, text)
-
-
-def containsResourceLocation(rl: ResourceLocation, container: Iterable[ResourceLocation]) -> bool:
-	if rl.namespace == 'minecraft':
-		rl = replace(rl, namespace=None)
-	return rl in container

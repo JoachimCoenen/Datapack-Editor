@@ -2,7 +2,7 @@ from math import inf
 from typing import Optional
 
 from corePlugins.mcFunction.argumentTypes import LiteralsArgumentType, BRIGADIER_BOOL, BRIGADIER_INTEGER
-from corePlugins.datapack.datapackContents import ResourceLocation
+from corePlugins.minecraft.resourceLocation import ResourceLocation
 from corePlugins.json.core import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.utils import MDStr

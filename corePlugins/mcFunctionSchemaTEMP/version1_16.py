@@ -1,6 +1,6 @@
 from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
 from corePlugins.mcFunctionSchemaTEMP.mcd import fillFromMinecraftData
-from corePlugins.datapack.datapackContents import ResourceLocation
+from corePlugins.minecraft.resourceLocation import ResourceLocation
 
 
 def initPlugin() -> None:

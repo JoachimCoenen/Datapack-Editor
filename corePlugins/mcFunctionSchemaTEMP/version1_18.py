@@ -2,7 +2,7 @@ from dataclasses import replace
 
 from corePlugins.mcFunction.command import KeywordSchema
 from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
-from corePlugins.datapack.datapackContents import ResourceLocation
+from corePlugins.minecraft.resourceLocation import ResourceLocation
 from corePlugins.mcFunctionSchemaTEMP.mcd import fillFromMinecraftData
 
 

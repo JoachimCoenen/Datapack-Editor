@@ -11,7 +11,7 @@ from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID
 from corePlugins.mcFunction.argumentTypes import ArgumentType
 from corePlugins.mcFunction.command import MCFunctionSchema
 from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
-from corePlugins.datapack.datapackContents import ResourceLocation
+from corePlugins.minecraft.resourceLocation import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes
 
 

@@ -3,7 +3,7 @@ import minecraft_data
 from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
 from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion
-from corePlugins.datapack.datapackContents import ResourceLocation
+from corePlugins.minecraft.resourceLocation import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes
 
 
