@@ -25,15 +25,15 @@ from base.model.applicationSettings import applicationSettings
 @as_dataclass(fast_new=True)
 class SearchResult:
 	fe: FileEntry
-	match_: FuzzyMatch # = field(compare=False)
+	match_: FuzzyMatch  # = field(compare=False)
 
 	def __eq__(self, other):
-		if type(other) is not FileEntry:
+		if type(other) is not SearchResult:
 			return False
 		return self.fe == other.fe
 
 	def __ne__(self, other):
-		if type(other) is not FileEntry:
+		if type(other) is not SearchResult:
 			return True
 		return self.fe != other.fe
 
@@ -70,8 +70,6 @@ class SpotlightSearchGui(CatTextField):
 		self.focusEndOfText: bool = False
 
 		self.allChoices: list[FileEntry] = []
-		#self.lastFEsCache: dict[tuple[str, int], tuple[list[FilePath], list[FileEntry]]] = {}
-		#self.updateAllChoices()
 
 		self.setRoundedCorners(CORNERS.ALL)
 
@@ -83,7 +81,6 @@ class SpotlightSearchGui(CatTextField):
 
 	@TimedMethod()
 	@CrashReportWrapped
-	#@ProfiledFunction()
 	def focusInEvent(self, event: QFocusEvent) -> None:
 		super(SpotlightSearchGui, self).focusInEvent(event)
 		self.updateAllChoices()
@@ -119,14 +116,14 @@ class SpotlightSearchGui(CatTextField):
 		else:
 			self._rejectPopup()
 
-		#QApplication.processEvents(QEventLoop.ExcludeUserInputEvents, 5)
+		# QApplication.processEvents(QEventLoop.ExcludeUserInputEvents, 5)
 		self._updatePopupGeometry()
 
 	@utils.DeferredCallOnceMethod(delay=166)
 	@utils.BusyIndicator
 	@TimedMethod(enabled=True)
 	@ProfiledFunction(enabled=False)
-	#@MethodCallCounter(enabled=True, minPrintCount=10)
+	# @MethodCallCounter(enabled=True, minPrintCount=10)
 	def performSearchAndShowPopup(self):
 		text = self.text().strip()
 		if text:
@@ -135,22 +132,6 @@ class SpotlightSearchGui(CatTextField):
 			self._showPopup()
 
 	def performSearch(self, searchTerm: str):
-		# searchTerms = getSearchTerms('ConFiFi')
-		# fp = "org/docx4j/wml/CTMailMergeOdsoFMDFieldType.java"
-		# searchResults = [
-		# 	SearchResult(fe, fuzzyMatch)
-		# 	for fe, fuzzyMatch in ((fe, getFuzzyMatch2(searchTerms, fe.splitPath, strict=True)) for fe in [
-		# 		FileEntry(
-		# 			fp,
-		# 			splitStringForSearch(fp.rpartition('/')[2]),
-		# 			fp.rpartition('/')[2],
-		# 			fp,
-		# 			getSession().project
-		# 		)
-		# 	])
-		# 	if fuzzyMatch is not None
-		# ]
-
 		if searchTerm != self._searchResults.searchTerm:
 			# update search results:
 			searchTerms = getSearchTerms(searchTerm)
@@ -163,20 +144,8 @@ class SpotlightSearchGui(CatTextField):
 			searchResults.sort(key=lambda x: x.match_.matchQuality, reverse=True)
 			self._searchResults = SearchResults(searchTerm, searchResults)
 
+	# @ProfiledFunction()
 	def updateAllChoices(self) -> None:
-		# filterByRole: Optional[FilterByRoleOptions] = None
-		# if filterByRole is None:
-		# 	filterByRole = FilterByRoleOptions(
-		# 		layouts=True,
-		# 		configs=True,
-		# 		models=True,
-		# 		java=True,
-		# 		properties=True,
-		# 		translations=True,
-		# 	)
-
-		searchFileProps = [] # todo: [Root.files]
-
 		allRoots = self.getAllRoots()
 		filePathsToSearch: list[FileEntry] = []
 
@@ -187,7 +156,7 @@ class SpotlightSearchGui(CatTextField):
 		self.allChoices = filePathsToSearch
 
 	def getAllRoots(self) -> list[Root]:
-		return getSession().project.deepDependencies
+		return getSession().project.allRoots
 
 	def _showPopup(self):
 		self._resultsPopup.setTextField(self)
@@ -207,12 +176,6 @@ class SpotlightSearchGui(CatTextField):
 
 	def _updatePopupGeometry(self):
 		self._resultsPopup.recalculateGeometry()
-		return
-		if self.parent() is not None:
-			center = self.geometry().left() + self.geometry().width() / 2
-			left = center - self._resultsPopup.width() / 2
-			bottomLeft = self.parent().mapToGlobal(QPoint(int(left), int(self.geometry().bottom() + 9)))# * gui.scale))
-			self._resultsPopup.move(bottomLeft)
 
 		width = max(self.width(), int( 200 * self._scale))
 		height = max(self._resultsPopup.height(), int( 0 * self._scale))
@@ -244,22 +207,16 @@ class FileSearchPopup(PythonGUIDialog):
 		self._isTitlebarVisible = False
 		self._disableContentMargins = True
 		self.setSuppressRedrawLogging(True)
-		#self.setAttribute(Qt.WA_ShowWithoutActivating)
+		# self.setAttribute(Qt.WA_ShowWithoutActivating)
 		self.setAttribute(Qt.WA_TranslucentBackground)
-		#self.setAttribute(Qt.WA_MacNoShadow)
+		# self.setAttribute(Qt.WA_MacNoShadow)
 
 		self._textField: Optional[CatTextField] = None
 		self._searchResults: SearchResults = SearchResults('', [])
 		self._shownResults: list[SearchResult] = []
 		self.selectedItem: Optional[SearchResult] = None
 
-		#self._topCenter: QPoint = QPoint()
-
 		self.layout().setSizeConstraint(QLayout.SetFixedSize)
-		# sp = self.sizePolicy()
-		# sp.setVerticalPolicy(SizePolicy.Fixed.value)
-		# sp.setHorizontalPolicy(SizePolicy.Fixed.value)
-		# self.setSizePolicy(sp)
 
 	def setSearchResults(self, searchResults: SearchResults):
 		self._searchResults = searchResults
