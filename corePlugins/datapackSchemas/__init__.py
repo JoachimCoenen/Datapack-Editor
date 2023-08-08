@@ -35,10 +35,6 @@ class DatapackSchemasPlugin(PluginBase):
 				schemaId='minecraft:pack',
 				pathFilter='/pack.mcmeta',
 			),
-			SchemaMapping(
-				schemaId='dpe:dependencies',
-				pathFilter='/dependencies.json',
-			),
 			# TagInfos:
 			SchemaMapping(
 				schemaId='minecraft:tags/block_type',
