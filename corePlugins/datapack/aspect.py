@@ -9,10 +9,11 @@ from Cat.utils.logging_ import logWarning
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.aspect import AspectType
-from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr
+from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr, FileEntry
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
 from base.model.utils import WrappedError
+from corePlugins.datapack.datapackContents import collectEntry
 from corePlugins.json import JSON_ID
 from corePlugins.json.core import JsonData
 
@@ -21,7 +22,7 @@ DATAPACK_ASPECT_TYPE = AspectType('dpe:datapack')
 
 
 @dataclass
-class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, analyzeRoots=False)):
+class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, analyzeRoots=False, analyzeFiles=True)):
 	@classmethod
 	def getAspectType(cls) -> AspectType:
 		return DATAPACK_ASPECT_TYPE
@@ -70,14 +71,35 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
 		return resolveDependency(dependencyDescr)
 
+	def analyzeFile(self, root: Root, fileEntry: FileEntry) -> None:
+		from corePlugins.datapack.datapackContentsContents import DATAPACK_CONTENTS_STRUCTURE
+		handlers = DATAPACK_CONTENTS_STRUCTURE  # TODO: usedatapack version to get correct contents structure.
+		collectEntry(fileEntry.fullPath, handlers, root)
+
+		# pattern = folderPatternFromPath(f'data/{NAME_SPACE_VAR}/functions/')
+		# filePath = fileEntry.fullPath[1]
+		# match = pattern.match(filePath)
+		# if match is None:
+		# 	return
+		#
+		# namespace = match.groupdict().get('namespace')
+		# rest = filePath[match.end():]
+		#
+		# dpPath, filePath = fileEntry.fullPath
+		# name = fileEntry.fileName.partition('.')[0]
+		#
+		# if not filePath.endswith('.mcfunction'):
+		# 	return
+		# resLoc = ResourceLocation(namespace, rest + name, False) if namespace is not None else None
+		# root.indexBundles.setdefault(DatapackContents).functions.add(resLoc, filePath, FunctionMeta(fileEntry.fullPath))
+		# return None
+
+
 	# def onRootAdded(self, root: Root, project: Project) -> None:
 	# 	filesystemEvents.FILESYSTEM_OBSERVER.schedule("dpe:files_aspect", root.normalizedLocation, Handler(root, project))
 	#
 	# def onRootRemoved(self, root: Root, project: Project) -> None:
 	# 	filesystemEvents.FILESYSTEM_OBSERVER.unschedule("dpe:files_aspect", root.normalizedLocation)
-	#
-	# def analyzeFile(self, root: Root, path: FilePathTpl) -> None:
-	# 	pass
 
 	# def analyzeRoot(self, root: Root) -> None:
 	# 	location = root.normalizedLocation

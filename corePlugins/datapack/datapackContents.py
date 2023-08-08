@@ -1,7 +1,7 @@
 from __future__ import annotations
 import re
 from dataclasses import dataclass, field
-from typing import Optional, TypeVar, Type, Callable, OrderedDict
+from typing import Optional, TypeVar, Type, Callable
 
 from Cat.utils.profiling import logError
 from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty
@@ -9,7 +9,7 @@ from base.model.aspect import AspectType
 from base.model.project.index import Index, IndexBundle
 from base.model.parsing.parser import parse
 from base.model.pathUtils import FilePathTpl, loadBinaryFile, loadTextFile, ZipFilePool
-from base.model.project.project import IndexBundleAspect
+from base.model.project.project import IndexBundleAspect, Root
 from base.model.utils import MDStr
 from corePlugins.minecraft.resourceLocation import ResourceLocation, MetaInfo
 
@@ -192,7 +192,7 @@ class EntryHandlerInfo:
 	isTag: bool = field(kw_only=True)
 	includeSubdirs: bool = field(kw_only=True)
 	buildMetaInfo: Callable[[FilePathTpl], MetaInfo] = field(kw_only=True)
-	getIndex: Callable[[Project], Index[ResourceLocation, MetaInfo]] | None = field(kw_only=True)
+	getIndex: Callable[[Root], Index[ResourceLocation, MetaInfo]] | None = field(kw_only=True)
 	generation: GenerationInfo = field(default_factory=GenerationInfo, kw_only=True)
 
 	def __post_init__(self):
@@ -204,11 +204,11 @@ def folderPatternFromPath(path: str) -> re.Pattern:
 	return re.compile(path2)
 
 
-EntryHandlers = OrderedDict[str, list[EntryHandlerInfo]]
+EntryHandlers = dict[str, list[EntryHandlerInfo]]
 
 
 def buildEntryHandlers(handlers: list[EntryHandlerInfo]) -> EntryHandlers:
-	result = OrderedDict()
+	result = {}
 	for handler in handlers:
 		result.setdefault(handler.folder, []).append(handler)
 	return result
@@ -303,12 +303,13 @@ def getMetaInfo(fullPath: FilePathTpl, handlers: EntryHandlers) -> MetaInfo | No
 			return metaInfo
 
 
-def collectAllEntries(files: list[FilePathTpl], handlers: EntryHandlers, project: Project) -> None:
-	for fullPath in files:
-		if (resLocHandler := getEntryHandlerForFile(fullPath, handlers)) is not None:
-			resLoc, handler = resLocHandler
-			if resLoc is None:
-				continue
-			metaInfo = handler.buildMetaInfo(fullPath)
-			if handler.getIndex is not None:
-				handler.getIndex(project).add(resLoc, fullPath, metaInfo)
+def collectEntry(fullPath: FilePathTpl, handlers: EntryHandlers, root: Root) -> None:
+	if (resLocHandler := getEntryHandlerForFile(fullPath, handlers)) is not None:
+		resLoc: ResourceLocation | None
+		handler: EntryHandlerInfo
+		resLoc, handler = resLocHandler
+		if resLoc is None:
+			return
+		metaInfo = handler.buildMetaInfo(fullPath)
+		if handler.getIndex is not None:
+			handler.getIndex(root).add(resLoc, fullPath, metaInfo)
