@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import NewType, TypeVar, Generic, Type, Optional, Iterator, Any, Callable, cast, overload
+from typing import NewType, TypeVar, Generic, Type, Optional, Iterator, Any, Callable, cast, overload, Mapping
 
 from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.utils.collections_ import getIfKeyIssubclass, AddToDictDecorator
@@ -81,6 +81,13 @@ _REGISTERED_ASPECTS_FOR_CLASS: dict[Type, dict[AspectType, Type[Aspect]]] = defa
 
 def registerAspectForType(parentCls: Type, aspectCls: Type[Aspect], *, forceOverride: bool = False) -> None:
 	AddToDictDecorator(_REGISTERED_ASPECTS_FOR_CLASS[parentCls])(aspectCls.getAspectType(), forceOverride=forceOverride)(aspectCls)
+
+
+def getAspectsForClass(parentCls: Type) -> Mapping[AspectType, Type[Aspect]]:
+	aspects = getIfKeyIssubclass(_REGISTERED_ASPECTS_FOR_CLASS, parentCls)
+	if aspects is None:
+		aspects = {}
+	return aspects
 
 
 def getAspectCls(parentCls: Type, aspectType: AspectType) -> Optional[Type[Aspect]]:

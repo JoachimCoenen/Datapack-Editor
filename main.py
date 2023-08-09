@@ -1,5 +1,6 @@
 import os
 import sys
+from dataclasses import fields
 
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDialog
@@ -15,8 +16,7 @@ from base.model import filesystemEvents
 from base.model.session import loadSessionFromFile
 from mainWindow import MainWindow, WindowId
 from Cat.utils.profiling import Timer
-from base.model.applicationSettings import applicationSettings, saveApplicationSettings, loadApplicationSettings, AppearanceSettings
-# from settings._applicationSettings import MinecraftSettings
+from base.model.applicationSettings import applicationSettings, saveApplicationSettings, loadApplicationSettings, resetApplicationSettings
 
 
 class ResizableStyles(Styles):
@@ -34,6 +34,14 @@ class ResizableStyles(Styles):
 			'font-size': f'{applicationSettings.appearance.fontSize}pt',
 		})
 
+	@_StyleProperty
+	def title(self) -> Style:
+		return Style({
+			'padding-top': f'{int(8 * applicationSettings.appearance.fontSize / 10)}px',
+			'font-family': applicationSettings.appearance.fontFamily,
+			'font-size': f'{int(applicationSettings.appearance.fontSize * 1.5)}pt',
+		})
+
 
 setStyles(ResizableStyles())  # .hostWidgetStyle._func, 'hostWidgetStyle'))
 
@@ -44,7 +52,7 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 		self.reset()
 
 	def reset(self):
-		applicationSettings.reset()
+		resetApplicationSettings()
 		applicationSettings.appearance.colorScheme = 'Default Dark'
 
 	def OnGUI(self, gui: AutoGUI):
@@ -53,34 +61,42 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 				if isinstance(child, QtWidgets.QWidget):
 					child.resize(QtCore.QSize(3, 3))  # force a proper redraw.
 
+		spacerSize = int(9 * applicationSettings.appearance.fontSize / 10)
+
+		def vSpacer():
+			gui.addVSpacer(spacerSize, SizePolicy.Fixed)  # just a spacer
+
 		appearanceSettings = applicationSettings.appearance
-		minecraftSettings = applicationSettings.minecraft
-		with gui.vLayout1C(preventVStretch=True):
-			with gui.groupBox('Welcome!'):
+		appearanceFields = {f.name: f for f in fields(appearanceSettings)}
+
+		from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettings
+		minecraftSettings = applicationSettings.aspects.get(MinecraftSettings)
+		minecraftFields = {f.name: f for f in fields(minecraftSettings)}
+
+		with gui.vLayout(preventVStretch=True):
+			with gui.groupBox('Welcome!', addSeparator=True):
+				vSpacer()  # just a spacer
 				gui.label("We'll have to set up a few things before we can start. This shouldn't take long.")
 				with gui.hLayout(preventHStretch=True):
 					gui.label("You can always change these later under Settings ")
-					gui.label("("); gui.label(icons.settings); gui.label(").")
-				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+					gui.label(icons.settings)
+				vSpacer()  # just a spacer
 
-			with gui.groupBox('Appearance'):
-				# with gui.hLayout2R(preventHStretch=True):
-				# 	gui.propertyField(appearanceSettings, AppearanceSettings.useCompactLayout)
-				# gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-				#with gui.hLayout2R():
-				gui.propertyField(appearanceSettings, AppearanceSettings.fontSize)
-				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-				gui.propertyField(appearanceSettings, AppearanceSettings.colorScheme)
-				gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+			with gui.groupBox('Appearance', addSeparator=True):
+				vSpacer()  # just a spacer
+				gui.propertyField(appearanceSettings, appearanceFields['useCompactLayout'])
+				vSpacer()  # just a spacer
+				gui.propertyField(appearanceSettings, appearanceFields['fontSize'])
+				vSpacer()  # just a spacer
+				gui.propertyField(appearanceSettings, appearanceFields['colorScheme'])
+				vSpacer()  # just a spacer
 
-			# with gui.groupBox('Minecraft'):
-			# 	#with gui.hLayout2R():
-			# 	gui.propertyField(minecraftSettings, MinecraftSettings.version)  # , hSizePolicy=SizePolicy.Fixed.value)
-			# 	gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-			# 	gui.propertyField(minecraftSettings, MinecraftSettings.executable)
-			# 	gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
-			# 	gui.propertyField(minecraftSettings, MinecraftSettings.savesLocation)
-			# 	gui.addVSpacer(9, SizePolicy.Fixed)  # just a spacer
+			with gui.groupBox('Minecraft', addSeparator=True):
+				vSpacer()  # just a spacer
+				gui.propertyField(minecraftSettings, minecraftFields['minecraftVersion'])  # , hSizePolicy=SizePolicy.Fixed.value)
+				vSpacer()  # just a spacer
+				gui.propertyField(minecraftSettings, minecraftFields['minecraftExecutable'])
+				vSpacer()  # just a spacer
 
 		gui.dialogButtons({
 			MessageBoxButton.Ok    : lambda b: self.accept(),
@@ -175,7 +191,7 @@ def start(argv):
 		loadCorePlugins()
 		#
 		loadSessionFromFile()
-		# showSetupDialogIfNecessary()
+		showSetupDialogIfNecessary()
 		# loadPlugins()
 
 		window = MainWindow(WindowId('0'))

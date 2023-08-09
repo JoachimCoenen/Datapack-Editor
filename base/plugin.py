@@ -11,7 +11,8 @@ from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.logging_ import logError, logWarning
 from base.gui.styler import registerStyler, CatStyler
-from base.model.applicationSettings import SettingsAspect, getApplicationSettings
+from base.model.applicationSettings import SettingsAspect, getApplicationSettings, ApplicationSettings
+from base.model.aspect import registerAspectForType
 from base.model.defaultSchemaProvider import SchemaMapping, addSchemaMapping
 from base.model.documents import DocumentTypeDescription, registerDocumentTypeDescription
 from base.model.parsing.contextProvider import ContextProvider, registerContextProvider
@@ -66,9 +67,10 @@ class PluginService:
 				addSchemaMapping(languageId, mapping)
 
 		application_settings = getApplicationSettings()
-		for settingCls in (plugin.settingsAspects() or []):
-			application_settings.aspects.add(settingCls)
-			aspect_type = settingCls.getAspectType()
+		for aspectCls in (plugin.settingsAspects() or []):
+			registerAspectForType(ApplicationSettings, aspectCls, forceOverride=False)
+			application_settings.aspects.add(aspectCls)
+			aspect_type = aspectCls.getAspectType()
 			aspectJson = application_settings.unknownAspects.get(aspect_type)
 			if aspectJson is not None:
 				del application_settings.unknownAspects[aspect_type]

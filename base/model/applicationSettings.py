@@ -25,7 +25,7 @@ QFont.__deepcopy__ = lambda x, m: QFont(x)
 
 # from model.data.mcVersions import ALL_MC_VERSIONS
 # from model.data.dpVersion import ALL_DP_VERSIONS
-from base.model.aspect import AspectDict, Aspect, AspectType, SerializableDataclassWithAspects
+from base.model.aspect import AspectDict, Aspect, AspectType, SerializableDataclassWithAspects, getAspectsForClass
 
 
 class ColorSchemePD(pd.PropertyDecorator):
@@ -272,6 +272,10 @@ class ApplicationSettings(SerializableDataclassWithAspects[SettingsAspect]):
 
 	isUserSetupFinished: bool = field(default=False, metadata=catMeta(decorators=[pd.NoUI()]))
 
+	def __post_init__(self):
+		for aspectCls in getAspectsForClass(type(self)).values():
+			self.aspects.add(aspectCls)
+
 	def _setAspect(self, newAspect: SettingsAspect):
 		copyAppSettings(self.aspects.get(type(newAspect)), newAspect)
 
@@ -297,6 +301,10 @@ def setApplicationSettings(newSettings: ApplicationSettings):
 	global applicationSettings
 	copyAppSettings(applicationSettings, copy.deepcopy(newSettings))
 	#applicationSettings.copyFrom(copy.deepcopy(newSettings))
+
+
+def resetApplicationSettings():
+	setApplicationSettings(ApplicationSettings())
 
 
 _TT = TypeVar('_TT')
@@ -359,11 +367,22 @@ def copyAppSettings(self: SerializableDataclass, other: SerializableDataclass) -
 			setattr(self, aField.name, next(selfValIt))
 			next(selfValIt, None)
 
-	if isinstance(self, ApplicationSettings):
-		assert isinstance(other, ApplicationSettings)
-		for aspect in self.aspects._aspects.copy().values():
-			otherAspect = other.aspects.get(type(aspect))
-			copyAppSettings(aspect, otherAspect)
+	if isinstance(self, SerializableDataclassWithAspects):
+		assert isinstance(other, SerializableDataclassWithAspects)
+		oldSelfAspects: dict[AspectType, Aspect] = self.aspects._aspects.copy()
+		self.aspects._aspects.clear()
+		otherAspect: Aspect
+		for otherAspect in other.aspects._aspects.copy().values():
+			# isinstance(otherAspect, Aspect) check only added to not confuse the type checker.
+			assert isinstance(otherAspect, SerializableDataclass) and isinstance(otherAspect, Aspect), "Aspect must be SerializableDataclass in order to be copyable."
+			selfAspect = oldSelfAspects.pop(otherAspect.getAspectType(), None)
+			assert isinstance(selfAspect, SerializableDataclass)
+			if selfAspect is None:
+				selfAspect = type(otherAspect)()
+			self.aspects.add(selfAspect)
+			copyAppSettings(selfAspect, otherAspect)
+
+
 		self.unknownAspects = other.unknownAspects.copy()
 
 
@@ -390,8 +409,8 @@ __all__ = (
 	'applicationSettings',
 
 	'getApplicationSettings',
-
 	'setApplicationSettings',
+	'resetApplicationSettings',
 	'saveApplicationSettings',
 	'loadApplicationSettings',
 )
