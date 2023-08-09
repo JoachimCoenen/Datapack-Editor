@@ -7,7 +7,7 @@ import traceback
 from abc import ABC
 from dataclasses import dataclass, field, fields
 from json import JSONDecodeError
-from typing import final, Iterator, TypeVar, Any, Callable, cast
+from typing import final, Iterator, TypeVar, Type, Optional
 
 from PyQt5.Qsci import QsciScintillaBase
 from PyQt5.QtCore import Qt
@@ -17,7 +17,6 @@ from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.GUI import getStyles
 from Cat.Serializable.dataclassJson import SerializableDataclass, shouldSerialize, catMeta
 from Cat.utils import getExePath
-from Cat.utils.formatters import formatVal
 from Cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory
 
@@ -26,7 +25,7 @@ QFont.__deepcopy__ = lambda x, m: QFont(x)
 
 # from model.data.mcVersions import ALL_MC_VERSIONS
 # from model.data.dpVersion import ALL_DP_VERSIONS
-from base.model.aspect import AspectDict, Aspect, AspectType
+from base.model.aspect import AspectDict, Aspect, AspectType, SerializableDataclassWithAspects
 
 
 class ColorSchemePD(pd.PropertyDecorator):
@@ -253,55 +252,8 @@ class SettingsAspect(Aspect, SerializableDataclass, ABC):
 		pass
 
 
-@dataclass()
-class ApplicationSettings(SerializableDataclass):
-	aspects: AspectDict[SettingsAspect] = field(default_factory=lambda: AspectDict(SettingsAspect), metadata=catMeta(serialize=False))
-	unknownSettings: dict[str, Any] = field(default_factory=dict, metadata=catMeta(serialize=False))
-
-	# def __post_init__(self):
-	# 	_fillSettingsAspects(self.aspects)
-
-	def serializeJson(self, strict: bool, memo: dict, path: tuple[str | int, ...]) -> dict[str, Any]:
-		result = super(ApplicationSettings, self).serializeJson(strict, memo, path)
-		result['aspects'] = self._serializeAspects(strict)
-		return result
-
-	def _serializeAspects(self, strict: bool) -> dict[str, Any]:
-		result = {}
-		result |= self.unknownSettings
-
-		for aspect in self.aspects:
-			key = aspect.getAspectType()
-			memo = {}
-			value = aspect.serializeJson(strict, memo, ('aspects', key,))
-			result[key] = value
-		return result
-
-	@classmethod
-	def fromJSONDict(cls: ApplicationSettings, jsonDict: dict[str, dict], memo: dict, path: tuple[str | int, ...], onError: Callable[[Exception, str], None] = None) -> ApplicationSettings:
-		self = cast(ApplicationSettings, super(ApplicationSettings, cls).fromJSONDict(jsonDict, memo, path, onError=onError))
-		aspectsJson = jsonDict.get('aspects', {}).copy()
-		for aspectType, aspectJson in aspectsJson.items():
-			self.loadAspectSettings(aspectType, aspectJson, onError)
-		return self
-
-	def loadAspectSettings(self, aspectType: AspectType, aspectJson: dict[str, dict], onError: Callable[[Exception, str], None] = None):
-		aspect = self.aspects._aspects.get(aspectType)
-		if aspect is not None:
-			memo = {}
-			try:
-				newAspect = aspect.fromJSONDict(aspectJson, memo, ('aspects', aspectType), onError=onError)
-			except Exception as e:
-				if True and onError is not None:
-					onError(e, f'{formatVal(type(aspect))} in {type(type(aspect)).__name__}')
-					newAspect = None
-				else:
-					print(f"ERROR  : f'{formatVal(type(aspect))} in {type(type(aspect)).__name__}")
-					raise
-			if newAspect is not None:
-				copyAppSettings(self.aspects.get(type(aspect)), newAspect)
-				return
-		self.unknownSettings[aspectType] = aspectJson  # we could not find an appropriate settingsAspect, so, just remember the, values
+@dataclass
+class ApplicationSettings(SerializableDataclassWithAspects[SettingsAspect]):
 
 	appearance: AppearanceSettings = field(default_factory=AppearanceSettings, metadata=catMeta(kwargs=dict(label='Appearance')))
 	# minecraft: MinecraftSettings = Serialized(default_factory=MinecraftSettings, label='Minecraft')
@@ -319,6 +271,14 @@ class ApplicationSettings(SerializableDataclass):
 		return self.about.organization
 
 	isUserSetupFinished: bool = field(default=False, metadata=catMeta(decorators=[pd.NoUI()]))
+
+	def _setAspect(self, newAspect: SettingsAspect):
+		copyAppSettings(self.aspects.get(type(newAspect)), newAspect)
+
+	def _getAspectCls(self, aspectType: AspectType) -> Optional[Type[SettingsAspect]]:
+		aspect = self.aspects._aspects.get(aspectType)
+		return type(aspect) if aspect is not None else None
+		return getAspectCls(type(self), aspectType)
 
 
 applicationSettings = None
@@ -404,7 +364,7 @@ def copyAppSettings(self: SerializableDataclass, other: SerializableDataclass) -
 		for aspect in self.aspects._aspects.copy().values():
 			otherAspect = other.aspects.get(type(aspect))
 			copyAppSettings(aspect, otherAspect)
-		self.unknownSettings = other.unknownSettings.copy()
+		self.unknownAspects = other.unknownAspects.copy()
 
 
 def saveApplicationSettings():
@@ -425,6 +385,7 @@ __all__ = (
 	'AppearanceSettings',
 	'DebugSettings',
 	'AboutSettings',
+	'SettingsAspect',
 	'ApplicationSettings',
 	'applicationSettings',
 

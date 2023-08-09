@@ -65,14 +65,14 @@ class PluginService:
 			for mapping in mappings:
 				addSchemaMapping(languageId, mapping)
 
+		application_settings = getApplicationSettings()
 		for settingCls in (plugin.settingsAspects() or []):
-			application_settings = getApplicationSettings()
 			application_settings.aspects.add(settingCls)
 			aspect_type = settingCls.getAspectType()
-			aspectJson = application_settings.unknownSettings.get(aspect_type)
+			aspectJson = application_settings.unknownAspects.get(aspect_type)
 			if aspectJson is not None:
-				del application_settings.unknownSettings[aspect_type]
-				application_settings.loadAspectSettings(aspect_type, aspectJson, logError)
+				del application_settings.unknownAspects[aspect_type]
+				application_settings.loadAspectData(aspect_type, aspectJson, logError)
 
 	# TODO: def initializeAllPlugins(self) -> None:
 	# 	for plugin in self.activePlugins:
