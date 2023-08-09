@@ -689,7 +689,7 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 	@classmethod
 	def getAspectType(cls) -> AspectType:
-		return AspectType('FilesAspect')
+		return AspectType('cce:files_aspect')
 
 	def getDependencies(self, root: Root) -> list[DependencyDescr]:
 		return []
@@ -711,10 +711,10 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 			fe.virtualPath = f'{newName}/{fe.fullPath[1]}'
 
 	def onRootAdded(self, root: Root, project: Project) -> None:
-		filesystemEvents.FILESYSTEM_OBSERVER.schedule("dpe:files_aspect", root.normalizedLocation, _FileSysytemChangeHandler(root, project))
+		filesystemEvents.FILESYSTEM_OBSERVER.schedule("cce:files_aspect", root.normalizedLocation, _FileSysytemChangeHandler(root, project))
 
 	def onRootRemoved(self, root: Root, project: Project) -> None:
-		filesystemEvents.FILESYSTEM_OBSERVER.unschedule("dpe:files_aspect", root.normalizedLocation)
+		filesystemEvents.FILESYSTEM_OBSERVER.unschedule("cce:files_aspect", root.normalizedLocation)
 
 	def analyzeFile(self, root: Root, path: FileEntry) -> None:
 		pass
