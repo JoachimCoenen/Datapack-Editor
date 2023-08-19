@@ -40,7 +40,7 @@ class ProjectFilesPlugin(PluginBase):
 
 
 def projectFilesGUI(gui: DatapackEditorGUI):
-	gui.editor(DatapackFilesEditor, getSession().project, seamless=True)
+	gui.editor(ProjectFilesEditor, getSession().project, seamless=True)
 
 
 @final
@@ -131,7 +131,7 @@ class FilesTreeRoot:
 AnyFilesTreeElement = FilesTreeRoot | FilesTreeItem
 
 
-class DatapackFilesEditor(EditorBase[Project]):
+class ProjectFilesEditor(EditorBase[Project]):
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.vLayout(seamless=True):
@@ -145,17 +145,7 @@ class DatapackFilesEditor(EditorBase[Project]):
 
 			with gui.hPanel(seamless=True):
 				gui.addHSpacer(5, SizePolicy.Expanding)
-				if gui.toolButton(
-					icon=icons.add,
-					tip="create new Datapack",
-					enabled=True
-				):
-					self._createNewDatapackGUI()
-				if gui.toolButton(
-					icon=icons.refresh,
-					tip="refresh",
-					enabled=True
-				):
+				if gui.toolButton(icon=icons.refresh, tip="refresh"):
 					self._refreshDependencies()
 
 	def _openFunc(self, filePath: FilePath, selectedSpan: Optional[Span] = None):
@@ -206,7 +196,7 @@ class DatapackFilesEditor(EditorBase[Project]):
 						view = getSession().documents._getViewForDocument(doc)
 						if view is not None:
 							view.onDocumentsChanged.emit()
-			self.redraw('DatapackFilesEditor._renameFileOrFolder(...)')
+			self.redraw('ProjectFilesEditor._renameFileOrFolder(...)')
 
 	def _deleteFileFunc(self, path: FilePath):
 		_, __, name = path[1].rstrip('/').rpartition('/')
@@ -215,7 +205,7 @@ class DatapackFilesEditor(EditorBase[Project]):
 				os.unlink(os.path.join(*path))
 			except OSError as e:
 				getSession().showAndLogError(e)
-			self.redraw('DatapackFilesEditor._deleteFileFunc(...)')
+			self.redraw('ProjectFilesEditor._deleteFileFunc(...)')
 			# TODO: maybe close opened file?
 
 	def _deleteFolderFunc(self, path: FilePath):
@@ -232,78 +222,7 @@ class DatapackFilesEditor(EditorBase[Project]):
 			# TODO: maybe close opened files?
 		except OSError as e:
 			getSession().showAndLogError(e)
-		self.redraw('DatapackFilesEditor._deleteFileFunc(...)')
-
-	def _newDatapackDialog(self):
-		pass  # todo: _newDatapackDialog(...)?
-
-	def _createNewDatapackGUI(self) -> None:
-		self._gui.showWarningDialog("Out of Order", "This feature is currently out of order.")
-		# TODO: _createNewDatapackGUI()
-		# def datapackPathFromName(name: str):
-		# 	return normalizeDirSeparators(os.path.join(getSession().world.path, 'datapacks', name))
-		#
-		# def validateName(name: str) -> Optional[ValidatorResult]:
-		# 	datapackPath = datapackPathFromName(name)
-		# 	if os.path.exists(datapackPath):
-		# 		return ValidatorResult(f"Another datapack with the same name already exists.", 'error')
-		# 	return None
-		#
-		# def validateNamespace(namespace: str) -> Optional[ValidatorResult]:
-		# 	if not isNamespaceValid(namespace):
-		# 		return ValidatorResult(f"Not a valid namespace.\nNamespaces mut only contain:\n"
-		# 							   f" - Numbers (0-9)\n"
-		# 							   f" - Lowercase letters (a-z)\n"
-		# 							   f" - Underscore (_)\n"
-		# 							   f" - Hyphen/minus (-)\n"
-		# 							   f" - dot (.)\n", 'error')
-		# 	return None
-		#
-		# class Context(SerializableContainer):
-		# 	name: str = Serialized(default='new Datapack', decorators=[Validator(validateName)])
-		# 	namespace: str = Serialized(default='new_datapack', decorators=[Validator(validateNamespace)])
-		#
-		# def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
-		# 	gui.propertyField(context, Context.name)
-		# 	gui.propertyField(context, Context.namespace)
-		# 	return context
-		#
-		# context = Context()
-		# while True:
-		# 	context, isOk = self._gui.askUserInput(f"new Datapack", context, guiFunc)
-		# 	if not isOk:
-		# 		return
-		# 	isValid = validateName(context.name) is None and validateNamespace(context.namespace) is None
-		# 	if isValid:
-		# 		break
-		#
-		# datapackPath = datapackPathFromName(context.name)
-		#
-		# try:
-		# 	with openOrCreate(f"{datapackPath}/pack.mcmeta", 'w') as f:
-		# 		f.write(
-		# 			'{\n'
-		# 			'	"pack": {\n'
-		# 			'		"pack_format": 6,\n'
-		# 			'		"description": "[{"text":" """ + context.name + """ ","color":"white"}{"text":"\\nCreated with","color":"white"},{"text":"Data Pack Editor","color":"yellow"}] "\n'
-		# 			'	}\n'
-		# 			'}')
-		#
-		# 	for folder in getSession().datapackData.structure.values():
-		# 		folderPath = f"data/{context.namespace}/{folder.folder}"
-		# 		createNewFolder(datapackPath, folderPath)
-		#
-		# 		for file in folder.generation.initialFiles:
-		# 			fileNS = file.namespace.replace(NAME_SPACE_VAR, context.namespace)
-		# 			filePath = f"{datapackPath}/data/{fileNS}/{folder.folder}{file.name}"
-		# 			with openOrCreate(filePath, 'w') as f:
-		# 				f.write(file.contents.replace(NAME_SPACE_VAR, context.namespace))
-		#
-		# except OSError as e:
-		# 	getSession().showAndLogError(e)
-		# else:
-		# 	self.redraw('DatapackFilesEditor._createNewDatapackGUI(...)')
-		return
+		self.redraw('ProjectFilesEditor._deleteFileFunc(...)')
 
 	def _refreshDependencies(self) -> None:
 		self.model().analyzeRoots()

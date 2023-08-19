@@ -160,7 +160,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		with gui.vLayout(contentsMargins=(mg, mg, mg, mg)):
 			gui.addVSpacer(int(50 * gui.scale), SizePolicy.Expanding)
 			if not getSession().hasOpenedProject:
-				self._noWorldLoadedGUI(gui)
+				self._noProjectOpenedGUI(gui)
 			else:
 				self._noDocumentOpenedGUI(gui)
 			gui.addVSpacer(int(50 * gui.scale), SizePolicy.Expanding)
@@ -177,17 +177,16 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 				self.model().manager.safelyCloseView(self.model())
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
 
-	def _noWorldLoadedGUI(self, gui: DatapackEditorGUI) -> None:
+	def _noProjectOpenedGUI(self, gui: DatapackEditorGUI) -> None:
 		gui.label('No project loaded.', wordWrap=False, alignment=Qt.AlignCenter)
 		gui.addVSpacer(gui.margin, SizePolicy.Fixed)
 		gui.label(f"Please open a project.", wordWrap=False, alignment=Qt.AlignCenter)
 		gui.addVSpacer(gui.margin, SizePolicy.Fixed)
 		with gui.hLayout():
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
-			if gui.framelessButton("Load Project", icon=icons.globeAlt, tip="Load Project", default=True):
-				self.window()._loadWorldDialog(gui)
+			if gui.framelessButton("Open / Create Project", icon=icons.project, tip="Load Project", default=True):
+				self.window()._openOrCreateProjectDialog(gui)
 			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
-
 
 	def _showOpenedDocumentsPopup(self, gui: DatapackEditorGUI) -> None:
 		view = self.model()

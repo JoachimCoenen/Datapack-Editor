@@ -1,13 +1,17 @@
 import os
 from typing import Type
 
+from base.gui import newProjectDialog
 from base.model.applicationSettings import SettingsAspect
 from base.model.defaultSchemaProvider import SchemaMapping
 from base.model.parsing.tree import Schema
 from base.model.project.project import ProjectAspect
+from base.model.project.projectCreator import ProjectCreator
 from base.model.utils import LanguageId
 from base.plugin import PLUGIN_SERVICE, PluginBase
 
+
+newProjectDialog.DEFAULT_PROJECTS_LOCATION = os.path.expanduser('~/.dpe/projects').replace('\\', '/')
 
 def initPlugin() -> None:
 	PLUGIN_SERVICE.registerPlugin('DatapackPlugin', DatapackPlugin())
@@ -43,3 +47,6 @@ class DatapackPlugin(PluginBase):
 		from corePlugins.json import JSON_ID
 		return {JSON_ID: mappings}
 
+	def projectCreators(self) -> list[Type[ProjectCreator]]:
+		from corePlugins.datapack.projectCreator import DatapackProjectCreator
+		return [DatapackProjectCreator]

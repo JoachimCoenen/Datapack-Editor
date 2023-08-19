@@ -20,6 +20,7 @@ from base.model.parsing.parser import ParserBase, registerParser
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Node, Schema
 from base.model.project.project import ProjectAspect, Project
+from base.model.project.projectCreator import ProjectCreator
 from base.model.utils import LanguageId
 
 if TYPE_CHECKING:
@@ -140,6 +141,9 @@ class PluginBase(ABC):
 
 	def schemaMappings(self) -> dict[LanguageId, list[SchemaMapping]]:
 		return {}
+
+	def projectCreators(self) -> list[Type[ProjectCreator]]:
+		return []
 
 # class DatapackAspect(ProjectAspect):
 # 	@classmethod

@@ -9,7 +9,8 @@
    * Added `globalStyles.whiteSpaceStyle` setting to color schemes.
 
 ### Improvements
- * improved layout of the Setup Dialog shown when the application is started for the first time.
+ * Improved layout of the Setup Dialog shown when the application is started for the first time.
+ * New and improved dialog for opening existing and creating new projects.
 
 ### Fixes
  * Save As now selects correct file extension by default.
