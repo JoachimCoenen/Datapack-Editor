@@ -436,36 +436,35 @@ def _filesTreeChildrenMaker(data: FilesTreeItem) -> list[AnyFilesTreeElement]:
 
 
 def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
-	# todo: createNewFileGUI(...)
-	getSession().showAndLogWarning(None, "createNewFileGUI()... not yet implemented")
 	# nsHandlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.structure)
 	# extensions = [h.extension for ns, h, _ in nsHandlers]
+	# extensions = ['.json', '.mcfunction']
 	# CUSTOM_EXT = "[custom]"
 	# extensions.append(CUSTOM_EXT)
-	#
-	# @dataclass
-	# class Context:
-	# 	extension: int = 0
-	# 	name: str = "untitled"
-	#
-	# def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
-	# 	context.name = gui.textField(context.name, "name:")
-	# 	context.extension = gui.radioButtonGroup(context.extension, extensions, "extension:")
-	# 	return context
-	#
-	# context = Context()
-	# context, isOk = gui.askUserInput(f"new File", context, guiFunc)
-	# if not isOk:  # or not context.name:
-	# 	return
-	#
+
+	@dataclass
+	class Context:
+		extension: int = 0
+		name: str = "untitled.json"
+
+	def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
+		context.name = gui.textField(context.name, "name:")
+		# context.extension = gui.radioButtonGroup(context.extension, extensions, "extension:")
+		return context
+
+	context = Context()
+	context, isOk = gui.askUserInput(f"new File", context, guiFunc)
+	if not isOk:  # or not context.name:
+		return
+
 	# ext = extensions[context.extension]
 	# if ext == CUSTOM_EXT:
 	# 	ext = ''
-	# try:
-	# 	filePath = createNewFile(folderPath, context.name.removesuffix(ext) + ext)
-	# 	openFunc(filePath)
-	# except OSError as e:
-	# 	getSession().showAndLogError(e, "Cannot create file")
+	try:
+		filePath = createNewFile(folderPath, context.name)  # .removesuffix(ext) + ext)
+		openFunc(filePath)
+	except OSError as e:
+		getSession().showAndLogError(e, "Cannot create file")
 	return
 
 
