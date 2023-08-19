@@ -363,18 +363,6 @@ class ProjectFilesEditor(EditorBase[Project]):
 		filesForProj.extend(filesIndex.folders.values())
 		filesForProj.extend(filesIndex.files.values())
 		allAutocompleteStringsIO.extend(map(attrgetter('virtualPath'), filesForProj))
-		# for fullPath in filesIndex.folders.values():
-		# 	# getRight:
-		# 	# virtualPath = rootName + fullPath[1]
-		# 	# allAutocompleteStringsIO.append(virtualPath)
-		# 	# filesForProj.append(makeFileEntry(fullPath, root, False))
-		# 	filesForProj.append(fullPath)
-		# for fullPath in filesIndex.files.values():
-		# 	# getRight:
-		# 	# virtualPath = rootName + fullPath[1]
-		# 	# allAutocompleteStringsIO.append(virtualPath)
-		# 	# filesForProj.append(makeFileEntry(fullPath, root, True))
-		# 	filesForProj.append(fullPath)
 		if True or projItem.filePaths:
 			projectItemsIO.append(projItem)
 
@@ -385,11 +373,6 @@ def _labelMaker(data: FilesTreeItem, column: int) -> str:
 
 def _iconMaker(data: FilesTreeItem, column: int) -> QIcon:
 	return data.icon if column == 0 else None
-	# if data.isFile:
-	# 	return icons.file_code
-	# elif data.isArchive:
-	# 	return icons.archive
-	# return icons.folderInTree
 
 
 def _toolTipMaker(data: FilesTreeItem, column: int) -> str:
