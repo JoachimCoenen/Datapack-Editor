@@ -170,9 +170,9 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 
 		with gui.scrollBox():
 			errorsByFile: list[Tuple[FilePath, Collection[GeneralError], ErrorCounts]] = \
-				[(fp, ers, getErrorCounts([], ers)) for fp, ers in self.errorsByFile.items() if ers]
+				[(fp, ers, getErrorCounts(ers)) for fp, ers in self.errorsByFile.items() if ers]
 
-			errorsByFile = sorted(errorsByFile, key=lambda itm: (itm[2].parserErrors, itm[2].configErrors, ), reverse=True)
+			errorsByFile = sorted(errorsByFile, key=lambda itm: (itm[2].errors,), reverse=True)
 
 			def onContextMenu(x: FilePath, *, s=self):
 				with gui.popupMenu(atMousePosition=True) as menu:
@@ -184,7 +184,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 					label = f"{os.path.basename(file)} ('{file}')"
 				else:
 					label = f"{os.path.basename(file[1])} ('{file[1]}') in '{file[0]}'"
-				label = f'errors: {errorCounts.parserErrors + errorCounts.configErrors:2} | warnings: {errorCounts.configWarnings:2} | hints: {errorCounts.configHints:2} | {label}'
+				label = f'errors: {errorCounts.errors:2} | warnings: {errorCounts.warnings:2} | hints: {errorCounts.hints:2} | {label}'
 
 				opened = gui.spoiler(
 					label=label,
@@ -206,7 +206,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 			with gui.hLayout(preventHStretch=True):
 				gui.errorsSummaryGUI(self.totalErrorCounts)
 				if self._filesChecked > 0:
-					errorsPerFile = self.totalErrorCounts.totalErrors / self._filesChecked
+					errorsPerFile = self.totalErrorCounts.errors / self._filesChecked
 				else:
 					errorsPerFile = 0
 				gui.label(f'{self._filesChecked} / {self._filesCount} files checked. ({errorsPerFile:.1f} errors / file)')
@@ -295,7 +295,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 
 					errors = checkFile(filePath, archiveFilePool)
 
-					self.totalErrorCounts += getErrorCounts([], errors)
+					self.totalErrorCounts += getErrorCounts(errors)
 					self.errorsByFile[filePath] = errors
 
 					errorCounter = 0

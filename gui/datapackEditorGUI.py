@@ -636,18 +636,18 @@ class DatapackEditorGUI(AutoGUI):
 
 		#self.hSeparator()  # parser & config errors:
 		self.label(errorIcons['error'], tip=errorsTip, **kwargs)
-		self.label(f'{errorCounts.parserErrors + errorCounts.configErrors}', tip=errorsTip, **kwargs)
+		self.label(f'{errorCounts.errors}', tip=errorsTip, **kwargs)
 		#self.hSeparator()  # config warnings:
 		self.label(errorIcons['warning'], tip=warningsTip, **kwargs)
-		self.label(f'{errorCounts.configWarnings}', tip=warningsTip, **kwargs)
+		self.label(f'{errorCounts.warnings}', tip=warningsTip, **kwargs)
 		#self.hSeparator()  # config hints:
 		self.label(errorIcons['info'], tip=hintsTip, **kwargs)
-		self.label(f'{errorCounts.configHints}', tip=hintsTip, **kwargs)
+		self.label(f'{errorCounts.hints}', tip=hintsTip, **kwargs)
 		#self.hSeparator()  # config hints:
 
 	def errorsSummarySimpleGUI(self: DatapackEditorGUI, errorCounts: ErrorCounts, **kwargs):
 		self.hSeparator()
-		self.label(f'errors: {errorCounts.parserErrors + errorCounts.configErrors:3} | warnings: {errorCounts.configWarnings:3} | hints: {errorCounts.configHints:3}')
+		self.label(f'errors: {errorCounts.errors:3} | warnings: {errorCounts.warnings:3} | hints: {errorCounts.hints:3}')
 		self.hSeparator()
 
 	def drawError(self, error: GeneralError, **kwargs):

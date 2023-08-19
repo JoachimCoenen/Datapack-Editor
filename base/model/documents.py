@@ -31,51 +31,42 @@ TTarget = TypeVar("TTarget")
 
 @dataclass
 class ErrorCounts:
-	parserErrors: int = 0
-	configErrors: int = 0
-	configWarnings: int = 0
-	configHints: int = 0
-
-	@property
-	def totalErrors(self) -> int:
-		return self.parserErrors + self.configErrors
+	errors: int = 0
+	warnings: int = 0
+	hints: int = 0
 
 	@property
 	def total(self) -> int:
-		return self.parserErrors + self.configErrors + self.configWarnings + self.configHints
+		return self.errors + self.warnings + self.hints
 
 	def __add__(self, other: ErrorCounts) -> ErrorCounts:
 		if not isinstance(other, ErrorCounts):
 			raise TypeError(f"unsupported operand type(s) for +: '{type(self)!r}' and '{type(other)!r}'")
 		return ErrorCounts(
-			self.parserErrors + other.parserErrors,
-			self.configErrors + other.configErrors,
-			self.configWarnings + other.configWarnings,
-			self.configHints + other.configHints,
+			self.errors + other.errors,
+			self.warnings + other.warnings,
+			self.hints + other.hints,
 		)
 
 	def __iadd__(self, other: ErrorCounts):
 		if not isinstance(other, ErrorCounts):
 			raise TypeError(f"unsupported operand type(s) for +=: '{type(self)!r}' and '{type(other)!r}'")
-		self.parserErrors += other.parserErrors
-		self.configErrors += other.configErrors
-		self.configWarnings += other.configWarnings
-		self.configHints += other.configHints
+		self.errors += other.errors
+		self.warnings += other.warnings
+		self.hints += other.hints
 		return self
 
 
-def getErrorCounts(parserErrors: Collection[GeneralError], otherErrors: Collection[GeneralError]) -> ErrorCounts:
+def getErrorCounts(allErrors: Collection[GeneralError]) -> ErrorCounts:
 	errorCounts = ErrorCounts()
 
-	errorCounts.parserErrors = len(parserErrors)
-
-	for error in otherErrors:
+	for error in allErrors:
 		if error.style == 'error':
-			errorCounts.configErrors += 1
+			errorCounts.errors += 1
 		elif error.style == 'warning':
-			errorCounts.configWarnings += 1
+			errorCounts.warnings += 1
 		elif error.style in {'hint', 'info'}:
-			errorCounts.configHints += 1
+			errorCounts.hints += 1
 		else:
 			logError(f'Unknown configError style: {error.style!r}')
 	return errorCounts
@@ -257,13 +248,6 @@ def getAllFileExtensionFilters(expanded: bool = False) -> Sequence[FileExtension
 		return [dt.fileExtensionFilter for dt in _documentTypes]
 
 
-def addErrors(self):
-	parserErrors = self.parserErrors
-	validationErrors = self.validationErrors
-	summ = parserErrors + validationErrors
-	return summ
-
-
 class FileChangedHandler(FileSystemEventHandler):
 	def __init__(self):
 		super(FileChangedHandler, self).__init__()
@@ -401,10 +385,6 @@ class Document(SerializableDataclass):
 	_originalContent: Optional[TTarget] = field(default=None, metadata=catMeta(decorators=[pd.NoUI()]))
 
 	tree: Optional[Node] = field(default=None, repr=False, metadata=catMeta(serialize=False))
-	# @Serialized(shouldSerialize=False)
-	# def tree(self) -> Optional[Node]:
-	# 	tree, self.parserErrors = self.parse(self.content)
-	# 	return tree
 
 	def contentOnSet(self, newVal: bytes, oldVal: Optional[bytes]) -> None:
 		if not self._undoRedoStackInitialized:
