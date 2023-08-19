@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
-from math import log10
+from collections import defaultdict
+from dataclasses import dataclass
 from operator import itemgetter
 from typing import Optional, Tuple, Collection
 
@@ -8,22 +9,19 @@ from PyQt5.QtCore import pyqtSignal, QEventLoop, QObject, Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QDialog, QSizePolicy, QWidget
 
 from Cat.CatPythonGUI.GUI import SizePolicy
-# from Cat.CatPythonGUI.GUI.enums import ToggleCheckState
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-# from Cat.CatPythonGUI.GUI.pythonGUI import BoolOrCheckState
 from Cat.CatPythonGUI.utilities import connect
-from Cat.utils import format_full_exc
-from Cat.utils.collections_ import OrderedDict, OrderedMultiDict
-from Cat.utils.formatters import formatDictItem, formatListLike2, INDENT, SW
+from Cat.icons import icons
+from Cat.utils import format_full_exc, BusyIndicator
+from Cat.utils.formatters import SW, formatDictOnly
 from Cat.utils.profiling import TimedMethod, logError
 from base.model.project.project import Root
 from base.model.session import getSession
 from basePlugins.projectFiles import FilesIndex
-# from model.datapack.datapackContents import EntryHandlerInfo, NAME_SPACE_VAR
 from base.model.utils import WrappedError, GeneralError
 from base.model.documents import ErrorCounts, getErrorCounts, loadDocument
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
-from base.model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool
+from base.model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool, FilePathTpl
 
 
 def checkFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[GeneralError]:
@@ -38,108 +36,22 @@ def checkFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collectio
 		return [WrappedError(e)]
 
 
-# def checkMcFunctionFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[Error]:
-# 	try:
-# 		sourceCode = loadTextFile(filePath, archiveFilePool)
-# 		tree, errors = parseMCFunction(getSession().minecraftData.commands, sourceCode)
-# 		if tree is not None:
-# 			errors += checkMCFunction(tree)
-# 		return errors
-# 	except Exception as e:
-# 		logError(f"filePath = {filePath!r}")
-# 		logError(format_full_exc())
-# 		return [WrappedError(e)]
-
-
-FILE_TYPES = [
-	'.mcfunction',
-	'.json',
-]
-
-
-# _DPStructure = dict[str, Union[EntryHandlerInfo, '_DPStructure']]
-#
-#
-# def _getKey(value: EntryHandlerInfo) -> str:
-# 	key = f'{value.folder}/*{value.extension}'
-# 	return key
-#
-#
-# def _getAllInnerKeys(structure: _DPStructure) -> dict[str, EntryHandlerInfo]:
-# 	result = {}
-# 	for value in structure.values():
-# 		if isinstance(value, EntryHandlerInfo):
-# 			result[_getKey(value)] = value
-# 		else:
-# 			result.update(_getAllInnerKeys(value))
-# 	return result
-#
-#
-# def _chb(gui: DatapackEditorGUI, isChecked: Optional[BoolOrCheckState], label: Optional[str], returnTristate: bool, showSpoiler: bool, **kwargs) -> tuple[bool, BoolOrCheckState]:
-# 	with gui.hLayout(preventHStretch=True, horizontalSpacing=0):
-# 		isOpen = gui.spoiler(drawDisabled=not showSpoiler)
-# 		checkState = gui.checkboxLeft(isChecked, label, returnTristate=returnTristate, **kwargs)
-# 	return isOpen, checkState
-#
-#
-# def _innerFileTypesSelectionGUI(gui: DatapackEditorGUI, structure: _DPStructure, oldVals: dict[str, EntryHandlerInfo]) -> dict[str, EntryHandlerInfo]:
-# 	result: dict[str, EntryHandlerInfo] = {}
-# 	for name, value in structure.items():
-# 		# merge if only one subCategory:
-# 		isSingleEHF = isinstance(value, EntryHandlerInfo)
-# 		while not isSingleEHF and len(value) == 1:
-# 			suffix, value = first(value.items())
-# 			isSingleEHF = isinstance(value, EntryHandlerInfo)
-# 			if isSingleEHF:
-# 				name = f'{name} ({suffix})'
-# 			else:
-# 				name = f'{name}/{suffix}'
-#
-# 		if isSingleEHF:
-# 			key = _getKey(value)
-# 			if _chb(gui, key in oldVals, name, returnTristate=False, showSpoiler=False)[1]:
-# 				result[key] = value
-# 		else:
-# 			allInnerKeys = _getAllInnerKeys(value)
-# 			innerSelection = {key: iValue for key, iValue in allInnerKeys.items() if key in oldVals}
-#
-# 			if len(innerSelection) == len(allInnerKeys):
-# 				innerCheckState = ToggleCheckState.Checked
-# 			elif not innerSelection:
-# 				innerCheckState = ToggleCheckState.Unchecked
-# 			else:
-# 				innerCheckState = ToggleCheckState.PartiallyChecked
-#
-# 			isOpen, innerCheckState = _chb(gui, innerCheckState, name, returnTristate=True, showSpoiler=True)
-#
-# 			if innerCheckState is ToggleCheckState.Checked:
-# 				innerSelection = allInnerKeys
-# 			elif innerCheckState is ToggleCheckState.Unchecked:
-# 				innerSelection = {}
-#
-# 			with gui.indentation():
-# 				if isOpen:
-# 					innerSelection = _innerFileTypesSelectionGUI(gui, value, innerSelection)
-# 				else:
-# 					pass
-# 				result.update(innerSelection)
-#
-# 	return result
-
-
 class CheckAllDialog(CatFramelessWindowMixin, QDialog):
+
+	progressSignal = pyqtSignal(int)
+	errorCountsUpdateSignal = pyqtSignal()
 
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=DatapackEditorGUI, parent=parent)
 
 		self.totalErrorCounts: ErrorCounts = ErrorCounts()
-		self.errorsByFile: OrderedDict[FilePath, Collection[GeneralError]] = OrderedDict()
+		self.errorsByFile: dict[FilePath, Collection[GeneralError]] = {}
 
 		self._includedRoots: list[Root] = []
 		# self._fileTypes: dict[str, EntryHandlerInfo] = {}
 		self._allFiles: list[FilePath] = []
-		self._filesCount: int = 100
-		self._filesChecked: int = 50
+		self._filesCount: int = 0
+		self._filesChecked: int = -1
 
 		self._spoilerSizePolicy = QSizePolicy(SizePolicy.Expanding.value, SizePolicy.Fixed.value)
 
@@ -157,14 +69,21 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 					includedRoots.append(root)
 		self._includedRoots = includedRoots
 
-		#self._fileTypes = self.fileTypesSelectionGUI(gui, self._fileTypes)
-
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.hLayout():
 			gui.progressBar(self.progressSignal, min=0, max=self._filesCount, value=self._filesChecked, format='', textVisible=True)
-			if gui.button('check files', default=True):
+			if gui.button('Check Files', default=True):
 				self.resetUserInterface()
 				QTimer.singleShot(1, self.checkAllFiles)
+			if self._filesChecked > -1:
+				if gui.button(icon=icons.signal, tip='Show Stats', default=False):
+					stats = getErrorStats(self.errorsByFile)
+					errorStatsStr = errorStatsToStr(stats)
+					gui.askUserInput(
+						"Check all Files Results",
+						errorStatsStr,
+						lambda g, v: g.codeField(errorStatsStr)
+					)
 
 		self.totalErrorsSummaryGUI(gui)
 
@@ -218,48 +137,9 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 			self.errorCountsUpdateSignal.disconnect()
 		connect(self.errorCountsUpdateSignal, lambda es=errorsSummary: es.redrawGUI())
 
-	# def fileTypesSelectionGUI(self, gui: DatapackEditorGUI, oldVals: dict[str, EntryHandlerInfo]) -> dict[str, EntryHandlerInfo]:
-	# 	# build Folder Structure:
-	# 	structure: _DPStructure = {}
-	# 	for path, infos in getSession().datapackData.structure.items():
-	# 		pathParts = path.strip('/').split('/')
-	# 		if pathParts[0] == '':
-	# 			del pathParts[0]
-	# 		folder = structure
-	# 		for pathPart in pathParts:
-	# 			if pathPart == NAME_SPACE_VAR:
-	# 				continue
-	# 			folder = folder.setdefault(pathPart, {})
-	# 		for info in infos:
-	# 			folder[info.extension] = info
-	#
-	# 	# gui:
-	# 	with gui.vLayout(preventVStretch=True, verticalSpacing=0):
-	# 		return _innerFileTypesSelectionGUI(gui, structure, oldVals)
-
-	progressSignal = pyqtSignal(int)
-	errorCountsUpdateSignal = pyqtSignal()
-
 	def resetUserInterface(self):
 		self.errorsByFile.clear()
 		self.totalErrorCounts = ErrorCounts()
-
-		# # allFiles = getSession().world.datapacksProp[:].files[:].get(getSession().world)
-		# # allFiles = [f for dp in self._includedDatapacks for f in dp.files]
-		# self._allFiles = []
-		# for dp in self._includedProjects:
-		# 	for ft in self._fileTypes.values():
-		# 		if ft.getIndex is not None:
-		# 			cnts = ft.getIndex(dp)
-		# 			self._allFiles.extend(cnt.filePath for cnt in cnts.values())
-		# 	# for f in dp.files:
-		# 	# 	if isinstance(f, tuple):
-		# 	# 		fn = f[1]
-		# 	# 	else:
-		# 	# 		fn = f
-		# 	# 	if fn.endswith(tuple(self._fileTypes)):
-		# 	# 		self._allFiles.append(f)
-		#
 		self._allFiles = self.collectAllFiles()
 		self._filesCount = len(self._allFiles)
 		self._filesChecked = -1
@@ -273,56 +153,68 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 
 		return filePathsToSearch
 
+	@BusyIndicator
 	@TimedMethod()
-	def checkAllFiles(self):
+	def checkAllFiles(self) -> None:
 		gui = self._gui
 
 		gui.redrawGUI()
-		self.setCursor(Qt.WaitCursor)
 		try:
-			if self._filesCount > 0:
-				digits = int(log10(self._filesCount)) + 1
-			else:
-				digits = 1
-			formatStr = f"({{i:0{digits}}} / {self._filesCount}) file: {{file}}"
-
 			self.totalErrorCounts = ErrorCounts()
-			allErrorCounts1 = OrderedMultiDict()
-			allErrorCounts2 = {}
 			with ZipFilePool() as archiveFilePool:
 				for i, filePath in enumerate(self._allFiles):
 					self._filesChecked = i + 1
-
 					errors = checkFile(filePath, archiveFilePool)
 
 					self.totalErrorCounts += getErrorCounts(errors)
 					self.errorsByFile[filePath] = errors
 
-					errorCounter = 0
-
-					if errorCounter > 0:
-						allErrorCounts1.add(filePath, errorCounter)
-					allErrorCounts2[errorCounter] = allErrorCounts2.get(errorCounter, 0) + 1
-
 					if i % 25 == 0:
 						self.progressSignal.emit(i + 1)
 						self.errorCountsUpdateSignal.emit()
 						QApplication.processEvents(QEventLoop.ExcludeUserInputEvents, 1)
-
-			print("   ========\n" * 5)
-
-			errors1Str = SW()
-			errors2Str = SW()
-			allErrorCounts1 = sorted(allErrorCounts1.items(), key=itemgetter(1), reverse=True)
-			allErrorCounts2 = sorted(allErrorCounts2.items(), key=itemgetter(0), reverse=False)
-			formatListLike2(iter(allErrorCounts1), tab=1, localFormatters={}, singleIndent=INDENT, separator=',', newLine='\n', s=errors1Str,
-							parenthesies='{}', formatListItem=formatDictItem)
-			formatListLike2(iter(allErrorCounts2), tab=1, localFormatters={}, singleIndent=INDENT, separator=',', newLine='\n', s=errors2Str,
-							parenthesies='{}', formatListItem=formatDictItem)
-			print(f"Errors1 = {errors1Str}")
-			print(f"Errors2 = {errors2Str}")
-			print(f"Total Errors = {sum(k*v for k, v in allErrorCounts2)}")
 		finally:
 			self.errorCountsUpdateSignal.emit()
-			self.setCursor(Qt.ArrowCursor)
 			gui.redrawGUILater()
+
+
+@dataclass
+class TotalErrorStats:
+	errorCountsByPath: dict[FilePathTpl, int]
+	errorCountHistogram: dict[int, int]
+	total: int = 0
+
+	def add(self, filePath: FilePathTpl, errorsCount: int) -> None:
+		self.errorCountsByPath[filePath] = errorsCount
+		self.errorCountHistogram[errorsCount] += 1
+		self.total += errorsCount
+
+	def finish(self) -> TotalErrorStats:
+		self.errorCountsByPath = dict(sorted(filter(lambda x: x[1] > 0, self.errorCountsByPath.items()), key=itemgetter(1), reverse=True))
+		self.errorCountHistogram = dict(sorted(self.errorCountHistogram.items(), key=itemgetter(0), reverse=False))
+		return self
+
+
+def getErrorStats(errorsByPath: dict[FilePathTpl, Collection[GeneralError]]) -> TotalErrorStats:
+	totalErrorCounts = ErrorCounts()
+	errorStats = TotalErrorStats({}, defaultdict(int))
+
+	for filePath, errors in errorsByPath.items():
+		errorCounts = getErrorCounts(errors)
+		totalErrorCounts += errorCounts
+		errorStats.add(filePath, errorCounts.errors)
+
+	return errorStats.finish()
+
+
+def errorStatsToStr(errorStats: TotalErrorStats) -> str:
+	errors1Str = SW()
+	errors2Str = SW()
+	formatDictOnly(errorStats.errorCountsByPath, tab=1, s=errors1Str)
+	formatDictOnly(errorStats.errorCountHistogram, tab=1, s=errors2Str)
+	result = (
+		f"Errors By Path = {errors1Str}\n"
+		f"Errors Histogram = {errors2Str}\n"
+		f"Errors Total = {errorStats.total}\n"
+	)
+	return result
