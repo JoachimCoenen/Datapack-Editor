@@ -11,11 +11,13 @@
 ### Improvements
  * Improved layout of the Setup Dialog shown when the application is started for the first time.
  * New and improved dialog for opening existing and creating new projects.
+ * Json schemas are now stored as Json files and can be viewed in the editor
 
 ### Fixes
  * Save As now selects correct file extension by default.
  * Saving an untitled file now correctly opens the Save As dialog instead of just saving the file to `untitled n`.
  * fixed potential crashes when loading or saving files, settings, etc.
+
 
 ## Version 0.4.0-alpha
 ### Features
@@ -61,6 +63,7 @@
  * Reverted changes to resource location parsing.
  * Fixed validation of `minecraft:component` command argument returning wrong error type.
 
+
 ## Version 0.2.1-alpha
 ### Fixes
  * Fixed crash in `clickableRangesForFilterArgs(...)` (issue #19).
@@ -68,6 +71,7 @@
 
 ### Improvements
  * Slightly improved suggestions for coordinates
+
 
 ## Version 0.2.0-alpha
 ### Features
