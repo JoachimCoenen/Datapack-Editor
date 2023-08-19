@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from abc import ABC
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -12,8 +11,8 @@ from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from Cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
-from base.model.pathUtils import FilePath, FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
-from base.model.aspect import AspectDict, Aspect
+from base.model.pathUtils import FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
+from base.model.aspect import AspectDict, Aspect, SerializableDataclassWithAspects
 from base.model.utils import Span, GeneralError, MDStr, SemanticsError, splitStringForSearch
 
 
@@ -21,140 +20,7 @@ def _fillProjectAspects(aspectsDict: AspectDict):
 	from base.plugin import PLUGIN_SERVICE
 	for plugin in PLUGIN_SERVICE.activePlugins:
 		for aspectCls in plugin.projectAspects():
-			aspectsDict.add(aspectCls)
-
-
-@dataclass
-class Project(SerializableDataclass, ABC):
-	name: str = 'new Project'
-	path: FilePath = ''  # save path for the project, might also be usd for git, etc.
-	roots: list[ProjectRoot] = field(default_factory=list)
-	deepDependencies: list[Root] = field(default_factory=list, metadata=catMeta(serialize=False))
-	"""all dependencies recursively, excluding all ProjectRoots."""
-	# projectSettings: ProjectSettings
-	aspects: AspectDict[ProjectAspect] = field(default_factory=lambda: AspectDict(ProjectAspect), metadata=catMeta(serialize=False))
-
-	@property
-	def isValid(self) -> bool:
-		return len(self.path) > 0 and os.path.exists(self.path)
-
-	@property
-	def isEmpty(self) -> bool:
-		return not self.roots
-
-	@property
-	def allRoots(self) -> list[Root]:
-		return self.roots + self.deepDependencies
-
-	def resolveDependencies(self):
-		self.deepDependencies = resolveDependencies(self)
-
-	def insertRoot(self, idx: int, root: ProjectRoot):
-		self.roots.insert(idx, root)
-		for aspect in self.aspects:
-			aspect.onRootAdded(root, self)
-		self.analyzeRoot(root)
-
-	def addRoot(self, root: ProjectRoot):
-		self.insertRoot(len(self.roots), root)
-
-	def removeRoot(self, root: ProjectRoot):
-		self.roots.remove(root)
-		for aspect in self.aspects:
-			aspect.onRootRemoved(root, self)
-
-	def analyzeRoots(self):
-		aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
-		for projRoot in self.roots:
-			self.analyzeRoot(projRoot, aspects)
-
-	def analyzeDependencies(self):
-		aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
-		for dependency in self.deepDependencies:
-			self.analyzeRoot(dependency, aspects)
-
-	def analyzeRoot(self, root: Root, aspects: list[ProjectAspect] = ...):
-		if aspects is ...:
-			aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
-		for idxBundle in root.indexBundles:
-			idxBundle.clear()
-		for a in aspects:
-			a.analyzeRoot(root, self)
-
-	def setup(self):
-		""" only call once!"""
-		_fillProjectAspects(self.aspects)
-		roots = self.roots
-		self.roots = []
-		for root in roots:
-			self.addRoot(root)
-		self.resolveDependencies()
-		self.analyzeDependencies()
-
-	def close(self):
-		""" only call once!"""
-		roots = self.roots.copy()
-		for root in roots:
-			self.removeRoot(root)
-
-
-def resolveDependencies(project: Project):
-	aspects = [a for a in project.aspects if a.aspectFeatures.dependencies]
-
-	# just a cache:
-	dependencyDict: dict[str, Optional[Root]] = {}
-	# seenDependencies: set[str] = set()
-	errorsByRoot: dict[str, list[GeneralError]] = defaultdict(list)
-
-	def getDestinations(root: Root) -> list[Root]:
-		dependencies = []
-		for aspect in aspects:
-			aDependencies = aspect.getDependencies(root)
-			root.dependencies = aDependencies
-			for dep in aDependencies:
-				# seenDependencies.add(dep.identifier)
-				# root.dependencies.append(dep)
-				if dep.identifier not in dependencyDict:
-					dep.resolved = aspect.resolveDependency(dep)
-				else:
-					dep.resolved = dependencyDict[dep.identifier]
-				if dep.resolved is not None:
-					dependencyDict[dep.identifier] = dep.resolved
-					dependencies.append(dep.resolved)
-				else:
-					errorsByRoot[root.name].append(
-						SemanticsError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span)
-						if dep.mandatory else
-						SemanticsError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span, style='info')
-					)
-		return dependencies
-
-	projectRoots: list[Root] = project.roots
-	deepDependencies = collectAndSemiTopolSortAllNodes(projectRoots, getDestinations, lambda p: p.name)
-	projectRootNames = {root.name for root in projectRoots}
-	deepDependencies = [dep for dep in deepDependencies if dep.name not in projectRootNames]  # remove project roots.
-
-	if errorsByRoot:
-		for rootName, errors in errorsByRoot.items():
-			logWarning(f"Project '{rootName}':")
-			for error in errors:
-				logWarning(str(error), indentLvl=1)
-
-	return deepDependencies
-
-
-@dataclass(slots=True)
-class DependencyDescr:
-	name: str  # used for displaying
-	identifier: str  # used for unique identification, of the root (i.e. two DependencyDescr objects with the same identifier ALWAYS point o the same Root.
-	mandatory: bool
-	span: Optional[Span] = None
-	resolved: Optional[Root] = None
-
-
-@dataclass
-class IndexBundleAspect(Aspect, IndexBundle, ABC):
-	pass
+			aspectsDict.setdefault(aspectCls)
 
 
 @dataclass(kw_only=True)
@@ -176,7 +42,7 @@ class AspectFeatures:
 
 
 @dataclass
-class ProjectAspect(Aspect, ABC):
+class ProjectAspect(Aspect, SerializableDataclass, ABC):
 	aspectFeatures: ClassVar[AspectFeatures]
 
 	def __init_subclass__(cls, *, features: AspectFeatures = None, **kwargs):
@@ -231,6 +97,162 @@ class ProjectAspect(Aspect, ABC):
 		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeFiles=True)): ...
 		"""
 		pass
+
+
+@dataclass
+class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
+	"""
+	Project is always the child of a Session (Composition).
+	"""
+	name: str = 'new Project'
+	roots: list[ProjectRoot] = field(default_factory=list)
+	deepDependencies: list[Root] = field(default_factory=list, metadata=catMeta(serialize=False))
+	"""all dependencies recursively, excluding all ProjectRoots."""
+	# projectSettings: ProjectSettings
+
+	@property
+	def path(self) -> FilePathStr:
+		# maybe... warn(f"use getSession().projectPath instead", DeprecationWarning, 2)
+		from base.model.session import getSession
+		return getSession().projectPath
+
+	@property
+	def configPath(self) -> FilePathTpl:
+		# maybe... warn(f"use getSession().getProjectConfigPath instead", DeprecationWarning, 2)
+		from base.model.session import getSession
+		return getSession().projectConfigPath
+
+	@property
+	def hasConfigFile(self) -> bool:
+		from base.model.session import getSession
+		return getSession().hasProjectConfigFile
+
+	@property
+	def isOpened(self) -> bool:
+		from base.model.session import getSession
+		return getSession().hasOpenedProject
+
+	@property
+	def isEmpty(self) -> bool:
+		return not self.roots
+
+	@property
+	def allRoots(self) -> list[Root]:
+		return self.roots + self.deepDependencies
+
+	def resolveDependencies(self):
+		self.deepDependencies = resolveDependencies(self)
+
+	def insertRoot(self, idx: int, root: ProjectRoot) -> ProjectRoot:
+		self.roots.insert(idx, root)
+		for aspect in self.aspects:
+			aspect.onRootAdded(root, self)
+		self.analyzeRoot(root)
+		return root
+
+	def addRoot(self, root: ProjectRoot) -> ProjectRoot:
+		return self.insertRoot(len(self.roots), root)
+
+	def removeRoot(self, root: ProjectRoot):
+		self.roots.remove(root)
+		for aspect in self.aspects:
+			aspect.onRootRemoved(root, self)
+
+	def analyzeRoots(self):
+		aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
+		for projRoot in self.roots:
+			self.analyzeRoot(projRoot, aspects)
+
+	def analyzeDependencies(self):
+		aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
+		for dependency in self.deepDependencies:
+			self.analyzeRoot(dependency, aspects)
+
+	def analyzeRoot(self, root: Root, aspects: list[ProjectAspect] = ...):
+		if aspects is ...:
+			aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
+		for idxBundle in root.indexBundles:
+			idxBundle.clear()
+		for a in aspects:
+			a.analyzeRoot(root, self)
+
+	def setup(self):
+		""" only call once!"""
+		_fillProjectAspects(self.aspects)
+		roots = self.roots
+		self.roots = []
+		for root in roots:
+			self.addRoot(root)
+		self.resolveDependencies()
+		self.analyzeDependencies()
+
+	def close(self):
+		""" only call once!"""
+		roots = self.roots.copy()
+		for root in roots:
+			self.removeRoot(root)
+
+
+def resolveDependencies(project: Project):
+	aspects = [a for a in project.aspects if a.aspectFeatures.dependencies]
+
+	# just a cache:
+	dependencyDict: dict[str, Optional[Root]] = {}
+	# seenDependencies: set[str] = set()
+	errorsByRoot: dict[str, list[GeneralError]] = defaultdict(list)
+
+	def getDestinations(root: Root) -> list[Root]:
+		root.dependencies = []
+		dependencyRoots = []
+		seenDependencies = set()
+		for aspect in aspects:
+			aDependencies = aspect.getDependencies(root)
+			for dep in aDependencies:
+				if dep.identifier in seenDependencies:
+					continue
+				seenDependencies.add(dep.identifier)
+				root.dependencies.append(dep)
+				if dep.identifier not in dependencyDict:
+					dep.resolved = aspect.resolveDependency(dep)
+				else:
+					dep.resolved = dependencyDict[dep.identifier]
+				if dep.resolved is not None:
+					dependencyDict[dep.identifier] = dep.resolved
+					dependencyRoots.append(dep.resolved)
+				else:
+					errorsByRoot[root.name].append(
+						SemanticsError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span)
+						if dep.mandatory else
+						SemanticsError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span, style='info')
+					)
+		return dependencyRoots
+
+	projectRoots: list[Root] = project.roots
+	deepDependencies = collectAndSemiTopolSortAllNodes(projectRoots, getDestinations, lambda p: p.name)
+	projectRootNames = {root.name for root in projectRoots}
+	deepDependencies = [dep for dep in deepDependencies if dep.name not in projectRootNames]  # remove project roots.
+
+	if errorsByRoot:
+		for rootName, errors in errorsByRoot.items():
+			logWarning(f"Project '{rootName}':")
+			for error in errors:
+				logWarning(str(error), indentLvl=1)
+
+	return deepDependencies
+
+
+@dataclass(slots=True)
+class DependencyDescr:
+	name: str  # used for displaying
+	identifier: str  # used for unique identification, of the root (i.e. two DependencyDescr objects with the same identifier ALWAYS point o the same Root.
+	mandatory: bool
+	span: Optional[Span] = None
+	resolved: Optional[Root] = None
+
+
+@dataclass
+class IndexBundleAspect(Aspect, IndexBundle, ABC):
+	pass
 
 
 @dataclass

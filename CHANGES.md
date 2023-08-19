@@ -1,5 +1,8 @@
 ## Next Version
 ### Features
+ * Projects:
+   * Multi-root Projects! Projects can have multiple subprojects (called Roots) now.
+   * Project configuration is now stored inside the project folder as `.dpeproj`.
  * Indentation & Whitespace:
    * Added indentation settings for documents.
    * Added whitespace visibility setting.

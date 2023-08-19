@@ -7,12 +7,12 @@ from typing import Callable, ClassVar, Optional, overload
 
 from PyQt5.QtCore import QTimer
 
-from Cat.Serializable.dataclassJson import SerializableDataclass
+from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.utils import format_full_exc, getExePath, openOrCreate, Singleton
 from Cat.utils.logging_ import logError
 from Cat.utils.signals import CatBoundSignal, CatSignal
 from base.model.documents import Document
-from base.model.pathUtils import FilePath
+from base.model.pathUtils import FilePath, FilePathStr, FilePathTpl, unitePathTpl
 from base.model.project.project import Project
 from base.model.documentHandling import DocumentsManager
 from base.model.utils import Span
@@ -22,11 +22,34 @@ from base.model.utils import Span
 class Session(SerializableDataclass):
 	"""docstring for Session"""
 
-	project: Project = field(default_factory=Project)
+	project: Project = field(default_factory=Project, metadata=catMeta(serialize=False))
+	""" This is a Composition (i.e. Session owns the Project and the Project cannot esxist without a Session)."""
+	_projectPath: FilePathStr = field(default="", metadata=catMeta(serializedName='projectPath'))
+
+	@property
+	def projectPath(self) -> FilePathStr:
+		"""
+		is set using: :func:`Session.closeProject()`, :func:`Session.openProject()`
+		:return: the path of the currently opened Project, or an empty str if no project is opened.
+
+		"""
+		return self._projectPath
+
+	@classmethod
+	def getProjectConfigPath(cls, projectPath: FilePathStr) -> FilePathTpl:
+		return projectPath, '.dpeproj'
+
+	@property
+	def projectConfigPath(self) -> FilePathTpl:
+		return self.getProjectConfigPath(self.projectPath)
 
 	@property
 	def hasOpenedProject(self) -> bool:
-		return bool(self.project.isEmpty)
+		return len(self.projectPath) > 0
+
+	@property
+	def hasProjectConfigFile(self) -> bool:
+		return self.hasOpenedProject and os.path.exists(unitePathTpl(self.projectConfigPath))
 
 	documents: DocumentsManager = field(default_factory=DocumentsManager)
 
@@ -63,12 +86,40 @@ class Session(SerializableDataclass):
 	def closeProject(self) -> None:
 		project = self.project
 		project.close()
+		self._projectPath = ''
+		self.project = Project()
 		# resetAllGlobalCaches()
 		gc.collect()
 
-	def openProject(self, newWorldPath: str) -> None:
+	def openProject(self, newProjectPath: FilePathStr) -> Project:
+		if not os.path.isdir(newProjectPath):
+			raise ValueError(f"Not a valid directory: '{newProjectPath}'")
+
 		self.closeProject()
-		self.project.path = newWorldPath
+		self._projectPath = newProjectPath
+		projConfigPath = unitePathTpl(self.projectConfigPath)
+
+		def _logError(ex, s):
+			logError(ex, s)
+			raise ex
+
+		try:
+			with open(projConfigPath, 'r') as inFile:
+				newProject = Project.fromJson(inFile.read(), onError=_logError)
+		except (JSONDecodeError, OSError, AttributeError, TypeError, RuntimeError) as e:
+			self.showAndLogError(e, "Unable to load project")
+			self._projectPath = ''
+			newProject = Project()
+
+		self.project = newProject
+		self.project.setup()
+		return self.project
+
+	def saveProjectToFile(self) -> None:
+		if self.hasProjectConfigFile:
+			projConfigPath = unitePathTpl(self.projectConfigPath)
+			with openOrCreate(projConfigPath, "w") as outFile:
+				self.project.dumpJson(outFile)
 
 	@staticmethod
 	def showAndLogError(e: Exception, title: str = 'Error') -> None:
@@ -91,6 +142,7 @@ class Session(SerializableDataclass):
 		# todo: remove the 'minecraftData' property and build actual version system.
 		from corePlugins.mcFunctionSchemaTEMP.mcVersions import getCurrentMCVersion
 		return getCurrentMCVersion()
+
 
 __session = Session()
 
@@ -119,9 +171,6 @@ def setSession(session: Session):
 	if session is not __session:
 		__session.closeProject()
 		__session = session
-		__session.project.setup()
-		# __session.reset()
-		# __session.copyFrom(session)
 
 
 def getSessionFilePath() -> str:
@@ -142,6 +191,10 @@ def loadSessionFromFile(filePath: str = None) -> None:
 		logError(f'Unable to load session: \n{format_full_exc(e)}')
 	else:
 		setSession(session)
+		if session.projectPath and os.path.isdir(session.projectPath):
+			session.openProject(session.projectPath)
+		else:
+			session.project.setup()
 
 
 def saveSessionToFile(filePath: str = None) -> None:
@@ -150,3 +203,5 @@ def saveSessionToFile(filePath: str = None) -> None:
 	with openOrCreate(filePath, "w") as outFile:
 		getSession().dumpJson(outFile)
 
+	if getSession().projectPath:
+		getSession().saveProjectToFile()

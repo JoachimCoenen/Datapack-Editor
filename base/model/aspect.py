@@ -64,6 +64,9 @@ class AspectDict(Generic[_TAspect]):
 			return aspect
 		return self._set(aspectCls())
 
+	def discard(self, aspectCls: Type[_TAspect2]) -> None:
+		self._aspects.pop(aspectCls.getAspectType(), None)
+
 	def __getitem__(self, aspectCls: Type[_TAspect2]) -> _TAspect2:
 		if (aspect := self._get(aspectCls.getAspectType())) is not None:
 			return aspect

@@ -69,7 +69,8 @@ def splitPath(path: FilePathStr, projPath: str) -> Optional[FilePathTpl]:
 
 
 def unitePathTpl(path: FilePathTpl) -> FilePathStr:
-	return f"{path[0].rstrip('/')}/{path[1].lstrip('/')}"
+	chrs = r'\/'
+	return f"{path[0].rstrip(chrs)}/{path[1].lstrip(chrs)}"
 
 
 def unitePath(path: FilePath) -> FilePathStr:
@@ -378,7 +379,7 @@ def loadTextFile(filePath: FilePath, archiveFilePool: ArchiveFilePool, encoding:
 		with open(filePath, encoding=encoding, errors=errors) as f:  # open file
 			text = f.read()
 	elif os.path.isdir(filePath[0]):
-		with open(f'{filePath[0]}/{filePath[1]}', encoding=encoding, errors=errors) as f:  # open file
+		with open(unitePathTpl(filePath), encoding=encoding, errors=errors) as f:  # open file
 			text = f.read()
 	else:
 		# path contains a .jar file:

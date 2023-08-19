@@ -1,14 +1,15 @@
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Type, cast
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
-from Cat.CatPythonGUI.GUI import SizePolicy, NO_MARGINS
+from Cat.CatPythonGUI.GUI import SizePolicy, NO_MARGINS, MessageBoxStyle
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 from Cat.icons import icons
-from base.model.project.project import Project, ProjectRoot, Root, DependencyDescr
+from base.model.aspect import getAspectsForClass
+from base.model.project.project import Project, ProjectRoot, Root, DependencyDescr, ProjectAspect
 from base.model.session import getSession
 from gui.datapackEditorGUI import DatapackEditorGUI
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
@@ -33,7 +34,6 @@ def _addRoot(gui: DatapackEditorGUI, project: Project):
 		val.name = gui.textField(val.name, 'name')
 		val.path = gui.folderPathField(val.path, 'path')
 		return val
-
 
 	namePath, isOk = gui.askUserInput(
 		f"Add new Root",
@@ -80,15 +80,18 @@ def _refreshRoots(project: Project):
 def projectPanelGUI(gui: DatapackEditorGUI):  # , *, roundedCorners: RoundedCorners, cornerRadius: float):
 	with gui.scrollBox(contentsMargins=(gui.panelMargins, gui.panelMargins, gui.panelMargins, gui.panelMargins), preventVStretch=True):  # , roundedCorners=roundedCorners, cornerRadius=cornerRadius):
 		project = getSession().project
-
-		gui.title("Basics")
-		project.name = gui.textField(project.name, 'name')
-		project.path = gui.folderPathField(project.path, 'path')
-		gui.helpBox("invallid project" if not project.isValid else "", style='error')
-		gui.checkbox(project.isEmpty, 'is empty', enabled=False)
-
-		gui.vSeparator()
+		basicsGUI(gui, project)
 		rootsGUI(gui, project)
+		aspectsGUI(gui, project)
+
+
+def basicsGUI(gui: DatapackEditorGUI, project: Project):
+	gui.title("Basics")
+	with gui.vPanel(seamless=True):
+		project.name = gui.textField(project.name, 'name')
+		gui.folderPathField(project.path, 'path', enabled=False)
+		gui.helpBox("Project missing config file ('.dpeproj')" if not project.hasConfigFile else " ", style='error')
+		gui.checkbox(not project.isEmpty, 'is not empty', enabled=True)
 
 
 def rootsGUI(gui: DatapackEditorGUI, project: Project):
@@ -126,7 +129,7 @@ def rootsGUI(gui: DatapackEditorGUI, project: Project):
 		else:
 			return None
 
-	def toolTipMaker(item: Project | ProjectRoot | DependencyDescr, c: int=0) -> Optional[str]:
+	def toolTipMaker(item: Project | ProjectRoot | DependencyDescr, c: int = 0) -> Optional[str]:
 		if isinstance(item, Project):
 			return project.path
 		elif isinstance(item, Root):
@@ -208,3 +211,50 @@ def rootPanelGUI(gui: DatapackEditorGUI, root: ProjectRoot):
 			gui.addVSpacer(0, sizePolicy=SizePolicy.Expanding)
 			gui.toolButton(icon=icons.remove, tip='remove')
 
+
+def aspectsGUI(gui: DatapackEditorGUI, project: Project):
+	gui.title("Aspects")
+	with gui.vLayout(seamless=True):
+		for aspect in list(project.aspects):
+			aspectPanelGUI(gui, project, aspect)
+		with gui.hPanel(contentsMargins=NO_MARGINS, seamless=True):
+			gui.addHSpacer(0, SizePolicy.Expanding)
+			if gui.toolButton(icon=icons.add, tip='Add'):
+				_addAspectGUI(gui, project)
+
+
+def aspectPanelGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect):
+	with gui.hLayout(seamless=True):
+		with gui.hPanel(seamless=True, preventVStretch=False):
+			gui.label(aspect.getAspectType())
+			gui.addHSpacer(0, SizePolicy.Expanding)
+			if gui.toolButton(icon=icons.remove, tip='remove'):
+				_removeAspectGUI(gui, project, aspect)
+
+
+def _removeAspectGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect):
+	if gui.askUser(f"Do you really want to remove the Aspect '{aspect.getAspectType()}'?", "", style=MessageBoxStyle.Warning):
+		project.aspects.discard(type(aspect))
+
+
+def _addAspectGUI(gui: DatapackEditorGUI, project: Project):
+
+	allAspectClss: list[Type[ProjectAspect]] = cast(list[Type[ProjectAspect]], list(getAspectsForClass(type(project)).values()))
+	allAspectClss = [aspectCls for aspectCls in allAspectClss if aspectCls not in project.aspects]
+
+	aspectCls = gui.searchableChoicePopup(
+		cast(Type[ProjectAspect], None),
+		'Aspects',
+		allAspectClss,
+		getSearchStr=lambda x: x.getAspectType(),
+		labelMaker=lambda x, i: x.getAspectType(),
+		iconMaker=lambda x, i: None,
+		toolTipMaker=lambda x, i: x.getAspectType(),
+		columnCount=1,
+		onContextMenu=None,
+		reevaluateAllChoices=True,
+		# width=width,
+		# height=height,
+	)
+	if aspectCls is not None:
+		project.aspects.add(aspectCls)

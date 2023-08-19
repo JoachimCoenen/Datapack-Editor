@@ -29,17 +29,17 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 
 	def getDependencies(self, root: Root) -> list[DependencyDescr]:
 		fileName = 'dependencies.json'
-		projectPath = root.normalizedLocation
+		rootPath = root.normalizedLocation
 		schema = GLOBAL_SCHEMA_STORE.get('dpe:dependencies', JSON_ID)
 
-		if projectPath.lower().endswith('.jar'):
+		if rootPath.lower().endswith('.jar'):
 			# Minecraft does not need itself as a dependency.
 			return []
 
 		# dependencies = [Dependency(applicationSettings.minecraft.executable, mandatory=True)]
 		dependencies: list[DependencyDescr] = []  # TODO: DependencyDescr(applicationSettings.minecraft.executable, 'minecraft', mandatory=True)]
 
-		filePath = (projectPath, fileName)
+		filePath = (rootPath, fileName)
 		node: Optional[JsonData]
 		try:
 			with ZipFilePool() as pool:
@@ -62,7 +62,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 					span=name.span
 				))
 		if errors:
-			logWarning(f"Failed to read '{fileName}' for project '{projectPath}':")
+			logWarning(f"Failed to read '{fileName}' for root '{rootPath}':")
 			for error in errors:
 				logWarning(str(error), indentLvl=1)
 
@@ -73,7 +73,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 
 	def analyzeFile(self, root: Root, fileEntry: FileEntry) -> None:
 		from corePlugins.datapack.datapackContentsContents import DATAPACK_CONTENTS_STRUCTURE
-		handlers = DATAPACK_CONTENTS_STRUCTURE  # TODO: usedatapack version to get correct contents structure.
+		handlers = DATAPACK_CONTENTS_STRUCTURE  # TODO: use datapack version to get correct contents structure.
 		collectEntry(fileEntry.fullPath, handlers, root)
 
 		# pattern = folderPatternFromPath(f'data/{NAME_SPACE_VAR}/functions/')
@@ -162,16 +162,6 @@ def resolveDependency(dep: DependencyDescr) -> Optional[Root]:
 ALL_DP_VERSIONS: dict[str, int] = {}
 
 
-def folderPathValidator(path: str) -> Optional[ValidatorResult]:
-	if not os.path.lexists(path):
-		return ValidatorResult('Folder not found', 'error')
-
-	if not os.path.isdir(path):
-		return ValidatorResult('Not a directory', 'error')
-
-	return None
-
-
 @dataclass()
 class DatapackSettings(SettingsAspect):
 	@classmethod
@@ -197,7 +187,7 @@ class DatapackSettings(SettingsAspect):
 			),
 			decorators=[
 				pd.FolderPath(),
-				pd.Validator(folderPathValidator)
+				pd.Validator(pd.folderPathValidator)
 			]
 		)
 	)

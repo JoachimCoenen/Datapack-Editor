@@ -19,7 +19,7 @@ from base.model.parsing.contextProvider import ContextProvider, registerContextP
 from base.model.parsing.parser import ParserBase, registerParser
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Node, Schema
-from base.model.project.project import ProjectAspect
+from base.model.project.project import ProjectAspect, Project
 from base.model.utils import LanguageId
 
 if TYPE_CHECKING:
@@ -65,6 +65,9 @@ class PluginService:
 		for languageId, mappings in schemaMappings.items():
 			for mapping in mappings:
 				addSchemaMapping(languageId, mapping)
+
+		for aspectCls in (plugin.projectAspects() or []):
+			registerAspectForType(Project, aspectCls, forceOverride=False)
 
 		application_settings = getApplicationSettings()
 		for aspectCls in (plugin.settingsAspects() or []):
