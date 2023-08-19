@@ -515,16 +515,17 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 		:type event:
 			:class:`DirMovedEvent` or :class:`FileMovedEvent`
 		"""
+		dest_path = normalizeDirSeparatorsStr(event.dest_path)
 		if event.is_directory:
 			index = self._root.indexBundles.setdefault(FilesIndex).folders
 			index.discardSource(event.split_src_path)
-			if (jf := splitPath(event.dest_path, self._root.normalizedLocation)) is not None:
+			if (jf := splitPath(dest_path, self._root.normalizedLocation)) is not None:
 				index.add(jf[1], jf, makeFileEntry(jf, self._root, False))
 			# TODO: analyze Files for DirMovedEvent
 		else:
 			for index in self._root.indexBundles:
 				index.discardSource(event.split_src_path)
-			if (jf := splitPath(event.dest_path, self._root.normalizedLocation)) is not None:
+			if (jf := splitPath(dest_path, self._root.normalizedLocation)) is not None:
 				index = self._root.indexBundles.setdefault(FilesIndex).files
 				fileEntry = makeFileEntry(jf, self._root, True)
 				index.add(jf[1], jf, fileEntry)
