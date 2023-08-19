@@ -14,9 +14,6 @@ from corePlugins.mcFunctionSchemaTEMP.mcVersions import ALL_MC_VERSIONS, getMCVe
 MINECRAFT_ASPECT_TYPE = AspectType('dpe:minecraft')
 
 
-ALL_DP_VERSIONS: dict[str, int] = {}
-
-
 def jarPathValidator(path: str) -> Optional[ValidatorResult]:
 	if not os.path.lexists(path):
 		return ValidatorResult('File not found', 'error')

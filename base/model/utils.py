@@ -112,8 +112,8 @@ class Span:  # (dataobject, fast_new=True):
 	def __init__(self, start: Position = None, end: Position = None):
 		self.start = NULL_POSITION if start is None else start
 		self.end = self.start if end is None else end
-		assert isinstance(self.start, Position)
-		assert isinstance(self.end, Position)
+		# assert isinstance(self.start, Position)
+		# assert isinstance(self.end, Position)
 
 	@property
 	def slice(self) -> builtins.slice:

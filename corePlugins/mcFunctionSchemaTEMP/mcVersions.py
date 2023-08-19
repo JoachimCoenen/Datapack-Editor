@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import abstractmethod, ABC
+from abc import ABC
 from copy import copy
 from dataclasses import dataclass, Field, fields, is_dataclass
 from typing import Optional

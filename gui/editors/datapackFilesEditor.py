@@ -11,6 +11,9 @@ from base.model.pathUtils import FilePath
 from sessionOld.session import getSession, Session
 
 
+do not use!
+
+
 class DatapackFilesEditor(EditorBase[Session]):
 
 	def _openFunc(self, filePath: FilePath, selectedSpan: Optional[Span] = None):

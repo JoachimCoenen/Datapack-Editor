@@ -17,6 +17,8 @@ from base.model.documents import RegisterDocument, TextDocument
 from sessionOld.session import getSession
 
 
+do not use!
+
 def initPlugin():
 	pass
 
