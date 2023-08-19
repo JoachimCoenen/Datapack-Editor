@@ -145,7 +145,7 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 		jsonData = (
 			'[\n'  # just some example data
 			'\t{"name": "DatapackUtilities_v3.4.1", "mandatory": False},\n'
-			'\t{"name": "another-depenency", "mandatory": False}\n'
+			'\t{"name": "another-dependency", "mandatory": False}\n'
 			']'
 		)
 
