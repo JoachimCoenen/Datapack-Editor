@@ -26,7 +26,7 @@ from base.model.parsing.tree import Node, Schema
 from base.model.pathUtils import fileNameFromFilePath, FilePath, ZipFilePool, loadTextFile, ArchiveFilePool, unitePath, toDisplayPath, unitePathTpl
 from base.model.utils import GeneralError, Position, WrappedError, LanguageId
 
-TTarget = TypeVar("TTarget")
+_TTarget = TypeVar("_TTarget")
 
 
 @dataclass
@@ -294,7 +294,6 @@ class Document(SerializableDataclass):
 	def __post_init__(self):
 		self._initUndoRedoStack(undoRedo.makesSnapshotMementoIfDiff)
 		self.undoRedoStack: Optional[UndoRedoStack2] = None  # must be set with _initUndoRedoStack(...) in constructor of subclasses
-		self.inUndoRedoMode: bool = False
 		self._resetDocumentChanged()
 
 	_filePath: FilePath = field(default='')
@@ -366,12 +365,12 @@ class Document(SerializableDataclass):
 
 	schemaId: Optional[str] = field(default=None)
 
-	def _initUndoRedoStack(self, makeMementoIfDiff: MakeMementoIfDiffFunc[TTarget]):
+	def _initUndoRedoStack(self, makeMementoIfDiff: MakeMementoIfDiffFunc[_TTarget]):
 		self.undoRedoStack = UndoRedoStack2(self, 'content', makeMementoIfDiff)
 
 	encoding: str = field(default='utf-8')
 	_undoRedoStackInitialized: bool = field(default=False, metadata=catMeta(serialize=False))
-	_content: TTarget = field(default=None, metadata=catMeta(decorators=[pd.NoUI()]))
+	_content: _TTarget = field(default=None, metadata=catMeta(decorators=[pd.NoUI()]))
 
 	@property
 	def content(self) -> bytes:
@@ -382,7 +381,7 @@ class Document(SerializableDataclass):
 		self.contentOnSet(newVal, self._content)
 		self._content = newVal
 
-	_originalContent: Optional[TTarget] = field(default=None, metadata=catMeta(decorators=[pd.NoUI()]))
+	_originalContent: Optional[_TTarget] = field(default=None, metadata=catMeta(decorators=[pd.NoUI()]))
 
 	tree: Optional[Node] = field(default=None, repr=False, metadata=catMeta(serialize=False))
 
@@ -400,7 +399,7 @@ class Document(SerializableDataclass):
 
 		self._setDocumentChanged()
 
-		if self.inUndoRedoMode:
+		if self.undoRedoStack.isUndoingOrRedoing:
 			self._asyncTakeSnapshot.cancelPending()
 			return
 
@@ -487,7 +486,7 @@ class Document(SerializableDataclass):
 
 	__MISSING = object()
 
-	def _resetDocumentChanged(self, content: TTarget = __MISSING):
+	def _resetDocumentChanged(self, content: _TTarget = __MISSING):
 		if content is Document.__MISSING:
 			content = self.content
 		self._originalContent = content
