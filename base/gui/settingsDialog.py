@@ -6,14 +6,19 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.CatPythonGUI.AutoGUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
+from Cat.CatPythonGUI.GUI import CORNERS
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
 from Cat.Serializable.dataclassJson import SerializableDataclass, getDecorators, getKWArg
-from base.model.applicationSettings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings
+from Cat.icons import icons
+from Cat.utils import showInFileSystem
+from base.model.applicationSettings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings, ColorSchemePD
 from base.model.applicationSettings import AboutQt
+from gui.themes import theme
 
 _qtIcon: Optional[QIcon] = None
 
@@ -30,6 +35,27 @@ def aboutQt(gui: AutoGUI, v: AboutQt, **kwargs) -> AboutQt:
 			QApplication.aboutQt()
 	return v
 
+
+@registerDecoratorDrawer(ColorSchemePD)
+def drawColorSchemePD(gui_: AutoGUI, value_: str, type_, decorator_: ColorSchemePD, drawProperty_: InnerDrawPropertyFunc[str], owner_: SerializableDataclass, **kwargs) -> str:
+	choices = [cs.name for cs in theme.getAllColorSchemes()]
+
+	with gui_.hLayout(
+		horizontalSpacing=0,
+		label=kwargs.pop('label', None),
+		fullSize=kwargs.pop('fullSize', False),
+		enabled=kwargs.get('enabled', True),
+		tip=kwargs.get('tip', ''),
+		seamless=True,
+		roundedCorners=CORNERS.RIGHT
+	):
+		result = gui_.comboBox(value_, choices=choices, **kwargs)
+		if gui_.button(icon=icons.refresh, tip="reload color schemes"):
+			theme.reloadAllColorSchemes()
+		if gui_.button(icon=icons.folder_open, tip="open color schemes folder"):
+			showInFileSystem(theme.getColorSchemesDir())
+
+	return result
 
 class _Field(NamedTuple):
 	value: SerializableDataclass

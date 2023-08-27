@@ -20,12 +20,11 @@ from Cat.utils import getExePath
 from Cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory
 
+from base.model.aspect import AspectDict, Aspect, AspectType, SerializableDataclassWithAspects, getAspectsForClass
+from gui.themes import theme
+
 
 QFont.__deepcopy__ = lambda x, m: QFont(x)
-
-# from model.data.mcVersions import ALL_MC_VERSIONS
-# from model.data.dpVersion import ALL_DP_VERSIONS
-from base.model.aspect import AspectDict, Aspect, AspectType, SerializableDataclassWithAspects, getAspectsForClass
 
 
 class ColorSchemePD(pd.PropertyDecorator):
@@ -126,7 +125,6 @@ def _getColorScheme(self) -> str:
 
 
 def _setColorScheme(self, newVal: str) -> None:
-	from gui.themes import theme
 	if applicationSettings is not None and applicationSettings.appearance is self:
 		oldVal = getattr(self, '_colorScheme', None)
 		if newVal != oldVal:
@@ -135,46 +133,6 @@ def _setColorScheme(self, newVal: str) -> None:
 
 
 AppearanceSettings.colorScheme = property(_getColorScheme, _setColorScheme)
-
-
-# @RegisterContainer
-# class MinecraftSettings(SerializableContainer):
-# 	__slots__ = ()
-# 	version: str = Serialized(
-# 		label='Minecraft Version',
-# 		default='1.17',
-# 		decorators=[
-# 			pd.ComboBox(choices=ALL_MC_VERSIONS.keys()),
-# 		],
-# 		shouldSerialize=True
-# 	)
-# 	dpVersion: str = Serialized(
-# 		label='Datapack Version',
-# 		default='6',
-# 		decorators=[
-# 			pd.ComboBox(choices=ALL_DP_VERSIONS.keys()),
-# 		],
-# 		shouldSerialize=True
-# 	)
-#
-# 	executable: str = Serialized(
-# 		label='Minecraft Executable',
-# 		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/versions/1.17.1/1.17.1.jar').replace('\\', '/'),
-# 		decorators=[
-# 			pd.FilePath([('jar', '.jar')]),
-# 			pd.Validator(minecraftJarValidator)
-# 		]
-# 	)
-#
-# 	savesLocation: str = Serialized(
-# 		label="Datapack Dependencies Location",
-# 		tip="DPE will search in this directory to resolve dependencies",
-# 		default_factory=lambda: os.path.expanduser('~/.dpe/dependencies').replace('\\', '/'),
-# 		decorators=[
-# 			pd.FolderPath(),
-# 			pd.Validator(folderPathValidator)
-# 		]
-# 	)
 
 
 @dataclass()
