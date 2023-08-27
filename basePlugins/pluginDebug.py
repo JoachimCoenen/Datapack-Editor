@@ -20,6 +20,13 @@ def initPlugin():
 
 
 class PluginDebugPlugin(PluginBase):
+
+	def dependencies(self) -> set[str]:
+		return set()
+
+	def optionalDependencies(self) -> set[str]:
+		return {'ProjectFiles'}  # ordering of gui elements
+
 	def sideBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
 		return [(TabOptions('Index Bundles', icon=icons.folder_open), indexBundlesGUI, None)]
 

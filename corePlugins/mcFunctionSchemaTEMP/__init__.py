@@ -23,6 +23,9 @@ class McFunctionSchemasTEMPPlugin(PluginBase):
 		from .argumentContextsImpl import initPlugin as initArgumentContexts
 		initArgumentContexts()
 
+	def dependencies(self) -> set[str]:
+		return {'McFunctionPlugin', 'MinecraftPlugin', 'NbtPlugin'}
+
 	def settingsAspects(self) -> list[Type[SettingsAspect]]:
 		from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettings
 		return [MinecraftSettings]

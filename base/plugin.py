@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from abc import ABC
+import os
+from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Protocol, Iterable, TYPE_CHECKING, Optional, Type
 
@@ -8,8 +10,10 @@ from PyQt5.Qsci import QsciLexerCustom
 
 from Cat.CatPythonGUI.GUI.codeEditor import CodeEditorLexer
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
+from Cat.utils import getExePath
 from Cat.utils.collections_ import AddToDictDecorator
-from Cat.utils.logging_ import logError, logWarning
+from Cat.utils.graphs import getCycles, semiTopologicalSort2
+from Cat.utils.logging_ import logError, logWarning, logInfo, logFatal
 from base.gui.styler import registerStyler, CatStyler
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings, ApplicationSettings
 from base.model.aspect import registerAspectForType
@@ -19,9 +23,11 @@ from base.model.parsing.contextProvider import ContextProvider, registerContextP
 from base.model.parsing.parser import ParserBase, registerParser
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Node, Schema
+from base.model.pathUtils import FilePathStr
 from base.model.project.project import ProjectAspect, Project
 from base.model.project.projectCreator import ProjectCreator
 from base.model.utils import LanguageId
+from base.modules import loadAllModules
 
 if TYPE_CHECKING:
 	from gui.datapackEditorGUI import DatapackEditorGUI
@@ -37,7 +43,66 @@ class PluginService:
 
 	def registerPlugin(self, name: str, plugin: PluginBase):
 		AddToDictDecorator(self.plugins)(name)(plugin)
+		plugin._name = name
 
+	def initAllPlugins(self):
+		pluginByName = self.plugins
+
+		# dependenciesByPlugin = {plugin.name: list(filter(None, (pluginByName.get(dep) for dep in plugin.dependencies()))) for plugin in self.plugins.values()}
+		dependenciesDict: defaultdict[str, list[str]] = defaultdict(list)
+		unknownDependenciesDict: defaultdict[str, list[str]] = defaultdict(list)
+		unknownOptionalDependenciesDict: defaultdict[str, list[str]] = defaultdict(list)
+
+		for plugin in self.plugins.values():
+			for dep in plugin.dependencies():
+				depsDict = unknownDependenciesDict if dep not in pluginByName else dependenciesDict
+				depsDict[plugin.name].append(dep)
+			for dep in plugin.optionalDependencies():
+				depsDict = unknownOptionalDependenciesDict if dep not in pluginByName else dependenciesDict
+				depsDict[plugin.name].append(dep)
+
+		if unknownDependenciesDict:
+			msg = f"There are missing mandatory dependencies for plugins. Aborting!"
+			msg2 = '\n'.join(f"{plugin}: {', '.join(dependencies)}" for plugin, dependencies in unknownDependenciesDict.items())
+			logFatal(msg)
+			logFatal(msg2, indentLvl=1)
+			exit(f"There are missing mandatory dependencies for plugins. See 'logfile.log'. Aborting!")  # a bit harsh, I know...
+		del unknownDependenciesDict
+
+		if unknownOptionalDependenciesDict:
+			msg = f"There are missing optional dependencies for plugins. They dependencies will be ignored:"
+			msg2 = '\n'.join(f"{plugin}: {', '.join(dependencies)}" for plugin, dependencies in unknownOptionalDependenciesDict.items())
+			logInfo(msg)
+			logInfo(msg2, indentLvl=1)
+		del unknownOptionalDependenciesDict
+
+		# check for cycles:
+		emptyList = []
+		cycles = getCycles(pluginByName.keys(), lambda p: dependenciesDict.get(p, emptyList), lambda p: p)
+		if cycles:
+			msg = f"There are dependency cycle(s) between plugins. Aborting!"
+			msg2 = '\n'.join(
+				f"  - " + _formatPluginsOrder(cycle + [cycle[0]])
+				for cycle in cycles
+			)
+			logFatal(msg, )
+			logFatal(msg2, indentLvl=1)
+			exit(f"There are dependency cycles between plugins. See 'logfile.log'. Aborting!")  # a bit harsh, I know...
+
+		# sort topologically:
+		allPluginsSorted = semiTopologicalSort2(pluginByName.keys(), lambda p: dependenciesDict.get(p, emptyList), lambda x: x, reverse=True)
+		pluginOrderStr = _formatPluginsOrder(allPluginsSorted)
+		logInfo("Initializing plugins in the following order:", pluginOrderStr)
+
+		# initialize plugins
+		self.plugins = {}
+		for pluginName in allPluginsSorted:
+			plugin = pluginByName.get(pluginName)
+			self.plugins[pluginName] = plugin
+			self._initPlugin(plugin)
+
+	@staticmethod
+	def _initPlugin(plugin: PluginBase):
 		for languageId, parserCls in (plugin.parsers() or {}).items():
 			registerParser(languageId)(parserCls)
 
@@ -80,19 +145,12 @@ class PluginService:
 				del application_settings.unknownAspects[aspect_type]
 				application_settings.loadAspectData(aspect_type, aspectJson, logError)
 
-	# TODO: def initializeAllPlugins(self) -> None:
-	# 	for plugin in self.activePlugins:
-	# 		plugin.initPlugin()
-
 
 PLUGIN_SERVICE = PluginService({})
 
 
-# @dataclass
-# class FileChanges:
-# 	newFiles: list[FilePath]
-# 	changedFiles: list[FilePath]
-# 	deletedFiles: list[FilePath]
+def _formatPluginsOrder(plugins: list[str]) -> str:
+	return ' -> '.join(plugins)
 
 
 class SideBarTabGUIFunc(Protocol):
@@ -106,8 +164,23 @@ class ToolBtnFunc(Protocol):
 
 
 class PluginBase(ABC):
+
+	def __init__(self):
+		self._name: str = ""  # will be set when registering.
+
+	@property
+	def name(self) -> str:
+		return self._name
+
 	def initPlugin(self) -> None:
 		pass
+
+	@abstractmethod
+	def dependencies(self) -> set[str]:
+		return set()
+
+	def optionalDependencies(self) -> set[str]:
+		return set()
 
 	def sideBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
 		return []
@@ -145,50 +218,29 @@ class PluginBase(ABC):
 	def projectCreators(self) -> list[Type[ProjectCreator]]:
 		return []
 
-# class DatapackAspect(ProjectAspect):
-# 	@classmethod
-# 	def getAspectType(cls) -> AspectType:
-# 		return DATAPACK_ASPECT_TYPE
-#
-# 	@property
-# 	def dependencies(self) -> list[Dependency]:
-# 		fileName = 'dependencies.json'
-# 		projectPath = self.parent.path
-# 		schema = GLOBAL_SCHEMA_STORE.get('dpe:dependencies')
-#
-# 		if projectPath == applicationSettings.minecraft.executable:
-# 			# Minecraft does not need to itself as a dependency.
-# 			return []
-#
-# 		dependencies = [Dependency(applicationSettings.minecraft.executable, mandatory=True)]
-# 		filePath = (projectPath, fileName)
-# 		try:
-# 			with ZipFilePool() as pool:
-# 				file = loadBinaryFile(filePath, pool)
-# 		except (OSError, KeyError) as e:
-# 			node, errors = None, [GeneralError(MDStr(f"{type(e).__name__}: {str(e)}"))]
-# 		else:
-# 			node, errors = parseNPrepare(file, filePath=filePath, language=LANGUAGES.JSON, schema=schema, allowMultilineStr=False)
-#
-# 		if node is not None:
-# 			validateTree(node, file, errors)
-#
-# 		if node is not None and not errors:
-# 			for element in node.data:
-# 				dependencies.append(Dependency(
-# 					element.data['name'].value.data,
-# 					element.data['mandatory'].value.data,
-# 					element.data['name'].value.span
-# 				))
-# 		if errors:
-# 			logWarning(f"Failed to read '{fileName}' for project '{projectPath}':")
-# 			for error in errors:
-# 				logWarning(error, indentLvl=1)
-#
-# 		return dependencies
-#
-# 	def analyzeProject(self) -> None:
-# 		from sessionOld.session import getSession
-# 		allEntryHandlers = getSession().datapackData.structure
-# 		collectAllEntries(self.parent.files, allEntryHandlers, self.parent)
-#
+
+def getPluginsDir() -> FilePathStr:
+	pluginsDir = os.path.dirname(os.path.abspath(getExePath()))
+	pluginsDir = os.path.join(pluginsDir, 'plugins')
+	return pluginsDir
+
+
+def getBasePluginsDir() -> FilePathStr:
+	pluginsDir = os.path.dirname(os.path.abspath(getExePath()))
+	pluginsDir = os.path.dirname(os.path.dirname(__file__))
+	pluginsDir = os.path.join(pluginsDir, 'basePlugins')
+	return pluginsDir
+
+
+def getCorePluginsDir() -> FilePathStr:
+	pluginsDir = os.path.dirname(os.path.abspath(getExePath()))
+	pluginsDir = os.path.dirname(os.path.dirname(__file__))
+	pluginsDir = os.path.join(pluginsDir, 'corePlugins')
+	return pluginsDir
+
+
+def loadAllPlugins(pluginsDir: FilePathStr) -> None:
+	# all single-file plugins
+	loadAllModules('plugins', pluginsDir, '/', r'(?!__)[\w_]+\.py', initMethodName='initPlugin')
+	# all multi-file plugins (plugins inside a package
+	loadAllModules('plugins', pluginsDir, '/*', r'__init__\.py', initMethodName='initPlugin')

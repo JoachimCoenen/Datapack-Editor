@@ -20,6 +20,10 @@ def initPlugin():
 
 
 class ProjectPagePlugin(PluginBase):
+
+	def dependencies(self) -> set[str]:
+		return set()
+
 	def sideBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
 		return [(TabOptions('Project', icon=icons.project), projectPanelGUI, None)]
 

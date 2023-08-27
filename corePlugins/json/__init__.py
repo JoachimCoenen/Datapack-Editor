@@ -26,6 +26,9 @@ class JsonPlugin(PluginBase):
 		from corePlugins.json.argTypes import init  # load standard argument types
 		init()
 
+	def dependencies(self) -> set[str]:
+		return set()
+
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from corePlugins.json.parser import JsonParser
 		return {

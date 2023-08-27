@@ -8,7 +8,6 @@ import numpy as np
 from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from gui.themes.theme import addColorScheme, ColorScheme, Style, StylesModifier, updateGlobalStylesToMatchUIColors, GlobalStyles
 
-enabled = True
 
 _DO_PRINT = False
 

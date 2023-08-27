@@ -22,6 +22,9 @@ class DatapackPlugin(PluginBase):
 	def initPlugin(self):
 		from . import resourceLocationContext  # loads all resource location contexts
 
+	def dependencies(self) -> set[str]:
+		return {'JsonPlugin', 'McFunctionPlugin', 'MinecraftPlugin'}
+
 	def projectAspects(self) -> list[Type[ProjectAspect]]:
 		from corePlugins.datapack.aspect import DatapackAspect
 		return [DatapackAspect]

@@ -32,6 +32,13 @@ def initPlugin():
 
 
 class ProjectFilesPlugin(PluginBase):
+
+	def dependencies(self) -> set[str]:
+		return set()
+
+	def optionalDependencies(self) -> set[str]:
+		return {'ProjectPage'}  # ordering of gui elements
+
 	def sideBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
 		return [(TabOptions('Files', icon=icons.folder_open), projectFilesGUI, None)]
 

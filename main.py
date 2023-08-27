@@ -12,8 +12,10 @@ from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFram
 from Cat.icons import icons
 from Cat.utils import getExePath, logging_
 from Cat.utils.formatters import FW
+from Cat.utils.logging_ import loggingIndentInfo
 from base.model import filesystemEvents
 from base.model.session import loadSessionFromFile
+from base.plugin import PLUGIN_SERVICE, loadAllPlugins, getBasePluginsDir, getCorePluginsDir, getPluginsDir
 from mainWindow import MainWindow, WindowId
 from Cat.utils.profiling import Timer
 from base.model.applicationSettings import applicationSettings, saveApplicationSettings, loadApplicationSettings, resetApplicationSettings
@@ -116,30 +118,42 @@ def showSetupDialogIfNecessary():
 		saveApplicationSettings()
 
 
-def loadBasePlugins():
-	from basePlugins import projectPage, projectFiles, pluginDebug
+# def loadBasePlugins():
+# 	from basePlugins import projectPage, projectFiles, pluginDebug
+#
+# 	projectPage.initPlugin()
+# 	projectFiles.initPlugin()
+# 	pluginDebug.initPlugin()
 
-	projectPage.initPlugin()
-	projectFiles.initPlugin()
-	pluginDebug.initPlugin()
+
+# def loadCorePlugins():
+# 	from corePlugins import json
+# 	from corePlugins import nbt
+# 	from corePlugins import minecraft
+# 	from corePlugins import mcFunction
+# 	from corePlugins import mcFunctionSchemaTEMP
+# 	from corePlugins import datapack
+# 	from corePlugins import datapackSchemas
+#
+# 	json.initPlugin()
+# 	nbt.initPlugin()
+# 	minecraft.initPlugin()
+# 	mcFunction.initPlugin()
+# 	mcFunctionSchemaTEMP.initPlugin()
+# 	datapack.initPlugin()
+# 	datapackSchemas.initPlugin()
 
 
-def loadCorePlugins():
-	from corePlugins import json
-	from corePlugins import nbt
-	from corePlugins import minecraft
-	from corePlugins import mcFunction
-	from corePlugins import mcFunctionSchemaTEMP
-	from corePlugins import datapack
-	from corePlugins import datapackSchemas
+def loadActualBasePlugins():
+	loadAllPlugins(getBasePluginsDir())
 
-	json.initPlugin()
-	nbt.initPlugin()
-	minecraft.initPlugin()
-	mcFunction.initPlugin()
-	mcFunctionSchemaTEMP.initPlugin()
-	datapack.initPlugin()
-	datapackSchemas.initPlugin()
+
+def loadActualCorePlugins():
+	loadAllPlugins(getCorePluginsDir())
+
+
+def loadActualPlugins():
+	loadAllPlugins(getPluginsDir())
 
 
 def loadPlugins():
@@ -185,14 +199,17 @@ def start(argv):
 		applyStyle(app, Style({'QWidget': getStyles().hostWidgetStyle}))  # + styles.layoutingBorder))
 		catWidgetMixins.setGUIColors(catWidgetMixins.standardBaseColors)
 
-		import gui.themes.schemesUI  # DO NOT REMOVE!
+		with loggingIndentInfo("Collecting & Loading all plugins..."):
+			loadActualBasePlugins()
+			loadActualCorePlugins()
+			loadActualPlugins()
 
-		loadBasePlugins()
-		loadCorePlugins()
-		#
-		loadSessionFromFile()
+		with loggingIndentInfo("Initializing all plugins..."):
+			PLUGIN_SERVICE.initAllPlugins()
+
+		with loggingIndentInfo("Loading Session..."):
+			loadSessionFromFile()
 		showSetupDialogIfNecessary()
-		# loadPlugins()
 
 		window = MainWindow(WindowId('0'))
 		window.show()

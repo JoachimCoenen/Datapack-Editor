@@ -1,25 +1,22 @@
 from __future__ import annotations
 
-import importlib
-import importlib.util
 import os
 import shutil
-import sys
 import warnings
 from dataclasses import dataclass, field, fields, Field, is_dataclass, replace
 from operator import attrgetter
-from types import ModuleType
 from typing import TypeVar, Generic, Union, Optional, Iterable
 
 from PyQt5.QtGui import QFont, QColor
 
 from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from Cat.extensions import processRecursively
-from Cat.utils import getExePath, openOrCreate, format_full_exc
+from Cat.utils import getExePath
 from Cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
-from Cat.utils.logging_ import logDebug, logWarning, logInfo, logError
+from Cat.utils.logging_ import logDebug, logWarning, logError
 from Cat.utils.profiling import TimedFunction
-from base.model.utils import LanguageId, Message
+from base.model.utils import LanguageId
+from base.modules import loadAllModules
 
 _TT = TypeVar('_TT')
 
@@ -376,15 +373,6 @@ def getColorSchemesDir() -> str:
 	return colorSchemesDir
 
 
-def _ensureColorSchemesModule(csDir: str) -> None:
-	initPath = os.path.join(csDir, '__init__.py')
-	try:
-		with openOrCreate(initPath, 'w'):
-			pass
-	except OSError as e:
-		logError(e, f"Failed to open or create colorScheme module. path: '{initPath}'")
-
-
 def _copyDefaultColorSchemes(csDir: str) -> None:
 	defaultSchemesDir = os.path.join(os.path.dirname(__file__), "colorSchemes/")
 	logDebug(f"defaultSchemesDir = {defaultSchemesDir}")
@@ -401,83 +389,21 @@ def _copyDefaultColorSchemes(csDir: str) -> None:
 			logError(e, f"Failed to copy default color scheme from '{srcPath}' to '{dstPath}'")
 
 
-def _allColorSchemeModules() -> list[tuple[str, str]]:
-	csDir = getColorSchemesDir()
-	logInfo(f"ColorSchemesDir = {csDir}")
-
-	_ensureColorSchemesModule(csDir)
-	_copyDefaultColorSchemes(csDir)
-
-	allModulePaths: list[str] = []
-	processRecursively(csDir, '/**', allModulePaths.append)
-
-	allModuleNames = [(mp.removeprefix(csDir).removesuffix('.py'), mp) for mp in allModulePaths if mp.endswith('.py')]
-	allModuleNames = [('colorSchemes' + '.'.join(mn.split('/')), mp) for mn, mp in allModuleNames if mn.rpartition('/')[2].startswith("scheme_")]
-	return allModuleNames
-
-
-def _importModuleFromFile(moduleName: str, path: str):
-	spec = importlib.util.spec_from_file_location(moduleName, path)
-	foo = importlib.util.module_from_spec(spec)
-	sys.modules[moduleName] = foo
-	spec.loader.exec_module(foo)
-	return foo
-
-
-_CANNOT_LOAD_MSG = Message("Color scheme module '{0}' cannot be loaded, because {1}", 2)
-
-
-def _loadColorSchemeModules(names: list[tuple[str, str]]) -> dict[str, ModuleType]:
-	_importModuleFromFile('colorSchemes', os.path.join(getColorSchemesDir(), '__init__.py'))
-	colorSchemeModules: dict[str, ModuleType] = {}
-	for moduleName, modPath in names:
-		try:
-			thisMod = _importModuleFromFile(moduleName, modPath)
-		except Exception as ex:
-			logError(
-				_CANNOT_LOAD_MSG.format(moduleName, f"the following Exception occurred while loading the python module:"),
-				format_full_exc(ex, indentLvl=1)
-			)
-			continue
-
-		if getattr(thisMod, 'enabled') is True:
-			colorSchemeModules[moduleName] = thisMod
-			logInfo(f"imported colorScheme {moduleName}")
-		else:
-			logInfo(f"imported colorScheme {moduleName}: DISABLED")
-	return colorSchemeModules
-
-
-def _reloadModules(modules: Iterable[ModuleType]):
-	for module in modules:
-		importlib.reload(module)
-
-
 @TimedFunction()
 def loadAllColorSchemes() -> None:
 	_ALL_COLOR_SCHEMES.clear()
 	addColorScheme(ColorScheme('None', []))
 
-	colorSchemeModuleNames = _allColorSchemeModules()
-	_colorSchemeModules = _loadColorSchemeModules(colorSchemeModuleNames)
-	_reloadModules(_colorSchemeModules.values())
+	colorSchemesDir = getColorSchemesDir()
+	colorSchemeModules = loadAllModules(
+		'colorSchemes',
+		colorSchemesDir,
+		'/**',
+		r'scheme_.+\.py',
+		setDefaultFilesFunc=lambda x: _copyDefaultColorSchemes(x),
+		initMethodName='initPlugin'
+	)
 
-	for moduleName, module in _colorSchemeModules.items():
-		initPlugin = getattr(module, 'initPlugin', None)
-		if initPlugin is None:
-			logError(_CANNOT_LOAD_MSG.format(moduleName, "no 'initPlugin()' function can be found."))
-			continue
-		if not callable(initPlugin):
-			logError(_CANNOT_LOAD_MSG.format(moduleName, f" '{moduleName}.initPlugin' is not callable. ('{type(initPlugin).__name__}' object is not callable)"))
-			continue
-		try:
-			initPlugin()
-		except Exception as ex:
-			logError(
-				_CANNOT_LOAD_MSG.format(moduleName, f"the following Exception occurred while calling '{moduleName}.initPlugin()':"),
-				format_full_exc(ex, indentLvl=1)
-			)
-			continue
 	initAllColorSchemes()
 	currentColorSchemeUpdated()
 

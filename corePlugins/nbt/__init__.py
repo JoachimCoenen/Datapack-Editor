@@ -24,6 +24,9 @@ class SNBTPlugin(PluginBase):
 	def initPlugin(self) -> None:
 		pass
 
+	def dependencies(self) -> set[str]:
+		return set()
+
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from corePlugins.nbt.snbtParser import SNBTParser
 		return {

@@ -17,6 +17,10 @@ class DatapackSchemasPlugin(PluginBase):
 
 	def initPlugin(self):
 		from . import contexts
+		contexts.init()
+
+	def dependencies(self) -> set[str]:
+		return {'JsonPlugin', 'McFunctionPlugin', 'NbtPlugin', 'MinecraftPlugin'}
 
 	def schemas(self) -> dict[str, Schema]:
 		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER

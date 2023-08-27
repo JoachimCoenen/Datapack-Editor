@@ -8,8 +8,6 @@ from base.gui.styler import DEFAULT_STYLE_ID, StyleIdEnum
 from base.model.utils import LanguageId
 from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors, StyleFont
 
-enabled = True
-
 
 def initPlugin():
 	addColorScheme(buildColorScheme())

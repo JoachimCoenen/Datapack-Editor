@@ -16,13 +16,16 @@ MC_FUNCTION_DEFAULT_SCHEMA_ID = 'Minecraft'
 
 
 def initPlugin() -> None:
-	PLUGIN_SERVICE.registerPlugin('MCFunctionPlugin', McFunctionPlugin())
+	PLUGIN_SERVICE.registerPlugin('McFunctionPlugin', McFunctionPlugin())
 
 
 class McFunctionPlugin(PluginBase):
 
 	def initPlugin(self) -> None:
 		pass
+
+	def dependencies(self) -> set[str]:
+		return {'MinecraftPlugin', 'NbtPlugin'}
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from corePlugins.mcFunction.parser import MCFunctionParser
