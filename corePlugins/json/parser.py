@@ -445,7 +445,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			return JsonNumber(token.span, None, number)
 
 		except ValueError:
-			self.error(MDStr(f"Invalid number: `{token.value}`"), span=token.span)
+			pass # numbers are checked by lexer already.
 		return JsonNumber(token.span, None, 0)
 
 	def parse_boolean(self) -> JsonBool:

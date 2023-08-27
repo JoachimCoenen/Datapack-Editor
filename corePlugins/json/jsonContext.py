@@ -16,6 +16,7 @@ from base.model.parsing.contextProvider import ContextProvider, Suggestions, Con
 	getDocumentation, getClickableRanges, onIndicatorClicked
 from base.model.utils import Position, Span, GeneralError, MDStr, LanguageId
 from .argTypes import *
+from .lexer import INVALID_NUMBER_MSG
 from .schemaStore import JSON_SCHEMA_LOADER
 from model.messages import UNKNOWN_MSG
 
@@ -437,7 +438,7 @@ class FloatJsonStrContext(JsonStringContext):
 	def prepare(self, node: JsonString, info: CtxInfo[JsonString], errorsIO: list[GeneralError]) -> None:
 		data = node.data
 		try:
-			if data and data[0] == ord('-'):
+			if data and data[0] == '-':
 				valToCHeck = data[1:]
 			else:
 				valToCHeck = data
@@ -448,7 +449,7 @@ class FloatJsonStrContext(JsonStringContext):
 			node.parsedValue = number
 
 		except ValueError:
-			self._error(MDStr(f"Invalid number: `{data}`"), node.span)
+			errorsIO.append(JsonSemanticsError(INVALID_NUMBER_MSG.format(data), span=node.span))
 
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
 		if isinstance(node.schema, JsonStringSchema):

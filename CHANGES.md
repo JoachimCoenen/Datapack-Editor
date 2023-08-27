@@ -18,6 +18,7 @@
  * Saving an untitled file now correctly opens the Save As dialog instead of just saving the file to `untitled n`.
  * Fixed potential crashes when loading or saving files, settings, etc.
  * Fixed renamed files not being recognized correctly.
+ * Fixed parsing of numbers in json.
 
 
 ## Version 0.4.0-alpha

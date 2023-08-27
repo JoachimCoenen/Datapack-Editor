@@ -12,7 +12,7 @@ INCOMPLETE_ESCAPE_MSG = Message("Incomplete escape at end of string", 0)
 SINGLE_QUOTED_STRING_MSG = Message("JSON standard does not allow single quoted strings", 0)
 EXPECTED_END_OF_STRING_MSG = Message("Expected end of string", 0)
 MISSING_CLOSING_QUOTE_MSG = Message("Missing closing quote", 0)
-INVALID_NUMBER_MSG = Message("Minus sign in between number `{0}`", 1)
+INVALID_NUMBER_MSG = Message("Invalid number `{0}`", 1)
 UNKNOWN_LITERAL_MSG = Message("Unknown literal `{0}`", 1)
 ILLEGAL_CHARS_MSG = Message("Illegal characters `{0}`", 1)
 EMPTY_STRING_MSG = Message("Cannot parse empty string", 0)
@@ -95,7 +95,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 		quote = self.text[self.cursor]
 		if quote == ord("'"):
 			self.errorNextToken(SINGLE_QUOTED_STRING_MSG)
-		self.cursor += 1  # opening '"'
+		self.cursor += 1  # opening "
 
 		while self.cursor < self.totalLength:
 			char = self.text[self.cursor]
@@ -123,11 +123,13 @@ class JsonTokenizer(TokenizerBase[Token]):
 		return self.addToken(start, TokenType.string)
 
 	def extract_number(self) -> Token:
-		"""Extracts a single number token (eg. 42, -12.3) from JSON string"""
+		"""Extracts a single number token (e.g. 42, -12.3) from JSON string"""
 		start = self.currentPos
 
+		non_exp_digit_found = False
 		decimal_point_found = False
 		exponent_found = False
+		exponent_digit_found = False
 		isValid = True
 
 		if self.cursor < self.totalLength and self.text[self.cursor] in b'-+':
@@ -138,26 +140,36 @@ class JsonTokenizer(TokenizerBase[Token]):
 			self.cursor += 1
 
 			if char in DIGITS_RANGE:
-				continue
-			elif char == '.':
-				if decimal_point_found:
-					isValid = False
+				non_exp_digit_found = True
+			elif char == 46:  # 46 == ord('.')!
+				isValid = isValid and not decimal_point_found
 				decimal_point_found = True
-				continue
-			elif char in b'+-':
-				if not self.text[self.cursor] in b'eE':
-					isValid = False
-				continue
 			elif char in b'eE':
-				if exponent_found:
-					isValid = False
 				exponent_found = True
-				continue
+				break
 			elif char in b',' + WHITESPACE + b'}]"\':=[{\\':
 				self.cursor -= 1
 				break
-			else:
-				continue
+			else:  # includes b'+-'
+				isValid = False
+
+		if exponent_found:
+			if self.cursor < self.totalLength and self.text[self.cursor] in b'-+':
+				self.cursor += 1
+
+			while self.cursor < self.totalLength:
+				char = self.text[self.cursor]
+				self.cursor += 1
+				if char in DIGITS_RANGE:
+					exponent_digit_found = True
+				elif char in b',' + WHITESPACE + b'}]"\':=[{\\':
+					self.cursor -= 1
+					break
+				else:  # includes b'.+-eE'
+					isValid = False
+
+		isValid = isValid and non_exp_digit_found
+		isValid = isValid and (not exponent_found or exponent_digit_found)
 
 		token = self.addToken(start, TokenType.number)
 		if not isValid:

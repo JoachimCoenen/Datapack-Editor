@@ -30,7 +30,7 @@ class DatapackPlugin(PluginBase):
 		return [DatapackAspect]
 
 	def settingsAspects(self) -> list[Type[SettingsAspect]]:
-		from .aspect import DatapackSettings
+		from .settings import DatapackSettings
 		return [DatapackSettings]
 
 	def schemas(self) -> dict[str, Schema]:
