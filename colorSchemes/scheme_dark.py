@@ -28,9 +28,11 @@ def buildColorScheme() -> ColorScheme:
 	scheme.globalStyles.defaultStyle |= Style(background=scheme.uiColors.Window)
 
 	for language, styles in lightScheme.styles2.items():
-		print(f"STYLES:")
+		if _DO_PRINT:
+			print(f"STYLES:")
 		styles._styles = {name: invertStyle(style, blackColor, f'{language}:{name}') for name, style in styles._styles.items()}
-		print(f"MODIFIERS:")
+		if _DO_PRINT:
+			print(f"MODIFIERS:")
 		styles.innerLanguageStyleModifiers = {name: invertStylesModifier(stylesMode, blackColor, f'{language}:{name}') for name, stylesMode in styles.innerLanguageStyleModifiers.items()}
 		scheme.styles2[language] = styles
 
