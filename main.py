@@ -145,15 +145,15 @@ def showSetupDialogIfNecessary():
 
 
 def loadActualBasePlugins():
-	loadAllPlugins(getBasePluginsDir())
+	loadAllPlugins(*getBasePluginsDir())
 
 
 def loadActualCorePlugins():
-	loadAllPlugins(getCorePluginsDir())
+	loadAllPlugins(*getCorePluginsDir())
 
 
 def loadActualPlugins():
-	loadAllPlugins(getPluginsDir())
+	loadAllPlugins(*getPluginsDir())
 
 
 def loadPlugins():

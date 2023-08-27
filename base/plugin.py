@@ -13,7 +13,7 @@ from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.utils import getExePath
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.graphs import getCycles, semiTopologicalSort2
-from Cat.utils.logging_ import logError, logWarning, logInfo, logFatal
+from Cat.utils.logging_ import logError, logWarning, logInfo, logFatal, loggingIndentInfo
 from base.gui.styler import registerStyler, CatStyler
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings, ApplicationSettings
 from base.model.aspect import registerAspectForType
@@ -99,7 +99,8 @@ class PluginService:
 		for pluginName in allPluginsSorted:
 			plugin = pluginByName.get(pluginName)
 			self.plugins[pluginName] = plugin
-			self._initPlugin(plugin)
+			with loggingIndentInfo(f"Initializing plugin '{pluginName}' ({type(plugin).__qualname__}) "):
+				self._initPlugin(plugin)
 
 	@staticmethod
 	def _initPlugin(plugin: PluginBase):
@@ -219,28 +220,29 @@ class PluginBase(ABC):
 		return []
 
 
-def getPluginsDir() -> FilePathStr:
+def getPluginsDir() -> tuple[str, FilePathStr]:
+	baseModuleName = 'plugins'
 	pluginsDir = os.path.dirname(os.path.abspath(getExePath()))
-	pluginsDir = os.path.join(pluginsDir, 'plugins')
-	return pluginsDir
+	pluginsDir = os.path.join(pluginsDir, baseModuleName)
+	return baseModuleName, pluginsDir
 
 
-def getBasePluginsDir() -> FilePathStr:
-	pluginsDir = os.path.dirname(os.path.abspath(getExePath()))
+def getBasePluginsDir() -> tuple[str, FilePathStr]:
+	baseModuleName = 'basePlugins'
 	pluginsDir = os.path.dirname(os.path.dirname(__file__))
-	pluginsDir = os.path.join(pluginsDir, 'basePlugins')
-	return pluginsDir
+	pluginsDir = os.path.join(pluginsDir, baseModuleName)
+	return baseModuleName, pluginsDir
 
 
-def getCorePluginsDir() -> FilePathStr:
-	pluginsDir = os.path.dirname(os.path.abspath(getExePath()))
+def getCorePluginsDir() -> tuple[str, FilePathStr]:
+	baseModuleName = 'corePlugins'
 	pluginsDir = os.path.dirname(os.path.dirname(__file__))
-	pluginsDir = os.path.join(pluginsDir, 'corePlugins')
-	return pluginsDir
+	pluginsDir = os.path.join(pluginsDir, baseModuleName)
+	return baseModuleName, pluginsDir
 
 
-def loadAllPlugins(pluginsDir: FilePathStr) -> None:
+def loadAllPlugins(baseModuleName: str, pluginsDir: FilePathStr) -> None:
 	# all single-file plugins
-	loadAllModules('plugins', pluginsDir, '/', r'(?!__)[\w_]+\.py', initMethodName='initPlugin')
+	loadAllModules(baseModuleName, pluginsDir, '/', r'(?!__)[\w_]+\.py', initMethodName='initPlugin')
 	# all multi-file plugins (plugins inside a package
-	loadAllModules('plugins', pluginsDir, '/*', r'__init__\.py', initMethodName='initPlugin')
+	loadAllModules(baseModuleName, pluginsDir, '/*', r'__init__\.py', initMethodName='initPlugin')
