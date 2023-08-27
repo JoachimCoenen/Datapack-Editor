@@ -16,7 +16,7 @@ from PyQt5.QtGui import QFont, QFontDatabase
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.GUI import getStyles
 from Cat.Serializable.dataclassJson import SerializableDataclass, shouldSerialize, catMeta
-from Cat.utils import getExePath
+from Cat.utils import getExePath, override
 from Cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory
 
@@ -158,6 +158,24 @@ class DebugSettings(SerializableDataclass):
 		)
 	)
 
+	loadedPlugins: list[tuple[str]] = field(
+		init=False,
+		metadata=catMeta(
+			readOnly=True,
+			serialize=False,
+			decorators=[pd.Title("Loaded Plugins")],
+			kwargs=dict(headers=("plugins",), label=None)
+		)
+	)
+
+
+def getLoadedPlugins(self) -> list[tuple[str]]:
+	from base.plugin import PLUGIN_SERVICE
+	return [(plugin.name,) for plugin in PLUGIN_SERVICE.activePlugins]
+
+
+DebugSettings.loadedPlugins = property(getLoadedPlugins)
+
 
 @final
 class AboutQt:
@@ -234,13 +252,14 @@ class ApplicationSettings(SerializableDataclassWithAspects[SettingsAspect]):
 		for aspectCls in getAspectsForClass(type(self)).values():
 			self.aspects.add(aspectCls)
 
+	@override
 	def _setAspect(self, newAspect: SettingsAspect):
 		copyAppSettings(self.aspects.get(type(newAspect)), newAspect)
 
+	@override
 	def _getAspectCls(self, aspectType: AspectType) -> Optional[Type[SettingsAspect]]:
 		aspect = self.aspects._aspects.get(aspectType)
 		return type(aspect) if aspect is not None else None
-		return getAspectCls(type(self), aspectType)
 
 
 applicationSettings = None
@@ -258,7 +277,6 @@ def getApplicationSettings() -> ApplicationSettings:
 def setApplicationSettings(newSettings: ApplicationSettings):
 	global applicationSettings
 	copyAppSettings(applicationSettings, copy.deepcopy(newSettings))
-	#applicationSettings.copyFrom(copy.deepcopy(newSettings))
 
 
 def resetApplicationSettings():
