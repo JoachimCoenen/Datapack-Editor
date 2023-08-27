@@ -1,5 +1,11 @@
-from .datapackContents import buildJsonMeta, EntryHandlerInfo, NAME_SPACE_VAR, DatapackContents, GenerationInfo, DefaultFileInfo, buildFunctionMeta, buildNbtMeta, \
-	buildEntryHandlers, EntryHandlers
+from corePlugins.datapack.datapackContents import buildJsonMeta, EntryHandlerInfo, NAME_SPACE_VAR, DatapackContents, GenerationInfo, DefaultFileInfo, buildFunctionMeta, buildNbtMeta, \
+	buildEntryHandlers
+from corePlugins.datapack.dpVersions import DPVersion, registerDPVersion
+
+
+def initVersion() -> None:
+	registerDPVersion(version6)
+
 
 LOAD_JSON_CONTENTS = f"""{{
 	"values": [
@@ -254,4 +260,10 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 	),
 ]
 
-DATAPACK_CONTENTS_STRUCTURE: EntryHandlers = buildEntryHandlers(DATAPACK_CONTENTS)
+version6 = DPVersion(
+	name='6',
+	structure=buildEntryHandlers(DATAPACK_CONTENTS),
+	# jsonSchemas=GLOBAL_SCHEMA_STORE
+)
+
+# DATAPACK_CONTENTS_STRUCTURE: EntryHandlers = buildEntryHandlers(DATAPACK_CONTENTS)

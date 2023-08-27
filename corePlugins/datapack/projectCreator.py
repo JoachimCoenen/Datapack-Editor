@@ -12,9 +12,9 @@ from Cat.utils.utils import openOrCreate
 from base.model.pathUtils import joinFilePath, FilePathStr
 from base.model.project.project import Project, ProjectRoot
 from base.model.project.projectCreator import ProjectCreator
-from .aspect import ALL_DP_VERSIONS
+from .aspect import DatapackAspect
 from .datapackContents import NAME_SPACE_VAR
-from .datapackContentsContents import DATAPACK_CONTENTS_STRUCTURE
+from .dpVersions import getAllDPVersions
 from corePlugins.minecraft.resourceLocation import isNamespaceValid
 from gui.datapackEditorGUI import DatapackEditorGUI
 
@@ -64,7 +64,7 @@ class DatapackProjectCreatorData(SerializableDataclass):
 		metadata=catMeta(
 			kwargs=dict(label='Datapack Version'),
 			decorators=[
-				pd.ComboBox(choices=ALL_DP_VERSIONS.keys()),
+				pd.ComboBox(choices=property(lambda self: getAllDPVersions().keys())),
 			]
 		)
 	)
@@ -111,13 +111,14 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 
 	def initializeProject(self, gui: DatapackEditorGUI, project: Project) -> None:
 		data = self.data
+		project.aspects.get(DatapackAspect).dpVersion = data.dpVersion
 		newRoot = project.addRoot(ProjectRoot(project.name, project.path))
 		if data.generatePackMcMeta:
 			self.generatePackMcMetaFile(newRoot)
 		if data.generateDependenciesJson:
 			self.generateDependenciesFile(newRoot)
 		if data.generateSkeleton:
-			self.generateSkeleton(newRoot)
+			self.generateSkeleton(newRoot, project)
 
 	def generatePackMcMetaFile(self, root: ProjectRoot):
 		data = self.data
@@ -152,10 +153,11 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 		with openOrCreate(path, 'w') as f:
 			f.write(jsonData)
 
-	def generateSkeleton(self, root: ProjectRoot):
+	def generateSkeleton(self, root: ProjectRoot, project: Project):
 		datapackPath = root.normalizedLocation
 		data = self.data
-		structure = DATAPACK_CONTENTS_STRUCTURE  # TODO: use datapack version to get correct contents structure.
+		dpAspect = project.aspects.get(DatapackAspect)
+		structure = dpAspect.dpVersionData.structure
 		for handlers in structure.values():
 			for handler in handlers:
 				folderPath = handler.folder.replace(NAME_SPACE_VAR, data.namespace)

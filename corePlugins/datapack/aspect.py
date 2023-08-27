@@ -3,29 +3,45 @@ from dataclasses import dataclass, field
 from typing import Optional, Callable
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
-from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
 from Cat.Serializable.dataclassJson import catMeta
 from Cat.utils.logging_ import logWarning
-from base.model.applicationSettings import SettingsAspect, getApplicationSettings
+from base.model.applicationSettings import getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.aspect import AspectType
 from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr, FileEntry
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
+from base.model.session import getSession
 from base.model.utils import WrappedError
 from .datapackContents import collectEntry
+from .dpVersions import getAllDPVersions, getDPVersion, DPVersion, DP_EMPTY_VERSION
 from corePlugins.json import JSON_ID
 from corePlugins.json.core import JsonData
-
-DATAPACK_ASPECT_TYPE = AspectType('dpe:datapack')
-# DATAPACK_CONTENTS_TYPE = AspectType('dpe:datapack_contents')
 
 
 @dataclass
 class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, analyzeRoots=False, analyzeFiles=True)):
 	@classmethod
 	def getAspectType(cls) -> AspectType:
+		from .settings import DATAPACK_ASPECT_TYPE
 		return DATAPACK_ASPECT_TYPE
+
+	dpVersion: str = field(
+		default='7',
+		metadata=catMeta(
+			kwargs=dict(label='Datapack Version'),
+			decorators=[
+				pd.ComboBox(choices=property(lambda self: getAllDPVersions().keys())),
+			]
+		)
+	)
+
+	@property
+	def dpVersionData(self) -> DPVersion:
+		result = getDPVersion(self.dpVersion)
+		if result is None:
+			result = DP_EMPTY_VERSION
+		return result
 
 	def getDependencies(self, root: Root) -> list[DependencyDescr]:
 		fileName = 'dependencies.json'
@@ -72,63 +88,26 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 		return resolveDependency(dependencyDescr)
 
 	def analyzeFile(self, root: Root, fileEntry: FileEntry) -> None:
-		from corePlugins.datapack.datapackContentsContents import DATAPACK_CONTENTS_STRUCTURE
-		handlers = DATAPACK_CONTENTS_STRUCTURE  # TODO: use datapack version to get correct contents structure.
+		handlers = self.dpVersionData.structure
 		collectEntry(fileEntry.fullPath, handlers, root)
 
-		# pattern = folderPatternFromPath(f'data/{NAME_SPACE_VAR}/functions/')
-		# filePath = fileEntry.fullPath[1]
-		# match = pattern.match(filePath)
-		# if match is None:
-		# 	return
-		#
-		# namespace = match.groupdict().get('namespace')
-		# rest = filePath[match.end():]
-		#
-		# dpPath, filePath = fileEntry.fullPath
-		# name = fileEntry.fileName.partition('.')[0]
-		#
-		# if not filePath.endswith('.mcfunction'):
-		# 	return
-		# resLoc = ResourceLocation(namespace, rest + name, False) if namespace is not None else None
-		# root.indexBundles.setdefault(DatapackContents).functions.add(resLoc, filePath, FunctionMeta(fileEntry.fullPath))
-		# return None
+
+def _getDPVersion(self: DatapackAspect) -> str:
+	return getattr(self, '_dpVersion', '') or 'Default'
 
 
-	# def onRootAdded(self, root: Root, project: Project) -> None:
-	# 	filesystemEvents.FILESYSTEM_OBSERVER.schedule("dpe:files_aspect", root.normalizedLocation, Handler(root, project))
-	#
-	# def onRootRemoved(self, root: Root, project: Project) -> None:
-	# 	filesystemEvents.FILESYSTEM_OBSERVER.unschedule("dpe:files_aspect", root.normalizedLocation)
-
-	# def analyzeRoot(self, root: Root) -> None:
-	# 	location = root.normalizedLocation
-	# 	if location.endswith('.jar'):  # we don't need '.class' files. This is not a Java IDE.
-	# 		pathInFolder = 'data/**'
-	# 		pathInZip = 'data/**'
-	# 	else:
-	# 		pathInFolder = '/**'
-	# 		pathInZip = '/**'
-	# 	pif = SearchPath(pathInFolder, location.rstrip('/'))
-	# 	piz = pathInZip
-	#
-	# 	# rawLocalFiles = getAllFilesFromSearchPath(location, pif, piz, extensions=tuple(), excludes=None)
-	# 	if not pif.divider:
-	# 		return
-	# 	rawLocalFiles, rawLocalFolders = getAllFilesFoldersFromFolder(location, pif.divider)
-	#
-	# 	idx = root.indexBundles.get(FilesIndex).files
-	# 	for jf in rawLocalFiles:
-	# 		idx.add(jf[1], jf, FileEntry(jf, root.name + jf[1], True))
-	#
-	# 	idx = root.indexBundles.get(FilesIndex).folders
-	# 	for jf in rawLocalFolders:
-	# 		idx.add(jf[1], jf, FileEntry(jf, root.name + jf[1], False))
-	#
-	# def analyzeProject(self) -> None:
-	# 	from sessionOld.session import getSession
-	# 	allEntryHandlers = getSession().datapackData.structure
-	# 	collectAllEntries(self.parent.files, allEntryHandlers, self.parent)
+def _setDPVersion(self: DatapackAspect, newVal: str) -> None:
+	project = getSession().project
+	if project is not None and project.aspects.get(DatapackAspect) is self:
+		oldVal = getattr(self, '_dpVersion', None)
+		if True or newVal != oldVal:
+			dpVersion = getDPVersion(oldVal)
+			if dpVersion is not None:
+				dpVersion.deactivate()
+			dpVersion = getDPVersion(newVal)
+			if dpVersion is not None:
+				dpVersion.activate()
+	setattr(self, '_minecraftVersion',  newVal)
 
 
 DEPENDENCY_SEARCH_LOCATIONS: list[Callable[[], list[str]]] = []
@@ -136,10 +115,12 @@ DEPENDENCY_SEARCH_LOCATIONS: list[Callable[[], list[str]]] = []
 
 
 def defaultSearchLocations():
+	from .settings import DatapackSettings
 	sl = getApplicationSettings().aspects.get(DatapackSettings).dependenciesLocation
 	if sl:
 		return [sl]
 	return []
+
 
 DEPENDENCY_SEARCH_LOCATIONS.append(defaultSearchLocations)
 
@@ -157,37 +138,3 @@ def resolveDependency(dep: DependencyDescr) -> Optional[Root]:
 			if os.path.exists(path):
 				return Root(_name=dep.name, _location=normalizeDirSeparators(path))
 	return None
-
-
-ALL_DP_VERSIONS: dict[str, int] = {}
-
-
-@dataclass()
-class DatapackSettings(SettingsAspect):
-	@classmethod
-	def getAspectType(cls) -> AspectType:
-		return DATAPACK_ASPECT_TYPE
-
-	dpVersion: str = field(
-		default='6',
-		metadata=catMeta(
-			kwargs=dict(label='Datapack Version'),
-			decorators=[
-				pd.ComboBox(choices=ALL_DP_VERSIONS.keys()),
-			]
-		)
-	)
-
-	dependenciesLocation: str = field(
-		default_factory=lambda: os.path.expanduser('~/.dpe/dependencies').replace('\\', '/'),
-		metadata=catMeta(
-			kwargs=dict(
-				label="Datapack Dependencies Location",
-				tip="DPE will search in this directory to resolve dependencies",
-			),
-			decorators=[
-				pd.FolderPath(),
-				pd.Validator(pd.folderPathValidator)
-			]
-		)
-	)

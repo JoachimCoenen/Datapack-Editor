@@ -1,7 +1,7 @@
 from __future__ import annotations
 import re
 from dataclasses import dataclass, field
-from typing import Optional, TypeVar, Type, Callable
+from typing import Optional, TypeVar, Type, Callable, Mapping
 
 from Cat.utils.profiling import logError
 from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty
@@ -204,7 +204,7 @@ def folderPatternFromPath(path: str) -> re.Pattern:
 	return re.compile(path2)
 
 
-EntryHandlers = dict[str, list[EntryHandlerInfo]]
+EntryHandlers = Mapping[str, list[EntryHandlerInfo]]
 
 
 def buildEntryHandlers(handlers: list[EntryHandlerInfo]) -> EntryHandlers:
