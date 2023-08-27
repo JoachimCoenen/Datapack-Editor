@@ -191,7 +191,8 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 					toolBtnFunc(gui)
 					gui.hSeparator()
 
-				guiFunc(gui)
+				subGui = gui.subGUI(type(gui), guiFunc, seamless=True)
+				subGui.redrawGUILater()
 
 	def OnBottombarGUI(self, gui: DatapackEditorGUI):
 		bottomPanel = gui.subGUI(type(gui), lambda gui: self.bottomPanelGUI(gui), seamless=True)

@@ -5,11 +5,11 @@ from typing import Optional, Any
 
 from PyQt5.QtGui import QIcon
 
-from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions, EditorBase
+from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 from Cat.icons import icons
 from base.model.project.index import Index, IndexBundle
-from base.model.project.project import Project, Root
+from base.model.project.project import Root
 from base.model.session import getSession
 from gui.datapackEditorGUI import DatapackEditorGUI
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
@@ -32,47 +32,34 @@ class PluginDebugPlugin(PluginBase):
 
 
 def indexBundlesGUI(gui: DatapackEditorGUI):
-	gui.editor(IndexExplorerEditor, getSession().project, seamless=True)
+	filteredProjectsFilesTreeGUI(gui, getSession().project.allRoots)
 
 
-class IndexExplorerEditor(EditorBase[Project]):
-
-	def OnGUI(self, gui: DatapackEditorGUI) -> None:
-		with gui.vLayout(seamless=True):
-			self.filteredProjectsFilesTreeGUI(
-				gui,
-				self.model().allRoots
-			)
-
-	def filteredProjectsFilesTreeGUI(
-			self,
-			gui: DatapackEditorGUI,
-			allRoots: list[Root],
-
-	):
-		gui.tree(
-			DataTreeBuilder(
-				allRoots,
-				_childrenMaker,
-				_labelMaker,
-				_iconMaker,
-				_toolTipMaker,
-				columnCount=1,
-				suppressUpdate=False,
-				showRoot=False,
-				onCopy=_onCopy,
-				getId=_getId,
-			),
-			loadDeferred=True,
-		)
+def filteredProjectsFilesTreeGUI(
+		gui: DatapackEditorGUI,
+		allRoots: list[Root],
+):
+	gui.tree(
+		DataTreeBuilder(
+			allRoots,
+			_childrenMaker,
+			_labelMaker,
+			_iconMaker,
+			_toolTipMaker,
+			columnCount=1,
+			suppressUpdate=False,
+			showRoot=False,
+			onCopy=_onCopy,
+			getId=_getId,
+		),
+		loadDeferred=True,
+	)
 
 
 @dataclass(unsafe_hash=True)
 class TreeItem:
 	name: str
 	value: Any = field(hash=False, compare=False)
-
-	#subIndex: Index | IndexBundle
 
 
 def _labelMaker(data: TreeItem | Root, column: int) -> str:
