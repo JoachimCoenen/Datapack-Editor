@@ -11,8 +11,8 @@ from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override, HTMLStr
 from Cat.utils.logging_ import logWarning
 from base.gui.styler import DEFAULT_STYLE_ID, getStyler, StyleId, StylerCtx
-from gui.themes import theme
-from gui.themes.theme import StyleFont, Style, GlobalStyles
+from base.model import theme
+from base.model.theme import StyleFont, Style, GlobalStyles
 from base.model.parsing.contextProvider import ContextProvider, getContextProvider
 from base.model.parsing.tree import Node
 from base.model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position

@@ -6,7 +6,7 @@ from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from Cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, StyleIdEnum
 from base.model.utils import LanguageId
-from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors, StyleFont
+from base.model.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors, StyleFont
 
 
 def initPlugin():

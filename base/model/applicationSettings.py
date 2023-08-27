@@ -21,8 +21,7 @@ from Cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory
 
 from base.model.aspect import AspectDict, Aspect, AspectType, SerializableDataclassWithAspects, getAspectsForClass
-from gui.themes import theme
-
+from base.model import theme
 
 QFont.__deepcopy__ = lambda x, m: QFont(x)
 

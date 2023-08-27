@@ -8,9 +8,9 @@ from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase, TabOptions
 from Cat.icons import icons
 from Cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
-from gui.editors.documentEditors import getDocumentEditor
+from base.gui.documentEditors import getDocumentEditor
 from keySequences import KEY_SEQUENCES
-from base.model.documentHandling import View
+from base.model.documentHandling import View, ViewContainer
 from base.model.documents import Document
 from base.model.session import getSession
 
@@ -120,8 +120,8 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		view = self.model()
 		gui = self._gui
 		with gui.popupMenu(True) as menu:
-			menu.addItem("split horizontally", lambda: view.splitView(False))
-			menu.addItem("split vertically", lambda: view.splitView(True))
+			menu.addItem("split horizontally", lambda: view.splitView(False) and None)
+			menu.addItem("split vertically", lambda: view.splitView(True) and None)
 			menu.addSeparator()
 			menu.addItem("close view", lambda: view.manager.safelyCloseView(view), enabled=len(view.documents) == 0)
 
@@ -195,7 +195,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		def onContextMenu(d: Document, _: int):
 			print(f"showing ContextMenu for Document '{d.fileName}'")
 			with gui.popupMenu(atMousePosition=True) as menu:
-				menu.addItem('close', lambda: getSession().documents.safelyCloseDocument(d), tip=f'close {d.filePath}')
+				menu.addItem('close', lambda: getSession().documents.safelyCloseDocument(d) and None, tip=f'close {d.filePath}')
 				menu.addItems(ContextMenuEntries.pathItems(d.filePath))
 
 		# calculate dimensions:
@@ -249,4 +249,25 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		self.redraw('DocumentsViewEditor._forceFocus(...)')
 
 
-__all__ = ['DocumentsViewEditor',]
+class DocumentsViewsContainerEditor(EditorBase[ViewContainer]):
+
+	def onSetModel(self, new: ViewContainer, old: Optional[ViewContainer]) -> None:
+		super(DocumentsViewsContainerEditor, self).onSetModel(new, old)
+		if old is not None:
+			old.onViewsChanged.disconnect('editorRedraw')
+		new.onViewsChanged.reconnect('editorRedraw', lambda: self.redraw('onViewsChanged'))
+
+	def OnGUI(self, gui: DatapackEditorGUI) -> None:
+		viewContainer = self.model()
+		splitterFunc = gui.vSplitter if viewContainer.isVertical else gui.hSplitter
+
+		with splitterFunc(handleWidth=gui.smallSpacing) as splitter:
+			for view in viewContainer.views:
+				with splitter.addArea(seamless=True):
+					if isinstance(view, ViewContainer):
+						gui.editor(DocumentsViewsContainerEditor, view, seamless=True).redrawLater('DocumentsViewsContainerEditor.OnGUI(...)')
+					else:
+						gui.editor(DocumentsViewEditor, view, seamless=True).redrawLater('DocumentsViewsContainerEditor.OnGUI(...)')
+
+
+__all__ = ['DocumentsViewEditor', 'DocumentsViewsContainerEditor']

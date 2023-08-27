@@ -18,7 +18,7 @@ from Cat.icons import icons
 from Cat.utils import showInFileSystem
 from base.model.applicationSettings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings, ColorSchemePD
 from base.model.applicationSettings import AboutQt
-from gui.themes import theme
+from base.model import theme
 
 _qtIcon: Optional[QIcon] = None
 

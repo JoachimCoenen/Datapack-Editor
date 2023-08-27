@@ -1,43 +1,34 @@
 from __future__ import annotations
 
 import codecs
-import dataclasses
 import functools as ft
 import os
 import re
+from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Union, Pattern, NamedTuple, Protocol, Type, ClassVar
+from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy
 
-from Cat.CatPythonGUI.GUI.enums import ResizeMode
-from base.model.project.project import Project
-from base.model.utils import GeneralError
-from base.model import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
+from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
 from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch
+from Cat.CatPythonGUI.GUI.enums import ResizeMode
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
-from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
-from Cat.Serializable import SerializedPropertyABC
+from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
 from Cat.icons import icons
 from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
-from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
-from base.model.documents import Document, ErrorCounts
-from base.model.pathUtils import FilePath, FilePathTpl, unitePath
+from base.model import documents
 from base.model.applicationSettings import applicationSettings
-
+from base.model.documents import ErrorCounts
+from base.model.pathUtils import FilePath, unitePath
+from base.model.utils import GeneralError
 
 inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})
 resultBoxStyle = Style({'CatBox': Style({'background': '#DAE8FC'})})
-
-
-class DocumentGUIFunc(Protocol):
-	def __call__(self, gui: DatapackEditorGUI, document: Document, **kwargs) -> Document:
-		...
 
 
 _TT = TypeVar('_TT')
@@ -132,7 +123,6 @@ def autocompleteFromList(text: str, allChoices: Iterable[Any], getStr: Callable[
 	return text
 
 
-#FilterStr = NewType('FilterStr', str)
 @ft.total_ordering
 class FilterStr:
 	def __init__(self, string: str):
@@ -177,7 +167,7 @@ def filterStrChoices(filterStr: FilterStr, allChoices: Collection[str]) -> Colle
 	if not filterStr:
 		return allChoices
 	return [choice[1] for choice in ((choice.lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
-	#[choice for choice in allChoices if filterStr in choice.lower()]
+	# [choice for choice in allChoices if filterStr in choice.lower()]
 
 
 def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> list[_TT]:
@@ -192,55 +182,6 @@ def filterComputedChoices(getStr: Callable[[_TT], str]):
 			return allChoices
 		return [choice[1] for choice in ((getStr(choice).lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
 	return innerFilterComputedChoices
-
-
-FilePathSplitter = Union[Pattern, str]
-
-LocalFilesProp = SerializedPropertyABC[Any, list[FilePath]]
-
-
-class LocalFilesPropInfo(NamedTuple):
-	prop: LocalFilesProp
-	firstSplitter: FilePathSplitter
-	folderName: str
-
-
-class FileEntry(NamedTuple):
-	fullPath: FilePath
-	virtualPath: str  # = dataclasses.field(compare=False)
-
-
-@dataclass(slots=True)
-class FilesTreeItem:
-	label: str
-	commonVPath: str = dataclasses.field(compare=False)
-	commonPath: FilePathTpl = dataclasses.field(compare=False)
-	filePaths: list[FileEntry] = dataclasses.field(compare=False)
-
-	isImmutable: bool = dataclasses.field(compare=False)
-	isArchive: bool = dataclasses.field(default=False, compare=False)
-
-	@property
-	def folderPath(self) -> Optional[FilePathTpl]:
-		if self.isFile:
-			return None
-		return self.commonPath
-
-	@property
-	def isFile(self) -> bool:
-		filePathsCount = len(self.filePaths)
-		return filePathsCount == 1 and self.commonPath == self.filePaths[0].fullPath
-
-
-@dataclass
-class FilesTreeRoot:
-	projects: list[FilesTreeItem] = dataclasses.field(compare=False)
-	label: ClassVar[str] = '<ROOT>'
-	commonDepth: ClassVar[int] = 0
-	isImmutable: ClassVar[bool] = False
-	isArchive: ClassVar[bool] = False
-	folderPath: ClassVar[Optional[FilePath]] = None
-	isFile: ClassVar[bool] = False
 
 
 class DatapackEditorGUI(AutoGUI):
@@ -280,7 +221,7 @@ class DatapackEditorGUI(AutoGUI):
 			index: int
 			#value: _TT
 			filterVal: str
-			filteredChoices: OrderedDict[str, _TT]
+			filteredChoices: dict[str, _TT]
 			selectedValue: Optional[_TT] = None
 			focusEndOfText: bool = False
 
@@ -333,7 +274,7 @@ class DatapackEditorGUI(AutoGUI):
 					context.focusEndOfText = False
 
 					caseFoldedFilterVal = context.filterVal.lower()
-					context.filteredChoices = OrderedDict(choice for choice in allChoicesDict.items() if caseFoldedFilterVal in choice[0])
+					context.filteredChoices = dict(choice for choice in allChoicesDict.items() if caseFoldedFilterVal in choice[0])
 
 					gui.toolButton(f'{len(context.filteredChoices)} of {len(allChoicesDict)}', roundedCorners=CORNERS.NONE, overlap=(1, -1))
 
@@ -379,7 +320,7 @@ class DatapackEditorGUI(AutoGUI):
 
 			return context
 
-		context = Context(-2, '', OrderedDict(), value)
+		context = Context(-2, '', {}, value)
 		newValue, isOk = self.popupWindow(
 			context,
 			guiFunc=guiFunc,
@@ -431,134 +372,6 @@ class DatapackEditorGUI(AutoGUI):
 			filteredChoices = filterFunc(filterStr, allChoices)
 			self.toolButton(f'{len(filteredChoices):,} of {len(allChoices):,}', overlap=adjustOverlap(overlap, (1, None, None, None)), roundedCorners=maskCorners(roundedCorners, CORNERS.RIGHT))  #  {valuesName} shown', alignment=Qt.AlignRight)
 		return filterStr, filteredChoices
-
-	def filteredProjectsFilesTree1(
-			self,
-			allIncludedProjects: list[Project],
-			onDoubleClick : Optional[Callable[[FilesTreeItem], None]] =  None,
-			onContextMenu : Optional[Callable[[FilesTreeItem, int], None]] = None,
-			onCopy        : Optional[Callable[[FilesTreeItem], Optional[str]]] = None,
-			onCut         : Optional[Callable[[FilesTreeItem], Optional[str]]] = None,
-			onPaste       : Optional[Callable[[FilesTreeItem, str], None]] = None,
-			onDelete      : Optional[Callable[[FilesTreeItem], None]] = None,
-			isSelected    : Optional[Callable[[FilesTreeItem], bool]] = None,
-
-			*,
-			roundedCorners: RoundedCorners = CORNERS.NONE,
-			overlap: Overlap = NO_OVERLAP
-	):
-		def labelMaker(data: FilesTreeItem, column: int) -> str:
-			return data.label
-
-		def iconMaker(data: FilesTreeItem, column: int) -> QIcon:
-			if data.isFile:
-				return icons.file_code
-			elif data.isArchive:
-				return icons.archive
-			return icons.folderInTree
-
-		def toolTipMaker(data: FilesTreeItem, column: int) -> str:
-			return data.commonVPath
-
-		def childrenMaker(data: FilesTreeItem) -> list[FilesTreeItem]:
-			if isinstance(data, FilesTreeRoot):
-				return data.projects
-
-			filePathsCount = len(data.filePaths)
-			if data.isFile or filePathsCount == 0:
-				return []
-
-			children: OrderedDict[str, FilesTreeItem] = OrderedDict()
-			cVPathLen = len(data.commonVPath)
-			isImmutable = data.isImmutable
-			for entry in data.filePaths:
-				index2 = entry.virtualPath.find('/', cVPathLen)
-				isFile = index2 == -1
-				if isFile:
-					index2 = len(entry.virtualPath)
-				label = entry.virtualPath[cVPathLen:index2]
-
-				child = children.get(label, None)
-				if child is None:
-					suffix = label if isFile else f'{label}/'
-					children[label] = FilesTreeItem(
-						label,
-						f'{data.commonVPath}{suffix}',
-						(data.commonPath[0], f'{data.commonPath[1]}{suffix}'),
-						[entry],
-						isImmutable
-					)
-				else:
-					child.filePaths.append(entry)
-
-			return sorted(children.values(), key=lambda x: (x.isFile, x.label.lower()))
-
-		# autocomplete strings:
-		allAutocompleteStrings: list[str] = []
-		projectItems = []
-		for proj in allIncludedProjects:
-			projPrefix = proj.name + '/'
-			filesForProj = []
-			projItem = FilesTreeItem(proj.name, projPrefix, (proj.path, ''), filesForProj, proj.isImmutable, proj.isArchive)
-
-			fullPathsInProj = proj.files
-			for fullPath in fullPathsInProj:
-				# getRight:
-				right = fullPath if isinstance(fullPath, str) else fullPath[1]
-				virtualPath = projPrefix + right.removeprefix('/')
-				allAutocompleteStrings.append(virtualPath)
-				filesForProj.append(FileEntry(fullPath, virtualPath))
-
-			if projItem.filePaths:
-				projectItems.append(projItem)
-
-		with self.vLayout(verticalSpacing=0):
-			with self.hLayout(horizontalSpacing=0):
-				filterStr = self.filterTextField(None, allAutocompleteStrings, overlap=adjustOverlap(overlap, (None, None, 0, 1)), roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_LEFT), shortcut=QKeySequence.Find).lower()
-
-				totalFilesCount = len(allAutocompleteStrings)
-				filteredFilesCount = 0
-
-				if filterStr:
-					filteredProjectItems = []
-					for projItem in projectItems:
-						projItem.filePaths = [fp for fp in projItem.filePaths if filterStr in fp.virtualPath.lower()]
-						if projItem.filePaths:
-							filteredFilesCount += len(projItem.filePaths)
-							filteredProjectItems.append(projItem)
-				else:
-					filteredFilesCount = totalFilesCount
-					filteredProjectItems = projectItems
-
-				self.toolButton(
-					f'{filteredFilesCount:,} of {totalFilesCount:,}',
-					overlap=adjustOverlap(overlap, (1, None, None, 1)),
-					roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_RIGHT)
-				)  # files shown', alignment=Qt.AlignLeft)
-
-			self.tree(
-				DataTreeBuilder(
-					FilesTreeRoot(filteredProjectItems),
-					childrenMaker,
-					labelMaker,
-					iconMaker,
-					toolTipMaker,
-					columnCount=1,
-					suppressUpdate=False,
-					showRoot=False,
-					onDoubleClick=onDoubleClick,
-					onContextMenu=onContextMenu,
-					onCopy=onCopy,
-					onCut=onCut,
-					onPaste=onPaste,
-					onDelete=onDelete,
-					isSelected=isSelected,
-					getId=lambda x: x.label,
-				),
-				loadDeferred=True,
-				roundedCorners=maskCorners(roundedCorners, CORNERS.BOTTOM),
-				overlap=adjustOverlap(overlap, (None, 0, None, None))
-			)
 
 	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[tuple[int, int]], bool, bool, SearchOptions]:
 		def onGUI(gui: DatapackEditorGUI, text: Optional[str], searchExpr: Optional[str], outerGUI: DatapackEditorGUI) -> None:
@@ -634,16 +447,12 @@ class DatapackEditorGUI(AutoGUI):
 
 		errorIcons = self._errorIcons
 
-		#self.hSeparator()  # parser & config errors:
 		self.label(errorIcons['error'], tip=errorsTip, **kwargs)
 		self.label(f'{errorCounts.errors}', tip=errorsTip, **kwargs)
-		#self.hSeparator()  # config warnings:
 		self.label(errorIcons['warning'], tip=warningsTip, **kwargs)
 		self.label(f'{errorCounts.warnings}', tip=warningsTip, **kwargs)
-		#self.hSeparator()  # config hints:
 		self.label(errorIcons['info'], tip=hintsTip, **kwargs)
 		self.label(f'{errorCounts.hints}', tip=hintsTip, **kwargs)
-		#self.hSeparator()  # config hints:
 
 	def errorsSummarySimpleGUI(self: DatapackEditorGUI, errorCounts: ErrorCounts, **kwargs):
 		self.hSeparator()
@@ -758,11 +567,3 @@ def drawCodeField(
 		)
 
 	return code, highlightErrors, cursorPos, forceLocate
-
-
-
-
-
-__documentDrawers: dict[Type[Document], DocumentGUIFunc] = {}
-DocumentDrawer = AddToDictDecorator(__documentDrawers)
-getDocumentDrawer = ft.partial(getIfKeyIssubclassOrEqual, __documentDrawers)

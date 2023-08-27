@@ -240,8 +240,9 @@ def _setCursorPos(a, b, d: Document):
 def _setSelection(a1, b1, a2, b2, d: Document):
 	d.selection = (a1, b1, a2, b2)
 
+
 __all__ = [
 	'DocumentEditorBase',
-	'getDocumentEditor'
+	'getDocumentEditor',
 	'TextDocumentEditor',
 ]

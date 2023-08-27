@@ -16,9 +16,9 @@ from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.icons import icons
 from Cat.icons.icons import _Icons
 from base.gui.newProjectDialog import NewProjectDialog
-from gui.editors import DocumentsViewsContainerEditor
+from base.gui.documentsViewEditor import DocumentsViewsContainerEditor
 from gui.profileParsingDialog import ProfileParsingDialog
-from gui.themes import theme
+from base.model import theme
 from keySequences import KEY_SEQUENCES
 from base.model.utils import GeneralError
 from base.model.session import getSession, saveSessionToFile, GLOBAL_SIGNALS

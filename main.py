@@ -171,7 +171,7 @@ def loadPlugins():
 
 
 def loadColorSchemes():
-	from gui.themes.theme import loadAllColorSchemes
+	from base.model.theme import loadAllColorSchemes
 	loadAllColorSchemes()
 
 

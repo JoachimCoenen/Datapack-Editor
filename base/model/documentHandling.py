@@ -256,7 +256,7 @@ class View(ViewBase):
 	# houseKeeping:
 	def _ensureManagerIsSet(self) -> None:
 		if self.manager is None:
-			from sessionOld.session import getSession
+			from base.model.session import getSession
 			self.manager = getSession().documents
 
 	@override
