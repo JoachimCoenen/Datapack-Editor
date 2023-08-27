@@ -3,8 +3,8 @@ from typing import Optional
 
 from Cat.utils.logging_ import logWarning, logInfo
 from base.model.pathUtils import FilePathStr
-from corePlugins.json.core import JsonSchema
-from corePlugins.json.jsonSchema import SchemaBuilderOrchestrator
+from .core import JsonSchema
+from .jsonSchema import SchemaBuilderOrchestrator
 
 
 @dataclass

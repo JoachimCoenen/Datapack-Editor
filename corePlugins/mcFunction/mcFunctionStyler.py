@@ -7,10 +7,10 @@ from typing import Type, Optional, ClassVar
 from Cat.utils import Decorator, first
 from Cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StylingFunc
-from corePlugins.mcFunction import MC_FUNCTION_ID
-from corePlugins.mcFunction.argumentTypes import *
-from corePlugins.mcFunction.argumentValues import ItemStack, BlockState, TargetSelector
-from corePlugins.mcFunction.command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
+from . import MC_FUNCTION_ID
+from .argumentTypes import *
+from .argumentValues import ItemStack, BlockState, TargetSelector
+from .command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
 from base.model.utils import LanguageId
 
 

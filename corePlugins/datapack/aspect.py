@@ -13,7 +13,7 @@ from base.model.project.project import AspectFeatures, Root, ProjectAspect, Depe
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
 from base.model.utils import WrappedError
-from corePlugins.datapack.datapackContents import collectEntry
+from .datapackContents import collectEntry
 from corePlugins.json import JSON_ID
 from corePlugins.json.core import JsonData
 

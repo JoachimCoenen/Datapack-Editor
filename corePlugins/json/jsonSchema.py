@@ -9,9 +9,8 @@ from typing import Optional, TypeVar, Type, Callable, Mapping, Any, Generator, A
 
 from Cat.utils import Nothing, Anything
 from Cat.utils.collections_ import AddToDictDecorator
-from corePlugins.json import JSON_ID
-from corePlugins.json.core import *
-from corePlugins.json.core import ALL_NAMED_JSON_ARG_TYPES
+from . import JSON_ID
+from .core import *
 from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.parser import parse
 from base.model.pathUtils import normalizeDirSeparators, fromDisplayPath, loadBinaryFile, ZipFilePool

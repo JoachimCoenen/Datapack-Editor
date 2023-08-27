@@ -10,7 +10,7 @@ from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID
 from corePlugins.mcFunction.argumentTypes import ArgumentType
 from corePlugins.mcFunction.command import MCFunctionSchema
-from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
+from .filterArgs import FilterArgumentInfo
 from corePlugins.minecraft.resourceLocation import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes
 
@@ -104,7 +104,7 @@ def getMCVersion(name: str) -> Optional[MCVersion]:
 
 def getCurrentMCVersion() -> Optional[MCVersion]:
 	"""Returns the MCVersion currently selected in settings."""
-	from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettings
+	from .settings import MinecraftSettings
 	version = getApplicationSettings().aspects.get(MinecraftSettings).minecraftVersion
 	return getMCVersion(version)
 

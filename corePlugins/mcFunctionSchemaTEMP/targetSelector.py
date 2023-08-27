@@ -7,7 +7,7 @@ from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
 from corePlugins.mcFunction.commandContext import argumentContext, ArgumentContext, getArgumentContext, makeParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.mcFunction.utils import CommandSyntaxError
-from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
+from .filterArgs import FilterArgumentInfo
 from model.messages import *
 from base.model.parsing.bytesUtils import strToBytes, bytesToStr
 from base.model.pathUtils import FilePath

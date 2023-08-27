@@ -12,7 +12,7 @@ def initPlugin() -> None:
 class McFunctionSchemasTEMPPlugin(PluginBase):
 
 	def initPlugin(self):
-		from corePlugins.mcFunctionSchemaTEMP.mcVersions import getMCVersion
+		from .mcVersions import getMCVersion
 		from .version1_17 import initPlugin as initPlugin_1_17
 		from .version1_16 import initPlugin as initPlugin_1_16
 		from .version1_18 import initPlugin as initPlugin_1_18
@@ -27,7 +27,7 @@ class McFunctionSchemasTEMPPlugin(PluginBase):
 		return {'McFunctionPlugin', 'MinecraftPlugin', 'NbtPlugin'}
 
 	def settingsAspects(self) -> list[Type[SettingsAspect]]:
-		from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettings
+		from .settings import MinecraftSettings
 		return [MinecraftSettings]
 
 	def schemas(self) -> dict[str, Schema]:

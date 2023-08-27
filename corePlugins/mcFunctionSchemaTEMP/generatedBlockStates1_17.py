@@ -3,7 +3,7 @@
 					DO NOT EDIT!
 """
 from corePlugins.mcFunction.argumentTypes import *
-from corePlugins.mcFunctionSchemaTEMP.filterArgs import FilterArgumentInfo
+from .filterArgs import FilterArgumentInfo
 from corePlugins.minecraft.resourceLocation import ResourceLocation
 
 # Argument types:

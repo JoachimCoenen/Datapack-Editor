@@ -1,5 +1,5 @@
 from Cat.utils import Anything
-from corePlugins.json.core import *
+from .core import *
 
 
 def enrichWithSchema(data: JsonData, schema: JsonSchema) -> bool:

@@ -5,7 +5,7 @@ from functools import partial
 from typing import Any, Optional, Union, Type, Callable
 
 from Cat.utils.collections_ import AddToDictDecorator
-from corePlugins.json.core import *
+from .core import *
 
 
 class ComplexEncoder(json.JSONEncoder):

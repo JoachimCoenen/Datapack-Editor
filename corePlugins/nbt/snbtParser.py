@@ -5,8 +5,8 @@ from typing import Optional, Type, Union, Callable, NamedTuple, overload, TypeVa
 
 from Cat.utils.collections_ import OrderedDict
 from model.messages import *
-from corePlugins.nbt.snbtTokenizer import SNBTTokenizer, Token, TokenType
-from corePlugins.nbt.tags import *
+from .snbtTokenizer import SNBTTokenizer, Token, TokenType
+from .tags import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.parser import ParserBase
 from base.model.utils import Message, Position, Span, MDStr

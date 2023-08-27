@@ -1,5 +1,5 @@
 from base.model.utils import MDStr
-from corePlugins.json.core import JsonArgType, OPTIONS_JSON_ARG_TYPE
+from .core import JsonArgType, OPTIONS_JSON_ARG_TYPE
 
 DPE_FLOAT = JsonArgType(
 	name='dpe:float',

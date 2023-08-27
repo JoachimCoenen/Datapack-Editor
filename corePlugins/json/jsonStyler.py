@@ -5,7 +5,7 @@ from typing import ClassVar, Callable, Type
 
 from Cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum
-from corePlugins.json.core import *
+from .core import *
 from base.model.parsing.tree import Node
 from base.model.utils import LanguageId
 

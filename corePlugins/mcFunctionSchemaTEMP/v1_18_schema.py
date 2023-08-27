@@ -2,8 +2,8 @@ from dataclasses import replace
 
 from corePlugins.mcFunction.command import KeywordSchema, MCFunctionSchema
 # temporarily copied from model/data/mcVersion.py
-from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion, getMCVersion
-from corePlugins.mcFunctionSchemaTEMP.v1_17_schema import buildMCFunctionSchemaFor_v1_17
+from .mcVersions import MCVersion, getMCVersion
+from .v1_17_schema import buildMCFunctionSchemaFor_v1_17
 
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:

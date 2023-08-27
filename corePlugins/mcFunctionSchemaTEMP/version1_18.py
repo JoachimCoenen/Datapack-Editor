@@ -1,9 +1,9 @@
 from dataclasses import replace
 
 from corePlugins.mcFunction.command import KeywordSchema
-from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
+from .mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
 from corePlugins.minecraft.resourceLocation import ResourceLocation
-from corePlugins.mcFunctionSchemaTEMP.mcd import fillFromMinecraftData
+from .mcd import fillFromMinecraftData
 
 
 def initPlugin() -> None:

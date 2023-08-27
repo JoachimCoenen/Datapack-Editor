@@ -28,7 +28,7 @@ class SNBTPlugin(PluginBase):
 		return set()
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
-		from corePlugins.nbt.snbtParser import SNBTParser
+		from .snbtParser import SNBTParser
 		return {
 			SNBT_ID: SNBTParser,
 		}
@@ -50,5 +50,5 @@ class SNBTPlugin(PluginBase):
 		}
 
 	def stylers(self) -> list[Type[CatStyler]]:
-		from corePlugins.nbt.snbtStyler import SNBTStyler
+		from .snbtStyler import SNBTStyler
 		return [SNBTStyler]

@@ -1,5 +1,5 @@
-from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
-from corePlugins.mcFunctionSchemaTEMP.mcd import fillFromMinecraftData
+from .mcVersions import MCVersion, registerMCVersion, getMCVersion, newVersionFrom
+from .mcd import fillFromMinecraftData
 from corePlugins.minecraft.resourceLocation import ResourceLocation
 
 

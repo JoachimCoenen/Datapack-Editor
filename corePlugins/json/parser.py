@@ -7,9 +7,9 @@ from typing import Optional, AbstractSet, Callable
 from Cat.utils import CachedProperty
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import ProfiledFunction
-from corePlugins.json.core import *
-from corePlugins.json.lexer import JsonTokenizer
-from corePlugins.json.schema import enrichWithSchema, pathify
+from .core import *
+from .lexer import JsonTokenizer
+from .schema import enrichWithSchema, pathify
 from model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.parser import ParserBase, IndexMapBuilder

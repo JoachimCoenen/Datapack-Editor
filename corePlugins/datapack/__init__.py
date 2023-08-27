@@ -26,11 +26,11 @@ class DatapackPlugin(PluginBase):
 		return {'JsonPlugin', 'McFunctionPlugin', 'MinecraftPlugin'}
 
 	def projectAspects(self) -> list[Type[ProjectAspect]]:
-		from corePlugins.datapack.aspect import DatapackAspect
+		from .aspect import DatapackAspect
 		return [DatapackAspect]
 
 	def settingsAspects(self) -> list[Type[SettingsAspect]]:
-		from corePlugins.datapack.aspect import DatapackSettings
+		from .aspect import DatapackSettings
 		return [DatapackSettings]
 
 	def schemas(self) -> dict[str, Schema]:
@@ -51,5 +51,5 @@ class DatapackPlugin(PluginBase):
 		return {JSON_ID: mappings}
 
 	def projectCreators(self) -> list[Type[ProjectCreator]]:
-		from corePlugins.datapack.projectCreator import DatapackProjectCreator
+		from .projectCreator import DatapackProjectCreator
 		return [DatapackProjectCreator]

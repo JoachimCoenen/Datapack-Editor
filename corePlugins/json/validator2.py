@@ -1,8 +1,7 @@
 from typing import Protocol
 
 from Cat.utils.collections_ import AddToDictDecorator
-from corePlugins.json.core import *
-from corePlugins.json.core import JsonInvalid, JsonSemanticsError
+from .core import *
 # from model.json.jsonContext import getJsonStringContext
 from model.messages import *
 from base.model.utils import Message, Span, GeneralError, Position

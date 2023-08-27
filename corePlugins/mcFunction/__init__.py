@@ -28,14 +28,14 @@ class McFunctionPlugin(PluginBase):
 		return {'MinecraftPlugin', 'NbtPlugin'}
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
-		from corePlugins.mcFunction.parser import MCFunctionParser
+		from .parser import MCFunctionParser
 		return {
 			MC_FUNCTION_ID: MCFunctionParser,
 		}
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
-		from corePlugins.mcFunction.commandContext import CommandCtxProvider
-		from corePlugins.mcFunction.command import CommandPart
+		from .commandContext import CommandCtxProvider
+		from .command import CommandPart
 		return {
 			CommandPart: CommandCtxProvider,
 			# MCFunction: CommandCtxProvider,
@@ -59,5 +59,5 @@ class McFunctionPlugin(PluginBase):
 		}
 
 	def stylers(self) -> list[Type[CatStyler]]:
-		from corePlugins.mcFunction.mcFunctionStyler import MCCommandStyler
+		from .mcFunctionStyler import MCCommandStyler
 		return [MCCommandStyler]

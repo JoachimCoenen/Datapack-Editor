@@ -4,7 +4,7 @@ from typing import Optional, Callable
 
 from Cat.utils import CachedProperty
 from base.model.parsing.bytesUtils import CR_LF, DIGITS_RANGE, WHITESPACE, ASCII_LOWERCASE_RANGE, ASCII_UPPERCASE_RANGE, bytesToStr, ASCII_LETTERS, WHITESPACE_NO_LF
-from corePlugins.json.core import TokenType, Token
+from .core import TokenType, Token
 from base.model.parsing.parser import TokenizerBase
 from base.model.utils import Span, Position, Message
 

@@ -18,13 +18,11 @@ from corePlugins.mcFunction.commandContext import ArgumentContext, argumentConte
 from corePlugins.mcFunction.snbt import parseNBTPath
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.mcFunction.utils import CommandSyntaxError, CommandSemanticsError
-from corePlugins.mcFunctionSchemaTEMP.argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
-from corePlugins.mcFunctionSchemaTEMP.filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, \
-	FilterArgumentInfo, validateFilterArgs
-from corePlugins.mcFunctionSchemaTEMP.targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
+from .argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
+from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, validateFilterArgs
+from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from corePlugins.nbt.tags import NBTTagSchema
 from model.messages import *
-# from sessionOld.session import getSession
 
 
 def initPlugin() -> None:

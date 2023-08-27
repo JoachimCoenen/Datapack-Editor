@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from typing import TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar, Collection
 
 from Cat.utils import Singleton
-from corePlugins.mcFunction import MC_FUNCTION_ID
-from corePlugins.mcFunction.argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
+from . import MC_FUNCTION_ID
+from .argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.tree import Schema, Node
 from base.model.utils import Position, LanguageId, Span

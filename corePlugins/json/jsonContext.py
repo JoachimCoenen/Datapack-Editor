@@ -10,14 +10,13 @@ from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import joinFilePath, dirFromFilePath
 from base.model.session import getSession
-from corePlugins.json import validator2
-from corePlugins.json.core import *
+from . import validator2
+from .core import *
 from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, parseNPrepare, validateTree, getSuggestions, \
 	getDocumentation, getClickableRanges, onIndicatorClicked
 from base.model.utils import Position, Span, GeneralError, MDStr, LanguageId
-from corePlugins.json.argTypes import *
-from corePlugins.json.core import ALL_NAMED_JSON_ARG_TYPES
-from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
+from .argTypes import *
+from .schemaStore import JSON_SCHEMA_LOADER
 from model.messages import UNKNOWN_MSG
 
 

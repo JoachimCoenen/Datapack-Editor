@@ -18,7 +18,7 @@ class MinecraftPlugin(PluginBase):
 		return set()
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
-		from corePlugins.minecraft.resourceLocation import ResourceLocationCtxProvider, ResourceLocationNode
+		from .resourceLocation import ResourceLocationCtxProvider, ResourceLocationNode
 		return {
 			ResourceLocationNode: ResourceLocationCtxProvider
 		}

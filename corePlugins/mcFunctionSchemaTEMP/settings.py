@@ -9,7 +9,7 @@ from Cat.Serializable.dataclassJson import catMeta
 
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings
 from base.model.aspect import AspectType
-from corePlugins.mcFunctionSchemaTEMP.mcVersions import ALL_MC_VERSIONS, getMCVersion
+from .mcVersions import ALL_MC_VERSIONS, getMCVersion
 
 MINECRAFT_ASPECT_TYPE = AspectType('dpe:minecraft')
 

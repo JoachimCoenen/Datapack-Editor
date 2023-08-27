@@ -23,21 +23,21 @@ def initPlugin() -> None:
 class JsonPlugin(PluginBase):
 
 	def initPlugin(self) -> None:
-		from corePlugins.json.argTypes import init  # load standard argument types
+		from .argTypes import init  # load standard argument types
 		init()
 
 	def dependencies(self) -> set[str]:
 		return set()
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
-		from corePlugins.json.parser import JsonParser
+		from .parser import JsonParser
 		return {
 			JSON_ID: JsonParser,
 		}
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
-		from corePlugins.json.jsonContext import JsonCtxProvider
-		from corePlugins.json.core import JsonNode
+		from .jsonContext import JsonCtxProvider
+		from .core import JsonNode
 		return {
 			JsonNode: JsonCtxProvider
 		}
@@ -56,11 +56,11 @@ class JsonPlugin(PluginBase):
 		}
 
 	def stylers(self) -> list[Type[CatStyler]]:
-		from corePlugins.json.jsonStyler import JsonStyler
+		from .jsonStyler import JsonStyler
 		return [JsonStyler]
 
 	def schemas(self) -> dict[str, Schema]:
-		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
+		from .schemaStore import JSON_SCHEMA_LOADER
 		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
 		schemaPath = os.path.join(resourcesDir, 'jsonSchema.json')
 		return {'dpe:json_schema': JSON_SCHEMA_LOADER.loadSchema('dpe:json_schema', schemaPath)}

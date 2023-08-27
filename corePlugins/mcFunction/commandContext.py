@@ -5,10 +5,10 @@ from typing import Iterable, Optional, Any, cast
 from Cat.utils import escapeForXml, Decorator
 from Cat.utils.profiling import logError
 from base.model.parsing.contextProvider import ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
-from corePlugins.mcFunction.argumentTypes import LiteralsArgumentType, ArgumentType
-from corePlugins.mcFunction.command import *
-from corePlugins.mcFunction.stringReader import StringReader
-from corePlugins.mcFunction.utils import CommandSyntaxError
+from .argumentTypes import LiteralsArgumentType, ArgumentType
+from .command import *
+from .stringReader import StringReader
+from .utils import CommandSyntaxError
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.pathUtils import FilePath
 from base.model.utils import Position, Span, GeneralError, MDStr, formatAsError
@@ -43,10 +43,10 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 
 	def validateTree(self, errorsIO: list[GeneralError]) -> None:
 		if isinstance(self.tree, MCFunction):
-			from corePlugins.mcFunction.validator import checkMCFunction
+			from .validator import checkMCFunction
 			errorsIO += checkMCFunction(self.tree)
 		elif isinstance(self.tree, ParsedCommand):
-			from corePlugins.mcFunction.validator import validateCommand
+			from .validator import validateCommand
 			validateCommand(self.tree, errorsIO=cast(list, errorsIO))
 		pass  # TODO: validateTree for command
 

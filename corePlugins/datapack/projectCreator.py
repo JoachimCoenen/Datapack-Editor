@@ -12,9 +12,9 @@ from Cat.utils.utils import openOrCreate
 from base.model.pathUtils import joinFilePath, FilePathStr
 from base.model.project.project import Project, ProjectRoot
 from base.model.project.projectCreator import ProjectCreator
-from corePlugins.datapack.aspect import ALL_DP_VERSIONS
-from corePlugins.datapack.datapackContents import NAME_SPACE_VAR
-from corePlugins.datapack.datapackContentsContents import DATAPACK_CONTENTS_STRUCTURE
+from .aspect import ALL_DP_VERSIONS
+from .datapackContents import NAME_SPACE_VAR
+from .datapackContentsContents import DATAPACK_CONTENTS_STRUCTURE
 from corePlugins.minecraft.resourceLocation import isNamespaceValid
 from gui.datapackEditorGUI import DatapackEditorGUI
 
