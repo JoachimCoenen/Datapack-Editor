@@ -75,8 +75,6 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 					result += handler.getSuggestions2(nx, node, pos, replaceCtx)
 			elif nx is COMMANDS_ROOT:
 				result += self._getCommandSuggestions()
-				# from sessionOld.session import getSession
-				# result += [cmd.name + ' ' for cmd in getSession().minecraftData.commands.values()]
 		return result
 
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
@@ -90,7 +88,6 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 
 		return self._getCommandSuggestions()
 
-
 	def getCallTips(self, pos: Position) -> list[str]:
 		match = self.getBestMatch(pos)
 		possibilities: Optional[list[CommandPartSchema]] = None
@@ -98,7 +95,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			if (ctx := self.getContext(hit)) is not None:
 				if tips := ctx.getCallTips(hit, pos):
 					return tips
-			possibilities = _getCallTipsFromHit(hit, pos)
+			possibilities = _getCallTipsFromHit(hit)
 
 		if possibilities is None:
 			if (before := match.before) is not None:
@@ -155,7 +152,7 @@ def _getBestMatch(tree: CommandPart, pos: Position, match: Match) -> None:
 		child = child.next
 
 
-def _getCallTipsFromHit(hit: CommandPart, pos: Position) -> Optional[list[CommandPartSchema]]:
+def _getCallTipsFromHit(hit: CommandPart) -> Optional[list[CommandPartSchema]]:
 	if (prev := hit.prev) is not None:
 		if (schema := prev.schema) is not None:
 			if (next_ := schema.next) is not None:
@@ -227,7 +224,7 @@ def defaultDocumentationProvider(argument: CommandPart) -> MDStr:
 				schema.type.description2,
 			]
 		else:
-			typeStr = escapeForXml(schema.asString)
+			typeStr = ""
 			typeDescription = []
 		tip = f"{name}\n\n`{typeStr}`\n\n{description}"
 		if typeDescription:
