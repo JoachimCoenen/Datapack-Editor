@@ -9,7 +9,7 @@ from corePlugins.nbt.tags import NBTTag, NBTTagSchema
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import parseNPrepare
 from base.model.pathUtils import FilePath
-from base.model.utils import Span, GeneralError, LanguageId
+from base.model.utils import Span, GeneralError, LanguageId, wrapInMarkdownCode
 
 
 def parseNBTTag(sr: StringReader, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
@@ -142,7 +142,7 @@ def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -
 			stop = ex.args[0][1] + sr.cursor
 			begin = sr.posFromColumn(start)
 			end = sr.posFromColumn(stop)
-		errorsIO.append(CommandSyntaxError(escapeForXml(message), Span(begin, end), style='error'))
+		errorsIO.append(CommandSyntaxError(wrapInMarkdownCode(message), Span(begin, end), style='error'))
 		sr.rollback()
 		return None
 
