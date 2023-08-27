@@ -4,7 +4,7 @@ import os
 import re
 from io import BufferedIOBase
 from operator import itemgetter
-from typing import Callable, Literal, NamedTuple, Optional, Protocol, Union
+from typing import Callable, Literal, NamedTuple, Optional, Protocol, Union, TypeVar
 from zipfile import ZipFile, BadZipFile
 
 from Cat.extensions import makeSearchPath, processRecursively
@@ -15,6 +15,8 @@ from Cat.utils.profiling import logWarning
 FilePathStr = str
 FilePathTpl = tuple[str, str]
 FilePath = Union[FilePathStr, FilePathTpl]
+
+_TFilePath = TypeVar('_TFilePath', FilePathStr, FilePathTpl)
 
 
 _normalizeDirSeparatorsTrans: dict = str.maketrans({'\\': '/'})
@@ -79,7 +81,7 @@ def unitePath(path: FilePath) -> FilePathStr:
 	return path
 
 
-def joinFilePath(path: FilePath, part: str) -> FilePath:
+def joinFilePath(path: _TFilePath, part: str) -> _TFilePath:
 	if isinstance(path, tuple):
 		return path[0], f"{path[1].removesuffix('/')}/{part.removeprefix('/')}"
 	else:
