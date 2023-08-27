@@ -1,12 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, Field
 from typing import Optional, Sequence, Type, cast
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
+from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.GUI import SizePolicy, NO_MARGINS, MessageBoxStyle
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
+from Cat.Serializable.dataclassJson import getDecorators
 from Cat.icons import icons
 from base.model.aspect import getAspectsForClass
 from base.model.project.project import Project, ProjectRoot, Root, DependencyDescr, ProjectAspect
@@ -228,12 +230,23 @@ def aspectsGUI(gui: DatapackEditorGUI, project: Project):
 
 
 def aspectPanelGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect):
-	with gui.hLayout(seamless=True):
+	allFields = [field for field in fields(aspect) if all(not isinstance(d, pd.NoUI) for d in getDecorators(field))]
+	with gui.vPanel(seamless=True, preventVStretch=False):
 		with gui.hPanel(seamless=True, preventVStretch=False):
+			isOpen = gui.spoiler(drawDisabled=not allFields)
 			gui.label(aspect.getAspectType())
 			gui.addHSpacer(0, SizePolicy.Expanding)
 			if gui.toolButton(icon=icons.remove, tip='remove'):
 				_removeAspectGUI(gui, project, aspect)
+		if isOpen and allFields:
+			with gui.vPanel(), gui.indentation():
+				aspectOptionsGUI(gui, project, aspect, allFields)
+
+
+def aspectOptionsGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect, allFields: list[Field]):
+	for field in allFields:
+		gui.propertyField(aspect, field, True, enabled=True)
+		gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer
 
 
 def _removeAspectGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect):
