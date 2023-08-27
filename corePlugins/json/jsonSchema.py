@@ -842,7 +842,11 @@ def nullHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 def calculatedHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	func = self.reqStrVal(node, 'function')
-	func = lookupFunction(func)
+	try:
+		func = lookupFunction(func)
+	except Exception as ex:
+		self.errors.append(WrappedError(ex, span=node.n.data.get('function').value.span))
+		func = lambda x: None
 
 	objectSchema = JsonCalculatedValueSchema(
 		description=description,
@@ -854,12 +858,12 @@ def calculatedHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchem
 
 
 def lookupFunction(qName: str) -> Callable:
-	splitQName = qName.split('.')
+	splitQName = qName.rpartition('.')[::2]
 	mod = sys.modules.get(splitQName[0])
 	f = mod
 	for part in splitQName[1:]:
 		f = getattr(f, part)
-	assert callable(f)
+	assert callable(f), f"{qName} is not a callable type({qName}): {type(qName)}"
 	return f
 
 
