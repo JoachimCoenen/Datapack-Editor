@@ -21,8 +21,7 @@ from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
 from Cat.icons import icons
 from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
-from base.model import documents
-from base.model.applicationSettings import applicationSettings
+from base.model.applicationSettings import getApplicationSettings
 from base.model.documents import ErrorCounts
 from base.model.pathUtils import FilePath, unitePath
 from base.model.utils import GeneralError
@@ -541,7 +540,7 @@ def drawCodeField(
 
 	forceLocate = False
 
-	font = applicationSettings.appearance.monospaceFont
+	font = getApplicationSettings().appearance.monospaceFont
 
 	with gui.vLayout(seamless=True):
 		# actual GUI:

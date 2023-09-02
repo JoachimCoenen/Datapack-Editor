@@ -19,7 +19,7 @@ from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries
 from base.model.project.project import Root, FileEntry
 from base.model.session import getSession
 
-from base.model.applicationSettings import applicationSettings
+from base.model.applicationSettings import getApplicationSettings
 
 
 @as_dataclass(fast_new=True)
@@ -285,13 +285,14 @@ class FileSearchPopup(PythonGUIDialog):
 		fe = sr.fe
 		isSelected = self.selectedItem is not None and fe == self.selectedItem.fe
 
+		fontSize = self.getLargeFontSize()
 		if isSelected:
-			fileNameStyle = f'font-size: {int(round(applicationSettings.appearance.fontSize * 1.3333))}pt; color: #ffffff;'
+			fileNameStyle = f'font-size: {fontSize}pt; color: #ffffff;'
 			pathStyle = f'color: #ffffff'
 			font = QFont(self.font())
 			font.setWeight(font.weight() + 7)
 		else:
-			fileNameStyle = f'font-size: {int(round(applicationSettings.appearance.fontSize * 1.3333))}pt;'
+			fileNameStyle = f'font-size: {fontSize}pt;'
 			pathStyle = f'color: #808080'
 			font = self.font()
 
@@ -313,9 +314,13 @@ class FileSearchPopup(PythonGUIDialog):
 				self.selectedItem = sr
 				self.accept()
 
+	def getLargeFontSize(self):
+		fontSize = int(round(getApplicationSettings().appearance.fontSize * 1.3333))
+		return fontSize
+
 	def remainingElementsGUI(self, gui: PythonGUI, count: int, overlap: Overlap, roundedCorners: RoundedCorners):
 		with gui.hPanel(overlap=overlap, roundedCorners=roundedCorners):
-			fileNameStyle = f'font-size: {int(round(applicationSettings.appearance.fontSize * 1.3333))}pt;'
+			fileNameStyle = f'font-size: {self.getLargeFontSize()}pt;'
 			if count > 0:
 				gui.label(f'<font style="{fileNameStyle}">and {count} more ...</font>')
 			else:

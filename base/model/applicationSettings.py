@@ -124,7 +124,7 @@ def _getColorScheme(self) -> str:
 
 
 def _setColorScheme(self, newVal: str) -> None:
-	if applicationSettings is not None and applicationSettings.appearance is self:
+	if applicationSettings is not None and getApplicationSettings().appearance is self:
 		oldVal = getattr(self, '_colorScheme', None)
 		if newVal != oldVal:
 			theme.setCurrentColorScheme(newVal)
@@ -262,7 +262,7 @@ class ApplicationSettings(SerializableDataclassWithAspects[SettingsAspect]):
 
 
 applicationSettings = None
-applicationSettings = ApplicationSettings()
+applicationSettings: ApplicationSettings = ApplicationSettings()
 
 
 def _getSettingsPath() -> str:
@@ -363,13 +363,13 @@ def copyAppSettings(self: SerializableDataclass, other: SerializableDataclass) -
 
 def saveApplicationSettings():
 	with open(_getSettingsPath(), 'w', encoding='utf-8') as settingsFile:
-		applicationSettings.dumpJson(settingsFile)
+		getApplicationSettings().dumpJson(settingsFile)
 
 
 def loadApplicationSettings():
 	try:
 		with open(_getSettingsPath(), "r", encoding='utf-8') as settingsFile:
-			newSettings = applicationSettings.fromJson(settingsFile.read(), onError=logError)
+			newSettings = getApplicationSettings().fromJson(settingsFile.read(), onError=logError)
 		setApplicationSettings(newSettings)
 	except (JSONDecodeError, OSError, AttributeError, TypeError, RuntimeError) as e:
 		logError(f'Unable to load settings: \n{traceback.format_exc()}')
