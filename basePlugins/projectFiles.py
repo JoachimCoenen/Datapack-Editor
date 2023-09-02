@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from operator import attrgetter
 from typing import Optional, Callable, ClassVar, Type, final
 
-from PyQt5.QtGui import QIcon, QKeySequence
+from PyQt5.QtGui import QIcon
 from recordclass import as_dataclass
 from watchdog.events import FileSystemEventHandler, FileClosedEvent, FileModifiedEvent, FileDeletedEvent, FileCreatedEvent, FileMovedEvent
 
@@ -23,7 +23,7 @@ from base.model.project.index import Index
 from base.model.project.project import Project, ProjectRoot, ProjectAspect, DependencyDescr, Root, IndexBundleAspect, AspectFeatures, FileEntry, makeFileEntry
 from base.model.session import getSession
 from base.model.utils import Span
-from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
+from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, SearchableListContext, FilterStr, filterComputedChoices
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
 
 
@@ -139,6 +139,9 @@ AnyFilesTreeElement = FilesTreeRoot | FilesTreeItem
 
 
 class ProjectFilesEditor(EditorBase[Project]):
+
+	def postInit(self) -> None:
+		self._listContext: SearchableListContext = SearchableListContext()
 
 	def OnGUI(self, gui: DatapackEditorGUI) -> None:
 		with gui.vLayout(seamless=True):
@@ -291,18 +294,12 @@ class ProjectFilesEditor(EditorBase[Project]):
 			isSelected    : Optional[Callable[[FilesTreeItem], bool]] = None,
 
 	):
-		allAutocompleteStrings, projectItems = self.buildFilesTreeRoot(projectRoots, dependencies)
-
-		with gui.vLayout(seamless=True):
-			with gui.hLayout(seamless=True):
-				filterStr = gui.filterTextField(None, allAutocompleteStrings, shortcut=QKeySequence.Find).lower()
-				totalFilesCount = len(allAutocompleteStrings)
-				filteredFilesCount, filteredProjectItems = self.filterFiles(totalFilesCount, filterStr, projectItems)
-				gui.toolButton(f'{filteredFilesCount:,} of {totalFilesCount:,}',)
-
-			gui.tree(
-				DataTreeBuilder(
-					FilesTreeRoot(filteredProjectItems),
+		totalFilesCount, allAutocompleteStrings, projectItems = self.buildFilesTreeRoot(projectRoots, dependencies)
+		_, self._listContext = gui.filteredTreeWithSearchField(
+			projectItems,
+			self._listContext,
+			lambda filteredItems: DataTreeBuilder(
+					FilesTreeRoot(filteredItems),
 					_filesTreeChildrenMaker,
 					_labelMaker,
 					_iconMaker,
@@ -319,18 +316,19 @@ class ProjectFilesEditor(EditorBase[Project]):
 					isSelected=isSelected,
 					getId=lambda x: x.label,
 				),
-				loadDeferred=True,
-			)
+			getStrChoices=lambda items: allAutocompleteStrings,
+			filterFunc=lambda filterStr, items: self.filterFiles(totalFilesCount, filterStr, projectItems),
+		)
 
-	def filterFiles(self, totalFilesCount: int, filterStr: str, projectItems: list[AnyFilesTreeElement]) -> tuple[int, list[AnyFilesTreeElement]]:
+	def filterFiles(self, totalFilesCount: int, filterStr: FilterStr, projectItems: list[AnyFilesTreeElement]) -> tuple[int, int, list[AnyFilesTreeElement]]:
 		if filterStr:
 			filteredFilesCount, filteredProjectItems = self._filterFilesInternal(filterStr, projectItems)
 		else:
 			filteredFilesCount = totalFilesCount
 			filteredProjectItems = projectItems
-		return filteredFilesCount, filteredProjectItems
+		return totalFilesCount, filteredFilesCount, filteredProjectItems
 
-	def _filterFilesInternal(self, filterStr: str, projectItems: list[AnyFilesTreeElement]) -> tuple[int, list[AnyFilesTreeElement]]:
+	def _filterFilesInternal(self, filterStr: FilterStr, projectItems: list[AnyFilesTreeElement]) -> tuple[int, list[AnyFilesTreeElement]]:
 		filteredFilesCount = 0
 		filteredProjectItems = []
 		for projItem in projectItems:
@@ -339,14 +337,15 @@ class ProjectFilesEditor(EditorBase[Project]):
 				filteredFilesCount += filteredFilesCount2
 				filteredProjectItems.append(projItem)
 			else:
-				projItem.filePaths = [fp for fp in projItem.filePaths if filterStr in fp.virtualPath.lower()]
-				if projItem.filePaths:
-					filteredFilesCount += len(projItem.filePaths)
+				filterFunc = filterComputedChoices(attrgetter('virtualPath'))
+				_, filteredCount, projItem.filePaths = filterFunc(filterStr, projItem.filePaths)
+				if filteredCount:
+					filteredFilesCount += filteredCount
 					filteredProjectItems.append(projItem)
 
 		return filteredFilesCount, filteredProjectItems
 
-	def buildFilesTreeRoot(self, projectRoots: list[ProjectRoot], dependencies: list[Root]) -> tuple[list[str], list[AnyFilesTreeElement]]:
+	def buildFilesTreeRoot(self, projectRoots: list[ProjectRoot], dependencies: list[Root]) -> tuple[int, list[str], list[AnyFilesTreeElement]]:
 		# autocomplete strings:
 		allAutocompleteStrings: list[str] = []
 		projectItems: list[AnyFilesTreeElement] = []
@@ -358,7 +357,7 @@ class ProjectFilesEditor(EditorBase[Project]):
 			self.handleRoot(proj, allAutocompleteStrings, dependenciesItems, icons.book)
 		dependenciesItem = FilesTreeRoot(dependenciesItems, "Dependencies", icons.sitemap)
 		projectItems.append(dependenciesItem)
-		return allAutocompleteStrings, projectItems
+		return len(allAutocompleteStrings), allAutocompleteStrings, projectItems
 
 	def handleRoot(self, root: Root, allAutocompleteStringsIO: list[str], projectItemsIO: list[FilesTreeItem], icon: QIcon) -> None:
 		rootName = root.name

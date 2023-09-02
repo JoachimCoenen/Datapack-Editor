@@ -400,11 +400,7 @@ class DatapackEditorGUI(AutoGUI):
 
 		def onKeyPressed(widget, event: QKeyEvent):
 			key = event.key()
-			if key in {Qt.Key_Down, Qt.Key_Up, Qt.Key_Return}:
-				if context.treeView is not None:
-					context.treeView.keyPressEvent(QKeyEvent(event))
-				return True
-			if key in {Qt.Key_Left, Qt.Key_Right}:
+			if key in {Qt.Key_Down, Qt.Key_Up, Qt.Key_Left, Qt.Key_Right, Qt.Key_Return}:
 				if context.treeView is not None:
 					context.treeView.keyPressEvent(QKeyEvent(event))
 					event.accept()
