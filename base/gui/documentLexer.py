@@ -468,11 +468,10 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		editor = self._editor
 		if editor is not None and (ctxProvider := self.contextProvider) is not None:
 			ranges = ctxProvider.getClickableRanges()
-			# return [r.asTuple for r in ranges]
 			return [
 				(
-					editor.lineIndexFromPosition(r.start.index),
-					editor.lineIndexFromPosition(r.end.index)
+					editor.cePositionFromIndex(r.start.index),
+					editor.cePositionFromIndex(r.end.index)
 				)
 				for r in ranges
 			]

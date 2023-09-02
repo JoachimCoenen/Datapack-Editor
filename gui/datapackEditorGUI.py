@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import QApplication, QSizePolicy
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
-from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch
+from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, IndexSpan
 from Cat.CatPythonGUI.GUI.enums import ResizeMode
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
@@ -68,15 +68,15 @@ class ContextMenuEntries:
 		return entries
 
 
-def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str], Iterator[tuple[int, int]]]:
+def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str], Iterator[IndexSpan]]:
 	if searchOptions.searchMode == SearchMode.RegEx:
 		flags = 0
 		flags |= re.IGNORECASE if not searchOptions.isCaseSensitive else 0
 		flags |= re.MULTILINE if not searchOptions.isMultiLine else 0
 		exprC = re.compile(expr, flags=flags)
 
-		def searcher(text: str) -> Iterator[tuple[int, int]]:
-			yield from ((m.start(), m.end()) for m in exprC.finditer(text))
+		def searcher(text: str) -> Iterator[IndexSpan]:
+			yield from (IndexSpan(m.start(), m.end()) for m in exprC.finditer(text))
 	else:
 		if searchOptions.searchMode == SearchMode.UnicodeEscaped:
 			expr = codecs.getdecoder("unicode_escape")(expr)[0]
@@ -84,9 +84,9 @@ def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str],
 			expr = expr.lower()
 		exprLen = len(expr)
 
-		def searcher(text: str) -> Iterator[tuple[int, int]]:
+		def searcher(text: str) -> Iterator[IndexSpan]:
 			text = text if searchOptions.isCaseSensitive else text.lower()
-			yield from ((m, m + exprLen) for m in findall(expr, text))
+			yield from (IndexSpan(m, m + exprLen) for m in findall(expr, text))
 
 	return searcher
 
@@ -372,7 +372,7 @@ class DatapackEditorGUI(AutoGUI):
 			self.toolButton(f'{len(filteredChoices):,} of {len(allChoices):,}', overlap=adjustOverlap(overlap, (1, None, None, None)), roundedCorners=maskCorners(roundedCorners, CORNERS.RIGHT))  #  {valuesName} shown', alignment=Qt.AlignRight)
 		return filterStr, filteredChoices
 
-	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[tuple[int, int]], bool, bool, SearchOptions]:
+	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[IndexSpan], bool, bool, SearchOptions]:
 		def onGUI(gui: DatapackEditorGUI, text: Optional[str], searchExpr: Optional[str], outerGUI: DatapackEditorGUI) -> None:
 			with gui.vLayout(seamless=True):
 				with gui.hLayout(seamless=True):
@@ -390,7 +390,7 @@ class DatapackEditorGUI(AutoGUI):
 
 					# do actual search:
 					try:
-						searcher = makeTextSearcher(gui.customData['searchExpr'].encode('utf-8'), gui.customData['searchOptions'])
+						searcher: Callable[[str], Iterator[IndexSpan]] = makeTextSearcher(gui.customData['searchExpr'].encode('utf-8'), gui.customData['searchOptions'])
 					except Exception as e:
 						errorText = str(e)
 						gui.customData['searchResults'] = []
@@ -439,7 +439,7 @@ class DatapackEditorGUI(AutoGUI):
 			'info': icons.infoColored,
 		}
 
-	def errorsSummaryGUI(self: DatapackEditorGUI, errorCounts: documents.ErrorCounts, **kwargs):
+	def errorsSummaryGUI(self: DatapackEditorGUI, errorCounts: ErrorCounts, **kwargs):
 		errorsTip = 'errors'
 		warningsTip = 'warnings'
 		hintsTip = 'hints'
@@ -559,7 +559,7 @@ def drawCodeField(
 			searchOptions=searchOptions,
 			returnCursorPos=True,
 			#onCursorPositionChanged=lambda a, b, g=gui: g.customData.__setitem__('currentCursorPos', (a, b)) ,
-			errors=errors,
+			errors=errors if highlightErrors else [],
 			font=font,
 			**codeFieldKwargs,
 			**kwargs

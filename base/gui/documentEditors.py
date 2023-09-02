@@ -169,11 +169,6 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		)
 
 	def codeEditorForDoc(self, gui: DatapackEditorGUI, document: TextDocument, *, autoIndent: bool = True, **kwargs) -> None:
-		if document.highlightErrors:
-			errors = [error for error in document.errors if error.position is not None and error.end is not None]
-		else:
-			errors = []
-
 		lexerCls = getLexer(document.language)
 		if type(self._currentLexer) is lexerCls:
 			lexer = self._currentLexer
@@ -190,7 +185,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			gui,
 			document.strContent,
 			lexer=lexer,
-			errors=errors,
+			errors=document.errors,
 			forceLocateElement=True,
 			currentCursorPos=document.cursorPosition,
 			selectionTo=document.selection[2:] if document.selection[0] != -1 else None,

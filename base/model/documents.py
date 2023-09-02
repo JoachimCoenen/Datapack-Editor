@@ -366,7 +366,7 @@ class Document(SerializableDataclass):
 	schemaId: Optional[str] = field(default=None)
 
 	def _initUndoRedoStack(self, makeMementoIfDiff: MakeMementoIfDiffFunc[_TTarget]):
-		self.undoRedoStack = UndoRedoStack2(self, 'content', makeMementoIfDiff)
+		self.undoRedoStack = UndoRedoStack2(self, 'content', makeMementoIfDiff, doDeepCopy=True)
 
 	encoding: str = field(default='utf-8')
 	_undoRedoStackInitialized: bool = field(default=False, metadata=catMeta(serialize=False))
@@ -388,7 +388,7 @@ class Document(SerializableDataclass):
 	def contentOnSet(self, newVal: bytes, oldVal: Optional[bytes]) -> None:
 		if not self._undoRedoStackInitialized:
 			# do take a snapshot to initialize the undoRedoStack:
-			self.undoRedoStack.takeSnapshotIfChanged(doDeepCopy=True)
+			self.undoRedoStack.takeSnapshotIfChanged()
 			self._undoRedoStackInitialized = True
 
 		if newVal == oldVal:
@@ -432,7 +432,7 @@ class Document(SerializableDataclass):
 			QTimer.singleShot(0, lambda s=self: s.onErrorsChanged.emit(s))
 
 	@property
-	def errors(self) -> Sequence[GeneralError]:
+	def errors(self) -> list[GeneralError]:
 		return self.parserErrors + self.validationErrors
 
 	cursorPosition: tuple[int, int] = field(default=(0, 0))
@@ -523,7 +523,7 @@ class Document(SerializableDataclass):
 	@utils.DeferredCallOnceMethod(delay=333)
 	def _asyncTakeSnapshot(self) -> None:
 		# MUST be deferred with a delay > 0!
-		self.undoRedoStack.takeSnapshotIfChanged(doDeepCopy=True)
+		self.undoRedoStack.takeSnapshotIfChanged()
 
 	def toRepr(self):
 		raise NotImplemented()
