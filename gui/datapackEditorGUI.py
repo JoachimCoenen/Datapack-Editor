@@ -5,15 +5,16 @@ import functools as ft
 import os
 import re
 from collections import OrderedDict
-from dataclasses import dataclass
-from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping
+from dataclasses import dataclass, field
+from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Generic, \
+	Sequence
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
-from PyQt5.QtWidgets import QApplication, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QSizePolicy, QTreeView
 
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS
+from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, CORNERS, TreeBuilderABC
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
 from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, IndexSpan
 from Cat.CatPythonGUI.GUI.enums import ResizeMode
@@ -32,6 +33,7 @@ resultBoxStyle = Style({'CatBox': Style({'background': '#DAE8FC'})})
 
 _TT = TypeVar('_TT')
 _TR = TypeVar('_TR')
+_T2 = TypeVar('_T2')
 
 
 class ContextMenuEntries:
@@ -162,25 +164,40 @@ class FilterStr:
 		return any(self.__filters)
 
 
-def filterStrChoices(filterStr: FilterStr, allChoices: Collection[str]) -> Collection[str]:
+def filterStrChoices(filterStr: FilterStr, allChoices: Collection[str]) -> tuple[int, int, Collection[str]]:
 	if not filterStr:
-		return allChoices
-	return [choice[1] for choice in ((choice.lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
+		result = allChoices
+	else:
+		result = [choice[1] for choice in ((choice.lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
+	return len(allChoices), len(result), result
 	# [choice for choice in allChoices if filterStr in choice.lower()]
 
 
-def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> list[_TT]:
+def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> tuple[int, int, list[_TT]]:
 	if not filterStr:
-		return list(allChoices.values())
-	return [choice[1] for choice in ((  name.lower(),   item) for name, item in allChoices.items()) if any(f in choice[0] for f in filterStr)]
+		result = list(allChoices.values())
+	else:
+		result = [choice[1] for choice in ((  name.lower(),   item) for name, item in allChoices.items()) if any(f in choice[0] for f in filterStr)]
+	return len(allChoices), len(result), result
 
 
 def filterComputedChoices(getStr: Callable[[_TT], str]):
-	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[_TT], getStr=getStr) -> Collection[_TT]:
+	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[_TT], getStr=getStr) -> tuple[int, int, Collection[_TT]]:
 		if not filterStr:
-			return allChoices
-		return [choice[1] for choice in ((getStr(choice).lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
+			result = allChoices
+		else:
+			result = [choice[1] for choice in ((getStr(choice).lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
+		return len(allChoices), len(result), result
 	return innerFilterComputedChoices
+
+
+@dataclass
+class SearchableListContext(Generic[_TR]):
+	selectedValue: Optional[_TR] = None
+	filterStr: FilterStr = field(default_factory=lambda: FilterStr(''))
+	filteredChoices: list[_TR] = field(default_factory=list)
+	focusEndOfText: bool = False
+	treeView: Optional[QTreeView] = None
 
 
 class DatapackEditorGUI(AutoGUI):
@@ -347,7 +364,7 @@ class DatapackEditorGUI(AutoGUI):
 			allChoices: _TT,
 			*,
 			getStrChoices: Callable[[-_TT], Iterable[str]] = lambda x: x,
-			filterFunc: Callable[[FilterStr, -_TT], _TR] = filterStrChoices,
+			filterFunc: Callable[[FilterStr, -_TT], tuple[int, int, _TR]] = filterStrChoices,
 			shortcut: Optional[QKeySequence] = QKeySequence.Find,
 			roundedCorners: RoundedCorners = (True, True, False, False),
 			overlap: Overlap = (0, -1),
@@ -360,17 +377,151 @@ class DatapackEditorGUI(AutoGUI):
 
 		if shortcut is not None:
 			kwargs['shortcut'] = shortcut
-		with self.hLayout(horizontalSpacing=0):
+		with self.hLayout(seamless=True):  # horizontalSpacing=0):
 			filterStr = FilterStr(self.filterTextField(
 				filterStr.string if filterStr is not None else None,
 				strChoicesIter(),
-				overlap=adjustOverlap(overlap, (None, None, 0, None)),
-				roundedCorners=maskCorners(roundedCorners, CORNERS.LEFT),
 				**kwargs
 			))
-			filteredChoices = filterFunc(filterStr, allChoices)
-			self.toolButton(f'{len(filteredChoices):,} of {len(allChoices):,}', overlap=adjustOverlap(overlap, (1, None, None, None)), roundedCorners=maskCorners(roundedCorners, CORNERS.RIGHT))  #  {valuesName} shown', alignment=Qt.AlignRight)
+			allCount, filteredCount, filteredChoices = filterFunc(filterStr, allChoices)
+			self.toolButton(f'{filteredCount:,} of {allCount:,}')
 		return filterStr, filteredChoices
+
+	def advancedFilterTextField2(
+			self,
+			allChoices: Sequence[_TT],
+			context: Optional[SearchableListContext[_TR]],
+			*,
+			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
+			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			isRegex: bool = False,
+	) -> SearchableListContext[_TR]:
+		# TODO: find more descriptive name for advancedFilterTextField2(...)
+
+		def onKeyPressed(widget, event: QKeyEvent):
+			key = event.key()
+			if key in {Qt.Key_Down, Qt.Key_Up, Qt.Key_Return}:
+				if context.treeView is not None:
+					context.treeView.keyPressEvent(QKeyEvent(event))
+				return True
+			if key in {Qt.Key_Left, Qt.Key_Right}:
+				if context.treeView is not None:
+					context.treeView.keyPressEvent(QKeyEvent(event))
+					event.accept()
+				return True
+			elif key == Qt.Key_Tab:
+				# do Tab Completion:
+				oldFilterVal = context.filterStr
+				context.filterStr = FilterStr(autocompleteFromList(oldFilterVal.string, getStrChoices(allChoices)))  # , isRegex=isRegex)
+				context.focusEndOfText = True
+				self.OnInputModified(context.treeView)
+				return True
+			else:
+				return False
+
+		if context is None:
+			context = SearchableListContext()
+
+		# with self.vLayout(seamless=True):
+		with self.hLayout(seamless=True):
+			context.filterStr = FilterStr(self.textField(
+				context.filterStr.string,
+				capturingTab=True,
+				onKeyPressed=onKeyPressed,
+				focusEndOfText=context.focusEndOfText,
+				placeholderText='filter... [Ctrl+F]',
+				shortcut=QKeySequence.Find
+			))  # , isRegex=isRegex)
+			context.focusEndOfText = False
+			allCount, filteredCount, context.filteredChoices = filterFunc(context.filterStr, allChoices)
+			self.toolButton(f'{filteredCount} of {allCount}')
+			# if context.filterStr.regexError is not None:
+			# 	self.helpBox(str(context.filterStr.regexError), style='error', elided=True)
+		return context
+
+	def filteredTree(
+			self,
+			context: SearchableListContext[_TT],
+			treeBuilder: TreeBuilderABC[_TT],
+			headerBuilder: Optional[TreeBuilderABC[_T2]] = None,
+			*,
+			headerVisible: bool = ...,
+			loadDeferred: bool = True,
+			columnResizeModes: Optional[Iterable[ResizeMode]] = None,
+			stretchLastColumn: Optional[bool] = None,
+			**kwargs
+	) -> SearchableListContext[_TT]:
+		treeResult = self.tree(
+			treeBuilder,
+			headerBuilder,
+			headerVisible=headerVisible,
+			loadDeferred=loadDeferred,
+			columnResizeModes=columnResizeModes,
+			stretchLastColumn=stretchLastColumn,
+			**kwargs
+		)
+		context.treeView = treeResult.treeView
+		selectionModel = treeResult.selectionModel
+
+		# if self.isFirstRedraw and selectionModel is not self.modifiedInput[0]:
+		# 	currentIndex = treeResult.treeView.currentIndex()
+		# 	if currentIndex.isValid():
+		# 		treeResult.treeView.scrollTo(currentIndex)  has bad performance characteristics :'(
+
+		if len(context.filteredChoices) == 1:
+			model_index = selectionModel.model().index(0, 0, QModelIndex())
+			selectionModel.setCurrentIndex(model_index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+		context.selectedValue = treeResult.selectedItem
+		return context
+
+	def filteredTreeWithSearchField(
+			self,
+			allChoices: Sequence[_TT],
+			filterContext: Optional[SearchableListContext[_TR]],
+			treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]],
+			*,
+			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
+			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
+			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			isRegex: bool = False,
+			headerVisible: bool = ...,
+			loadDeferred: bool = True,
+			columnResizeModes: Optional[Iterable[ResizeMode]] = None,
+			stretchLastColumn: Optional[bool] = None,
+			cornerGUI: Callable[[], None] = None,
+			sandwichedGUI: Callable[[], None] = None,
+			**kwargs
+	) -> tuple[Optional[_TR], SearchableListContext[_TR]]:
+		with self.vLayout(seamless=True):
+			with self.hLayout(seamless=True):
+				filterContext = self.advancedFilterTextField2(
+					allChoices,
+					filterContext,
+					getStrChoices=getStrChoices,
+					filterFunc=filterFunc,
+					isRegex=isRegex,
+				)
+
+				if cornerGUI is not None:
+					cornerGUI()
+
+			if sandwichedGUI is not None:
+				sandwichedGUI()
+
+			treeBuilder = treeBuilderBuilder(filterContext.filteredChoices)
+			headerBuilder = headerBuilderBuilder() if headerBuilderBuilder is not None else None
+			filterContext = self.filteredTree(
+				filterContext,
+				treeBuilder,
+				headerBuilder,
+				headerVisible=headerVisible,
+				loadDeferred=loadDeferred,
+				columnResizeModes=columnResizeModes,
+				stretchLastColumn=stretchLastColumn,
+				**kwargs
+			)
+
+		return filterContext.selectedValue, filterContext
 
 	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[IndexSpan], bool, bool, SearchOptions]:
 		def onGUI(gui: DatapackEditorGUI, text: Optional[str], searchExpr: Optional[str], outerGUI: DatapackEditorGUI) -> None:
