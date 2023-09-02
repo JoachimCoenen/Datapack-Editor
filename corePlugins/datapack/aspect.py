@@ -8,7 +8,7 @@ from Cat.utils.logging_ import logWarning
 from base.model.applicationSettings import getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.aspect import AspectType
-from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr, FileEntry
+from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr, FileEntry, Project
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
 from base.model.session import getSession
@@ -43,7 +43,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 			result = DP_EMPTY_VERSION
 		return result
 
-	def getDependencies(self, root: Root) -> list[DependencyDescr]:
+	def getDependencies(self, root: Root, project: Project) -> list[DependencyDescr]:
 		fileName = 'dependencies.json'
 		rootPath = root.normalizedLocation
 		schema = GLOBAL_SCHEMA_STORE.get('dpe:dependencies', JSON_ID)

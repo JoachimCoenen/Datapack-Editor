@@ -13,7 +13,7 @@ from Cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
 from base.model.pathUtils import FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
 from base.model.aspect import AspectDict, Aspect, SerializableDataclassWithAspects
-from base.model.utils import Span, GeneralError, MDStr, SemanticsError, splitStringForSearch
+from base.model.utils import Span, GeneralError, MDStr, SemanticsError, splitStringForSearch, NULL_SPAN
 
 
 def _fillProjectAspects(aspectsDict: AspectDict):
@@ -54,9 +54,23 @@ class ProjectAspect(Aspect, SerializableDataclass, ABC):
 							f"        ...")
 		cls.aspectFeatures = features
 
-	def getDependencies(self, root: Root) -> list[DependencyDescr]:
+	def preResolveDependencies(self, project: Project) -> None:
+		"""
+		called once for a project, just before all dependencies are resolved (.getDependencies(...) and .resolveDependency(...) for all roots & dependencies)
+		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
+		"""
+		pass
+
+	def getDependencies(self, root: Root, project: Project) -> list[DependencyDescr]:
 		"""
 		for now. might change.
+		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
+		"""
+		pass
+
+	def postResolveDependencies(self, project: Project) -> None:
+		"""
+		called once for a project, just after all dependencies were resolved (.getDependencies(...) and .resolveDependency(...) for all roots & dependencies)
 		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
 		"""
 		pass
@@ -140,8 +154,13 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 	def allRoots(self) -> list[Root]:
 		return self.roots + self.deepDependencies
 
-	def resolveDependencies(self):
-		self.deepDependencies = resolveDependencies(self)
+	def resolveDependencies(self) -> None:
+		aspects = [a for a in self.aspects if a.aspectFeatures.dependencies]
+		for aspect in aspects:
+			aspect.preResolveDependencies(self)
+		self.deepDependencies = resolveDependencies(self, aspects)
+		for aspect in aspects:
+			aspect.postResolveDependencies(self)
 
 	def insertRoot(self, idx: int, root: ProjectRoot) -> ProjectRoot:
 		self.roots.insert(idx, root)
@@ -193,11 +212,9 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 			self.removeRoot(root)
 
 
-def resolveDependencies(project: Project):
-	aspects = [a for a in project.aspects if a.aspectFeatures.dependencies]
-
+def resolveDependencies(project: Project, aspects: list[ProjectAspect]):
 	# just a cache:
-	dependencyDict: dict[str, Optional[Root]] = {}
+	dependencyDict: dict[str, Optional[Root]] = {rt.identifier: rt for rt in project.roots}
 	# seenDependencies: set[str] = set()
 	errorsByRoot: dict[str, list[GeneralError]] = defaultdict(list)
 
@@ -206,7 +223,7 @@ def resolveDependencies(project: Project):
 		dependencyRoots = []
 		seenDependencies = set()
 		for aspect in aspects:
-			aDependencies = aspect.getDependencies(root)
+			aDependencies = aspect.getDependencies(root, project)
 			for dep in aDependencies:
 				if dep.identifier in seenDependencies:
 					continue
@@ -221,13 +238,16 @@ def resolveDependencies(project: Project):
 					dependencyRoots.append(dep.resolved)
 				else:
 					errorsByRoot[root.name].append(
-						SemanticsError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span)
+						SemanticsError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span if dep.span is not None else NULL_SPAN)
 						if dep.mandatory else
-						SemanticsError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span, style='info')
+						SemanticsError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span if dep.span is not None else NULL_SPAN, style='info')
 					)
 		return dependencyRoots
 
 	projectRoots: list[Root] = project.roots
+	for projectRoot in projectRoots:
+		if projectRoot.identifier:
+			dependencyDict[projectRoot.identifier] = projectRoot
 	deepDependencies = collectAndSemiTopolSortAllNodes(projectRoots, getDestinations, lambda p: p.name)
 	projectRootNames = {root.name for root in projectRoots}
 	deepDependencies = [dep for dep in deepDependencies if dep.name not in projectRootNames]  # remove project roots.
@@ -243,8 +263,10 @@ def resolveDependencies(project: Project):
 
 @dataclass(slots=True)
 class DependencyDescr:
-	name: str  # used for displaying
-	identifier: str  # used for unique identification, of the root (i.e. two DependencyDescr objects with the same identifier ALWAYS point o the same Root.
+	name: str
+	"""used for displaying"""
+	identifier: str
+	"""Used for unique identification, of the root. Two DependencyDescr objects with the same identifier ALWAYS point o the same Root."""
 	mandatory: bool
 	span: Optional[Span] = None
 	resolved: Optional[Root] = None
@@ -259,6 +281,8 @@ class IndexBundleAspect(Aspect, IndexBundle, ABC):
 class Root(SerializableDataclass):
 	_name: str = field(metadata=catMeta(serializedName='name'))
 	_location: str  # =FilePathStr  # maybe?
+	_identifier: str = field(default='', metadata=catMeta(serializedName='identifier'))
+	"""Used for unique identification, of the root. Two DependencyDescr objects with the same identifier ALWAYS point o the same Root."""
 	dependencies: list[DependencyDescr] = field(default_factory=list, metadata=catMeta(serialize=False))
 	indexBundles: AspectDict[IndexBundleAspect] = field(default_factory=lambda: AspectDict(IndexBundleAspect), metadata=catMeta(serialize=False))
 
@@ -283,6 +307,11 @@ class Root(SerializableDataclass):
 				if aspect.aspectFeatures.analyzeRoots:
 					aspect.onRootRenamed(self, oldName, newName)
 		self._name = newName
+
+	@property
+	def identifier(self) -> str:
+		"""Used for unique identification, of the root. Two DependencyDescr objects with the same identifier ALWAYS point o the same Root."""
+		return self._identifier
 
 
 @dataclass
