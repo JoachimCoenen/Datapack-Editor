@@ -15,7 +15,7 @@ from base.model import theme
 from base.model.theme import StyleFont, Style, GlobalStyles
 from base.model.parsing.contextProvider import ContextProvider, getContextProvider
 from base.model.parsing.tree import Node
-from base.model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position
+from base.model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position, NULL_POSITION
 from base.model.documents import TextDocument
 
 
@@ -370,7 +370,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	@override
 	def postAutoCompletionSelected(self, selection: str) -> None:
-		QTimer.singleShot(0, lambda: self._editor.showCallTips() or self._editor.myStartAutoCompletion())
+		QTimer.singleShot(0, lambda: (self._editor is not None) and (self._editor.showCallTips() or self._editor.myStartAutoCompletion()))
 
 	@property
 	def autoCompletionTree(self) -> AutoCompletionTree:
@@ -408,13 +408,15 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	def posFromCEPos(self, cePosition: CEPosition) -> Position:
 		editor = self._editor
-		return Position(cePosition.line, cePosition.column, editor.positionFromLineIndex(*cePosition))
+		index = editor.positionFromLineIndex(*cePosition) if editor is not None else -1
+		return Position(cePosition.line, cePosition.column, index)
 
 	@property
 	def currentCursorPos(self) -> Position:
 		editor = self._editor
-		cePosition = CEPosition(*editor.getCursorPosition())
-		return self.posFromCEPos(cePosition)
+		if editor is not None:
+			return self.posFromCEPos(CEPosition(*editor.getCursorPosition()))
+		return NULL_POSITION
 
 	def updateDocumentTree(self) -> None:
 		if (doc := self._document) is not None:
@@ -464,7 +466,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 	@override
 	def getClickableRanges(self) -> list[tuple[CEPosition, CEPosition]]:
 		editor = self._editor
-		if (ctxProvider := self.contextProvider) is not None:
+		if editor is not None and (ctxProvider := self.contextProvider) is not None:
 			ranges = ctxProvider.getClickableRanges()
 			# return [r.asTuple for r in ranges]
 			return [
@@ -478,11 +480,9 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	@override
 	def indicatorClicked(self, cePosition: CEPosition, state: Qt.KeyboardModifiers) -> None:
-		editor = self._editor
-		position = self.posFromCEPos(cePosition)
-
 		if state != Qt.ControlModifier:
 			return
 
 		if (ctxProvider := self.contextProvider) is not None:
+			position = self.posFromCEPos(cePosition)
 			ctxProvider.onIndicatorClicked(position)
