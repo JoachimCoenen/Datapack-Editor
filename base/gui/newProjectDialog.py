@@ -151,7 +151,7 @@ class CreateNewDialogPage(DialogPage[CreateNewData]):
 
 	creators: list[ProjectCreator] = field(default_factory=list)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		self.creators = [
 			pcCls()
 			for plugin in PLUGIN_SERVICE.activePlugins
@@ -209,7 +209,7 @@ class CreateNewDialogPage(DialogPage[CreateNewData]):
 	def acceptAction(self, gui: DatapackEditorGUI) -> None:
 		data = self.data
 		try:
-			os.mkdir(data.resultingDirectoryPath)
+			os.makedirs(data.resultingDirectoryPath, exist_ok=True)
 		except OSError as ex:
 			getSession().showAndLogError(ex, "Error while creating project directory. Aborting.")
 			return  # ?
