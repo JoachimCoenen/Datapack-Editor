@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 from typing import Mapping, TYPE_CHECKING, TypeVar, NewType, Protocol, Generic, Type, Optional
 
 from Cat.utils import CachedProperty
-from Cat.utils.graphs import semiTopologicalSort
+from Cat.utils.collections_ import AddToDictDecorator
+from Cat.utils.graphs import semiTopologicalSort, collectAndSemiTopolSortAllNodes3
 from Cat.utils.logging_ import logError
 from base.model.parsing.tree import Node
 from base.model.utils import LanguageId
@@ -41,13 +42,12 @@ class CatStyler(Generic[_TNode], ABC):
 
 	setStyling: StylingFunc = field(init=False)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		self.setStyling = self.ctx.setStylingUtf8
 
 	@classmethod
-	@abstractmethod
-	def language(cls) -> LanguageId:
-		pass
+	def create(cls: Type[_TStyler], ctx: StylerCtx, innerStylers: dict[LanguageId, CatStyler], offset: StyleId) -> _TStyler:
+		return cls(ctx, innerStylers, offset)
 
 	@classmethod
 	@abstractmethod
@@ -62,118 +62,6 @@ class CatStyler(Generic[_TNode], ABC):
 	@property
 	def localStylesCount(self) -> int:
 		return len(self.styleIdEnum)
-
-	# @classmethod
-	# @abstractmethod
-	# def localInnerStylers(cls) -> list[Type[CatStyler]]:
-	# 	pass
-
-	# @classmethod
-	# def createStyler(cls, setStyling: StylingFunc):
-	# 	# def collectAllInnerStylers(cls, setStyling: StylingFunc):
-	# 	toHandle: deque[Type[CatStyler]] = deque()
-	#
-	# 	allInnerStylerTypes: list[Type[CatStyler]] = []
-	# 	stylerTypesByLang: dict[str, Type[CatStyler]] = {}
-	# 	innerLanguagesByLang: dict[str, list[str]] = {}
-	#
-	# 	toHandle.append(cls)
-	# 	while toHandle:
-	# 		stylerCls = toHandle.pop()
-	# 		if stylerCls.language() in stylerTypesByLang:
-	# 			continue
-	# 		allInnerStylerTypes.append(stylerCls)
-	# 		stylerTypesByLang[stylerCls.language()] = stylerCls
-	# 		localInnerStylers = stylerCls.localInnerStylers()
-	#
-	# 		innerLanguagesByLang[stylerCls.language()] = [l.language() for l in localInnerStylers]
-	# 		toHandle.extend(localInnerStylers)
-	#
-	# 	localInnerStylersByLang = {
-	# 		lang: [stylerTypesByLang[il] for il in innerLangs]
-	# 		for lang, innerLangs in innerLanguagesByLang.items()
-	# 	}
-	#
-	# 	sortedStylerTypes: list[Type[CatStyler]] = semiTopologicalSort(
-	# 		cast(Type[CatStyler], cls),
-	# 		allInnerStylerTypes,
-	# 		getDestinations=lambda x: localInnerStylersByLang[x.language()],
-	# 		getId=lambda x: x.language()
-	# 	)
-	#
-	# 	allStylers: OrderedDict[str, CatStyler] = OrderedDict()
-	#
-	# 	offset = 0
-	# 	for stylerCls in sortedStylerTypes:
-	# 		styler = stylerCls(
-	# 			setStyling,
-	# 			allStylers,
-	# 			offset
-	# 		)
-	# 		allStylers[styler.language()] = styler
-	#
-	# 	return list(allStylers.values())[0]
-
-	@classmethod
-	def _getStyler(cls, language: LanguageId) -> Optional[Type[CatStyler]]:
-		if language == cls.language():
-			return cls
-		else:
-			return getStylerCls(language)
-
-	@classmethod
-	def _allInnerLanguages(cls) -> list[LanguageId]:
-		# def collectAllInnerStylers(cls, setStyling: StylingFunc):
-		toHandle: deque[LanguageId] = deque()
-
-		allInnerLangs: list[LanguageId] = []
-		seenLangs: set[LanguageId] = set()
-		# stylerTypesByLang: dict[str, Type[CatStyler]] = {}
-		innerLanguagesByLang: dict[LanguageId, list[LanguageId]] = {}
-
-		toHandle.append(cls.language())
-		while toHandle:
-			language = toHandle.pop()
-			if language in seenLangs:
-				continue
-			seenLangs.add(language)
-			allInnerLangs.append(language)
-
-			stylerCls = cls._getStyler(language)
-			if stylerCls is not None:
-				localInnerLangs = stylerCls.localInnerLanguages()
-				innerLanguagesByLang[language] = localInnerLangs
-				toHandle.extend(localInnerLangs)
-
-		sortedLanguages: list[LanguageId] = semiTopologicalSort(
-			[cls.language()],
-			allInnerLangs,
-			getDestinations=lambda x: innerLanguagesByLang.get(x, ()),
-			getId=lambda x: x
-		)
-
-		return sortedLanguages
-
-	@classmethod
-	def createStyler(cls: Type[_TStyler], stylerCtx: StylerCtx) -> _TStyler:
-		sortedLanguages = cls._allInnerLanguages()
-		allStylers: OrderedDict[LanguageId, CatStyler] = OrderedDict()
-
-		offset = 0
-		for language in sortedLanguages:
-			stylerCls = cls._getStyler(language)
-			if stylerCls is None:
-				logError(f"CatStyler: No Styler found for language {language!r} while creating inner stylers for {cls}")
-			else:
-				styler = stylerCls(
-					stylerCtx,
-					allStylers,
-					offset
-				)
-				offset += styler.localStylesCount
-				allStylers[styler.language()] = styler
-
-		return list(allStylers.values())[0]
 
 	@abstractmethod
 	def styleNode(self, node: _TNode) -> int:
@@ -207,11 +95,11 @@ class CatStyler(Generic[_TNode], ABC):
 				allStylesIds[f'{language}:{name}'] = styleId
 		return allStylesIds
 
-	def __enter__(self):
+	def __enter__(self) -> None:
 		self.ctx.defaultStyles.append(self.ctx.defaultStyle)
 		self.ctx.defaultStyle = self.offset
 
-	def __exit__(self, exc_type, exc_val, exc_tb):
+	def __exit__(self, exc_type, exc_val, exc_tb) -> None:
 		self.ctx.defaultStyle = self.ctx.defaultStyles.pop()
 
 	# def setStyling(self, length: int, style: int) -> None:
@@ -225,12 +113,28 @@ class CatStyler(Generic[_TNode], ABC):
 	# 	super(LexerJson, self).setStyling(length, style)
 
 
+def createStyler(cls: Type[_TStyler], language: LanguageId, stylerCtx: StylerCtx) -> _TStyler:
+	def getDirectInnerLanguages(base: tuple[LanguageId, Optional[Type[CatStyler]]]) -> list[tuple[LanguageId, Optional[Type[CatStyler]]]]:
+		return () if base[1] is None else [(iLang, getStylerCls(iLang)) for iLang in base[1].localInnerLanguages()]
+
+	sortedLanguageStylers = collectAndSemiTopolSortAllNodes3([(language, cls)], getDirectInnerLanguages)
+
+	allStylers: dict[LanguageId, CatStyler] = {}
+
+	offset = 0
+	for innerLanguage, stylerCls in sortedLanguageStylers:
+		if stylerCls is None:
+			logError(f"CatStyler: No Styler found for language {innerLanguage!r} while creating inner stylers for {cls}")
+		else:
+			allStylers[innerLanguage] = styler = stylerCls.create(stylerCtx, allStylers, StyleId(offset))
+			offset += styler.localStylesCount
+
+	return allStylers[language]
+
+
 __allCatStylers: dict[LanguageId, Type[CatStyler]] = {}
 
-
-def registerStyler(stylerCls: Type[CatStyler]):
-	__allCatStylers[stylerCls.language()] = stylerCls
-	return stylerCls
+registerStyler: AddToDictDecorator[LanguageId, Type[CatStyler]] = AddToDictDecorator(__allCatStylers)
 
 
 def getStylerCls(language: LanguageId) -> Optional[Type[CatStyler]]:
@@ -241,11 +145,11 @@ def getStyler(language: LanguageId, stylerCtx: StylerCtx) -> Optional[CatStyler]
 	stylerCls = getStylerCls(language)
 	if stylerCls is None:
 		return None
-	styler = stylerCls.createStyler(stylerCtx)
+	styler = createStyler(stylerCls, language, stylerCtx)
 	return styler
 
 
-def allStylers() -> Mapping[LanguageId, Type[CatStyler]]:
+def getAllStylers() -> Mapping[LanguageId, Type[CatStyler]]:
 	return __allCatStylers
 
 
@@ -267,6 +171,6 @@ __all__ = [
 	'registerStyler',
 	'getStylerCls',
 	'getStyler',
-	'allStylers',
+	'getAllStylers',
 	'StylerCtx',
 ]

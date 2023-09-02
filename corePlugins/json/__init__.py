@@ -47,9 +47,9 @@ class JsonPlugin(PluginBase):
 			defaultLanguage=JSON_ID
 		)]
 
-	def stylers(self) -> list[Type[CatStyler]]:
+	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
 		from .jsonStyler import JsonStyler
-		return [JsonStyler]
+		return {JSON_ID: JsonStyler}
 
 	def schemas(self) -> dict[str, Schema]:
 		from .schemaStore import JSON_SCHEMA_LOADER

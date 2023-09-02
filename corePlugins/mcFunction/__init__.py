@@ -50,6 +50,6 @@ class McFunctionPlugin(PluginBase):
 			defaultSchemaId=MC_FUNCTION_DEFAULT_SCHEMA_ID
 		)]
 
-	def stylers(self) -> list[Type[CatStyler]]:
+	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
 		from .mcFunctionStyler import MCCommandStyler
-		return [MCCommandStyler]
+		return {MC_FUNCTION_ID: MCCommandStyler}

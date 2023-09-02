@@ -114,12 +114,12 @@ class PluginService:
 		for docTypeDescr in (plugin.documentTypes() or ()):
 			registerDocumentTypeDescription(docTypeDescr)
 
-		for stylerCls in (plugin.stylers() or ()):
-			registerStyler(stylerCls)
-			CodeEditorLexer(stylerCls.language, forceOverride=True)(DocumentLexer)
+		for languageId, stylerCls in (plugin.stylers() or {}).items():
+			registerStyler(languageId)(stylerCls)
+			CodeEditorLexer(languageId, forceOverride=True)(DocumentLexer)
 
-		for languageId, lexer in (plugin.lexers() or {}).items():
-			CodeEditorLexer(languageId, forceOverride=True)(lexer)
+		for languageId, lexerCls in (plugin.lexers() or {}).items():
+			CodeEditorLexer(languageId, forceOverride=True)(lexerCls)
 
 		plugin.initPlugin()
 
@@ -209,8 +209,8 @@ class PluginBase(ABC):
 	def lexers(self) -> dict[LanguageId, Type[QsciLexerCustom]]:
 		return {}
 
-	def stylers(self) -> list[Type[CatStyler]]:
-		return []
+	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
+		return {}
 
 	def schemas(self) -> dict[str, Schema]:
 		return {}

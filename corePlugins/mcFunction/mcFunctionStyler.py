@@ -7,7 +7,6 @@ from typing import Type, Optional, ClassVar
 from Cat.utils import Decorator, first
 from Cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StylingFunc
-from . import MC_FUNCTION_ID
 from .argumentTypes import *
 from .argumentValues import ItemStack, BlockState, TargetSelector
 from .command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
@@ -126,10 +125,6 @@ class MCCommandStyler(CatStyler[CommandPart]):
 			localInnerLanguages.extend(argS.localLanguages())
 		return list(set(localInnerLanguages))
 		# return [LanguageId('JSON')]
-
-	@classmethod
-	def language(cls) -> LanguageId:
-		return MC_FUNCTION_ID
 
 	def __post_init__(self):
 		super(MCCommandStyler, self).__post_init__()

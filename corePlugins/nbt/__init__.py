@@ -41,6 +41,6 @@ class SNBTPlugin(PluginBase):
 			defaultLanguage=SNBT_ID
 		)]
 
-	def stylers(self) -> list[Type[CatStyler]]:
+	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
 		from .snbtStyler import SNBTStyler
-		return [SNBTStyler]
+		return {SNBT_ID: SNBTStyler}

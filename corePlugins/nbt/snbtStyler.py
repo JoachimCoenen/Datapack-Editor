@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Callable, Type
 
 from Cat.utils.collections_ import AddToDictDecorator
-from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, registerStyler, StyleIdEnum
+from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum
 from.tags import *
 from base.model.parsing.tree import Node
 from base.model.utils import LanguageId
@@ -20,7 +20,6 @@ class StyleId(StyleIdEnum):
 	invalid   = DEFAULT_STYLE_ID + 6
 
 
-@registerStyler
 @dataclass
 class SNBTStyler(CatStyler[NBTTag]):
 
@@ -31,10 +30,6 @@ class SNBTStyler(CatStyler[NBTTag]):
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
 		return []
-
-	@classmethod
-	def language(cls) -> LanguageId:
-		return LanguageId('SNBT')
 
 	_STYLERS: ClassVar[dict[str, Callable[[SNBTStyler, NBTTag], int]]] = {}
 	_Styler: ClassVar = AddToDictDecorator(_STYLERS)

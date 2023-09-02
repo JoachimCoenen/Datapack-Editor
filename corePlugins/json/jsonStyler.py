@@ -31,10 +31,6 @@ class JsonStyler(CatStyler[JsonNode]):
 	def localInnerLanguages(cls) -> list[LanguageId]:
 		return [LanguageId('SNBT'), LanguageId('MCFunction')]
 
-	@classmethod
-	def language(cls) -> LanguageId:
-		return LanguageId('JSON')
-
 	_STYLERS: ClassVar[dict[str, Callable[[JsonStyler, JsonData], int]]] = {}
 	_Styler: ClassVar = AddToDictDecorator(_STYLERS)
 
