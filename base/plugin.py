@@ -14,6 +14,7 @@ from Cat.utils import getExePath
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.graphs import getCycles, semiTopologicalSort2
 from Cat.utils.logging_ import logError, logWarning, logInfo, logFatal, loggingIndentInfo
+from base.gui.documentLexer import DocumentLexer
 from base.gui.styler import registerStyler, CatStyler
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings, ApplicationSettings
 from base.model.aspect import registerAspectForType
@@ -113,11 +114,12 @@ class PluginService:
 		for docTypeDescr in (plugin.documentTypes() or ()):
 			registerDocumentTypeDescription(docTypeDescr)
 
-		for languageId, lexer in (plugin.lexers() or {}).items():
-			CodeEditorLexer(languageId, forceOverride=True)(lexer)
-
 		for stylerCls in (plugin.stylers() or ()):
 			registerStyler(stylerCls)
+			CodeEditorLexer(stylerCls.language, forceOverride=True)(DocumentLexer)
+
+		for languageId, lexer in (plugin.lexers() or {}).items():
+			CodeEditorLexer(languageId, forceOverride=True)(lexer)
 
 		plugin.initPlugin()
 

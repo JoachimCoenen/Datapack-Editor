@@ -13,7 +13,6 @@ from Cat.utils.abc_ import abstractmethod
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
 from Cat.utils.formatters import indentMultilineStr
 from Cat.utils.profiling import logError
-from base.gui.documentLexer import DocumentLexerBase
 from base.model.documents import TextDocument, Document, ParsedDocument
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.utils import LanguageId
@@ -178,7 +177,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			else:
 				lexer = lexerCls(self)
 			self._currentLexer = lexer
-		if isinstance(lexer, DocumentLexerBase):
+		if hasattr(lexer, 'setDocument'):
 			lexer.setDocument(document)
 
 		document.strContent, document.highlightErrors, document.cursorPosition, document.forceLocate = drawCodeField(

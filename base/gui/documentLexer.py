@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from dataclasses import dataclass, fields
 from typing import Optional, cast, Sequence
 
@@ -6,7 +5,7 @@ from PyQt5.Qsci import QsciLexerCustom, QsciLexer, QsciScintilla
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QColor
 
-from Cat.CatPythonGUI.GUI.codeEditor import CodeEditor, MyQsciAPIs, AutoCompletionTree, Position as CEPosition, CallTipInfo
+from Cat.CatPythonGUI.GUI.codeEditor import CodeEditor, MyQsciAPIs, AutoCompletionTree, CallTipInfo, CEPosition
 from Cat.CatPythonGUI.utilities import CrashReportWrapped
 from Cat.utils import override, HTMLStr
 from Cat.utils.logging_ import logWarning
@@ -75,18 +74,19 @@ def _qColorToSciRGBA(c: QColor) -> int:
 	return _twosComp32(c.red() + (c.green() << 8) + (c.blue() << 16) + (c.alpha() << 24))
 
 
-class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be a metaclass conflict.
+class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a metaclass conflict.
 
 	def __init__(self, parent=None):
 		# Initialize superclass
 		super().__init__(parent)
 		# Initialize all style colors
 		self._document: Optional[TextDocument] = None
-		self.initStyles(self.getStyles(), overwriteDefaultStyle=True)
-
-		self._api = DocumentQsciAPIs(self)
+		self._lastStylePos: int = 0
+		self._api: DocumentQsciAPIs = DocumentQsciAPIs(self)
 		self._api.prepare()
 		self.setAPIs(self._api)
+
+		self.initStyles(self.getStyles(), overwriteDefaultStyle=True)
 
 	def autoCompletionTree(self) -> AutoCompletionTree:
 		return self._api.autoCompletionTree
@@ -94,9 +94,62 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 	def setAutoCompletionTree(self, value: AutoCompletionTree):
 		self._api.autoCompletionTree = value
 
-	@abstractmethod
+	@property
+	def languageId(self) -> Optional[LanguageId]:
+		if (doc := self.document()) is not None:
+			return doc.language
+		# if (tree := self.getTree()) is not None:
+		# 	# TODO: remove properly: return tree.language
+		return None
+
+	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
 	def getStyles(self) -> dict[StyleId, Style]:
-		pass
+		scheme = theme.currentColorScheme()
+
+		styleMap = {}  # {DEFAULT_STYLE_ID: scheme.defaultStyle}
+		self.addGlobalStyles(scheme.globalStyles, styleMap)
+
+		languageId = self.languageId
+		if languageId is None:
+			return styleMap
+
+		styles = scheme.getStyles2(languageId)
+		if styles is None:
+			return styleMap
+
+		styler = getStyler(languageId, StylerCtxQScintilla(DEFAULT_STYLE_ID, 0, self))
+		if styler is None:
+			return styleMap
+
+		for innerLanguage, styler in styler.innerStylers.items():
+			innerStyles = styles.getInnerLanguageStyles(innerLanguage)
+			if innerStyles is None:
+				continue
+			for name, styleId in styler.localStyles.items():
+				style = innerStyles.get(name)
+				if style is None:
+					logWarning(f"Theme '{scheme.name}' is missing style '{name}' for language '{innerLanguage}'")
+					style = styleMap[_SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE]
+				# elif styleId == DEFAULT_STYLE_ID:
+				# 	style = scheme.globalStyles.defaultStyle | style
+				styleMap[styleId] = style
+		return styleMap
+
+	def addGlobalStyles(self, globalStyles: GlobalStyles, styleMap: dict[int, Style]):
+		revOffset = -_SCI_STYLE_FIRST_USER_STYLE
+		styleMap[DEFAULT_STYLE_ID] = globalStyles.defaultStyle
+		styleMap[_SCI_STYLE_DEFAULT + revOffset] = globalStyles.defaultStyle
+
+		styleMap[_SCI_STYLE_LINENUMBER + revOffset] = globalStyles.lineNumberStyle
+		styleMap[_SCI_STYLE_BRACELIGHT + revOffset] = globalStyles.braceLightStyle
+		styleMap[_SCI_STYLE_BRACEBAD + revOffset] = globalStyles.braceBadStyle
+		styleMap[_SCI_STYLE_CONTROLCHAR + revOffset] = globalStyles.controlCharStyle
+		styleMap[_SCI_STYLE_INDENTGUIDE + revOffset] = globalStyles.indentGuideStyle
+		styleMap[_SCI_STYLE_CALLTIP + revOffset] = globalStyles.calltipStyle
+		styleMap[_SCI_STYLE_FOLDDISPLAYTEXT + revOffset] = globalStyles.foldDisplayTextStyle
+		styleMap[_CAT_STYLE_CARETLINE] = globalStyles.caretLineStyle
+		styleMap[_CAT_STYLE_CARET] = globalStyles.caretStyle
+		styleMap[_CAT_STYLE_WHITE_SPACE] = globalStyles.whiteSpaceStyle
 
 	def setCaretLineStyle(self, style: Style):
 		editor: CodeEditor = self.editor()
@@ -187,92 +240,14 @@ class DocumentLexerBase(QsciLexerCustom):  # this is an ABC, but there would be 
 
 	def setDocument(self, document: Optional[TextDocument]) -> None:
 		self._document = document
-
-	def wordCharacters(self) -> str:
-		return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
-
-	def autoCompletionWordSeparators(self) -> list[str]:
-		return ['.']  # ':', '#', '.']
-
-
-class DocumentLexerBase2(DocumentLexerBase):  # this is an ABC, but there would be a metaclass conflict.
-	# styleIndices: dict[str, int] = {name: i for i, name in enumerate(styles.keys())}
-
-	def __init__(self, parent=None):
-		# Initialize superclass
-		super().__init__(parent)
-		self._lastStylePos: int = 0
+		# self.initStyles(self.getStyles())
 
 	def description(self, p_int):
 		return ''
 
-	# @override
-	# def setDocument(self, document: Optional[TextDocument]) -> None:
-	# 	super(LexerMCFunction, self).setDocument(document)
-	# 	self.initStyles(self.getStyles())
-
-	@property
-	def languageId(self) -> Optional[LanguageId]:
-		if (doc := self.document()) is not None:
-			# TODO: return doc.language
-			pass
-		if (tree := self.getTree()) is not None:
-			return tree.language
-		return None
-
-	@override
-	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
-	def getStyles(self) -> dict[StyleId, Style]:
-		scheme = theme.currentColorScheme()
-
-		styleMap = {}  # {DEFAULT_STYLE_ID: scheme.defaultStyle}
-		self.addGlobalStyles(scheme.globalStyles, styleMap)
-
-		languageId = self.languageId
-		if languageId is None:
-			return styleMap
-
-		styles = scheme.getStyles2(languageId)
-		if styles is None:
-			return styleMap
-
-		styler = getStyler(languageId, StylerCtxQScintilla(DEFAULT_STYLE_ID, 0, self))
-		if styler is None:
-			return styleMap
-
-		for innerLanguage, styler in styler.innerStylers.items():
-			innerStyles = styles.getInnerLanguageStyles(innerLanguage)
-			if innerStyles is None:
-				continue
-			for name, styleId in styler.localStyles.items():
-				style = innerStyles.get(name)
-				if style is None:
-					logWarning(f"Theme '{scheme.name}' is missing style '{name}' for language '{innerLanguage}'")
-					style = styleMap[_SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE]
-				# elif styleId == DEFAULT_STYLE_ID:
-				# 	style = scheme.globalStyles.defaultStyle | style
-				styleMap[styleId] = style
-		return styleMap
-
-	def addGlobalStyles(self, globalStyles: GlobalStyles, styleMap: dict[int, Style]):
-		revOffset = -_SCI_STYLE_FIRST_USER_STYLE
-		styleMap[DEFAULT_STYLE_ID] = globalStyles.defaultStyle
-		styleMap[_SCI_STYLE_DEFAULT + revOffset] = globalStyles.defaultStyle
-
-		styleMap[_SCI_STYLE_LINENUMBER + revOffset] = globalStyles.lineNumberStyle
-		styleMap[_SCI_STYLE_BRACELIGHT + revOffset] = globalStyles.braceLightStyle
-		styleMap[_SCI_STYLE_BRACEBAD + revOffset] = globalStyles.braceBadStyle
-		styleMap[_SCI_STYLE_CONTROLCHAR + revOffset] = globalStyles.controlCharStyle
-		styleMap[_SCI_STYLE_INDENTGUIDE + revOffset] = globalStyles.indentGuideStyle
-		styleMap[_SCI_STYLE_CALLTIP + revOffset] = globalStyles.calltipStyle
-		styleMap[_SCI_STYLE_FOLDDISPLAYTEXT + revOffset] = globalStyles.foldDisplayTextStyle
-		styleMap[_CAT_STYLE_CARETLINE] = globalStyles.caretLineStyle
-		styleMap[_CAT_STYLE_CARET] = globalStyles.caretStyle
-		styleMap[_CAT_STYLE_WHITE_SPACE] = globalStyles.whiteSpaceStyle
-
 	def startStyling(self, pos: int, styleBits: int = ...) -> None:
 		self._lastStylePos = pos
-		super(DocumentLexerBase2, self).startStyling(pos)
+		super().startStyling(pos)
 
 	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
 	# @ProfiledFunction()
@@ -291,6 +266,12 @@ class DocumentLexerBase2(DocumentLexerBase):  # this is an ABC, but there would 
 
 		folder = Folder(self.editor())
 		folder.add_folding(start, len(text) - start)
+
+	def wordCharacters(self) -> str:
+		return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
+
+	def autoCompletionWordSeparators(self) -> list[str]:
+		return ['.']  # ':', '#', '.']
 
 
 @dataclass
@@ -388,8 +369,8 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	@property
 	def _document(self) -> Optional[TextDocument]:
-		lexer: DocumentLexerBase = cast(DocumentLexerBase, self.lexer())
-		assert isinstance(lexer, DocumentLexerBase)
+		lexer: DocumentLexer = cast(DocumentLexer, self.lexer())
+		assert isinstance(lexer, DocumentLexer)
 		return lexer.document()
 
 	@property

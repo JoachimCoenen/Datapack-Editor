@@ -1,8 +1,5 @@
 from typing import Type
 
-from PyQt5.Qsci import QsciLexerCustom
-
-from base.gui.documentLexer import DocumentLexerBase2
 from base.gui.styler import CatStyler
 from base.model.documents import ParsedDocument,  DocumentTypeDescription
 from base.model.parsing.contextProvider import ContextProvider
@@ -43,11 +40,6 @@ class SNBTPlugin(PluginBase):
 			extensions=['.snbt'],
 			defaultLanguage=SNBT_ID
 		)]
-
-	def lexers(self) -> dict[LanguageId, Type[QsciLexerCustom]]:
-		return {
-			SNBT_ID: DocumentLexerBase2
-		}
 
 	def stylers(self) -> list[Type[CatStyler]]:
 		from .snbtStyler import SNBTStyler

@@ -1,8 +1,5 @@
 from typing import Type
 
-from PyQt5.Qsci import QsciLexerCustom
-
-from base.gui.documentLexer import DocumentLexerBase2
 from base.gui.styler import CatStyler
 from base.model.documents import DocumentTypeDescription, ParsedDocument
 from base.model.parsing.contextProvider import ContextProvider
@@ -52,11 +49,6 @@ class McFunctionPlugin(PluginBase):
 			defaultLanguage=MC_FUNCTION_ID,
 			defaultSchemaId=MC_FUNCTION_DEFAULT_SCHEMA_ID
 		)]
-
-	def lexers(self) -> dict[LanguageId, Type[QsciLexerCustom]]:
-		return {
-			MC_FUNCTION_ID: DocumentLexerBase2
-		}
 
 	def stylers(self) -> list[Type[CatStyler]]:
 		from .mcFunctionStyler import MCCommandStyler

@@ -1,9 +1,6 @@
 import os
 from typing import Type
 
-from PyQt5.Qsci import QsciLexerCustom
-
-from base.gui.documentLexer import DocumentLexerBase2
 from base.gui.styler import CatStyler
 from base.model.documents import ParsedDocument, DocumentTypeDescription
 from base.model.parsing.contextProvider import ContextProvider
@@ -49,11 +46,6 @@ class JsonPlugin(PluginBase):
 			extensions=['.json', '.mcmeta'],
 			defaultLanguage=JSON_ID
 		)]
-
-	def lexers(self) -> dict[LanguageId, Type[QsciLexerCustom]]:
-		return {
-			JSON_ID: DocumentLexerBase2
-		}
 
 	def stylers(self) -> list[Type[CatStyler]]:
 		from .jsonStyler import JsonStyler
