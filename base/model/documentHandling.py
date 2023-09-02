@@ -385,12 +385,19 @@ class DocumentsManager(SerializableDataclass):
 			raise ValueError("a path must be set before saving a document (document.isNew must be False)")
 		else:
 			document.saveToFile()
+			self.emitDocumentChanged(document)
 
 	def _reloadDocument(self, document: Document) -> None:
 		if document.isNew:
 			raise ValueError("a path must be set before reloading a document (document.isNew must be False)")
 		else:
 			document.loadFromFile()
+			self.emitDocumentChanged(document)
+
+	def emitDocumentChanged(self, document: Document) -> None:
+		view = self._getViewForDocument(document)
+		if view is not None:
+			view.onDocumentsChanged.emit()
 
 	def safelyCloseDocument(self, doc: Document) -> bool:
 		if doc.documentChanged:
