@@ -1,8 +1,10 @@
-from dataclasses import dataclass, fields, Field
-from typing import Optional, Sequence, Type, cast
+from collections import defaultdict
+from dataclasses import dataclass, fields, Field, field
+from typing import Optional, Sequence, Type, cast, Protocol, Any
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
+from recordclass import as_dataclass
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.GUI import SizePolicy, NO_MARGINS, MessageBoxStyle
@@ -10,10 +12,12 @@ from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 from Cat.Serializable.dataclassJson import getDecorators
 from Cat.icons import icons
+from Cat.utils import format_full_exc
+from Cat.utils.logging_ import logError
 from base.model.aspect import getAspectsForClass
 from base.model.project.project import Project, ProjectRoot, Root, DependencyDescr, ProjectAspect
 from base.model.session import getSession
-from gui.datapackEditorGUI import DatapackEditorGUI
+from gui.datapackEditorGUI import DatapackEditorGUI, filterComputedChoices, SearchableListContext
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
 
 
@@ -69,7 +73,7 @@ def _moveRootDown(project: Project, root: ProjectRoot):
 		roots[idx], roots[idx+1] = roots[idx+1], roots[idx]
 
 
-def _editRoot(gui: DatapackEditorGUI, project: Project, root: ProjectRoot):
+def _editRoot(gui: DatapackEditorGUI, root: ProjectRoot):
 	newName, isOk = gui.askUserInput(
 		f"Edit '{root.name}'",
 		root.name,
@@ -84,10 +88,10 @@ def _refreshRoots(project: Project):
 
 
 def projectPanelGUI(gui: DatapackEditorGUI):  # , *, roundedCorners: RoundedCorners, cornerRadius: float):
-	with gui.scrollBox(contentsMargins=(gui.panelMargins, gui.panelMargins, gui.panelMargins, gui.panelMargins), preventVStretch=True):  # , roundedCorners=roundedCorners, cornerRadius=cornerRadius):
+	with gui.scrollBox(contentsMargins=(gui.panelMargins, gui.panelMargins, gui.panelMargins, gui.panelMargins), preventVStretch=False):  # , roundedCorners=roundedCorners, cornerRadius=cornerRadius):
 		project = getSession().project
 		basicsGUI(gui, project)
-		rootsGUI(gui, project)
+		rootsAndDependenciesGUI(gui, project)
 		aspectsGUI(gui, project)
 
 
@@ -100,53 +104,252 @@ def basicsGUI(gui: DatapackEditorGUI, project: Project):
 		gui.checkbox(not project.isEmpty, 'is not empty', enabled=True)
 
 
-def rootsGUI(gui: DatapackEditorGUI, project: Project):
-	def childrenMaker(item: Project | ProjectRoot | DependencyDescr) -> Sequence[ProjectRoot | DependencyDescr]:
-		if isinstance(item, Project):
-			return project.roots
-		elif isinstance(item, Root):
-			return item.dependencies
-		elif isinstance(item, DependencyDescr):
-			return item.resolved.dependencies if item.resolved is not None else ()
-		elif isinstance(item, tuple):
-			return item
-		else:
-			return ()
+def rootsAndDependenciesGUI(gui: DatapackEditorGUI, project: Project):
+	gui.title("Roots & Dependencies")
+	with gui.vPanel(seamless=True):
+		with gui.tabWidget(documentMode=True) as tabs:
+			with tabs.addTab(TabOptions("Roots"), 'roots', seamless=True):
+				_RootsNS.rootsGUI(gui, project)
+			with tabs.addTab(TabOptions("Dependencies"), 'dependencies', seamless=True):
+				_DependenciesNS.dependenciesGUI(gui, project)
 
-	def labelMaker(item: Project | ProjectRoot | DependencyDescr, c: int) -> str:
-		if isinstance(item, Project):
-			return project.name
-		elif isinstance(item, Root):
-			return item.name
-		elif isinstance(item, DependencyDescr):
-			return item.name if item.resolved is not None else f"{item.name} (missing)"
-		else:
-			return str(item)
 
-	def iconMaker(item: Project | ProjectRoot | DependencyDescr, c: int) -> Optional[QIcon]:
-		if c > 0:
-			return None
-		if isinstance(item, Project):
-			return icons.project
-		elif isinstance(item, Root):
-			return icons.project
-		elif isinstance(item, DependencyDescr):
-			return icons.book
-		else:
-			return None
+class InfoP(Protocol):
+	root: Optional[Root]
 
-	def toolTipMaker(item: Project | ProjectRoot | DependencyDescr, c: int = 0) -> Optional[str]:
-		if isinstance(item, Project):
-			return project.path
-		elif isinstance(item, Root):
-			return item.normalizedLocation
-		elif isinstance(item, DependencyDescr):
-			return f'{item.identifier} ({item.resolved.normalizedLocation if item.resolved is not None else "missing"})'
-		else:
-			return str(type(item))
 
-	gui.title("Roots")
-	with gui.vLayout(seamless=True):
+@as_dataclass()
+class RootInfo:
+	root: Root
+
+
+@as_dataclass()
+class RequiredByInfo:
+	root: Root
+	descr: DependencyDescr
+
+
+@as_dataclass()
+class DependencyInfo:
+	root: Optional[Root]
+	descr: DependencyDescr
+	# @property
+	# def root(self) -> Optional[Root]:
+	# 	return self.descr.resolved
+
+
+class _DependenciesNS:
+
+	@as_dataclass()  # (unsafe_hash=True)
+	class DependencyDetails:
+		name: str = field(compare=True)
+		children: list[InfoP] = field(compare=False)
+
+		def __hash__(self) -> int:
+			return hash((_DependenciesNS.DependencyDetails, self.name))
+
+		def __eq__(self, other) -> bool:
+			if not isinstance(other, _DependenciesNS.DependencyDetails):
+				return NotImplemented
+			return self.name == other.name
+
+		def __ne__(self, other) -> bool:
+			if not isinstance(other, _DependenciesNS.DependencyDetails):
+				return NotImplemented
+			return self.name != other.name
+
+	@classmethod
+	def getDependencyDetails(
+			cls,
+			item: InfoP,
+			requiredBy: dict[str, list[RequiredByInfo]],
+	) -> list[DependencyDetails]:
+
+		# def getProjModules(pr: InfoP) -> list[InfoP]:
+		# 	localModules = getattr(pr, 'localModules', None)
+		# 	return localModules if localModules is not None else []
+
+		def getProjDependencies(info: InfoP) -> list[DependencyInfo]:
+			return [DependencyInfo(d.resolved, d) for d in root.dependencies] if (root := info.root) is not None else []
+
+		def getProjRequiredBy(info: InfoP) -> list[RequiredByInfo]:
+			return requiredBy.get(root.identifier, []) if (root := info.root) is not None else []
+
+		result = [
+			# cls.DependencyDetails("Modules:", getProjModules(item)),
+			cls.DependencyDetails("Dependencies:", getProjDependencies(item)),
+			cls.DependencyDetails("Required by:", getProjRequiredBy(item)),
+		]
+
+		return [details for details in result if details.children]
+
+	@classmethod
+	def collectRequiredBy(cls, project: Project) -> dict[str, list[RequiredByInfo]]:
+		allRoots = project.roots + project.deepDependencies
+		requiredBy: defaultdict[str, list[RequiredByInfo]] = defaultdict(list)
+		for root in allRoots:
+			for dep in root.dependencies:
+				requiredBy[dep.identifier].append(RequiredByInfo(root, dep))
+		return dict(requiredBy)
+
+	@classmethod
+	def dependenciesGUI(cls, gui: DatapackEditorGUI, project: Project):
+		requiredBy = cls.collectRequiredBy(project)
+		allRoots = [RootInfo(root) for root in project.roots + project.deepDependencies]
+
+		def childrenMaker(item: Project | InfoP | cls.DependencyDetails) -> Sequence[InfoP | cls.DependencyDetails]:
+			if isinstance(item, list):
+				return item
+			elif isinstance(item, cls.DependencyDetails):
+				return item.children
+			else:  # elif isinstance(item, InfoP):
+				return cls.getDependencyDetails(item, requiredBy)
+
+		def labelMaker(item: list | InfoP | cls.DependencyDetails, c: int) -> str:
+			if isinstance(item, list):
+				return "<ROOT>"
+			elif isinstance(item, RootInfo):
+				return (item.root.name, '')[c]
+			elif isinstance(item, DependencyInfo):
+				return (item.descr.name, "(missing)" if item.descr.resolved is None else "")[c]
+			elif isinstance(item, RequiredByInfo):
+				return (item.root.name, "(missing)" if item.descr.resolved is None else "")[c]
+			elif isinstance(item, cls.DependencyDetails):
+				return (item.name, "")[c]
+			else:
+				return (str(item), "")[c]
+
+		def iconMaker(item: list | InfoP | cls.DependencyDetails, c: int) -> Optional[QIcon]:
+			if c > 0:
+				return None
+			if isinstance(item, list):
+				return icons.lists
+			elif isinstance(item, RootInfo):
+				return icons.project if isinstance(item.root, ProjectRoot) else icons.book
+			elif isinstance(item, DependencyInfo):
+				return icons.book
+			elif isinstance(item, RequiredByInfo):
+				return icons.prev
+			elif isinstance(item, cls.DependencyDetails):
+				return None
+			else:
+				return None
+
+		def toolTipMaker(item: list | InfoP | cls.DependencyDetails, c: int = 0) -> Optional[str]:
+			if isinstance(item, list):
+				return project.path
+			elif isinstance(item, RootInfo):
+				return f'{item.root.identifier} ({item.root.normalizedLocation})'
+			elif isinstance(item, DependencyInfo):
+				return f'{item.descr.identifier} ({item.root.normalizedLocation if item.root is not None else "(missing)"})'
+			elif isinstance(item, RequiredByInfo):
+				return f'{item.root.identifier} ({item.root.normalizedLocation})'
+			elif isinstance(item, cls.DependencyDetails):
+				return None
+			else:
+				return str(type(item))
+
+		def getId(item: list | InfoP | cls.DependencyDetails) -> Any:
+			if isinstance(item, list):
+				return 1531608
+			elif isinstance(item, RootInfo):
+				return item.root.identifier + '}]root[{'
+			elif isinstance(item, DependencyInfo):
+				return item.descr.identifier + '}]dependency[{'
+			elif isinstance(item, RequiredByInfo):
+				return item.root.identifier + '}]requiredBy[{'
+			elif isinstance(item, cls.DependencyDetails):
+				return item.name
+			else:
+				return id(item)
+
+		listContext = gui.customData.get('dependencies_listContext')
+		if listContext is None:
+			listContext = SearchableListContext()
+
+		selected, listContext = gui.filteredTreeWithSearchField(
+			allRoots,
+			listContext,
+			lambda filteredRoots: DataTreeBuilder(
+				filteredRoots,
+				childrenMaker=childrenMaker,
+				labelMaker=labelMaker,
+				iconMaker=iconMaker,
+				toolTipMaker=toolTipMaker,
+				columnCount=2,
+				suppressUpdate=False,
+				showRoot=False,
+				onCopy=toolTipMaker,
+				getId=getId,
+			),
+			getStrChoices=lambda items: [item.root.name for item in items],
+			filterFunc=filterComputedChoices(lambda item: item.root.name),
+		)
+		gui.customData['dependencies_listContext'] = listContext
+
+		with gui.hPanel(contentsMargins=NO_MARGINS, seamless=True):
+			if gui.toolButton(icon=icons.refresh, tip="refresh dependencies", enabled=True):
+				_refreshRoots(project)
+			gui.addHSpacer(0, SizePolicy.Expanding)
+			if gui.toolButton(icon=icons.edit, tip='Edit', enabled=False):
+				_editRoot(gui, selected)
+			if gui.toolButton(icon=icons.up, tip='Move up', enabled=False):
+				_moveRootUp(project, selected)
+			if gui.toolButton(icon=icons.down, tip='Move down', enabled=False):
+				_moveRootDown(project, selected)
+			if gui.toolButton(icon=icons.remove, tip='Remove selected from project', enabled=False):
+				_removeRoot(gui, project, selected)
+			if gui.toolButton(icon=icons.add, tip='Add', enabled=False):
+				_addRoot(gui, project)
+
+
+class _RootsNS:
+	@classmethod
+	def rootsGUI(cls, gui: DatapackEditorGUI, project: Project):
+		def childrenMaker(item: Project | Root | DependencyDescr) -> Sequence[Root | DependencyDescr]:
+			if isinstance(item, Project):
+				return project.roots
+			elif isinstance(item, Root):
+				return item.dependencies
+			elif isinstance(item, DependencyDescr):
+				return item.resolved.dependencies if item.resolved is not None else ()
+			elif isinstance(item, tuple):
+				return item
+			else:
+				return ()
+
+		def labelMaker(item: Project | Root | DependencyDescr, c: int) -> str:
+			if isinstance(item, Project):
+				return project.name
+			elif isinstance(item, Root):
+				return item.name
+			elif isinstance(item, DependencyDescr):
+				return item.name if item.resolved is not None else f"{item.name} (missing)"
+			else:
+				return str(item)
+
+		def iconMaker(item: Project | Root | DependencyDescr, c: int) -> Optional[QIcon]:
+			if c > 0:
+				return None
+			if isinstance(item, Project):
+				return icons.project
+			elif isinstance(item, Root):
+				return icons.project
+			elif isinstance(item, DependencyDescr):
+				return icons.book
+			else:
+				return None
+
+		def toolTipMaker(item: Project | Root | DependencyDescr, c: int = 0) -> Optional[str]:
+			if isinstance(item, Project):
+				return project.path
+			elif isinstance(item, Root):
+				return item.normalizedLocation
+			elif isinstance(item, DependencyDescr):
+				return f'{item.identifier} ({item.resolved.normalizedLocation if item.resolved is not None else "missing"})'
+			else:
+				return str(type(item))
+
 		selected = gui.tree(
 			DataTreeBuilder(
 				(project,),
@@ -168,7 +371,7 @@ def rootsGUI(gui: DatapackEditorGUI, project: Project):
 				_refreshRoots(project)
 			gui.addHSpacer(0, SizePolicy.Expanding)
 			if gui.toolButton(icon=icons.edit, tip='Edit', enabled=isProjectRoot):
-				_editRoot(gui, project, selected)
+				_editRoot(gui, selected)
 			if gui.toolButton(icon=icons.up, tip='Move up', enabled=canMoveUp):
 				_moveRootUp(project, selected)
 			if gui.toolButton(icon=icons.down, tip='Move down', enabled=canMoveDown):
@@ -177,45 +380,6 @@ def rootsGUI(gui: DatapackEditorGUI, project: Project):
 				_removeRoot(gui, project, selected)
 			if gui.toolButton(icon=icons.add, tip='Add'):
 				_addRoot(gui, project)
-
-		# moddleOverlap = (1, 1, 1, 0)
-		# shouldAppendElement = self.toolButton(icon=icons.add, tip='Add', overlap=(0, 1, 0, 0), roundedCorners=CORNERS.NONE)
-		# shouldDeleteSelected = self.toolButton(icon=icons.remove, tip='Delete selected [Del]', overlap=moddleOverlap, enabled=someElementIsSelected)  # , shortcut=QKeySequence.Delete
-		# shouldChangeSelected = self.toolButton(icon=icons.edit, tip='Change selected [F2]', overlap=moddleOverlap, shortcut=Qt.Key_F2, enabled=someElementIsSelected)
-		# shouldMoveUp = self.toolButton(icon=icons.up, tip='Move up', overlap=moddleOverlap, enabled=someElementIsSelected)
-		# shouldMoveDown = self.toolButton(icon=icons.down, tip='Move down', overlap=moddleOverlap, enabled=someElementIsSelected)
-
-
-def rootsGUI2(gui: DatapackEditorGUI, project: Project):
-	gui.title("Roots")
-	with gui.vLayout(seamless=True):
-		for root in project.roots:
-			rootPanelGUI(gui, root)
-			gui.vSeparator()
-		with gui.hPanel(contentsMargins=NO_MARGINS, seamless=True):
-			gui.addHSpacer(0, SizePolicy.Expanding)
-			if gui.toolButton(icon=icons.add, tip='Add'):
-				_addRoot(gui, project)
-
-		# moddleOverlap = (1, 1, 1, 0)
-		# shouldAppendElement = self.toolButton(icon=icons.add, tip='Add', overlap=(0, 1, 0, 0), roundedCorners=CORNERS.NONE)
-		# shouldDeleteSelected = self.toolButton(icon=icons.remove, tip='Delete selected [Del]', overlap=moddleOverlap, enabled=someElementIsSelected)  # , shortcut=QKeySequence.Delete
-		# shouldChangeSelected = self.toolButton(icon=icons.edit, tip='Change selected [F2]', overlap=moddleOverlap, shortcut=Qt.Key_F2, enabled=someElementIsSelected)
-		# shouldMoveUp = self.toolButton(icon=icons.up, tip='Move up', overlap=moddleOverlap, enabled=someElementIsSelected)
-		# shouldMoveDown = self.toolButton(icon=icons.down, tip='Move down', overlap=moddleOverlap, enabled=someElementIsSelected)
-
-
-def rootPanelGUI(gui: DatapackEditorGUI, root: ProjectRoot):
-	with gui.hLayout(seamless=True):
-		with gui.vPanel(seamless=True, preventVStretch=False):
-			root.name = gui.textField(root.name, 'name')
-			gui.folderPathField(root.location, 'location')
-		with gui.vPanel(seamless=True, ):
-			gui.toolButton(icon=icons.up, tip='move up')
-			gui.toolButton(icon=icons.down, tip='move down')
-		with gui.vPanel(seamless=True, preventVStretch=False):
-			gui.addVSpacer(0, sizePolicy=SizePolicy.Expanding)
-			gui.toolButton(icon=icons.remove, tip='remove')
 
 
 def aspectsGUI(gui: DatapackEditorGUI, project: Project):
@@ -230,7 +394,7 @@ def aspectsGUI(gui: DatapackEditorGUI, project: Project):
 
 
 def aspectPanelGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect):
-	allFields = [field for field in fields(aspect) if all(not isinstance(d, pd.NoUI) for d in getDecorators(field))]
+	allFields = [f for f in fields(aspect) if all(not isinstance(d, pd.NoUI) for d in getDecorators(f))]
 	with gui.vPanel(seamless=True, preventVStretch=False):
 		with gui.hPanel(seamless=True, preventVStretch=False):
 			isOpen = gui.spoiler(drawDisabled=not allFields)
@@ -240,13 +404,19 @@ def aspectPanelGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspe
 				_removeAspectGUI(gui, project, aspect)
 		if isOpen and allFields:
 			with gui.vPanel(), gui.indentation():
-				aspectOptionsGUI(gui, project, aspect, allFields)
+				aspectOptionsGUI(gui, aspect, allFields)
 
 
-def aspectOptionsGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect, allFields: list[Field]):
-	for field in allFields:
-		gui.propertyField(aspect, field, True, enabled=True)
-		gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer
+def aspectOptionsGUI(gui: DatapackEditorGUI, aspect: ProjectAspect, allFields: list[Field]):
+	try:
+		for f in allFields:
+			gui.propertyField(aspect, f, True, enabled=True)
+			gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer
+	except Exception as ex:
+		logError(
+			f"Error while drawing GUI for ProjectAspect {aspect.getAspectType()} ({type(aspect).__qualname__}):",
+			format_full_exc(ex, indentLvl=1)
+		)
 
 
 def _removeAspectGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect):
