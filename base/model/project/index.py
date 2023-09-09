@@ -111,9 +111,9 @@ class Index(Mapping[_TK, _TV], Generic[_TK, _TV]):
 				self.discard(key, source)
 
 	def discardDirectory(self, source: FilePath) -> None:
-		for src, keys in self.bySource.keys():
-			if src[1].startswith(source[1]):
-				for key in keys:
+		for src, entries in self.bySource.copy().items():
+			if src[0] == source[0] and src[1].startswith(source[1]):
+				for key in entries.copy().keys():
 					self.discard(key, src)
 
 	def clear(self):

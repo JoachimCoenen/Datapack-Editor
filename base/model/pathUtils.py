@@ -103,6 +103,14 @@ def fromDisplayPath(path: str) -> FilePath:
 		return l
 
 
+def isExcludedDirectory(relDirPath: str, excludedDirs: tuple[str, ...]) -> bool:
+	if not excludedDirs:
+		return False
+	relDirPath = normalizeDirSeparatorsStr(relDirPath)
+	relDirPath = f'/{relDirPath.strip("/")}/'
+	return relDirPath.startswith(excludedDirs)
+
+
 def getAllFilesFromSearchPaths(
 		rootFolders: Union[str, list[str]],
 		folderFilter: SearchPath,
@@ -167,16 +175,16 @@ def _internalGetAllFilesFromFolder(rootFolder: str, folderFilter: SearchPath, ex
 	return filePaths
 
 
-def getAllFilesFoldersFromFolder(rootFolder: str, divider: str) -> tuple[list[FilePathTpl],  list[FilePathTpl]]:
+def getAllFilesFoldersFromFolder(rootFolder: str, divider: str, *, excludedDirs: tuple[str, ...]) -> tuple[list[FilePathTpl],  list[FilePathTpl]]:
 	if not divider:
 		raise ValueError("folderFilter.divider cannot be empty")
 	if os.path.exists(rootFolder) and os.path.isdir(rootFolder):
 		divider = normalizeDirSeparatorsStr(divider)
-		return _internalGetAllFilesFoldersFromFolder(rootFolder, divider)
+		return _internalGetAllFilesFoldersFromFolder(rootFolder, divider, excludedDirs)
 	return [], []
 
 
-def _internalGetAllFilesFoldersFromFolder(rootFolder: str, divider: str) -> tuple[list[FilePathTpl],  list[FilePathTpl]]:
+def _internalGetAllFilesFoldersFromFolder(rootFolder: str, divider: str, excludedFolders: tuple[str, ...]) -> tuple[list[FilePathTpl],  list[FilePathTpl]]:
 	filePaths = []
 	folderPaths = []
 
@@ -188,14 +196,14 @@ def _internalGetAllFilesFoldersFromFolder(rootFolder: str, divider: str) -> tupl
 			scanner = scanners.pop()
 			entry: os.DirEntry
 			while (entry := next(scanner, None)) is not None:
+				prefix, div, suffix = normalizeDirSeparatorsStr(entry.path).rpartition(divider)
 				if entry.is_file():
-					prefix, div, suffix = normalizeDirSeparatorsStr(entry.path).rpartition(divider)
 					filePaths.append((prefix + div, suffix.lstrip('/'),))
 				elif entry.is_dir():
-					prefix, div, suffix = normalizeDirSeparatorsStr(entry.path).rpartition(divider)
-					folderPaths.append((prefix + div, suffix.lstrip('/') + '/',))
-					scanners.push(scanner)
-					scanner = os.scandir(entry.path)
+					if not isExcludedDirectory(suffix, excludedFolders):
+						folderPaths.append((prefix + div, suffix.lstrip('/') + '/',))
+						scanners.push(scanner)
+						scanner = os.scandir(entry.path)
 			scanner.close()
 	except Exception:
 		if scanner is not None:
@@ -342,7 +350,7 @@ class ArchiveFilePool:
 			del self._openedArchives[normPath]
 
 	def _openArchive(self, normPath: str, mode: _ZipFileMode) -> Archive:
-		return NotImplemented
+		raise NotImplementedError()
 
 	def _getOrOpenArchive(self, path: str, mode: _ZipFileMode) -> Archive:
 		absPath = os.path.abspath(path)
@@ -456,6 +464,7 @@ __all__ = [
 	'toDisplayPath',
 	'fromDisplayPath',
 
+	'isExcludedDirectory',
 	'getAllFilesFromSearchPaths',
 	'getAllFilesFromSearchPath',
 	'getAllFilesFromFolder',

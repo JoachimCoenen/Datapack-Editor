@@ -66,7 +66,7 @@ class ProjectAspect(Aspect, SerializableDataclass, ABC):
 		for now. might change.
 		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
 		"""
-		pass
+		return []
 
 	def postResolveDependencies(self, project: Project) -> None:
 		"""

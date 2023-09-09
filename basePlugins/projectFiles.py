@@ -13,16 +13,17 @@ from watchdog.events import FileSystemEventHandler, FileClosedEvent, FileModifie
 from Cat.CatPythonGUI.GUI import SizePolicy
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions, EditorBase, MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
+from Cat.Serializable.dataclassJson import catMeta
 from Cat.icons import icons
 from Cat.utils import DeferredCallOnceMethod, openOrCreate
 from base.model import filesystemEvents
 from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDirSeparators, splitPath, normalizeDirSeparatorsStr, unitePath, \
-	fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, getAllFilesFromArchive
+	fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, getAllFilesFromArchive, isExcludedDirectory
 from base.model.aspect import AspectType
 from base.model.project.index import Index
-from base.model.project.project import Project, ProjectRoot, ProjectAspect, DependencyDescr, Root, IndexBundleAspect, AspectFeatures, FileEntry, makeFileEntry
+from base.model.project.project import Project, ProjectRoot, ProjectAspect, Root, IndexBundleAspect, AspectFeatures, FileEntry, makeFileEntry
 from base.model.session import getSession
-from base.model.utils import Span
+from base.model.utils import Span, formatMarkdown
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, SearchableListContext, FilterStr, filterComputedChoices
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
 
@@ -481,6 +482,29 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 		self._project: Project = project
 		self._root: Root = root
 
+	def _addFileOrFolderEntry(self, index: Index[str, FileEntry], path: FilePathTpl, isFile: bool) -> Optional[FileEntry]:
+		if not isExcludedDirectory(path[1], self._project.aspects.get(FilesAspect).excludedDirectories):
+			return index.add(path[1], path, makeFileEntry(path, self._root, isFile))
+
+	def _analyzeFile(self, fileEntry: FileEntry) -> None:
+		for aspect in self._project.aspects:
+			if aspect.aspectFeatures.analyzeFiles:
+				aspect.analyzeFile(self._root, fileEntry)
+
+	def _addFileEntryAndAnalyzeFile(self, path: FilePathTpl) -> None:
+		fileEntry = self._addFileOrFolderEntry(self._root.indexBundles.setdefault(FilesIndex).files, path, True)
+		if fileEntry is not None:
+			self._analyzeFile(fileEntry)
+
+	def _addFolderEntry(self, path: FilePathTpl) -> None:
+		self._addFileOrFolderEntry(self._root.indexBundles.setdefault(FilesIndex).folders, path, False)
+
+	def _splitPath(self, path: str, isDir: bool) -> Optional[FilePathTpl]:
+		normPath = normalizeDirSeparatorsStr(path)
+		if isDir:
+			normPath = normPath + '/'
+		return jf if (jf := splitPath(normPath, self._root.normalizedLocation)) is not None else None
+
 	def on_any_event(self, event):
 		"""Catch-all event handler.
 
@@ -489,12 +513,7 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 		:type event:
 			:class:`FileSystemEvent`
 		"""
-		path = normalizeDirSeparatorsStr(event.src_path)
-		if event.is_directory:
-			path = path + '/'
-		if (jf := splitPath(path, self._root.normalizedLocation)) is not None:
-			path = jf
-		event.split_src_path = path
+		event.split_src_path: Optional[FilePathTpl] = self._splitPath(event.src_path, event.is_directory)
 
 	def on_moved(self, event: FileMovedEvent):
 		"""Called when a file or a directory is moved or renamed.
@@ -504,23 +523,20 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 		:type event:
 			:class:`DirMovedEvent` or :class:`FileMovedEvent`
 		"""
-		dest_path = normalizeDirSeparatorsStr(event.dest_path)
+		split_src_path = event.split_src_path
+		split_dst_path = self._splitPath(event.dest_path, event.is_directory)
+
 		if event.is_directory:
-			index = self._root.indexBundles.setdefault(FilesIndex).folders
-			index.discardSource(event.split_src_path)
-			if (jf := splitPath(dest_path, self._root.normalizedLocation)) is not None:
-				index.add(jf[1], jf, makeFileEntry(jf, self._root, False))
+			discardName, addFunc = 'discardDirectory', self._addFolderEntry
 			# TODO: analyze Files for DirMovedEvent
 		else:
+			discardName, addFunc = 'discardSource', self._addFileEntryAndAnalyzeFile
+
+		if split_src_path is not None:
 			for index in self._root.indexBundles:
-				index.discardSource(event.split_src_path)
-			if (jf := splitPath(dest_path, self._root.normalizedLocation)) is not None:
-				index = self._root.indexBundles.setdefault(FilesIndex).files
-				fileEntry = makeFileEntry(jf, self._root, True)
-				index.add(jf[1], jf, fileEntry)
-				for aspect in self._project.aspects:
-					if aspect.aspectFeatures.analyzeFiles:
-						aspect.analyzeFile(self._root, fileEntry)
+				getattr(index, discardName)(split_src_path)
+		if split_dst_path is not None:
+			addFunc(split_dst_path)
 
 	def on_created(self, event: FileCreatedEvent):
 		"""Called when a file or directory is created.
@@ -530,16 +546,11 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 		:type event:
 			:class:`DirCreatedEvent` or :class:`FileCreatedEvent`
 		"""
-		path = event.split_src_path
-		if event.is_directory:
-			self._root.indexBundles.setdefault(FilesIndex).folders.add(path[1], path, makeFileEntry(path, self._root, False))
-		else:
-			index = self._root.indexBundles.setdefault(FilesIndex).files
-			fileEntry = makeFileEntry(path, self._root, True)
-			index.add(path[1], path, fileEntry)
-			for aspect in self._project.aspects:
-				if aspect.aspectFeatures.analyzeFiles:
-					aspect.analyzeFile(self._root, fileEntry)
+		if (path := event.split_src_path) is not None:
+			if event.is_directory:
+				self._addFolderEntry(path)
+			else:
+				self._addFileEntryAndAnalyzeFile(path)
 
 	def on_deleted(self, event: FileDeletedEvent):
 		"""Called when a file or directory is deleted.
@@ -549,17 +560,20 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 		:type event:
 			:class:`DirDeletedEvent` or :class:`FileDeletedEvent`
 		"""
-		path = event.split_src_path
-		if event.is_directory:
-			for index in self._root.indexBundles:
-				index.discardDirectory(path)
-		else:
-			# due to a bug (?) in Watchdog on Windows, a deleted directory will cause a FileDeletedEvent instead of a DirDeletedEvent:
-			index = self._root.indexBundles.setdefault(FilesIndex).folders
-			index.discardSource(joinFilePath(path, '/'))
-			# normal FileDeletedEvent handling:
-			for index in self._root.indexBundles:
-				index.discardSource(path)
+		if (path := event.split_src_path) is not None:
+			if event.is_directory:
+				self._root.indexBundles.setdefault(FilesIndex).folders.discardSource(path)
+				for index in self._root.indexBundles:
+					index.discardDirectory(path)
+			else:
+				# due to a bug (?) in Watchdog on Windows, a deleted directory will cause a FileDeletedEvent instead of a DirDeletedEvent:
+				dirPath = joinFilePath(path, '/')
+				self._root.indexBundles.setdefault(FilesIndex).folders.discardSource(dirPath)
+				for index in self._root.indexBundles:
+					# due to a bug (?) in Watchdog on Windows, a deleted directory will cause a FileDeletedEvent instead of a DirDeletedEvent:
+					index.discardDirectory(dirPath)
+					# normal FileDeletedEvent handling:
+					index.discardSource(path)
 
 	def on_modified(self, event: FileModifiedEvent):
 		"""Called when a file or directory is modified.
@@ -569,18 +583,13 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 		:type event:
 			:class:`DirModifiedEvent` or :class:`FileModifiedEvent`
 		"""
-		if event.is_directory:
-			pass
-		else:
-			path = event.split_src_path
-			for index in self._root.indexBundles:
-				index.discardSource(path)
-			index = self._root.indexBundles.setdefault(FilesIndex).files
-			fileEntry = makeFileEntry(path, self._root, True)
-			index.add(path[1], path, fileEntry)
-			for aspect in self._project.aspects:
-				if aspect.aspectFeatures.analyzeFiles:
-					aspect.analyzeFile(self._root, fileEntry)
+		if (path := event.split_src_path) is not None:
+			if event.is_directory:
+				pass
+			else:
+				for index in self._root.indexBundles:
+					index.discardSource(path)
+				self._addFileEntryAndAnalyzeFile(path)
 
 	def on_closed(self, event: FileClosedEvent):
 		"""Called when a file opened for writing is closed.
@@ -595,15 +604,32 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 
 @dataclass
 class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
+
+	_excludedDirectories: str = field(default='', metadata=catMeta(
+		serializedName='excludedDirectories',
+		kwargs=dict(
+			isMultiline=True,
+			label="Excluded Directories",
+			tip=formatMarkdown("Directories to be excluded from each Root, relative to the root path. For Example:\n"
+								"<pre>\n"
+								"	/target/generated/\n"
+								"	/.git/\n"
+								"	/venv/\n"
+								"</pre>"),
+		)
+	))
+
+	@property
+	def excludedDirectories(self) -> tuple[str, ...]:
+		return tuple(filter(None, map(str.strip, self._excludedDirectories.split())))
+
+	@excludedDirectories.setter
+	def excludedDirectories(self, excludedDirs: tuple[str, ...]) -> None:
+		self._excludedDirectories = '\n'.join(excludedDirs)
+
 	@classmethod
 	def getAspectType(cls) -> AspectType:
 		return AspectType('cce:files_aspect')
-
-	def getDependencies(self, root: Root) -> list[DependencyDescr]:
-		return []
-
-	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
-		pass
 
 	def onRootRenamed(self, root: Root, oldName: str, newName: str) -> None:
 		indexBundle = root.indexBundles.get(FilesIndex)
@@ -624,11 +650,6 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 	def onRootRemoved(self, root: Root, project: Project) -> None:
 		filesystemEvents.FILESYSTEM_OBSERVER.unschedule("cce:files_aspect", root.normalizedLocation)
 
-	def analyzeFile(self, root: Root, path: FileEntry) -> None:
-		pass
-		# idx = root.indexBundles.setdefault(FilesIndex).files
-		# idx.add(path[1], path, path)
-
 	def analyzeRoot(self, root: Root, project: Project) -> None:
 		location = root.normalizedLocation
 		if location.endswith('.jar'):  # we don't need '.class' files. This is not a Java IDE.
@@ -644,10 +665,12 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 		if not pif.divider:
 			return
 
+		excludedDirs = self.excludedDirectories
+
 		if not os.path.exists(location):
 			return
 		if os.path.isdir(location):
-			rawLocalFiles, rawLocalFolders = getAllFilesFoldersFromFolder(location, pif.divider)
+			rawLocalFiles, rawLocalFolders = getAllFilesFoldersFromFolder(location, pif.divider, excludedDirs=excludedDirs)
 		elif os.path.isfile(location):
 			rawLocalFiles = getAllFilesFromArchive(location, piz, (), ())
 			rawLocalFolders = []
