@@ -104,8 +104,8 @@ def getMCVersion(name: str) -> Optional[MCVersion]:
 
 def getCurrentMCVersion() -> Optional[MCVersion]:
 	"""Returns the MCVersion currently selected in settings."""
-	from .settings import MinecraftSettings
-	version = getApplicationSettings().aspects.get(MinecraftSettings).minecraftVersion
+	from .settings import MinecraftSettingsTemp
+	version = getApplicationSettings().aspects.get(MinecraftSettingsTemp).minecraftVersion
 	return getMCVersion(version)
 
 

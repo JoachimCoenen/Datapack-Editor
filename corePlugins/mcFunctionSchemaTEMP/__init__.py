@@ -27,8 +27,8 @@ class McFunctionSchemasTEMPPlugin(PluginBase):
 		return {'McFunctionPlugin', 'MinecraftPlugin', 'NbtPlugin'}
 
 	def settingsAspects(self) -> list[Type[SettingsAspect]]:
-		from .settings import MinecraftSettings
-		return [MinecraftSettings]
+		from .settings import MinecraftSettingsTemp
+		return [MinecraftSettingsTemp]
 
 	def schemas(self) -> dict[str, Schema]:
 		schemas = {}

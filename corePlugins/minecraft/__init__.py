@@ -1,5 +1,6 @@
 from typing import Type
 
+from base.model.applicationSettings import SettingsAspect
 from base.model.parsing.contextProvider import ContextProvider
 from base.model.parsing.tree import Node
 from base.plugin import PLUGIN_SERVICE, PluginBase
@@ -23,3 +24,6 @@ class MinecraftPlugin(PluginBase):
 			ResourceLocationNode: ResourceLocationCtxProvider
 		}
 
+	def settingsAspects(self) -> list[Type[SettingsAspect]]:
+		from corePlugins.minecraft.settings import MinecraftSettings
+		return [MinecraftSettings]

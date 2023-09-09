@@ -73,8 +73,8 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 		appearanceSettings = getApplicationSettings().appearance
 		appearanceFields = {f.name: f for f in fields(appearanceSettings)}
 
-		from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettings
-		minecraftSettings = applicationSettings.aspects.get(MinecraftSettings)
+		from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettingsTemp
+		minecraftSettings = getApplicationSettings().aspects.get(MinecraftSettingsTemp)
 		minecraftFields = {f.name: f for f in fields(minecraftSettings)}
 
 		with gui.vLayout(preventVStretch=True):

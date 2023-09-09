@@ -11,7 +11,7 @@ from base.model.applicationSettings import SettingsAspect, getApplicationSetting
 from base.model.aspect import AspectType
 from .mcVersions import ALL_MC_VERSIONS, getMCVersion
 
-MINECRAFT_ASPECT_TYPE = AspectType('dpe:minecraft')
+MINECRAFT_ASPECT_TYPE = AspectType('dpe:minecraftTemp')
 
 
 def jarPathValidator(path: str) -> Optional[ValidatorResult]:
@@ -37,7 +37,7 @@ def minecraftJarValidator(path: str) -> Optional[ValidatorResult]:
 
 
 @dataclass()
-class MinecraftSettings(SettingsAspect):
+class MinecraftSettingsTemp(SettingsAspect):
 	@classmethod
 	def getAspectType(cls) -> AspectType:
 		return MINECRAFT_ASPECT_TYPE
@@ -70,7 +70,7 @@ def _getMinecraftVersion(self) -> str:
 
 def _setMinecraftVersion(self, newVal: str) -> None:
 	applicationSettings = getApplicationSettings()
-	if applicationSettings is not None and applicationSettings.aspects.get(MinecraftSettings) is self:
+	if applicationSettings is not None and applicationSettings.aspects.get(MinecraftSettingsTemp) is self:
 		oldVal = getattr(self, '_minecraftVersion', None)
 		if True or newVal != oldVal:
 			mcVersion = getMCVersion(oldVal)
@@ -82,4 +82,4 @@ def _setMinecraftVersion(self, newVal: str) -> None:
 	setattr(self, '_minecraftVersion',  newVal)
 
 
-MinecraftSettings.minecraftVersion = property(_getMinecraftVersion, _setMinecraftVersion)
+MinecraftSettingsTemp.minecraftVersion = property(_getMinecraftVersion, _setMinecraftVersion)
