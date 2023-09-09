@@ -77,7 +77,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 	def consumeWhitespace(self) -> None:
 		cursor: int = self.cursor
 		source: bytes = self.text
-		length: int = self.totalLength
+		length: int = self.length
 		while cursor < length:
 			if source[cursor] in WHITESPACE_NO_LF:
 				cursor += 1
@@ -97,12 +97,12 @@ class JsonTokenizer(TokenizerBase[Token]):
 			self.errorNextToken(SINGLE_QUOTED_STRING_MSG)
 		self.cursor += 1  # opening "
 
-		while self.cursor < self.totalLength:
+		while self.cursor < self.length:
 			char = self.text[self.cursor]
 			self.cursor += 1
 
 			if char == ord('\\'):
-				if self.cursor == self.totalLength or self.text[self.cursor] in CR_LF:
+				if self.cursor == self.length or self.text[self.cursor] in CR_LF:
 					self.errorNextToken(INCOMPLETE_ESCAPE_MSG)
 					return self.addToken(start, TokenType.string)
 				else:
@@ -132,10 +132,10 @@ class JsonTokenizer(TokenizerBase[Token]):
 		exponent_digit_found = False
 		isValid = True
 
-		if self.cursor < self.totalLength and self.text[self.cursor] in b'-+':
+		if self.cursor < self.length and self.text[self.cursor] in b'-+':
 			self.cursor += 1
 
-		while self.cursor < self.totalLength:
+		while self.cursor < self.length:
 			char = self.text[self.cursor]
 			self.cursor += 1
 
@@ -154,10 +154,10 @@ class JsonTokenizer(TokenizerBase[Token]):
 				isValid = False
 
 		if exponent_found:
-			if self.cursor < self.totalLength and self.text[self.cursor] in b'-+':
+			if self.cursor < self.length and self.text[self.cursor] in b'-+':
 				self.cursor += 1
 
-			while self.cursor < self.totalLength:
+			while self.cursor < self.length:
 				char = self.text[self.cursor]
 				self.cursor += 1
 				if char in DIGITS_RANGE:
@@ -180,13 +180,13 @@ class JsonTokenizer(TokenizerBase[Token]):
 		"""Extracts true, false and null from JSON string"""
 		start = self.currentPos
 		self.cursor += 1  # first letter
-		while self.cursor < self.totalLength and (self.text[self.cursor] in ASCII_LOWERCASE_RANGE or self.text[self.cursor] in ASCII_UPPERCASE_RANGE):
+		while self.cursor < self.length and (self.text[self.cursor] in ASCII_LOWERCASE_RANGE or self.text[self.cursor] in ASCII_UPPERCASE_RANGE):
 			self.cursor += 1
 
 		word = self.text[start.index - self.cursorOffset:self.cursor]
 		tkType = _TOKEN_TYPE_FOR_SPECIAL.get(word, TokenType.invalid)
 		if tkType is TokenType.invalid:
-			if self.cursor < self.totalLength and self.text[self.cursor] == ord(b'"'):
+			if self.cursor < self.length and self.text[self.cursor] == ord(b'"'):
 				self.cursor += 1
 				word += self.text[self.cursor:self.cursor + 1]
 		token = self.addToken2(start, word, tkType)
@@ -198,7 +198,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 		"""Extracts illegal characters from JSON string"""
 		start = self.currentPos
 		self.cursor += 1  # first character
-		while self.cursor < self.totalLength:
+		while self.cursor < self.length:
 			char = self.text[self.cursor]
 			if char in DIGITS_RANGE or char in ASCII_LOWERCASE_RANGE or char in ASCII_UPPERCASE_RANGE:
 				break
@@ -229,7 +229,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 
 	def nextToken(self) -> Optional[Token]:
 		self.consumeWhitespace()
-		if not self.cursor < self.totalLength:
+		if not self.cursor < self.length:
 			return self.addToken2(self.currentPos, b'', TokenType.eof)
 
 		char = self.text[self.cursor]

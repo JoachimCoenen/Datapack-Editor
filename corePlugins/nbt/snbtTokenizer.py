@@ -60,7 +60,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 
 	def _consumeWhitespace(self) -> None:
 		src = self.text
-		length = self.totalLength
+		length = self.length
 		i = self.cursor
 		while i < length and src[i] in WHITESPACE_CHARS:
 			if src[i] == ord('\n'):
@@ -72,7 +72,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 	def handleQuotedString(self) -> Optional[Token]:
 		src = self.text
 		i = self.cursor
-		length = self.totalLength
+		length = self.length
 
 		quote = src[i]
 
@@ -80,7 +80,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 		while i < length:
 			i2 = src.find(quote, i)
 			if i2 == -1:
-				i = self.totalLength
+				i = self.length
 				self.cursor = i
 				return Token(TokenType.Invalid, self._tokenSpan, self._tokenStartEnd)
 			else:
@@ -123,7 +123,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 
 	def handleArrayOrList(self) -> Optional[Token]:
 		self.cursor += 1
-		if self.cursor >= self.totalLength:
+		if self.cursor >= self.length:
 			# List:
 			return Token(TokenType.List, self._tokenSpan, self._tokenStartEnd)
 		c = self.text[self.cursor]
@@ -131,7 +131,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 		# Array:
 		if (tokenType := _TOKEN_TYPE_BY_PREFIX.get(c)) is not None:
 			self.cursor += 1
-			if self.cursor < self.totalLength:
+			if self.cursor < self.length:
 				c2 = self.text[self.cursor]
 				if c2 == ord(';'):
 					self.cursor += 1
@@ -175,7 +175,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 	def nextToken(self) -> Optional[Token]:
 		self._consumeWhitespace()
 		self._tokenStart = self.currentPos, self.cursor
-		if self.cursor >= self.totalLength:
+		if self.cursor >= self.length:
 			return None
 
 		c = self.text[self.cursor]

@@ -162,13 +162,9 @@ class _Base(ABC):
 	maxErrors: int = field(default=200, init=False)
 
 	length: int = field(init=False)
-	decodedBytesCursor: int = field(init=False)
-	_lastDecodedCursorOfBytesDecodedCursor: int = field(init=False)
 
 	def __post_init__(self):
 		self.length = len(self.text)
-		self.decodedBytesCursor = self.cursor
-		self._lastDecodedCursorOfBytesDecodedCursor = self.cursor
 
 	@property
 	def currentPos(self) -> Position:
@@ -265,10 +261,6 @@ class _Base(ABC):
 
 @dataclass
 class TokenizerBase(_Base, Generic[_TToken], ABC):
-	totalLength: int = field(default=-1, init=False)
-
-	def __post_init__(self):
-		self.totalLength = len(self.text)
 
 	@abstractmethod
 	def nextToken(self) -> Optional[_TToken]:
