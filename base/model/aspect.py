@@ -22,6 +22,7 @@ class Aspect(ABC):
 		pass
 
 
+_TS = TypeVar('_TS')
 _TAspect = TypeVar('_TAspect', bound=Aspect)
 _TAspect2 = TypeVar('_TAspect2', bound=Aspect)
 
@@ -110,6 +111,26 @@ class SerializableDataclassWithAspects(SerializableDataclass, Generic[_TAspect])
 		result = super(SerializableDataclassWithAspects, self).serializeJson(strict, memo, path)
 		result['aspects'] = self._serializeAspects(strict)
 		return result
+
+	def copyFrom(self: _TS, other: _TS) -> None:
+		super().copyFrom(other)
+
+		if isinstance(self, SerializableDataclassWithAspects):
+			assert isinstance(other, SerializableDataclassWithAspects)
+			oldSelfAspects: dict[AspectType, Aspect] = self.aspects._aspects.copy()
+			self.aspects._aspects.clear()
+			otherAspect: Aspect
+			for otherAspect in other.aspects._aspects.copy().values():
+				# isinstance(otherAspect, Aspect) check only added to not confuse the type checker.
+				assert isinstance(otherAspect, SerializableDataclass) and isinstance(otherAspect, Aspect), "Aspect must be SerializableDataclass in order to be copyable."
+				selfAspect = oldSelfAspects.pop(otherAspect.getAspectType(), None)
+				assert isinstance(selfAspect, SerializableDataclass)
+				if selfAspect is None:
+					selfAspect = type(otherAspect)()
+				self.aspects.add(selfAspect)
+				selfAspect.copyFrom(otherAspect)
+
+			self.unknownAspects = other.unknownAspects.copy()
 
 	def _serializeAspects(self, strict: bool) -> dict[str, Any]:
 		result = {}

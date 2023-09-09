@@ -5,9 +5,9 @@ import enum
 import os
 import traceback
 from abc import ABC
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from json import JSONDecodeError
-from typing import final, Iterator, TypeVar, Type, Optional
+from typing import final, TypeVar, Type, Optional
 
 from PyQt5.Qsci import QsciScintillaBase
 from PyQt5.QtCore import Qt
@@ -15,7 +15,7 @@ from PyQt5.QtGui import QFont, QFontDatabase
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.GUI import getStyles
-from Cat.Serializable.dataclassJson import SerializableDataclass, shouldSerialize, catMeta
+from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
 from Cat.utils import getExePath, override
 from Cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory
@@ -231,7 +231,6 @@ class SettingsAspect(Aspect, SerializableDataclass, ABC):
 class ApplicationSettings(SerializableDataclassWithAspects[SettingsAspect]):
 
 	appearance: AppearanceSettings = field(default_factory=AppearanceSettings, metadata=catMeta(kwargs=dict(label='Appearance')))
-	# minecraft: MinecraftSettings = Serialized(default_factory=MinecraftSettings, label='Minecraft')
 	debugging: DebugSettings = field(default_factory=DebugSettings, metadata=catMeta(kwargs=dict(label='Debugging')))
 	about: AboutSettings = field(default_factory=AboutSettings, metadata=catMeta(kwargs=dict(label='About')))
 
@@ -253,7 +252,7 @@ class ApplicationSettings(SerializableDataclassWithAspects[SettingsAspect]):
 
 	@override
 	def _setAspect(self, newAspect: SettingsAspect):
-		copyAppSettings(self.aspects.get(type(newAspect)), newAspect)
+		self.aspects.get(type(newAspect)).copyFrom(newAspect)
 
 	@override
 	def _getAspectCls(self, aspectType: AspectType) -> Optional[Type[SettingsAspect]]:
@@ -275,90 +274,11 @@ def getApplicationSettings() -> ApplicationSettings:
 
 def setApplicationSettings(newSettings: ApplicationSettings):
 	global applicationSettings
-	copyAppSettings(applicationSettings, copy.deepcopy(newSettings))
+	applicationSettings.copyFrom(copy.deepcopy(newSettings))
 
 
 def resetApplicationSettings():
 	setApplicationSettings(ApplicationSettings())
-
-
-_TT = TypeVar('_TT')
-_TU = TypeVar('_TU')
-
-
-def createCopy(otherVal: _TT) -> Iterator[_TT]:
-	if isinstance(otherVal, SerializableDataclass):
-		return createCopySerializableDataclass(otherVal)
-	elif isinstance(otherVal, list):
-		return createCopyList(otherVal)
-	elif isinstance(otherVal, dict):
-		return createCopyDict(otherVal)
-	else:
-		return createCopySimple(otherVal)
-
-
-def createCopySerializableDataclass(other: SerializableDataclass) -> Iterator[SerializableDataclass]:
-	self = type(other)()
-	yield self
-	copyAppSettings(self, other)
-
-
-def createCopyList(other: list[_TT]) -> Iterator[list[_TT]]:
-	self = type(other)()
-	yield self
-	for otherVal in other:
-		selfValIt = createCopy(otherVal)
-		self.append(next(selfValIt))
-		next(selfValIt, None)
-
-
-def createCopyDict(other: dict[_TU, _TT]) -> Iterator[dict[_TU, _TT]]:
-	self = type(other)()
-	yield self
-	for otherKey, otherVal in other.items():
-		selfKeyIt = createCopy(otherKey)
-		selfValIt = createCopy(otherVal)
-		selfKey = next(selfKeyIt)
-		next(selfKeyIt, None)
-		self[selfKey] = next(selfValIt)
-		next(selfValIt, None)
-
-
-def createCopySimple(other: list[_TT]) -> Iterator[list[_TT]]:
-	self = copy.deepcopy(other)
-	yield self
-
-
-def copyAppSettings(self: SerializableDataclass, other: SerializableDataclass) -> None:
-	"""sets self to a shallow copy of other"""
-	if self is other:  # handle singletons
-		return
-	if not isinstance(other, SerializableDataclass):
-		raise ValueError(f"expected a SerializableDataclass, but got {other}")
-	for aField in fields(self):
-		if shouldSerialize(aField, None):
-			otherVal = getattr(other, aField.name)
-			selfValIt = createCopy(otherVal)
-			setattr(self, aField.name, next(selfValIt))
-			next(selfValIt, None)
-
-	if isinstance(self, SerializableDataclassWithAspects):
-		assert isinstance(other, SerializableDataclassWithAspects)
-		oldSelfAspects: dict[AspectType, Aspect] = self.aspects._aspects.copy()
-		self.aspects._aspects.clear()
-		otherAspect: Aspect
-		for otherAspect in other.aspects._aspects.copy().values():
-			# isinstance(otherAspect, Aspect) check only added to not confuse the type checker.
-			assert isinstance(otherAspect, SerializableDataclass) and isinstance(otherAspect, Aspect), "Aspect must be SerializableDataclass in order to be copyable."
-			selfAspect = oldSelfAspects.pop(otherAspect.getAspectType(), None)
-			assert isinstance(selfAspect, SerializableDataclass)
-			if selfAspect is None:
-				selfAspect = type(otherAspect)()
-			self.aspects.add(selfAspect)
-			copyAppSettings(selfAspect, otherAspect)
-
-
-		self.unknownAspects = other.unknownAspects.copy()
 
 
 def saveApplicationSettings():
