@@ -4,11 +4,11 @@ import importlib.util
 import os
 import sys
 from types import ModuleType
-from typing import Optional, Callable, Iterable
+from typing import Optional, Callable, Iterable, NamedTuple
 
 from Cat.extensions import processRecursively
 from Cat.utils import openOrCreate, format_full_exc
-from Cat.utils.logging_ import logError, logInfo, loggingIndent
+from Cat.utils.logging_ import logError, logInfo, loggingIndent, loggingIndentInfo
 from Cat.utils.profiling import TimedFunction
 from base.model.pathUtils import FilePathStr, normalizeDirSeparatorsStr
 from base.model.utils import Message
@@ -105,12 +105,16 @@ def callModuleMethod(baseModuleName: str, modules: dict[str, ModuleType], method
 			continue
 
 
+class FolderAndFileFilter(NamedTuple):
+	folderFilter: str
+	fileFilterRegex: Optional[str]
+
+
 @TimedFunction(details=lambda baseModuleName, baseModuleDir, *args, **kwargs: f"{baseModuleName} from directory '{baseModuleDir}'")
 def loadAllModules(
 		baseModuleName: str,
 		baseModuleDir: FilePathStr,
-		folderFilter: str,
-		fileFilterRegex: Optional[str],
+		folderAndFileFilters: list[FolderAndFileFilter],
 		*,
 		setDefaultFilesFunc: Optional[Callable[[FilePathStr], None]] = None,
 		initMethodName: Optional[str] = None
@@ -118,13 +122,15 @@ def loadAllModules(
 	with loggingIndent():
 		baseModuleDir = normalizeDirSeparatorsStr(baseModuleDir)
 
-		logInfo(f"collecting {baseModuleName} modules...")
-		pluginModuleNames = collectAllModules(baseModuleName, baseModuleDir, folderFilter, fileFilterRegex, setDefaultFilesFunc)
-		logInfo(f"loading {baseModuleName} modules...")
-		pluginModules = loadModules(baseModuleName, baseModuleDir, pluginModuleNames)
-		# logInfo(f"reloading {baseModuleName} modules...")
-		# reloadModules(baseModuleName, pluginModules.values())
+		with loggingIndentInfo(f"collecting {baseModuleName} modules..."):
+			pluginModuleNames = []
+			for folderFilter, fileFilterRegex in folderAndFileFilters:
+				pluginModuleNames.extend(collectAllModules(baseModuleName, baseModuleDir, folderFilter, fileFilterRegex, setDefaultFilesFunc))
+		with loggingIndentInfo(f"loading {baseModuleName} modules..."):
+			pluginModules = loadModules(baseModuleName, baseModuleDir, pluginModuleNames)
+		# with loggingIndentInfo(f"reloading {baseModuleName} modules..."):
+		# 	reloadModules(baseModuleName, pluginModules.values())
 		if initMethodName:
-			logInfo(f"calling {initMethodName}() for {baseModuleName} modules...")
-			callModuleMethod(baseModuleName, pluginModules, initMethodName)
+			with loggingIndentInfo(f"calling {initMethodName}() for {baseModuleName} modules..."):
+				callModuleMethod(baseModuleName, pluginModules, initMethodName)
 		return pluginModules

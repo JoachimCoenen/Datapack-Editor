@@ -16,7 +16,7 @@ from Cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
 from Cat.utils.logging_ import logDebug, logWarning, logError
 from Cat.utils.profiling import TimedFunction
 from base.model.utils import LanguageId
-from base.modules import loadAllModules
+from base.modules import loadAllModules, FolderAndFileFilter
 
 _TT = TypeVar('_TT')
 
@@ -398,8 +398,7 @@ def loadAllColorSchemes() -> None:
 	colorSchemeModules = loadAllModules(
 		'colorSchemes',
 		colorSchemesDir,
-		'/**',
-		r'scheme_.+\.py',
+		[FolderAndFileFilter('/**', r'scheme_.+\.py')],
 		setDefaultFilesFunc=lambda x: _copyDefaultColorSchemes(x),
 		initMethodName='initPlugin'
 	)

@@ -28,7 +28,7 @@ from base.model.pathUtils import FilePathStr
 from base.model.project.project import ProjectAspect, Project
 from base.model.project.projectCreator import ProjectCreator
 from base.model.utils import LanguageId
-from base.modules import loadAllModules
+from base.modules import loadAllModules, FolderAndFileFilter
 
 if TYPE_CHECKING:
 	from gui.datapackEditorGUI import DatapackEditorGUI
@@ -96,7 +96,7 @@ class PluginService:
 		logInfo("Initializing plugins in the following order:", pluginOrderStr)
 
 		# initialize plugins
-		self.plugins = {}
+		self.plugins: dict[str, PluginBase] = {}
 		for pluginName in allPluginsSorted:
 			plugin = pluginByName.get(pluginName)
 			self.plugins[pluginName] = plugin
@@ -244,7 +244,13 @@ def getCorePluginsDir() -> tuple[str, FilePathStr]:
 
 
 def loadAllPlugins(baseModuleName: str, pluginsDir: FilePathStr) -> None:
-	# all single-file plugins
-	loadAllModules(baseModuleName, pluginsDir, '/', r'(?!__)[\w_]+\.py', initMethodName='initPlugin')
-	# all multi-file plugins (plugins inside a package
-	loadAllModules(baseModuleName, pluginsDir, '/*', r'__init__\.py', initMethodName='initPlugin')
+	loadAllModules(
+		baseModuleName,
+		pluginsDir,
+		[
+			# all single-file plugins
+			FolderAndFileFilter('/', r'(?!__)[\w_]+\.py'),
+			# all multi-file plugins (plugins inside a package
+			FolderAndFileFilter('/*', r'__init__\.py'),
+		],
+		initMethodName='initPlugin')
