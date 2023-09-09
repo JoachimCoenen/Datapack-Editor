@@ -110,7 +110,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		#GUI
 		self.checkAllDialog = CheckAllDialog(self)
 		self.searchAllDialog = SearchAllDialog(self)
-		self.settingsDialog = SettingsDialog(self)
+		self.settingsDialog = SettingsDialog(self, GUICls=DatapackEditorGUI)
 		self.profileParsingDialog = ProfileParsingDialog(self)
 		self.currentDocumenSubGUI: Optional[DatapackEditorGUI] = None
 

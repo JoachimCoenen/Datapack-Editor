@@ -1,24 +1,23 @@
 import copy
 from dataclasses import fields
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Type
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
+from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.AutoGUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
 from Cat.CatPythonGUI.GUI import CORNERS
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
-
-from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
 from Cat.CatPythonGUI.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
+from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
 from Cat.Serializable.dataclassJson import SerializableDataclass, getDecorators, getKWArg
 from Cat.icons import icons
 from Cat.utils import showInFileSystem
-from base.model.applicationSettings import ApplicationSettings, applicationSettings, setApplicationSettings, saveApplicationSettings, ColorSchemePD
-from base.model.applicationSettings import AboutQt
 from base.model import theme
+from base.model.applicationSettings import AboutQt, ApplicationSettings, applicationSettings, setApplicationSettings,\
+	saveApplicationSettings, ColorSchemePD
 
 _qtIcon: Optional[QIcon] = None
 
@@ -57,6 +56,7 @@ def drawColorSchemePD(gui_: AutoGUI, value_: str, type_, decorator_: ColorScheme
 
 	return result
 
+
 class _Field(NamedTuple):
 	value: SerializableDataclass
 	label: str
@@ -79,8 +79,8 @@ def _childrenMaker(data: _Field) -> list[_Field]:
 
 
 class SettingsDialog(CatFramelessWindowMixin, QDialog):
-	def __init__(self, parent: Optional[QWidget] = None):
-		super().__init__(GUICls=AutoGUI, parent=parent)
+	def __init__(self, parent: Optional[QWidget] = None, GUICls: Type[AutoGUI] = AutoGUI):
+		super().__init__(GUICls=GUICls, parent=parent)
 		self._settingsCopy: ApplicationSettings = applicationSettings
 		self._selectedPage: Optional[SerializableDataclass] = None
 		self.setWindowTitle('Settings')
@@ -94,25 +94,13 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 
 	def OnStatusbarGUI(self, gui: PythonGUI):
 		gui.dialogButtons({
-			MessageBoxButton.Apply          : lambda b: self.apply(),
-			MessageBoxButton.Ok             : lambda b: self.accept(),
-			MessageBoxButton.Cancel         : lambda b: self.reject(),
+			MessageBoxButton.Apply: lambda b: self.apply(),
+			MessageBoxButton.Ok: lambda b: self.accept(),
+			MessageBoxButton.Cancel: lambda b: self.reject(),
 			# TODO: MessageBoxButton.RestoreDefaults: lambda b: self._settingsCopy.reset() or gui.redrawGUI(),
 		})
 
-	# def _mainAreaGUI(self, gui: PythonGUI, overlap: Overlap, roundedCorners: RoundedCorners):
-	# 	contentsMargins = self._mainAreaMargins
-	# 	with gui.vLayout(contentsMargins=contentsMargins):
-	# 		self.OnGUI(gui)
-
 	def OnGUI(self, gui: AutoGUI):
-		# def drawGUI(gui: AutoGUI):
-		# 	with gui.vLayout(preventVStretch=True):
-		# 		for prop in settingsPage.getSerializedProperties():
-		# 			if isinstance(prop.decorator, pd.NoUI):
-		# 				continue
-		# 			gui.propertyField(settingsPage, prop, True, enabled=True)
-		# 			gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer
 		with gui.vPanel(windowPanel=True, preventVStretch=True):
 			if self._selectedPage is None:
 				gui.helpBox('Please select a category.')
