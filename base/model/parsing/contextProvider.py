@@ -178,7 +178,6 @@ class ContextProvider(Generic[_TNode], ABC):
 			span = self.tree.span
 		return self.getClickableRangesInternal(span)
 
-	@abstractmethod
 	def getClickableRangesInternal(self, span: Span) -> Iterable[Span]:
 		ranges: list[Span] = []
 		for node in self.tree.walkTree():
