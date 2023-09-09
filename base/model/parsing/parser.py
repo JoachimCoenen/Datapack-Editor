@@ -34,7 +34,12 @@ class IndexMapper:
 	(encPos, decPos)
 	"""
 	_markers: list[tuple[int, int]] = field(default_factory=lambda: [(0, 0)], kw_only=True)
+	_isIdentity: bool = field(default=True, kw_only=True)
 	""" list of (encPos, decPos) pairs"""
+
+	@property
+	def isIdentity(self) -> bool:
+		return self._isIdentity
 
 	def _findMarker(self, pos: int, toEnc: bool) -> int:
 		"""
@@ -94,12 +99,18 @@ class IndexMapper:
 		return result
 
 	def toDecoded(self, encPos: int) -> int:
+		if self._isIdentity:
+			return encPos
 		return self._mapPos(encPos, toEnc=False)
 
 	def toEncoded(self, decPos: int) -> int:
+		if self._isIdentity:
+			return decPos
 		return self._mapPos(decPos, toEnc=True)
 
 	def addMarker(self, encPos: int, decPos: int):
+		if encPos != decPos:
+			self._isIdentity = False
 		marker = (encPos, decPos)
 		if not self._markers or self._markers[-1] != marker:
 			self._markers.append(marker)
@@ -113,6 +124,7 @@ class IndexMapBuilder:
 	_lastEncPos: int = field(init=False)
 	""" list of (encPos, decPos) pairs"""
 	_lastBaseMapIdx: int = field(default=-1, init=False)
+	_isIdentity: bool = field(default=True, init=False)
 
 	def __post_init__(self):
 		self._lastBaseMapIdx = self.baseMap.findEncodingMap(self.offset)
@@ -121,6 +133,8 @@ class IndexMapBuilder:
 
 	def _addActualMarker(self, marker: tuple[int, int]) -> None:
 		if not self._markers or self._markers[-1] != marker:
+			if marker[0] != marker[1]:
+				self._isIdentity = False
 			self._markers.append(marker)
 
 	def _addBaseMarkers(self, encPos: int, decPos: int):
@@ -146,7 +160,7 @@ class IndexMapBuilder:
 
 	def completeIndexMapper(self, encPosLastChar: int, decPosLastChar: int) -> IndexMapper:
 		self.addMarker(encPosLastChar, decPosLastChar)
-		return IndexMapper(_markers=self._markers)
+		return IndexMapper(_markers=self._markers, _isIdentity=self._isIdentity)
 
 
 @dataclass
@@ -165,10 +179,11 @@ class _Base(ABC):
 
 	def __post_init__(self):
 		self.length = len(self.text)
+		self._idxMprIsIdentity = self.indexMapper.isIdentity
 
 	@property
 	def currentPos(self) -> Position:
-		actualCursor = self.indexMapper.toEncoded(self.cursor + self.cursorOffset)
+		actualCursor = self.cursor + self.cursorOffset if self._idxMprIsIdentity else self.indexMapper.toEncoded(self.cursor + self.cursorOffset)
 		return Position(self.line, actualCursor - self.lineStart, actualCursor)
 
 	# @property
@@ -177,7 +192,7 @@ class _Base(ABC):
 	# 	return Position(self.line, actualCursor - self.lineStart, actualCursor)
 
 	def advanceLine(self) -> None:
-		self.lineStart = self.indexMapper.toEncoded(self.cursor + self.cursorOffset)
+		self.lineStart = self.cursor + self.cursorOffset if self._idxMprIsIdentity else self.indexMapper.toEncoded(self.cursor + self.cursorOffset)
 		self.line += 1
 
 	def advanceLineCounter(self, newPos: int) -> None:
