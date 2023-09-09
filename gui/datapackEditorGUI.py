@@ -1,25 +1,29 @@
 from __future__ import annotations
 
 import codecs
+import copy
 import functools as ft
 import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Generic, \
-	Sequence
+	Sequence, Type
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy, QTreeView
 
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
+from Cat.CatPythonGUI.AutoGUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
 from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, CORNERS, TreeBuilderABC
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
 from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, IndexSpan
-from Cat.CatPythonGUI.GUI.enums import ResizeMode
+from Cat.CatPythonGUI.GUI.enums import ResizeMode, SizePolicy
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
+from Cat.Serializable.dataclassJson import SerializableDataclass
+from Cat.Serializable.utils import PropertyDecorator, get_args
 from Cat.icons import icons
 from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
 from base.model.applicationSettings import getApplicationSettings
@@ -441,10 +445,10 @@ class DatapackEditorGUI(AutoGUI):
 			treeBuilder: TreeBuilderABC[_TT],
 			headerBuilder: Optional[TreeBuilderABC[_T2]] = None,
 			*,
-			headerVisible: bool = ...,
+			headerVisible: bool | Ellipsis = ...,
 			loadDeferred: bool = True,
 			columnResizeModes: Optional[Iterable[ResizeMode]] = None,
-			stretchLastColumn: Optional[bool] = None,
+			stretchLastColumn: bool | Ellipsis = ...,
 			**kwargs
 	) -> SearchableListContext[_TT]:
 		treeResult = self.tree(
@@ -480,10 +484,10 @@ class DatapackEditorGUI(AutoGUI):
 			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
 			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
 			isRegex: bool = False,
-			headerVisible: bool = ...,
+			headerVisible: bool | Ellipsis = ...,
 			loadDeferred: bool = True,
 			columnResizeModes: Optional[Iterable[ResizeMode]] = None,
-			stretchLastColumn: Optional[bool] = None,
+			stretchLastColumn: bool | Ellipsis = ...,
 			cornerGUI: Callable[[], None] = None,
 			sandwichedGUI: Callable[[], None] = None,
 			**kwargs
@@ -713,3 +717,89 @@ def drawCodeField(
 		)
 
 	return code, highlightErrors, cursorPos, forceLocate
+
+
+class EditableSerializableDataclassList(PropertyDecorator):
+	"""docstring for List"""
+	def __init__(
+			self,
+			name: str,
+			treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]],
+			*,
+			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
+			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
+			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+	):
+		super().__init__()
+		self.name: str = name
+		self.treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]] = treeBuilderBuilder
+		self.headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = headerBuilderBuilder
+		self.getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = getStrChoices
+		self.filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterFunc
+
+
+@registerDecoratorDrawer(EditableSerializableDataclassList)
+def drawList(gui_: DatapackEditorGUI, values_: list[_TT], type_: Optional[Type[list[_TT]]], decorator_: EditableSerializableDataclassList, drawProperty_: InnerDrawPropertyFunc[list[_TT]], owner_: SerializableDataclass, **kwargs) -> _TT:
+	innerType_ = get_args(type_)[0]
+
+	def _addRoot(gui: DatapackEditorGUI):
+		newVal, isOk = gui.askUserInput(
+			f"Add",
+			innerType_()
+		)
+		if isOk:
+			values_.append(newVal)
+
+	def _editRoot(gui: DatapackEditorGUI, value: _TT):
+		newVal, isOk = gui.askUserInput(
+			f"Edit",
+			copy.deepcopy(value)
+		)
+		if isOk:
+			value.copyFrom(newVal)
+
+	def _removeRoot(gui: DatapackEditorGUI, value: _TT):
+		# todo ask user
+		values_.remove(value)
+
+	def _moveRootUp(value: _TT):
+		idx = values_.index(value)
+		if idx > 0:
+			values_[idx - 1], values_[idx] = values_[idx], values_[idx - 1]
+
+	def _moveRootDown(value: _TT):
+		idx = values_.index(value)
+		if idx < len(values_) - 1:
+			values_[idx], values_[idx + 1] = values_[idx + 1], values_[idx]
+
+	contextId = f'{decorator_.name}_listContext'
+	listContext = gui_.customData.get(contextId)
+	if listContext is None:
+		listContext = SearchableListContext()
+
+	with gui_.vLayout(seamless=True):
+		selected, listContext = gui_.filteredTreeWithSearchField(
+			values_,
+			listContext,
+			decorator_.treeBuilderBuilder,
+			headerBuilderBuilder=decorator_.headerBuilderBuilder,
+			getStrChoices=decorator_.getStrChoices,
+			filterFunc=decorator_.filterFunc,
+		)
+		gui_.customData[contextId] = listContext
+
+		with gui_.hPanel(seamless=True):
+			canMoveDown = selected is not None and values_ and values_[-1] is not selected
+			canMoveUp = selected is not None and values_ and values_[0] is not selected
+			gui_.addHSpacer(0, SizePolicy.Expanding)
+			if gui_.toolButton(icon=icons.edit, tip='Edit', enabled=selected is not None):
+				_editRoot(gui_, selected)
+			if gui_.toolButton(icon=icons.up, tip='Move up', enabled=canMoveUp):
+				_moveRootUp(selected)
+			if gui_.toolButton(icon=icons.down, tip='Move down', enabled=canMoveDown):
+				_moveRootDown(selected)
+			if gui_.toolButton(icon=icons.remove, tip='Remove selected', enabled=selected is not None):
+				_removeRoot(gui_, selected)
+			if gui_.toolButton(icon=icons.add, tip='Add', enabled=True):
+				_addRoot(gui_)
+	return values_
