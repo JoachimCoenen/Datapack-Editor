@@ -23,6 +23,9 @@ class McFunctionSchemasTEMPPlugin(PluginBase):
 		from .argumentContextsImpl import initPlugin as initArgumentContexts
 		initArgumentContexts()
 
+		from .argumentStylers import initPlugin as initArgumentStylers
+		initArgumentStylers()
+
 	def dependencies(self) -> set[str]:
 		return {'McFunctionPlugin', 'MinecraftPlugin', 'NbtPlugin'}
 

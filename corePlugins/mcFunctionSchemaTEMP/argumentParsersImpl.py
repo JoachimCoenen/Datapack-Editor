@@ -2,12 +2,12 @@ from typing import Optional
 
 from corePlugins.mcFunction.command import ArgumentSchema
 from corePlugins.mcFunction.commandContext import makeParsedArgument
-from corePlugins.mcFunction.snbt import parseNBTTag
 from corePlugins.mcFunction.utils import CommandSyntaxError
 from corePlugins.mcFunction.command import ParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, ResourceLocationNode
 from corePlugins.nbt.tags import NBTTag, CompoundTag
+from .snbt import parseNBTTag
 from base.model.parsing.contextProvider import Suggestions
 from base.model.pathUtils import FilePath
 # from model.resourceLocationContext import getResourceLocationContext

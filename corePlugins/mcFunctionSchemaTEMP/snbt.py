@@ -3,8 +3,8 @@ from typing import Optional
 from nbtlib import Parser, tokenize, Int, String, List, Compound, Path, ListIndex, CompoundMatch, InvalidLiteral
 from nbtlib.path import can_be_converted_to_int, NamedKey, extend_accessors
 
-from .stringReader import StringReader
-from .utils import CommandSyntaxError
+from corePlugins.mcFunction.stringReader import StringReader
+from corePlugins.mcFunction.utils import CommandSyntaxError
 from corePlugins.nbt.tags import NBTTag, NBTTagSchema
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import parseNPrepare

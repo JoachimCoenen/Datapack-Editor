@@ -19,10 +19,11 @@ def initPlugin() -> None:
 class McFunctionPlugin(PluginBase):
 
 	def initPlugin(self) -> None:
-		pass
+		from .argumentContextsImpl import initPlugin as initArgumentContexts
+		initArgumentContexts()
 
 	def dependencies(self) -> set[str]:
-		return {'MinecraftPlugin', 'NbtPlugin'}
+		return set()
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from .parser import MCFunctionParser

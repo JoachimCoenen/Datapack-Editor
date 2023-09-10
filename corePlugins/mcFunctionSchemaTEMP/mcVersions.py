@@ -3,7 +3,8 @@ from __future__ import annotations
 from abc import ABC
 from copy import copy
 from dataclasses import dataclass, Field, fields, is_dataclass
-from typing import Optional
+from types import MappingProxyType
+from typing import Optional, Mapping, Sequence
 
 from base.model.applicationSettings import getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
@@ -27,25 +28,25 @@ class Gamerule:
 class MCVersion(ABC):
 	name: str
 
-	blocks: set[ResourceLocation]
-	fluids: set[ResourceLocation]
-	items: set[ResourceLocation]
+	blocks: AbstractSet[ResourceLocation]
+	fluids: AbstractSet[ResourceLocation]
+	items: AbstractSet[ResourceLocation]
 
-	entities: set[ResourceLocation]
-	potions: set[ResourceLocation]
-	effects: set[ResourceLocation]
-	enchantments: set[ResourceLocation]
-	biomes: set[ResourceLocation]
-	particles: set[ResourceLocation]
-	dimensions: set[ResourceLocation]
-	predicateConditions: set[ResourceLocation]
-	gameEvents: set[ResourceLocation]  # introduced in version 1.19
+	entities: AbstractSet[ResourceLocation]
+	potions: AbstractSet[ResourceLocation]
+	effects: AbstractSet[ResourceLocation]
+	enchantments: AbstractSet[ResourceLocation]
+	biomes: AbstractSet[ResourceLocation]
+	particles: AbstractSet[ResourceLocation]
+	dimensions: AbstractSet[ResourceLocation]
+	predicateConditions: AbstractSet[ResourceLocation]
+	gameEvents: AbstractSet[ResourceLocation]  # introduced in version 1.19
 
-	structures: set[ResourceLocation]
-	slots: dict[bytes, int]
+	structures: AbstractSet[ResourceLocation]
+	slots: Mapping[bytes, int]
 
-	blockStates: dict[ResourceLocation, list[FilterArgumentInfo]]
-	gamerules: list[Gamerule]
+	blockStates: Mapping[ResourceLocation, list[FilterArgumentInfo]]
+	gamerules: Sequence[Gamerule]
 
 	# commands: dict[bytes, CommandSchema]
 
@@ -70,6 +71,40 @@ class MCVersion(ABC):
 		if schema is not None:
 			if GLOBAL_SCHEMA_STORE.get(MC_FUNCTION_DEFAULT_SCHEMA_ID, MCFunctionSchema) is schema:
 				GLOBAL_SCHEMA_STORE.unregisterSchema(MC_FUNCTION_DEFAULT_SCHEMA_ID, MCFunctionSchema.language)
+
+
+MC_EMPTY_VERSION = MCVersion(
+	name='No Version',
+	blocks=frozenset(),
+	fluids=frozenset(),
+	items=frozenset(),
+
+	entities=frozenset(),
+	# Entities(
+	# 	mobs=ENTITIES_MOBS,
+	# 	misc=ENTITIES_MISC,
+	# 	projectiles=ENTITIES_PROJECTILES,
+	# 	vehicles=ENTITIES_VEHICLES,
+	# 	blocks=ENTITIES_BLOCKS,
+	# 	items=ENTITIES_ITEMS,
+	# ),
+	potions=frozenset(),
+	effects=frozenset(),
+	enchantments=frozenset(),
+	biomes=frozenset(),
+	particles=frozenset(),
+	dimensions=frozenset(),
+	structures=frozenset(),
+	predicateConditions=frozenset(),
+	gameEvents=frozenset(),  # introduced in version 1.19
+
+	slots=MappingProxyType({}),
+
+	blockStates=MappingProxyType({}),
+	gamerules=(),
+
+	# commands={},
+)
 
 
 def _copyRecursive(data):

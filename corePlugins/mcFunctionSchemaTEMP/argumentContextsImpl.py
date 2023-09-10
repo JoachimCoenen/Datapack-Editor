@@ -3,26 +3,27 @@ from abc import abstractmethod, ABC
 from typing import Optional, Iterable, Any
 
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare, CtxInfo, \
+from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, CtxInfo, \
 	prepareTree
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
 from base.model.session import getSession
 from base.model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
-from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode
-from corePlugins.mcFunction.argumentTypes import *
-from corePlugins.mcFunction.argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
-from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser, getArgumentContext
-from corePlugins.mcFunction.snbt import parseNBTPath
+from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.mcFunction.utils import CommandSyntaxError, CommandSemanticsError
-from .argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
-from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, validateFilterArgs
-from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
+from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode
 from corePlugins.nbt.tags import NBTTagSchema
 from model.messages import *
+from .argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
+from .argumentTypes import *
+from .argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
+from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, validateFilterArgs
+from .snbt import parseNBTPath
+from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
+from ..mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
 
 
 def initPlugin() -> None:
@@ -83,151 +84,6 @@ class ResourceLocationLikeHandler(ArgumentContext, ABC):
 
 	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
 		return onIndicatorClicked(node.value, node.source, position)
-
-
-class ParsingHandler(ArgumentContext, ABC):
-
-	@abstractmethod
-	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
-		pass
-
-	@abstractmethod
-	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
-		pass
-
-	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
-		return {}
-
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		# remainder = sr.tryReadRemaining()
-		if sr.hasReachedEnd:
-			return None
-		sr.save()
-		schema = self.getSchema(ai)
-		language = self.getLanguage(ai)
-
-		data, errors = parseNPrepare(
-			sr.source[sr.cursor:],
-			filePath=filePath,
-			language=language,
-			schema=schema,
-			line=sr._lineNo,
-			lineStart=sr._lineStart,
-			cursor=0,
-			cursorOffset=sr.cursor + sr._lineStart,
-			**self.getParserKwArgs(ai)
-		)
-		# sr.tryReadRemaining()
-
-		errorsIO.extend(errors)
-		if data is not None:
-			sr.cursor += data.span.length
-			sr._lineNo = data.span.end.line
-			sr._lineStart = data.span.end.index - data.span.end.column
-			return makeParsedArgument(sr, ai, value=data)
-
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		validateTree(node.value, node.source, errorsIO)
-		# errors = validateJson(node.value)
-		# nss = node.span.start
-		# for er in errors:
-		# 	s = Position(
-		# 		nss.line,
-		# 		nss.column + er.span.start.index,
-		# 		nss.index + er.span.start.index
-		# 	)
-		# 	e = Position(
-		# 		nss.line,
-		# 		nss.column + er.span.end.index,
-		# 		nss.index + er.span.end.index
-		# 	)
-		# 	if isinstance(er, GeneralError):
-		# 		er.span = Span(s, e)
-		# 	else:
-		# 		er = CommandSemanticsError(er.message, Span(s, e), er.style)
-		# 	errorsIO.append(er)
-
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		"""
-		:param ai:
-		:param node:
-		:param pos: cursor position
-		:param replaceCtx: the string that will be replaced
-		:return:
-		"""
-		if node is not None:
-			return getSuggestions(node.value, node.source, pos, replaceCtx)
-		return []
-
-	def getDocumentation(self, node: ParsedArgument, pos: Position) -> MDStr:
-		docs = [
-			super(ParsingHandler, self).getDocumentation(node, pos),
-			getDocumentation(node.value, node.source, pos)
-		]
-		return MDStr('\n\n'.join(docs))
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		return getClickableRanges(node.value, node.source)
-
-	def onIndicatorClicked(self, node: ParsedArgument, pos: Position) -> None:
-		onIndicatorClicked(node.value, node.source, pos)
-
-
-@argumentContext(BRIGADIER_BOOL.name)
-class BoolHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadBoolean()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
-
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
-		return ['true', 'false']
-
-
-@argumentContext(BRIGADIER_DOUBLE.name)
-class DoubleHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadFloat()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
-
-
-@argumentContext(BRIGADIER_FLOAT.name)
-class FloatHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadFloat()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
-
-
-@argumentContext(BRIGADIER_INTEGER.name)
-class IntegerHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadInt()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
-
-
-@argumentContext(BRIGADIER_LONG.name)
-class LongHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadInt()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
-
-
-@argumentContext(BRIGADIER_STRING.name)
-class StringHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadString()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
 
 
 @argumentContext(MINECRAFT_ANGLE.name)
@@ -864,9 +720,5 @@ class StDpeDataPackHandler(ArgumentContext):
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 
-# check if there's an ArgumentContext for every registered named ArgumentType:
-for name, argType in ALL_NAMED_ARGUMENT_TYPES.items():
-	if name != argType.name:
-		raise ValueError(f"argumentType {argType.name!r} registered under wrong name {name!r}.")
-	if getArgumentContext(argType) is None:
-		raise ValueError(f"missing argumentContext for argumentType {argType.name!r}.")
+# make sure there's an ArgumentContext for every registered named ArgumentType:
+checkArgumentContextsForRegisteredArgumentTypes()

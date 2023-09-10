@@ -5,6 +5,7 @@ from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunction.command import CommandSchema, KeywordSchema, ArgumentSchema, TERMINAL, COMMANDS_ROOT, SwitchSchema, MCFunctionSchema
 from base.model.parsing.bytesUtils import strToBytes
 
+from .argumentTypes import *
 from .mcVersions import MCVersion, getMCVersion
 
 

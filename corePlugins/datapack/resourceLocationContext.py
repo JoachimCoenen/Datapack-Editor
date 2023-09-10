@@ -9,7 +9,7 @@ from base.model.utils import GeneralError
 
 
 @resourceLocationContext('advancement', allowTags=False)
-class DimensionContext(ResourceLocationContext):
+class AdvancementContext(ResourceLocationContext):
 
 	@property
 	def name(self) -> str:
