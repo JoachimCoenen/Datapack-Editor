@@ -8,6 +8,8 @@
    * Added indentation settings for documents.
    * Added whitespace visibility setting.
    * Added `globalStyles.whiteSpaceStyle` setting to color schemes.
+ * Misc
+   * Multiple Minecraft versions can be configured simultaneously.
 
 ### Improvements
  * Improved layout of the Setup Dialog shown when the application is started for the first time.

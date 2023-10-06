@@ -59,7 +59,11 @@ class GlobalSchemaStore:
 	def registerSchema(self, name: str, schema: Schema):
 		self._schemaStores[schema.language].registerSchema(name, schema)
 
-	def unregisterSchema(self, name: str, language: LanguageId):
+	def unregisterSchema(self, name: str, languageSchemaCls: LanguageId | Type[_TSchema]):
+		if isinstance(languageSchemaCls, str):
+			language = languageSchemaCls
+		else:
+			language = languageSchemaCls.language
 		self._schemaStores[language].unregisterSchema(name)
 
 	# def unregisterNamespace(self, ns: str, language: LanguageId):

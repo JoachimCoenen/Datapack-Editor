@@ -16,7 +16,7 @@ class MinecraftPlugin(PluginBase):
 		pass
 
 	def dependencies(self) -> set[str]:
-		return set()
+		return {'dpe:minecraft_data-Plugin'}
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
 		from .resourceLocation import ResourceLocationCtxProvider, ResourceLocationNode

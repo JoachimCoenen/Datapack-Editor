@@ -34,8 +34,8 @@ def collectAllModules(baseModuleName: str, baseModuleDir: FilePathStr, folderFil
 	processRecursively(baseModuleDir, folderFilter, allModulePaths.append, filenameRegex=fileFilterRegex)
 	allModulePaths = [normalizeDirSeparatorsStr(p) for p in allModulePaths]
 
-	allModuleNames = [(mp.removeprefix(baseModuleDir).removesuffix('.py').removesuffix('/__init__'), mp) for mp in allModulePaths]
-	allModules = [(baseModuleName + '.'.join(mn.split('/')), mp) for mn, mp in allModuleNames]
+	allModuleNames = [(mp.removeprefix(baseModuleDir).removesuffix('.py').removesuffix('/__init__').lstrip('/'), mp) for mp in allModulePaths]
+	allModules = [(f'{baseModuleName}.' + '.'.join(mn.split('/')), mp) for mn, mp in allModuleNames]
 	# allModules = [(f'plugins.{mn}', joinFilePath(baseModuleDir, mn)) for mn in allModuleNames]
 	return allModules
 

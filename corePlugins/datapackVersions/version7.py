@@ -1,10 +1,17 @@
+import os
+
 from corePlugins.datapack.datapackContents import buildJsonMeta, EntryHandlerInfo, NAME_SPACE_VAR, DatapackContents, GenerationInfo, DefaultFileInfo, buildFunctionMeta, buildNbtMeta, \
 	buildEntryHandlers
 from corePlugins.datapack.dpVersions import DPVersion, registerDPVersion
+from corePlugins.json.core import JsonSchema
+from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
+from corePlugins.mcFunction.command import MCFunctionSchema
+from corePlugins.mcFunctionSchemaTEMP.v1_17_schema import buildMCFunctionSchemaFor_v1_17
+from corePlugins.minecraft_data.fullData import getFullMcData
 
 
 def initVersion() -> None:
-	registerDPVersion(version6)
+	registerDPVersion(version7)
 
 
 LOAD_JSON_CONTENTS = f"""{{
@@ -260,10 +267,33 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 	),
 ]
 
-version6 = DPVersion(
-	name='6',
+
+def buildMCFunctionSchema() -> MCFunctionSchema:
+	version1_17 = getFullMcData('1.17')
+	schema_1_17 = buildMCFunctionSchemaFor_v1_17(version1_17)
+	return schema_1_17
+
+
+def loadJsonSchemas() -> dict[str, JsonSchema]:
+	resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
+	v7Dir = os.path.join(resourcesDir, "v7/")
+	v7Schemas = {
+		**JSON_SCHEMA_LOADER.loadSchemaLibrary('minecraft:tags', os.path.join(v7Dir, 'tags.json')),
+		'minecraft:raw_json_text': JSON_SCHEMA_LOADER.loadSchema('minecraft:raw_json_text', os.path.join(v7Dir, 'rawJsonText.json')),
+		'minecraft:predicate': JSON_SCHEMA_LOADER.loadSchema('minecraft:predicate', os.path.join(v7Dir, 'predicate.json')),
+		'minecraft:recipe': JSON_SCHEMA_LOADER.loadSchema('minecraft:recipe', os.path.join(v7Dir, 'recipe.json')),
+		'minecraft:pack': JSON_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v7Dir, 'pack.json')),
+	}
+	return v7Schemas
+
+
+JSON_SCHEMAS = loadJsonSchemas()
+
+version7 = DPVersion(
+	name='7',
 	structure=buildEntryHandlers(DATAPACK_CONTENTS),
-	# jsonSchemas=GLOBAL_SCHEMA_STORE
+	jsonSchemas=JSON_SCHEMAS,  # todo add schemata here, so they are synced to datapack version.
+	mcFunctionSchema=buildMCFunctionSchema()
 )
 
 # DATAPACK_CONTENTS_STRUCTURE: EntryHandlers = buildEntryHandlers(DATAPACK_CONTENTS)

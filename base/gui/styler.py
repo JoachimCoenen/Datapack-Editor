@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import enum
 from abc import ABC, abstractmethod
-from collections import deque, OrderedDict
 from dataclasses import dataclass, field
 from typing import Mapping, TYPE_CHECKING, TypeVar, NewType, Protocol, Generic, Type, Optional
 
 from Cat.utils import CachedProperty
 from Cat.utils.collections_ import AddToDictDecorator
-from Cat.utils.graphs import semiTopologicalSort, collectAndSemiTopolSortAllNodes3
+from Cat.utils.graphs import collectAndSemiTopolSortAllNodes3
 from Cat.utils.logging_ import logError
 from base.model.parsing.tree import Node
 from base.model.utils import LanguageId

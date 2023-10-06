@@ -83,6 +83,7 @@ class Session(SerializableDataclass):
 		except OSError as e:
 			getSession().showAndLogError(e)
 
+
 	def closeProject(self) -> None:
 		project = self.project
 		project.close()
@@ -136,12 +137,6 @@ class Session(SerializableDataclass):
 	@staticmethod
 	def showAndLogWarning(e: Optional[Exception], title: str = 'Warning') -> None:
 		GLOBAL_SIGNALS.onWarning.emit(e, title)
-
-	@property
-	def minecraftData(self):
-		# todo: remove the 'minecraftData' property and build actual version system.
-		from corePlugins.mcFunctionSchemaTEMP.mcVersions import getCurrentMCVersion
-		return getCurrentMCVersion()
 
 
 __session = Session()

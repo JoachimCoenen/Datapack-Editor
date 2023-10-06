@@ -42,6 +42,7 @@
                 "optional": true,
                 "value": {
                   "$type": "string",
+                  "allowMultilineStr": true, 
                   "type": "minecraft:nbt_compound_tag"
                 },
                 "description": "The block NBT."

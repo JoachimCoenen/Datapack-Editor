@@ -2,10 +2,10 @@ from __future__ import annotations
 from typing import Mapping, Collection
 
 from base.model.project.project import Root
-# from corePlugins.mcFunctionSchemaTEMP.mcVersions import MCVersion
 from .datapackContents import DatapackContents
-from ..minecraft.resourceLocation import ResourceLocation, ResourceLocationNode, MCVersion, ResourceLocationContext, resourceLocationContext, MetaInfo
+from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationNode, ResourceLocationContext, resourceLocationContext, MetaInfo
 from base.model.utils import GeneralError
+from corePlugins.minecraft_data.fullData import FullMCData
 
 
 @resourceLocationContext('advancement', allowTags=False)
@@ -21,7 +21,7 @@ class AdvancementContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return (contents.advancements,) if (contents := dp.indexBundles.get(DatapackContents)) is not None else ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return ()
 
 
@@ -40,7 +40,7 @@ class BlockContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.blocks
 
 
@@ -57,7 +57,7 @@ class DimensionContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return (contents.dimension,) if (contents := dp.indexBundles.get(DatapackContents)) is not None else ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.dimensions
 
 
@@ -75,7 +75,7 @@ class EntityContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.entities
 
 
@@ -96,7 +96,7 @@ class FluidContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.fluids
 
 
@@ -112,7 +112,7 @@ class FunctionContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return (contents.functions,) if (contents := dp.indexBundles.get(DatapackContents)) is not None else ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return ()
 
 
@@ -128,7 +128,7 @@ class GameEventsContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.gameEvents
 
 
@@ -144,7 +144,7 @@ class ItemEnchantmentContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.enchantments
 
 
@@ -163,7 +163,7 @@ class ItemsContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.items
 
 
@@ -179,7 +179,7 @@ class MobEffectContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.effects
 
 
@@ -195,7 +195,7 @@ class ParticleContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.particles
 
 
@@ -211,7 +211,7 @@ class PredicateContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return (contents.predicates,) if (contents := dp.indexBundles.get(DatapackContents)) is not None else ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return ()
 
 
@@ -227,7 +227,7 @@ class StructureContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.potions
 
 
@@ -243,7 +243,7 @@ class BiomeIdContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.biomes
 
 
@@ -259,7 +259,7 @@ class StructureContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.structures
 
 
@@ -275,7 +275,7 @@ class ConditionIdContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.predicateConditions
 
 
@@ -292,7 +292,7 @@ class CommandStorageContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return ()
 
 	def validate(self, node: ResourceLocationNode, errorsIO: list[GeneralError]) -> None:
@@ -313,7 +313,7 @@ class AnyContext(ResourceLocationContext):
 	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
 		return ()
 
-	def valuesFromMC(self, mc: MCVersion) -> Collection[ResourceLocation]:
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return ()
 
 	def validate(self, node: ResourceLocationNode, errorsIO: list[GeneralError]) -> None:

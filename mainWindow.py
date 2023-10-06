@@ -167,9 +167,6 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			gui.label("this is a status bar.")
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		roundedCorners = CORNERS.RIGHT
-		# gui.editor(DatapackFilesEditor, getSession(), roundedCorners=roundedCorners).redrawLater()
-
 		tabs: list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]] = []
 		for plugin in PLUGIN_SERVICE.activePlugins:
 			tabs.extend(plugin.sideBarTabs())

@@ -399,7 +399,7 @@ def loadAllColorSchemes() -> None:
 		'colorSchemes',
 		colorSchemesDir,
 		[FolderAndFileFilter('/**', r'scheme_.+\.py')],
-		setDefaultFilesFunc=lambda x: _copyDefaultColorSchemes(x),
+		setDefaultFilesFunc=_copyDefaultColorSchemes,
 		initMethodName='initPlugin'
 	)
 

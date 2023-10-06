@@ -8,7 +8,6 @@ from base.model.parsing.contextProvider import Suggestions, validateTree, getSug
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
-from base.model.session import getSession
 from base.model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
 from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
@@ -23,7 +22,10 @@ from .argumentValues import BlockState, ItemStack, FilterArguments, TargetSelect
 from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, validateFilterArgs
 from .snbt import parseNBTPath
 from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
-from ..mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
+from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
+from corePlugins.mcFunction.argumentTypes import makeLiteralsArgumentType, ALL_NAMED_ARGUMENT_TYPES
+from corePlugins.minecraft_data.fullData import getCurrentFullMcData
+from corePlugins.minecraft_data.mcdAdapter import BlockStateType
 
 
 def initPlugin() -> None:
@@ -116,8 +118,20 @@ class BlockStateHandler(ArgumentContext):
 		super().__init__()
 		self._allowTag: bool = allowTag
 
+	def faiForBS(self, bs: BlockStateType) -> FilterArgumentInfo:
+		if bs.values:
+			argType = makeLiteralsArgumentType([strToBytes(val) for val in bs.values])
+		else:
+			argType = ALL_NAMED_ARGUMENT_TYPES[bs.type]
+
+		return FilterArgumentInfo(
+			name=bs.name,
+			type=argType,
+		)
+
 	def _getBlockStatesDict(self, blockID: ResourceLocation) -> dict[bytes, FilterArgumentInfo]:
-		return getSession().minecraftData.getBlockStatesDict(blockID)
+		blockStates = getCurrentFullMcData().getBlockStates(blockID)
+		return {strToBytes(argument.name): self.faiForBS(argument) for argument in blockStates}
 
 	rlcSchema = ResourceLocationSchema('', 'block')
 
@@ -376,11 +390,11 @@ class ItemSlotHandler(ArgumentContext):
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		slot: str = node.value
-		if slot not in getSession().minecraftData.slots:
+		if slot not in getCurrentFullMcData().slots:
 			errorsIO.append(CommandSemanticsError(UNKNOWN_MSG.format("item slot",  slot), node.span, style='error'))
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		return [bytesToStr(slot) for slot in getSession().minecraftData.slots.keys()]
+		return [bytesToStr(slot) for slot in getCurrentFullMcData().slots.keys()]
 
 
 @argumentContext(MINECRAFT_ITEM_STACK.name)
@@ -528,7 +542,7 @@ class ObjectiveHandler(ArgumentContext):
 		return makeParsedArgument(sr, ai, value=objective)
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		if len(node.value) > 16 and getSession().minecraftData.name < '1.18':
+		if len(node.value) > 16 and getCurrentFullMcData().name < '1.18':
 			errorsIO.append(CommandSemanticsError(OBJECTIVE_NAME_LONGER_THAN_16_MSG.format(), node.span, style='error'))
 
 

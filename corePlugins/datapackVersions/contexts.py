@@ -172,7 +172,3 @@ class CommandJsonStrContext(ParsingJsonCtx):
 
 	def getLanguage(self, node: JsonString) -> LanguageId:
 		return MC_FUNCTION_ID
-
-
-def init() -> None:
-	pass

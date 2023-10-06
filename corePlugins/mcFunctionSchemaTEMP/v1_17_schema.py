@@ -6,16 +6,16 @@ from corePlugins.mcFunction.command import CommandSchema, KeywordSchema, Argumen
 from base.model.parsing.bytesUtils import strToBytes
 
 from .argumentTypes import *
-from .mcVersions import MCVersion, getMCVersion
+from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
 
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
-	version1_17 = getMCVersion('1.17')
+	version1_17 = getFullMcData('1.17')
 	schema_1_17 = buildMCFunctionSchemaFor_v1_17(version1_17)
 	return {'Minecraft 1.17': schema_1_17}
 
 
-def buildMCFunctionSchemaFor_v1_17(version: MCVersion) -> MCFunctionSchema:
+def buildMCFunctionSchemaFor_v1_17(version: FullMCData) -> MCFunctionSchema:
 
 	_BASIC_COMMAND_INFO_LIST = [
 		CommandSchema(
@@ -1834,7 +1834,7 @@ def buildMCFunctionSchemaFor_v1_17(version: MCVersion) -> MCFunctionSchema:
 				TERMINAL,
 				ArgumentSchema(
 					name='value',
-					type=gr.type,
+					type=ALL_NAMED_ARGUMENT_TYPES[gr.type],
 				),
 			]
 		) for gr in version.gamerules

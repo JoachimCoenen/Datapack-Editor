@@ -1,31 +1,31 @@
 from math import inf
 from typing import Optional
 
-from base.model.session import getSession
-from corePlugins.mcFunction.argumentTypes import LiteralsArgumentType, BRIGADIER_BOOL, BRIGADIER_INTEGER
+from base.model.utils import MDStr
+from corePlugins.mcFunction.argumentTypes import BRIGADIER_BOOL, BRIGADIER_INTEGER
 from corePlugins.minecraft.resourceLocation import ResourceLocation
 from corePlugins.json.core import *
-from base.model.parsing.bytesUtils import bytesToStr
-from base.model.utils import MDStr
+from corePlugins.minecraft_data.fullData import getCurrentFullMcData
 
 
 def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[JsonObjectSchema]:
-	states = getSession().minecraftData.blockStates.get(blockId)
+	states = getCurrentFullMcData().blockStates.get(blockId)
 	if states is None:
 		return None
 
 	properties = []
 	for state in states:
-		valueDescr: MDStr = MDStr(state.type.description)
-		if isinstance(state.type, LiteralsArgumentType):
-			value = JsonStringOptionsSchema(options={bytesToStr(opt): MDStr("") for opt in state.type.options}, description=valueDescr, allowMultilineStr=False)
-		elif state.type.name == BRIGADIER_BOOL.name:
+		valueDescr: MDStr = MDStr("")
+		if state.values:
+			value = JsonStringOptionsSchema(options={val: MDStr("") for val in state.values}, description=valueDescr, allowMultilineStr=False)
+		elif state.type == BRIGADIER_BOOL.name:
 			value = JsonBoolSchema(description=valueDescr)
-		elif state.type.name == BRIGADIER_INTEGER.name:
-			args = state.args or {}
-			value = JsonIntSchema(minVal=args.get('min', -inf), maxVal=args.get('max', inf), description=valueDescr)
+		elif state.type == BRIGADIER_INTEGER.name:
+			range_ = state.range or (-inf, inf)
+			value = JsonIntSchema(minVal=range_[0], maxVal=range_[1], description=valueDescr)
 		else:
 			value = JsonStringSchema(type=state.type, description=valueDescr, allowMultilineStr=False)
+
 		properties.append(PropertySchema(name=state.name, value=value, optional=True, description=state.description, allowMultilineStr=None))
 
 	return JsonObjectSchema(properties=properties, allowMultilineStr=None)

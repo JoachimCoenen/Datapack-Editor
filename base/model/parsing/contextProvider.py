@@ -148,7 +148,6 @@ class ContextProvider(Generic[_TNode], ABC):
 		for innerChild in node.children:
 			self._validateAll(innerChild, errorsIO)
 
-	@abstractmethod
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
 		"""
 		:param pos: cursor position in contextStr

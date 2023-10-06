@@ -582,26 +582,24 @@ class DatapackEditorGUI(AutoGUI):
 			searchGUI.customData['nextPressed'], \
 			searchGUI.customData['searchOptions']
 
-	@property
-	def _errorIcons(self) -> dict[str, QIcon]:
-		return {
-			'error': icons.errorColored,
-			'warning': icons.warningColored,
-			'info': icons.infoColored,
-		}
+	@staticmethod
+	def getErrorIcon(style: str) -> Optional[QIcon]:
+		match style:
+			case 'error': return icons.errorColored
+			case 'warning': return icons.warningColored
+			case 'info': return icons.infoColored
+			case _: return None
 
 	def errorsSummaryGUI(self: DatapackEditorGUI, errorCounts: ErrorCounts, **kwargs):
 		errorsTip = 'errors'
 		warningsTip = 'warnings'
 		hintsTip = 'hints'
 
-		errorIcons = self._errorIcons
-
-		self.label(errorIcons['error'], tip=errorsTip, **kwargs)
+		self.label(self.getErrorIcon('error'), tip=errorsTip, **kwargs)
 		self.label(f'{errorCounts.errors}', tip=errorsTip, **kwargs)
-		self.label(errorIcons['warning'], tip=warningsTip, **kwargs)
+		self.label(self.getErrorIcon('warning'), tip=warningsTip, **kwargs)
 		self.label(f'{errorCounts.warnings}', tip=warningsTip, **kwargs)
-		self.label(errorIcons['info'], tip=hintsTip, **kwargs)
+		self.label(self.getErrorIcon('info'), tip=hintsTip, **kwargs)
 		self.label(f'{errorCounts.hints}', tip=hintsTip, **kwargs)
 
 	def errorsSummarySimpleGUI(self: DatapackEditorGUI, errorCounts: ErrorCounts, **kwargs):
@@ -644,11 +642,9 @@ class DatapackEditorGUI(AutoGUI):
 			errorMsg = error.htmlMessage.replace('\n', '')
 			return (errorMsg, positionMsg)[i]
 
-		errorIcons = self._errorIcons
-
 		def getIcon(error: GeneralError, i: int) -> Optional[QIcon]:
 			if i == 0:
-				return errorIcons.get(error.style)
+				return self.getErrorIcon(error.style)
 			else:
 				return None
 
@@ -729,6 +725,7 @@ class EditableSerializableDataclassList(PropertyDecorator):
 			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
 			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
 			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			dialogWidth: Optional[int] = None, dialogHeight: Optional[int] = None,
 	):
 		super().__init__()
 		self.name: str = name
@@ -736,6 +733,8 @@ class EditableSerializableDataclassList(PropertyDecorator):
 		self.headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = headerBuilderBuilder
 		self.getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = getStrChoices
 		self.filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterFunc
+		self.dialogWidth: Optional[int] = dialogWidth
+		self.dialogHeight: Optional[int] = dialogHeight
 
 
 @registerDecoratorDrawer(EditableSerializableDataclassList)
@@ -745,7 +744,9 @@ def drawList(gui_: DatapackEditorGUI, values_: list[_TT], type_: Optional[Type[l
 	def _addRoot(gui: DatapackEditorGUI):
 		newVal, isOk = gui.askUserInput(
 			f"Add",
-			innerType_()
+			innerType_(),
+			width=int(decorator_.dialogWidth * gui.scale) if decorator_.dialogWidth is not None else None,
+			height=int(decorator_.dialogHeight * gui.scale) if decorator_.dialogHeight is not None else None,
 		)
 		if isOk:
 			values_.append(newVal)
@@ -753,7 +754,9 @@ def drawList(gui_: DatapackEditorGUI, values_: list[_TT], type_: Optional[Type[l
 	def _editRoot(gui: DatapackEditorGUI, value: _TT):
 		newVal, isOk = gui.askUserInput(
 			f"Edit",
-			copy.deepcopy(value)
+			copy.deepcopy(value),
+			width=int(decorator_.dialogWidth * gui.scale) if decorator_.dialogWidth is not None else None,
+			height=int(decorator_.dialogHeight * gui.scale) if decorator_.dialogHeight is not None else None,
 		)
 		if isOk:
 			value.copyFrom(newVal)

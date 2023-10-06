@@ -240,7 +240,7 @@
     },
     "%%3!": {
       "$type": "calculated",
-      "function": "corePlugins.datapackSchemas.providers.propertiesFor_block_state_property"
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_block_state_property"
     },
     "predicate-damage_type": {
       "$type": "union",

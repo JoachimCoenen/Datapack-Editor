@@ -2,14 +2,17 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 
+from PyQt5.QtGui import QIcon
+
 from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
 from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
-from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
+from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, StringHeaderBuilder
 from Cat.Serializable.dataclassJson import catMeta, SerializableDataclass
 
 from base.model.applicationSettings import SettingsAspect
 from base.model.aspect import AspectType
-from gui.datapackEditorGUI import EditableSerializableDataclassList, filterComputedChoices
+from corePlugins.minecraft_data.fullData import getAllFullMcDatas
+from gui.datapackEditorGUI import EditableSerializableDataclassList, filterComputedChoices, DatapackEditorGUI
 
 MINECRAFT_ASPECT_TYPE = AspectType('dpe:minecraft')
 
@@ -36,13 +39,32 @@ def minecraftJarValidator(path: str) -> Optional[ValidatorResult]:
 	return result
 
 
-@dataclass()
+def minecraftVersionValidator(version: str) -> Optional[ValidatorResult]:
+	if not version.strip():
+		return ValidatorResult(f"Please select a Minecraft version.", 'error')
+	if version not in getAllFullMcDatas():
+		return ValidatorResult(f"No Minecraft version '{version}' known.", 'error')
+	return None
+
+
+@dataclass
 class MinecraftVersion(SerializableDataclass):
 	name: str = field(
 		default='1.17',
 		metadata=catMeta(
 			kwargs=dict(label='Name'),
 			decorators=[]
+		)
+	)
+
+	version: str = field(
+		default='',
+		metadata=catMeta(
+			kwargs=dict(label='Version'),
+			decorators=[
+				pd.ComboBox(choices=property(lambda x: sorted(getAllFullMcDatas().keys())), editable=True),
+				pd.Validator(minecraftVersionValidator)
+			]
 		)
 	)
 
@@ -62,6 +84,16 @@ class MinecraftVersionsPD(pd.PropertyDecorator):
 	pass
 
 
+def _iconMaker(mv: MinecraftVersion, c: int) -> Optional[QIcon]:
+	if c != 0:
+		return None
+	valResult = mv.validate()
+	if valResult:
+		maxErrorStyle = max(valResult, key=lambda r: {'info': 10, 'warning': 20, 'error': 30}.get(r.style, 40)).style
+		return DatapackEditorGUI.getErrorIcon(maxErrorStyle)
+	return None
+
+
 @dataclass()
 class MinecraftSettings(SettingsAspect):
 	@classmethod
@@ -77,14 +109,16 @@ class MinecraftSettings(SettingsAspect):
 					'minecraftVersions',
 					lambda data: DataListBuilder(
 						data,
-						labelMaker=lambda mv, c: (mv.name, mv.minecraftExecutable)[c],
-						iconMaker=None,
+						labelMaker=lambda mv, c: (mv.name, mv.version, mv.minecraftExecutable)[c],
+						iconMaker=_iconMaker,
 						toolTipMaker=lambda mv, c: mv.minecraftExecutable,
-						columnCount=2,
+						columnCount=3,
 						getId=id
 					),
+					headerBuilderBuilder=lambda: StringHeaderBuilder(('Name', 'Version', 'Executable')),
 					getStrChoices=lambda items: [mv.name for mv in items],
 					filterFunc=filterComputedChoices(lambda mv: mv.name),
+					dialogWidth=800
 				),
 				pd.Title("Minecraft Versions"),
 			]

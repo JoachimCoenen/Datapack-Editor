@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from operator import itemgetter
-from typing import Optional, Tuple, Collection
+from typing import Optional, Collection
 
 from PyQt5.QtCore import pyqtSignal, QEventLoop, QObject, Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QDialog, QSizePolicy, QWidget
@@ -88,7 +88,7 @@ class CheckAllDialog(CatFramelessWindowMixin, QDialog):
 		self.totalErrorsSummaryGUI(gui)
 
 		with gui.scrollBox():
-			errorsByFile: list[Tuple[FilePath, Collection[GeneralError], ErrorCounts]] = \
+			errorsByFile: list[tuple[FilePath, Collection[GeneralError], ErrorCounts]] = \
 				[(fp, ers, getErrorCounts(ers)) for fp, ers in self.errorsByFile.items() if ers]
 
 			errorsByFile = sorted(errorsByFile, key=lambda itm: (itm[2].errors,), reverse=True)

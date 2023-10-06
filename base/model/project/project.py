@@ -112,6 +112,19 @@ class ProjectAspect(Aspect, SerializableDataclass, ABC):
 		"""
 		pass
 
+	def onCloseProject(self, project: Project) -> None:
+		"""
+		always enabled.
+		Called just before closing a Project,
+		"""
+		pass
+
+	def onProjectLoaded(self, project: Project) -> None:
+		"""
+		always enabled.
+		"""
+		pass
+
 
 @dataclass
 class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
@@ -205,8 +218,14 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 		self.resolveDependencies()
 		self.analyzeDependencies()
 
+		for aspect in self.aspects:
+			aspect.onProjectLoaded(self)
+
 	def close(self):
 		""" only call once!"""
+		for aspect in self.aspects:
+			aspect.onCloseProject(self)
+
 		roots = self.roots.copy()
 		for root in roots:
 			self.removeRoot(root)
