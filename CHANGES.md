@@ -23,6 +23,7 @@
  * Fixed renamed files not being recognized correctly.
  * Fixed parsing of numbers in json
  * Fixed crashes caused by the DocumentLexer.
+ * Fixed syntax highlighting desyncing from actual text.
 
 
 ## Version 0.4.0-alpha

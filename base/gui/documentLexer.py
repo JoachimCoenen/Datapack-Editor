@@ -280,17 +280,20 @@ class StylerCtxQScintilla(StylerCtx):
 	lexer: QsciLexerCustom
 
 	def setStylingUtf8(self, span: slice, style: StyleId) -> None:
+		lastStylePos = self._lastStylePos
 		index = span.start
 		if index > self._lastStylePos:
-			interStrLength = index - self._lastStylePos
-			assert interStrLength >= 0, interStrLength
-			self.lexer.setStyling(interStrLength, _SCI_STYLE_FIRST_USER_STYLE + self.defaultStyle)  # styler.offset)
+			interStrLength = index - lastStylePos
+			assert interStrLength >= 0, (interStrLength, style)
+			self.lexer.setStyling(interStrLength, _SCI_STYLE_FIRST_USER_STYLE + self.defaultStyle)
+			lastStylePos += interStrLength
 
-		if span.stop > self._lastStylePos:
-			length = span.stop - index
+		if span.stop > lastStylePos:
+			length = span.stop - lastStylePos
 			assert length >= 0, (length, style)
 			self.lexer.setStyling(length, _SCI_STYLE_FIRST_USER_STYLE + style)
-			self._lastStylePos = span.stop
+			lastStylePos += length
+		self._lastStylePos = lastStylePos
 
 
 @dataclass
