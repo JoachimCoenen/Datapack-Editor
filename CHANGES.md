@@ -1,5 +1,17 @@
 ## Next Version
-### Features
+### Features 
+ * Plugin support
+   * Plugins can...:
+     * add sidebars & bottombars (GUI).
+     * define parser, stylers, & contextProviders for new languages.
+     * add new contexts for existing languages.
+     * add new schemas for existing & new languages.
+     * add schema mappings (which schema to used for what file).
+     * add custom document types (like `.json`, `.mcfunction`, or even `.png`).
+     * add custom settings (aka. SettingsAspect).
+     * add custom functionality to Projects (aka. ProjectAspect, mostly useful for file content indexing for custom languages or filetypes).
+     * define custom indices for Roots (aka. IndexBundle).
+     * customize what happens when a new project gets created (via.ProjectCreators).
  * Projects:
    * Multi-root Projects! Projects can have multiple subprojects (called Roots) now.
    * Project configuration is now stored inside the project folder as `.dpeproj`.
