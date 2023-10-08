@@ -45,7 +45,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	_last: Optional[Token] = field(init=False, default=None)
 
 	def __post_init__(self):
-		allowMultilineStr = self.schema is not None and self.schema.allowMultilineStr
+		allowMultilineStr = True or self.schema is not None and self.schema.allowMultilineStr
 		self._tokenizer = JsonTokenizer(
 			self.text,
 			self.line,
@@ -384,29 +384,28 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 				chars += (string[strStreakStart:index])
 				decIdx = len(chars)
 				next_char = string[index + 1]
-				if next_char == ord(b'u'):
+				if next_char == ord(b'u'):  # 'růže' -> "r\u016f\u017ee"
 					hex_string = string[index + 2:index + 6]
 					try:
 						unicode_char = literal_eval(f'"\\u{bytesToStr(hex_string)}"')
 					except SyntaxError:
 						self.error(MDStr(f"Invalid unicode escape: `\\u{bytesToStr(hex_string)}`"), span=token.span)
 						unicode_char = b'\\u' + hex_string
-						encIdx = index
 					else:
 						unicode_char = strToBytes(unicode_char)
-						encIdx = index - 1 + 5
+						idxMap.addMarker(index - 1,     decIdx)  # just before (=start of) escape sequence
+						idxMap.addMarker(index - 1 + 6, decIdx + 1)  # just after (=end of) escape sequence
 
 					chars += unicode_char
-					idxMap.addMarker(encIdx, decIdx)
 					index += 6
 					strStreakStart = index
 					continue
 				else:
 					next_char_str = _ESCAPE_CHAR_MAP.get(next_char)
 					if next_char_str is not None:
-						encIdx = index - 1 + 1
 						chars += next_char_str
-						idxMap.addMarker(encIdx, decIdx)
+						idxMap.addMarker(index - 1,     decIdx)  # just before (=start of) escape sequence
+						idxMap.addMarker(index - 1 + 2, decIdx + 1)  # just after (=end of) escape sequence
 					else:
 						self.error(MDStr(f"Unknown escape sequence: `{bytesToStr(string)}`"), span=token.span)
 						chars += string[index:index+2]
@@ -417,6 +416,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			chars += (string[strStreakStart:index])
 			value = bytesToStr(chars)
 			decPosLastChar = len(chars)  # = index
+			encPosLastChar = len(string) - 2  # we have to account for the quotation marks at start and end of string
 		elif string:
 			if string[0] == ord('"'):
 				string = string[1:].removesuffix(b'"')  # todo probably to be removed. INVESTIGATE
@@ -424,10 +424,12 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 				string = string[1:].removesuffix(b"'")  # todo probably to be removed. INVESTIGATE
 			value = bytesToStr(string)
 			decPosLastChar = len(string)
+			encPosLastChar = decPosLastChar
 		else:
 			value = ''
 			decPosLastChar = len(string)
-		return JsonString(token.span, None, value, idxMap.completeIndexMapper(len(string), decPosLastChar))
+			encPosLastChar = decPosLastChar
+		return JsonString(token.span, None, value, idxMap.completeIndexMapper(encPosLastChar, decPosLastChar))
 
 	def parse_number(self) -> JsonNumber:
 		"""Parses a number out of a JSON token"""

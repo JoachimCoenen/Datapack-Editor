@@ -24,6 +24,7 @@
  * Fixed parsing of numbers in json
  * Fixed crashes caused by the DocumentLexer.
  * Fixed syntax highlighting desyncing from actual text.
+ * Fixed index mapping for escape sequences in JSON strings.
 
 
 ## Version 0.4.0-alpha
