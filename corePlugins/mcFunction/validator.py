@@ -4,7 +4,7 @@ from .argumentTypes import *
 from .command import *
 from .commandContext import getArgumentContext
 from .utils import CommandSemanticsError
-from model.messages import *
+from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.utils import Span, Message, wrapInMarkdownCode, Position
 

@@ -2,8 +2,7 @@ from typing import Protocol
 
 from Cat.utils.collections_ import AddToDictDecorator
 from .core import *
-# from model.json.jsonContext import getJsonStringContext
-from model.messages import *
+from base.model.messages import *
 from base.model.utils import Message, Span, GeneralError, Position
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG = Message("Expected whitespace to end one argument, but found trailing data: `{0}`", 1)

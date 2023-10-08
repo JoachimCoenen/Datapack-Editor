@@ -10,7 +10,7 @@ from Cat.utils.profiling import ProfiledFunction
 from .core import *
 from .lexer import JsonTokenizer
 from .schema import enrichWithSchema, pathify
-from model.messages import *
+from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.parser import ParserBase, IndexMapBuilder
 from base.model.utils import Span, MDStr, Message, NULL_SPAN

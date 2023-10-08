@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Type, Union, Callable, NamedTuple, overload, TypeVar, ClassVar
 
 from Cat.utils.collections_ import OrderedDict
-from model.messages import *
+from base.model.messages import *
 from .snbtTokenizer import SNBTTokenizer, Token, TokenType
 from .tags import *
 from base.model.parsing.bytesUtils import bytesToStr

@@ -14,7 +14,7 @@ from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getDocumentation, onIndicatorClicked, getClickableRanges, parseNPrepare, CtxInfo
 from base.model.parsing.tree import Schema
 from base.model.utils import GeneralError, Position, Span, MDStr, LanguageId
-from model.messages import EXPECTED_BUT_GOT_MSG
+from base.model.messages import EXPECTED_BUT_GOT_MSG
 
 
 @jsonStringContext(MINECRAFT_RESOURCE_LOCATION.name)

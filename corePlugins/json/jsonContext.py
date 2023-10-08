@@ -18,7 +18,7 @@ from base.model.utils import Position, Span, GeneralError, MDStr, LanguageId
 from .argTypes import *
 from .lexer import INVALID_NUMBER_MSG
 from .schemaStore import JSON_SCHEMA_LOADER
-from model.messages import UNKNOWN_MSG
+from base.model.messages import UNKNOWN_MSG
 
 
 def _getBestMatchInArray(tree: JsonArray, pos: Position, matches: Match) -> None:

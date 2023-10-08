@@ -15,7 +15,7 @@ from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.mcFunction.utils import CommandSyntaxError, CommandSemanticsError
 from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode
 from corePlugins.nbt.tags import NBTTagSchema
-from model.messages import *
+from base.model.messages import *
 from .argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
 from .argumentTypes import *
 from .argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector

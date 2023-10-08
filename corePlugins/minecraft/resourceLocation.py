@@ -16,7 +16,7 @@ from base.model.session import getSession
 from base.model.utils import Span, Position, GeneralError, SemanticsError, MDStr
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData, FullMCData
 from corePlugins.minecraft_data.resourceLocation import isNamespaceValid, ResourceLocation
-from model.messages import INTERNAL_ERROR_MSG, EXPECTED_MSG, UNKNOWN_MSG
+from base.model.messages import INTERNAL_ERROR_MSG, EXPECTED_MSG, UNKNOWN_MSG
 
 
 @dataclass(slots=True)
