@@ -144,25 +144,33 @@ class SchemaBuilder:
 			return None
 
 		title = self.optStrVal(root2, 'title', '')
-		library = self._parseLibrary(root2, filePath, ctx)
+		partialLibrary = self._parseLibraryPartial(root2, filePath, ctx)
+		next(partialLibrary)
+		next(partialLibrary)
+		completePartialParse(partialLibrary)
 
 		body = self.reqObject(root2, '$body')
 		schema = self.parseBody(body)
 		return schema
 
-	def parseSchemaLibrary(self, root: JsonObject, filePath: str) -> Optional[SchemaLibrary]:
+	def parseSchemaLibraryPartial(self, root: JsonObject, filePath: str) -> Generator[Optional[SchemaLibrary]]:
+		"""" !!! 3-step generator !!! """
 		ctx = TemplateContext('', filePath, self.libraries, {})
 		root2: JObject = JD(root, ctx)
 		if self.optStrVal(root2, '$schema') != 'dpe/json/schema/library':
 			self.error(MDStr("Not a JSON Schema Library"), span=root.span, ctx=ctx)
-			return None
+			yield None
+		else:
+			title = self.optStrVal(root2, 'title', '')
+			partialLibrary = self._parseLibraryPartial(root2, filePath, ctx)
+			next(partialLibrary)
+			yield root2.ctx.libraries['']
+			next(partialLibrary)
+			yield root2.ctx.libraries['']
+			completePartialParse(partialLibrary)
 
-		title = self.optStrVal(root2, 'title', '')
-		library = self._parseLibrary(root2, filePath, ctx)
-
-		return root2.ctx.libraries['']
-
-	def _parseLibrary(self, root: JObject, filePath: str, ctx: TemplateContext) -> SchemaLibrary:
+	def _parseLibraryPartial(self, root: JObject, filePath: str, ctx: TemplateContext) -> Generator[None]:
+		"""" !!! 3-step generator !!! """
 		description = MDStr(self.optStrVal(root, 'description', ''))
 
 		ctx.libraries[''] = SchemaLibrary(
@@ -173,9 +181,14 @@ class SchemaBuilder:
 			filePath=filePath
 		)
 
+		yield None
+
 		libraries = self.optObjectRaw(root, '$libraries')
 		if libraries.n is not None:
-			self.parseLibraries(libraries, ctx)
+			partialLibraries = self.parseLibrariesPartial(libraries, ctx)
+			next(partialLibraries)
+		else:
+			partialLibraries = None
 
 		templates = self.optObjectRaw(root, '$templates')
 		if templates.n is not None:
@@ -183,14 +196,22 @@ class SchemaBuilder:
 
 		definitions = self.optObjectRaw(root, '$definitions')
 		if definitions.n is not None:
-			self.parseDefinitions(definitions, ctx)
+			partialDefinition = self.parseDefinitionsPartial(definitions, ctx)
+			next(partialDefinition)
+		else:
+			partialDefinition = None
 
-		return ctx.libraries['']
+		yield None
+
+		if partialLibraries is not None:
+			completePartialParse(partialLibraries)
+		if partialDefinition is not None:
+			completePartialParse(partialDefinition)
 
 	def parseBody(self, body: JObject) -> JsonSchema:
 		return self.parseType(body)
 
-	def parseDefinitions(self, definitionsNode: JObject, ctx: TemplateContext) -> None:
+	def parseDefinitionsPartial(self, definitionsNode: JObject, ctx: TemplateContext) -> Generator[None]:
 		definitions: dict[str, JsonSchema] = ctx.libraries[''].definitions
 		partialDefinitions = []
 		for ref, prop in definitionsNode.data.items():
@@ -201,8 +222,10 @@ class SchemaBuilder:
 			partialDefinition = self.handleTypePartial(definition)
 			partialDefinitions.append(partialDefinition)
 			definitions[ref] = next(partialDefinition)
+
+		yield None
 		for partialDefinition in partialDefinitions:
-			self.completePartialType(partialDefinition)
+			completePartialParse(partialDefinition)
 
 	def parseTemplates(self, templatesNode: JObject, ctx: TemplateContext) -> None:
 		templates: dict[str, SchemaTemplate] = ctx.libraries[''].templates
@@ -213,7 +236,9 @@ class SchemaBuilder:
 			templateNode = self.reqObject(templatesNode, ref)
 			templates[ref] = self.parseTemplate(templateNode, prop.key.span)
 
-	def parseLibraries(self, librariesNode: JObject, ctx: TemplateContext) -> None:
+	def parseLibrariesPartial(self, librariesNode: JObject, ctx: TemplateContext) -> Generator[None]:
+		"""" !!! 3-step generator !!! """
+		partialLibraries = []
 		libraries: dict[str, SchemaLibrary] = ctx.libraries[''].libraries
 		for ns, prop in librariesNode.data.items():
 			if ns in libraries:
@@ -225,7 +250,14 @@ class SchemaBuilder:
 			libraryFilePath = self.reqStrVal(librariesNode, ns)
 			if dirPath := ctx.libraries[''].dirPath:
 				libraryFilePath = f'{dirPath}/{libraryFilePath}'
-			libraries[ns] = self.orchestrator.getSchemaLibrary(libraryFilePath)
+			partialLibrary = self.orchestrator.getSchemaLibraryPartial(libraryFilePath)
+			libraries[ns] = next(partialLibrary)
+			partialLibraries.append(partialLibrary)
+		yield None
+		for partialLibrary in partialLibraries:
+			next(partialLibrary)
+		for partialLibrary in partialLibraries:
+			completePartialParse(partialLibrary)
 
 	def parseArguments(self, refNode: JObject, template: SchemaTemplate, templateCtx: TemplateContext) -> dict[str, TemplateArg]:
 		args = {}
@@ -274,7 +306,7 @@ class SchemaBuilder:
 			try:
 				th = _typeHandlers[type_.n.data]
 			except KeyError as e:
-				self.error(MDStr(f"Unknown $type '{type_.n.data}'."),span=type_.n.span, ctx=type_.ctx)
+				self.error(MDStr(f"Unknown $type '{type_.n.data}'."), span=type_.n.span, ctx=type_.ctx)
 				raise
 			else:
 				generator = th(self, node)
@@ -282,19 +314,10 @@ class SchemaBuilder:
 				yield definition
 				yield from generator
 
-	@staticmethod
-	def completePartialType(partialNode):
-		try:
-			next(partialNode)
-		except StopIteration:
-			pass
-		else:
-			raise RuntimeError("generator didn't stop")
-
 	def parseType(self, node: JObject) -> JsonSchema:
 		partialNode = self.handleTypePartial(node)
 		schema = next(partialNode)
-		self.completePartialType(partialNode)
+		completePartialParse(partialNode)
 		return schema
 
 	def parseTemplate(self, node: JObject, span: Span) -> SchemaTemplate:
@@ -520,6 +543,15 @@ class SchemaBuilder:
 		return []
 
 
+def completePartialParse(partialNode: Generator):
+	try:
+		next(partialNode)
+	except StopIteration:
+		pass
+	else:
+		raise RuntimeError("generator didn't stop")
+
+
 @dataclass
 class SchemaBuilderOrchestrator:
 	baseDir: str
@@ -529,11 +561,24 @@ class SchemaBuilderOrchestrator:
 	libraries: dict[str, SchemaLibrary] = field(default_factory=dict, init=False)
 	errors: dict[str, list[GeneralError]] = field(default_factory=lambda: defaultdict(list), init=False)
 
-	def getSchemaLibrary(self, path: str) -> SchemaLibrary:
+	def getSchemaLibraryPartial(self, path: str) -> Generator[SchemaLibrary]:
 		fullPath = self.getFullPath(path)
 		if (library := self.libraries.get(fullPath)) is not None:
-			return library
-		library = self.libraries[fullPath] = self._loadLibrary(fullPath)
+			yield library
+			yield library
+		else:
+			partialLibrary = self._loadLibraryPartial(fullPath)
+			library = self.libraries[fullPath] = next(partialLibrary)
+			yield library
+			next(partialLibrary)
+			yield library
+			completePartialParse(partialLibrary)
+
+	def getSchemaLibrary(self, path: str) -> SchemaLibrary:
+		partialLibrary = self.getSchemaLibraryPartial(path)
+		library = next(partialLibrary)
+		next(partialLibrary)
+		completePartialParse(partialLibrary)
 		return library
 
 	def getSchema(self, path: str) -> Optional[JsonSchema]:
@@ -576,24 +621,35 @@ class SchemaBuilderOrchestrator:
 		self.errors[fullPath].extend(builder.errors)
 		return schema
 
-	def _loadLibrary(self, fullPath: str) -> SchemaLibrary:
+	def _loadLibraryPartial(self, fullPath: str) -> Generator[SchemaLibrary]:
+		"""" !!! 3-step generator !!! """
 		try:
 			with ZipFilePool() as pool:
 				schemaBytes = loadBinaryFile(fromDisplayPath(fullPath), pool)
 		except OSError as ex:
 			self.errors[fullPath].append(WrappedError(ex))
-			return SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
-		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
-		schemaJson: JsonObject
-		self.errors[fullPath].extend(errors)
-		builder = SchemaBuilder(orchestrator=self)
-		try:
-			library = builder.parseSchemaLibrary(schemaJson, fullPath)
-		except Exception as ex:
-			self.errors[fullPath].extend(builder.errors)
-			self.errors[fullPath].append(WrappedError(ex))
-			return SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
-		return library
+			library = SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
+			yield library
+			yield library
+		else:
+			schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
+			schemaJson: JsonObject
+			self.errors[fullPath].extend(errors)
+			builder = SchemaBuilder(orchestrator=self)
+			try:
+				partialLibrary = builder.parseSchemaLibraryPartial(schemaJson, fullPath)
+				library = next(partialLibrary)
+			except Exception as ex:
+				self.errors[fullPath].extend(builder.errors)
+				self.errors[fullPath].append(WrappedError(ex))
+				library = SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
+				yield library
+				yield library
+			else:
+				yield library
+				next(partialLibrary)
+				yield library
+				completePartialParse(partialLibrary)
 
 
 _typeHandlers: dict[str, Callable[[SchemaBuilder, JObject], Generator[JsonSchema]]] = {}
@@ -728,7 +784,7 @@ def arrayHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
-	self.completePartialType(partialElement)
+	completePartialParse(partialElement)
 
 
 @typeHandler('union')

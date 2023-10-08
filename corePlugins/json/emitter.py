@@ -45,13 +45,13 @@ def emitJson(
 	)
 	# beautify json file:
 	if collapseSingleElementArray:
-		text = collapseSingleLineObject(text)
-	if collapseSinglePropObject:
 		text = collapseSingleLineArray(text)
+	if collapseSinglePropObject:
+		text = collapseSingleLineObject(text)
 	if collapseSingleElementArray:
-		text = collapseSingleLineObject(text)
-	if collapseSinglePropObject:
 		text = collapseSingleLineArray(text)
+	if collapseSinglePropObject:
+		text = collapseSingleLineObject(text)
 	return text
 
 
