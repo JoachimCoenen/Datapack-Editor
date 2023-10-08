@@ -17,6 +17,7 @@ from Cat.utils.logging_ import loggingIndentInfo
 from base.model import filesystemEvents
 from base.model.session import loadSessionFromFile
 from base.plugin import PLUGIN_SERVICE, loadAllPlugins, getBasePluginsDir, getCorePluginsDir, getPluginsDir
+from gui.datapackEditorGUI import DatapackEditorGUI
 from mainWindow import MainWindow, WindowId
 from Cat.utils.profiling import Timer
 from base.model.applicationSettings import saveApplicationSettings, loadApplicationSettings, resetApplicationSettings, \
@@ -73,8 +74,8 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 		appearanceSettings = getApplicationSettings().appearance
 		appearanceFields = {f.name: f for f in fields(appearanceSettings)}
 
-		from corePlugins.mcFunctionSchemaTEMP.settings import MinecraftSettingsTemp
-		minecraftSettings = getApplicationSettings().aspects.get(MinecraftSettingsTemp)
+		from corePlugins.minecraft.settings import MinecraftSettings
+		minecraftSettings = getApplicationSettings().aspects.get(MinecraftSettings)
 		minecraftFields = {f.name: f for f in fields(minecraftSettings)}
 
 		with gui.vLayout(preventVStretch=True):
@@ -97,9 +98,7 @@ class SetupDialog(CatFramelessWindowMixin, QDialog):
 
 			with gui.groupBox('Minecraft', addSeparator=True):
 				vSpacer()  # just a spacer
-				gui.propertyField(minecraftSettings, minecraftFields['minecraftVersion'])  # , hSizePolicy=SizePolicy.Fixed.value)
-				vSpacer()  # just a spacer
-				gui.propertyField(minecraftSettings, minecraftFields['minecraftExecutable'])
+				gui.propertyField(minecraftSettings, minecraftFields['minecraftVersions'])  # , hSizePolicy=SizePolicy.Fixed.value)
 				vSpacer()  # just a spacer
 
 		gui.dialogButtons({
@@ -113,7 +112,7 @@ def showSetupDialogIfNecessary() -> None:
 	if getApplicationSettings().isUserSetupFinished:
 		return
 	else:
-		setupResult = SetupDialog(GUICls=AutoGUI).exec()
+		setupResult = SetupDialog(GUICls=DatapackEditorGUI).exec()
 		if setupResult != 1:
 			return exit(0)
 		getApplicationSettings().isUserSetupFinished = True
