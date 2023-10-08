@@ -1,4 +1,4 @@
-## Next Version
+## Version 0.5.0-alpha
 ### Features 
  * Plugin support
    * Plugins can...:

@@ -190,14 +190,14 @@ class AboutSettings(SerializableDataclass):
 
 	title: str = field(default="Datapack Editor", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', style=getStyles().title), decorators=[pd.ReadOnlyLabel()]))
 
-	version: str = field(default="""0.3.0-alpha""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()]))
+	version: str = field(default="""0.5.0-alpha""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()]))
 
 	# @pd.NoUI()
 	@property
 	def organization(self) -> str:
 		return """Joachim Coenen"""
 
-	copyright: str = field(default="""<font>© 2021 Joachim Coenen. All Rights Reserved</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=True, label='Copyright'), decorators=[pd.ReadOnlyLabel()]))
+	copyright: str = field(default="""<font>© 2023 Joachim Coenen. All Rights Reserved</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=True, label='Copyright'), decorators=[pd.ReadOnlyLabel()]))
 	about: str = field(default="""<font>Written and maintained by <a href="https://www.github.com/JoachimCoenen">Joachim Coenen</a>.\n<br/>If you have any questions, bugs or improvements, please share them on GitHub.\n</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=True, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
 	# @pd.ReadOnlyLabel()
