@@ -4,10 +4,9 @@ from PyQt5.QtGui import QColor
 
 from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
 from Cat.utils.collections_ import AddToDictDecorator
-from model.utils import LanguageId
-from gui.themes.theme import addColorScheme, ColorScheme, Style, Styles, StyleFont, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors
-
-enabled = True
+from base.gui.styler import DEFAULT_STYLE_ID, StyleIdEnum
+from base.model.utils import LanguageId
+from base.model.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors, StyleFont
 
 
 def initPlugin():
@@ -48,7 +47,7 @@ def buildColorScheme() -> ColorScheme:
 		LinkVisited=QColor('#ff00ff'),
 	)
 	
-	lightGray = QColor(0xe0, 0xe0, 0xe0)
+	lightGray = QColor('#b4b4b4')
 	scheme.globalStyles = GlobalStyles(
 		defaultStyle=Style(foreground=scheme.uiColors.Text, background=scheme.uiColors.Input),
 		lineNumberStyle=Style(background=scheme.uiColors.Window),
@@ -59,6 +58,7 @@ def buildColorScheme() -> ColorScheme:
 		calltipStyle=Style(foreground=scheme.uiColors.Border, background=scheme.uiColors.Window),
 		foldDisplayTextStyle=Style(foreground=lightGray, background=QColor('orange')),
 		caretLineStyle=Style(background=scheme.uiColors.Window),
+		whiteSpaceStyle=Style(foreground=lightGray)
 	)
 	updateGlobalStylesToMatchUIColors(scheme)
 
@@ -83,9 +83,21 @@ def lighten(fg, lightness=.975):
 	return QColor.fromHslF(fg.hueF(), fg.saturationF(), lightness)
 
 
-@languageStyles(LanguageId('MCCommand'))
+@languageStyles(LanguageId('MCFunction'))
 def addMCCommandScheme():
-	from gui.lexers.mcFunctionStyler import StyleId
+	class StyleId(StyleIdEnum):
+		Default = DEFAULT_STYLE_ID
+		Command = DEFAULT_STYLE_ID + 1
+		String = DEFAULT_STYLE_ID + 2
+		Number = DEFAULT_STYLE_ID + 3
+		Constant = DEFAULT_STYLE_ID + 4
+		TargetSelector = DEFAULT_STYLE_ID + 5
+		Operator = DEFAULT_STYLE_ID + 6
+		Keyword = DEFAULT_STYLE_ID + 7
+
+		Complex = DEFAULT_STYLE_ID + 8
+		Comment = DEFAULT_STYLE_ID + 9
+		Error = DEFAULT_STYLE_ID + 10
 	styles = {
 		StyleId.Default.name:        Style(),
 		StyleId.Command.name:        Style(foreground=QColor(0x88, 0x0a, 0xe8)),
@@ -120,7 +132,15 @@ def addMCCommandScheme():
 
 @languageStyles(LanguageId('JSON'))
 def addJsonScheme():
-	from gui.lexers.jsonStyler import StyleId
+	# from gui.lexers.jsonStyler import StyleId
+	class StyleId(StyleIdEnum):
+		default = DEFAULT_STYLE_ID
+		null = DEFAULT_STYLE_ID + 1
+		boolean = DEFAULT_STYLE_ID + 2
+		number = DEFAULT_STYLE_ID + 3
+		string = DEFAULT_STYLE_ID + 4
+		key = DEFAULT_STYLE_ID + 5
+		invalid = DEFAULT_STYLE_ID + 6
 	styles = {
 		StyleId.default.name: Style(),
 		StyleId.null.name:    Style(foreground=QColor(0x00, 0x00, 0xBf)),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
@@ -132,7 +152,7 @@ def addJsonScheme():
 	}
 
 	innerLanguageStyleModifiers = {
-		LanguageId('MCCommand'): StylesModifier(
+		LanguageId('MCFunction'): StylesModifier(
 			modifier=Style(background=lighten(styles[StyleId.boolean.name].foreground, 0.95)),
 			default=styles[StyleId.string.name],
 		),
@@ -147,7 +167,14 @@ def addJsonScheme():
 
 @languageStyles(LanguageId('SNBT'))
 def addSNBTScheme():
-	from gui.lexers.snbtStyler import StyleId
+	class StyleId(StyleIdEnum):
+		default = DEFAULT_STYLE_ID
+		boolean = DEFAULT_STYLE_ID + 1
+		intLike = DEFAULT_STYLE_ID + 2
+		floatLike = DEFAULT_STYLE_ID + 3
+		string = DEFAULT_STYLE_ID + 4
+		key = DEFAULT_STYLE_ID + 5
+		invalid = DEFAULT_STYLE_ID + 6
 	styles = {
 		StyleId.default.name: Style(),
 		StyleId.boolean.name:   Style(foreground=QColor(0x00, 0x00, 0xBf)),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),

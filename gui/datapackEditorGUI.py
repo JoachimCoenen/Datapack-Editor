@@ -1,116 +1,43 @@
 from __future__ import annotations
 
 import codecs
-import dataclasses
+import copy
 import functools as ft
 import os
 import re
-from dataclasses import dataclass
-from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Union, Pattern, NamedTuple, Protocol, Type, ClassVar
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Generic, \
+	Sequence, Type
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
-from PyQt5.QtWidgets import QApplication, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QSizePolicy, QTreeView
 
-from Cat.CatPythonGUI.GUI.enums import ResizeMode
-from model.datapack.datapackContents import getEntryHandlersForFolder
-from model.project import Project
-from model.utils import GeneralError
-from session import documents
 from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, adjustOverlap, maskCorners, CORNERS, NO_OVERLAP
+from Cat.CatPythonGUI.AutoGUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
+from Cat.CatPythonGUI.GUI import Style, RoundedCorners, Overlap, CORNERS, TreeBuilderABC
 from Cat.CatPythonGUI.GUI.Widgets import CatTextField, HTMLDelegate
-from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch
+from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, IndexSpan
+from Cat.CatPythonGUI.GUI.enums import ResizeMode, SizePolicy
 from Cat.CatPythonGUI.GUI.pythonGUI import MenuItemData
-from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, DataTreeBuilder
-from Cat.Serializable import SerializedPropertyABC
+from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
+from Cat.Serializable.dataclassJson import SerializableDataclass
+from Cat.Serializable.utils import PropertyDecorator, get_args
 from Cat.icons import icons
-from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, openOrCreate, CachedProperty
-from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual, OrderedDict
-from gui import lexers
-from session.documents import Document, ErrorCounts
-from model.pathUtils import FilePath, normalizeDirSeparators, FilePathTpl
-from session.session import getSession
-from settings import applicationSettings
-
-lexers.init()  # don't delete!
-
+from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
+from base.model.applicationSettings import getApplicationSettings
+from base.model.documents import ErrorCounts
+from base.model.pathUtils import FilePath, unitePath
+from base.model.utils import GeneralError
 
 inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})
 resultBoxStyle = Style({'CatBox': Style({'background': '#DAE8FC'})})
 
 
-class DocumentGUIFunc(Protocol):
-	def __call__(self, gui: DatapackEditorGUI, document: Document, **kwargs) -> Document:
-		...
-
-
 _TT = TypeVar('_TT')
 _TR = TypeVar('_TR')
-
-
-def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
-	nsHandlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.structure)
-	extensions = [h.extension for ns, h, _ in nsHandlers]
-	CUSTOM_EXT = "[custom]"
-	extensions.append(CUSTOM_EXT)
-
-	@dataclass
-	class Context:
-		extension: int = 0
-		name: str = "untitled"
-
-	def guiFunc(gui: DatapackEditorGUI, context: Context) -> Context:
-		context.name = gui.textField(context.name, "name:")
-		context.extension = gui.radioButtonGroup(context.extension, extensions, "extension:")
-		return context
-
-	context = Context()
-	context, isOk = gui.askUserInput(f"new File", context, guiFunc)
-	if not isOk:  # or not context.name:
-		return
-
-	ext = extensions[context.extension]
-	if ext == CUSTOM_EXT:
-		ext = ''
-	try:
-		filePath = createNewFile(folderPath, context.name.removesuffix(ext) + ext)
-		openFunc(filePath)
-	except OSError as e:
-		getSession().showAndLogError(e, "Cannot create file")
-
-
-def createNewFile(folderPath: FilePath, name: str) -> FilePath:
-	if isinstance(folderPath, tuple):
-		filePath = folderPath[0], os.path.join(folderPath[1], name)
-	else:
-		filePath = (folderPath, name)
-	with openOrCreate(os.path.join(*filePath), 'a'):
-		pass  # creates the File
-	return normalizeDirSeparators(filePath)
-
-
-def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
-	name, ok = gui.askUserInput('New Folder', 'New folder')
-	if not ok or not name:
-		return
-
-	try:
-		createNewFolder(folderPath, name)
-	except OSError as e:
-		getSession().showAndLogError(e, "Cannot create folder")
-
-
-def createNewFolder(folderPath: FilePath, name: str):
-	if isinstance(folderPath, tuple):
-		filePath = folderPath[0], os.path.join(folderPath[1], name)
-		joinedFilePath = os.path.join(*filePath, '_ignoreMe.txt')
-	else:
-		filePath = os.path.join(folderPath, name)
-		joinedFilePath = os.path.join(filePath, '_ignoreMe.txt')
-
-	with openOrCreate(joinedFilePath, 'w'):
-		pass  # creates the File
+_T2 = TypeVar('_T2')
 
 
 class ContextMenuEntries:
@@ -124,7 +51,7 @@ class ContextMenuEntries:
 			raise AssertionError(f"Expected str, tuple or None, but got {type(filePath)}")
 
 		if filePath is not None:
-			filePathJoined = filePath if type(filePath) is str else os.path.join(*filePath)
+			filePathJoined = unitePath(filePath)
 		else:
 			filePathJoined = ''
 
@@ -146,34 +73,16 @@ class ContextMenuEntries:
 		entries.extend(cls.pathItems(filePath))
 		return entries
 
-	@classmethod
-	def folderItems(cls, filePath: FilePath, isMutable: bool, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None], *, showSeparator: bool = True) -> list[MenuItemData]:
-		entries: list[MenuItemData] = []
-		entries.append(('new File', lambda p=filePath: createNewFileGUI(p, gui, openFunc), {'enabled': filePath is not None and isMutable}))
-		if showSeparator:
-			entries.append(cls.separator())
-		entries.extend(cls.pathItems(filePath))
-		return entries
 
-	@classmethod
-	def datapackItems(cls, datapack: Project, openFunc: Callable[[FilePath], None]) -> list[MenuItemData]:
-		enabled = datapack is not None
-		return [
-			*cls.pathItems(datapack.path,),
-			cls.separator(),
-			(f'copy name', lambda p=datapack: QApplication.clipboard().setText(p.name), {'enabled': enabled}),
-		]
-
-
-def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str], Iterator[tuple[int, int]]]:
+def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str], Iterator[IndexSpan]]:
 	if searchOptions.searchMode == SearchMode.RegEx:
 		flags = 0
 		flags |= re.IGNORECASE if not searchOptions.isCaseSensitive else 0
 		flags |= re.MULTILINE if not searchOptions.isMultiLine else 0
 		exprC = re.compile(expr, flags=flags)
 
-		def searcher(text: str) -> Iterator[tuple[int, int]]:
-			yield from ((m.start(), m.end()) for m in exprC.finditer(text))
+		def searcher(text: str) -> Iterator[IndexSpan]:
+			yield from (IndexSpan(m.start(), m.end()) for m in exprC.finditer(text))
 	else:
 		if searchOptions.searchMode == SearchMode.UnicodeEscaped:
 			expr = codecs.getdecoder("unicode_escape")(expr)[0]
@@ -181,9 +90,9 @@ def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str],
 			expr = expr.lower()
 		exprLen = len(expr)
 
-		def searcher(text: str) -> Iterator[tuple[int, int]]:
+		def searcher(text: str) -> Iterator[IndexSpan]:
 			text = text if searchOptions.isCaseSensitive else text.lower()
-			yield from ((m, m + exprLen) for m in findall(expr, text))
+			yield from (IndexSpan(m, m + exprLen) for m in findall(expr, text))
 
 	return searcher
 
@@ -219,7 +128,6 @@ def autocompleteFromList(text: str, allChoices: Iterable[Any], getStr: Callable[
 	return text
 
 
-#FilterStr = NewType('FilterStr', str)
 @ft.total_ordering
 class FilterStr:
 	def __init__(self, string: str):
@@ -260,74 +168,40 @@ class FilterStr:
 		return any(self.__filters)
 
 
-def filterStrChoices(filterStr: FilterStr, allChoices: Collection[str]) -> Collection[str]:
+def filterStrChoices(filterStr: FilterStr, allChoices: Collection[str]) -> tuple[int, int, Collection[str]]:
 	if not filterStr:
-		return allChoices
-	return [choice[1] for choice in ((choice.lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
-	#[choice for choice in allChoices if filterStr in choice.lower()]
+		result = allChoices
+	else:
+		result = [choice[1] for choice in ((choice.lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
+	return len(allChoices), len(result), result
+	# [choice for choice in allChoices if filterStr in choice.lower()]
 
 
-def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> list[_TT]:
+def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> tuple[int, int, list[_TT]]:
 	if not filterStr:
-		return list(allChoices.values())
-	return [choice[1] for choice in ((  name.lower(),   item) for name, item in allChoices.items()) if any(f in choice[0] for f in filterStr)]
+		result = list(allChoices.values())
+	else:
+		result = [choice[1] for choice in ((  name.lower(),   item) for name, item in allChoices.items()) if any(f in choice[0] for f in filterStr)]
+	return len(allChoices), len(result), result
 
 
 def filterComputedChoices(getStr: Callable[[_TT], str]):
-	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[_TT], getStr=getStr) -> Collection[_TT]:
+	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[_TT], getStr=getStr) -> tuple[int, int, Collection[_TT]]:
 		if not filterStr:
-			return allChoices
-		return [choice[1] for choice in ((getStr(choice).lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
+			result = allChoices
+		else:
+			result = [choice[1] for choice in ((getStr(choice).lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
+		return len(allChoices), len(result), result
 	return innerFilterComputedChoices
 
 
-FilePathSplitter = Union[Pattern, str]
-
-LocalFilesProp = SerializedPropertyABC[Any, list[FilePath]]
-
-
-class LocalFilesPropInfo(NamedTuple):
-	prop: LocalFilesProp
-	firstSplitter: FilePathSplitter
-	folderName: str
-
-
-class FileEntry(NamedTuple):
-	fullPath: FilePath
-	virtualPath: str  # = dataclasses.field(compare=False)
-
-
-@dataclass(slots=True)
-class FilesTreeItem:
-	label: str
-	commonVPath: str = dataclasses.field(compare=False)
-	commonPath: FilePathTpl = dataclasses.field(compare=False)
-	filePaths: list[FileEntry] = dataclasses.field(compare=False)
-
-	isImmutable: bool = dataclasses.field(compare=False)
-	isArchive: bool = dataclasses.field(default=False, compare=False)
-
-	@property
-	def folderPath(self) -> Optional[FilePathTpl]:
-		if self.isFile:
-			return None
-		return self.commonPath
-
-	@property
-	def isFile(self) -> bool:
-		filePathsCount = len(self.filePaths)
-		return filePathsCount == 1 and self.commonPath == self.filePaths[0].fullPath
-
-
 @dataclass
-class FilesTreeRoot:
-	projects: list[FilesTreeItem] = dataclasses.field(compare=False)
-	label: ClassVar[str] = '<ROOT>'
-	commonDepth: ClassVar[int] = 0
-	isImmutable: ClassVar[bool] = False
-	isArchive: ClassVar[bool] = False
-	folderPath: ClassVar[Optional[FilePath]] = None
-	isFile: ClassVar[bool] = False
+class SearchableListContext(Generic[_TR]):
+	selectedValue: Optional[_TR] = None
+	filterStr: FilterStr = field(default_factory=lambda: FilterStr(''))
+	filteredChoices: list[_TR] = field(default_factory=list)
+	focusEndOfText: bool = False
+	treeView: Optional[QTreeView] = None
 
 
 class DatapackEditorGUI(AutoGUI):
@@ -367,7 +241,7 @@ class DatapackEditorGUI(AutoGUI):
 			index: int
 			#value: _TT
 			filterVal: str
-			filteredChoices: OrderedDict[str, _TT]
+			filteredChoices: dict[str, _TT]
 			selectedValue: Optional[_TT] = None
 			focusEndOfText: bool = False
 
@@ -420,7 +294,7 @@ class DatapackEditorGUI(AutoGUI):
 					context.focusEndOfText = False
 
 					caseFoldedFilterVal = context.filterVal.lower()
-					context.filteredChoices = OrderedDict(choice for choice in allChoicesDict.items() if caseFoldedFilterVal in choice[0])
+					context.filteredChoices = dict(choice for choice in allChoicesDict.items() if caseFoldedFilterVal in choice[0])
 
 					gui.toolButton(f'{len(context.filteredChoices)} of {len(allChoicesDict)}', roundedCorners=CORNERS.NONE, overlap=(1, -1))
 
@@ -466,7 +340,7 @@ class DatapackEditorGUI(AutoGUI):
 
 			return context
 
-		context = Context(-2, '', OrderedDict(), value)
+		context = Context(-2, '', {}, value)
 		newValue, isOk = self.popupWindow(
 			context,
 			guiFunc=guiFunc,
@@ -494,7 +368,7 @@ class DatapackEditorGUI(AutoGUI):
 			allChoices: _TT,
 			*,
 			getStrChoices: Callable[[-_TT], Iterable[str]] = lambda x: x,
-			filterFunc: Callable[[FilterStr, -_TT], _TR] = filterStrChoices,
+			filterFunc: Callable[[FilterStr, -_TT], tuple[int, int, _TR]] = filterStrChoices,
 			shortcut: Optional[QKeySequence] = QKeySequence.Find,
 			roundedCorners: RoundedCorners = (True, True, False, False),
 			overlap: Overlap = (0, -1),
@@ -507,164 +381,167 @@ class DatapackEditorGUI(AutoGUI):
 
 		if shortcut is not None:
 			kwargs['shortcut'] = shortcut
-		with self.hLayout(horizontalSpacing=0):
+		with self.hLayout(seamless=True):  # horizontalSpacing=0):
 			filterStr = FilterStr(self.filterTextField(
 				filterStr.string if filterStr is not None else None,
 				strChoicesIter(),
-				overlap=adjustOverlap(overlap, (None, None, 0, None)),
-				roundedCorners=maskCorners(roundedCorners, CORNERS.LEFT),
 				**kwargs
 			))
-			filteredChoices = filterFunc(filterStr, allChoices)
-			self.toolButton(f'{len(filteredChoices):,} of {len(allChoices):,}', overlap=adjustOverlap(overlap, (1, None, None, None)), roundedCorners=maskCorners(roundedCorners, CORNERS.RIGHT))  #  {valuesName} shown', alignment=Qt.AlignRight)
+			allCount, filteredCount, filteredChoices = filterFunc(filterStr, allChoices)
+			self.toolButton(f'{filteredCount:,} of {allCount:,}')
 		return filterStr, filteredChoices
 
-	def filteredProjectsFilesTree1(
+	def advancedFilterTextField2(
 			self,
-			allIncludedProjects: list[Project],
-			onDoubleClick : Optional[Callable[[FilesTreeItem], None]] =  None,
-			onContextMenu : Optional[Callable[[FilesTreeItem, int], None]] = None,
-			onCopy        : Optional[Callable[[FilesTreeItem], Optional[str]]] = None,
-			onCut         : Optional[Callable[[FilesTreeItem], Optional[str]]] = None,
-			onPaste       : Optional[Callable[[FilesTreeItem, str], None]] = None,
-			onDelete      : Optional[Callable[[FilesTreeItem], None]] = None,
-			isSelected    : Optional[Callable[[FilesTreeItem], bool]] = None,
-
+			allChoices: Sequence[_TT],
+			context: Optional[SearchableListContext[_TR]],
 			*,
-			roundedCorners: RoundedCorners = CORNERS.NONE,
-			overlap: Overlap = NO_OVERLAP
-	):
-		def labelMaker(data: FilesTreeItem, column: int) -> str:
-			return data.label
+			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
+			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			isRegex: bool = False,
+	) -> SearchableListContext[_TR]:
+		# TODO: find more descriptive name for advancedFilterTextField2(...)
 
-		def iconMaker(data: FilesTreeItem, column: int) -> QIcon:
-			if data.isFile:
-				return icons.file_code
-			elif data.isArchive:
-				return icons.archive
-			return icons.folderInTree
+		def onKeyPressed(widget, event: QKeyEvent):
+			key = event.key()
+			if key in {Qt.Key_Down, Qt.Key_Up, Qt.Key_Left, Qt.Key_Right, Qt.Key_Return}:
+				if context.treeView is not None:
+					context.treeView.keyPressEvent(QKeyEvent(event))
+					event.accept()
+				return True
+			elif key == Qt.Key_Tab:
+				# do Tab Completion:
+				oldFilterVal = context.filterStr
+				context.filterStr = FilterStr(autocompleteFromList(oldFilterVal.string, getStrChoices(allChoices)))  # , isRegex=isRegex)
+				context.focusEndOfText = True
+				self.OnInputModified(context.treeView)
+				return True
+			else:
+				return False
 
-		def toolTipMaker(data: FilesTreeItem, column: int) -> str:
-			return data.commonVPath
+		if context is None:
+			context = SearchableListContext()
 
-		def childrenMaker(data: FilesTreeItem) -> list[FilesTreeItem]:
-			if isinstance(data, FilesTreeRoot):
-				return data.projects
+		# with self.vLayout(seamless=True):
+		with self.hLayout(seamless=True):
+			context.filterStr = FilterStr(self.textField(
+				context.filterStr.string,
+				capturingTab=True,
+				onKeyPressed=onKeyPressed,
+				focusEndOfText=context.focusEndOfText,
+				placeholderText='filter... [Ctrl+F]',
+				shortcut=QKeySequence.Find
+			))  # , isRegex=isRegex)
+			context.focusEndOfText = False
+			allCount, filteredCount, context.filteredChoices = filterFunc(context.filterStr, allChoices)
+			self.toolButton(f'{filteredCount} of {allCount}')
+			# if context.filterStr.regexError is not None:
+			# 	self.helpBox(str(context.filterStr.regexError), style='error', elided=True)
+		return context
 
-			filePathsCount = len(data.filePaths)
-			if data.isFile or filePathsCount == 0:
-				return []
+	def filteredTree(
+			self,
+			context: SearchableListContext[_TT],
+			treeBuilder: TreeBuilderABC[_TT],
+			headerBuilder: Optional[TreeBuilderABC[_T2]] = None,
+			*,
+			headerVisible: bool | Ellipsis = ...,
+			loadDeferred: bool = True,
+			columnResizeModes: Optional[Iterable[ResizeMode]] = None,
+			stretchLastColumn: bool | Ellipsis = ...,
+			**kwargs
+	) -> SearchableListContext[_TT]:
+		treeResult = self.tree(
+			treeBuilder,
+			headerBuilder,
+			headerVisible=headerVisible,
+			loadDeferred=loadDeferred,
+			columnResizeModes=columnResizeModes,
+			stretchLastColumn=stretchLastColumn,
+			**kwargs
+		)
+		context.treeView = treeResult.treeView
+		selectionModel = treeResult.selectionModel
 
-			children: OrderedDict[str, FilesTreeItem] = OrderedDict()
-			cVPathLen = len(data.commonVPath)
-			isImmutable = data.isImmutable
-			for entry in data.filePaths:
-				index2 = entry.virtualPath.find('/', cVPathLen)
-				isFile = index2 == -1
-				if isFile:
-					index2 = len(entry.virtualPath)
-				label = entry.virtualPath[cVPathLen:index2]
+		# if self.isFirstRedraw and selectionModel is not self.modifiedInput[0]:
+		# 	currentIndex = treeResult.treeView.currentIndex()
+		# 	if currentIndex.isValid():
+		# 		treeResult.treeView.scrollTo(currentIndex)  has bad performance characteristics :'(
 
-				child = children.get(label, None)
-				if child is None:
-					suffix = label if isFile else f'{label}/'
-					children[label] = FilesTreeItem(
-						label,
-						f'{data.commonVPath}{suffix}',
-						(data.commonPath[0], f'{data.commonPath[1]}{suffix}'),
-						[entry],
-						isImmutable
-					)
-				else:
-					child.filePaths.append(entry)
+		if len(context.filteredChoices) == 1:
+			model_index = selectionModel.model().index(0, 0, QModelIndex())
+			selectionModel.setCurrentIndex(model_index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+		context.selectedValue = treeResult.selectedItem
+		return context
 
-			return sorted(children.values(), key=lambda x: (x.isFile, x.label.lower()))
+	def filteredTreeWithSearchField(
+			self,
+			allChoices: Sequence[_TT],
+			filterContext: Optional[SearchableListContext[_TR]],
+			treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]],
+			*,
+			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
+			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
+			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			isRegex: bool = False,
+			headerVisible: bool | Ellipsis = ...,
+			loadDeferred: bool = True,
+			columnResizeModes: Optional[Iterable[ResizeMode]] = None,
+			stretchLastColumn: bool | Ellipsis = ...,
+			cornerGUI: Callable[[], None] = None,
+			sandwichedGUI: Callable[[], None] = None,
+			**kwargs
+	) -> tuple[Optional[_TR], SearchableListContext[_TR]]:
+		with self.vLayout(seamless=True):
+			with self.hLayout(seamless=True):
+				filterContext = self.advancedFilterTextField2(
+					allChoices,
+					filterContext,
+					getStrChoices=getStrChoices,
+					filterFunc=filterFunc,
+					isRegex=isRegex,
+				)
 
-		# autocomplete strings:
-		allAutocompleteStrings: list[str] = []
-		projectItems = []
-		for proj in allIncludedProjects:
-			projPrefix = proj.name + '/'
-			filesForProj = []
-			projItem = FilesTreeItem(proj.name, projPrefix, (proj.path, ''), filesForProj, proj.isImmutable, proj.isArchive)
+				if cornerGUI is not None:
+					cornerGUI()
 
-			fullPathsInProj = proj.files
-			for fullPath in fullPathsInProj:
-				# getRight:
-				right = fullPath if isinstance(fullPath, str) else fullPath[1]
-				virtualPath = projPrefix + right.removeprefix('/')
-				allAutocompleteStrings.append(virtualPath)
-				filesForProj.append(FileEntry(fullPath, virtualPath))
+			if sandwichedGUI is not None:
+				sandwichedGUI()
 
-			if projItem.filePaths:
-				projectItems.append(projItem)
-
-		with self.vLayout(verticalSpacing=0):
-			with self.hLayout(horizontalSpacing=0):
-				filterStr = self.filterTextField(None, allAutocompleteStrings, overlap=adjustOverlap(overlap, (None, None, 0, 1)), roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_LEFT), shortcut=QKeySequence.Find).lower()
-
-				totalFilesCount = len(allAutocompleteStrings)
-				filteredFilesCount = 0
-
-				if filterStr:
-					filteredProjectItems = []
-					for projItem in projectItems:
-						projItem.filePaths = [fp for fp in projItem.filePaths if filterStr in fp.virtualPath.lower()]
-						if projItem.filePaths:
-							filteredFilesCount += len(projItem.filePaths)
-							filteredProjectItems.append(projItem)
-				else:
-					filteredFilesCount = totalFilesCount
-					filteredProjectItems = projectItems
-
-				self.toolButton(
-					f'{filteredFilesCount:,} of {totalFilesCount:,}',
-					overlap=adjustOverlap(overlap, (1, None, None, 1)),
-					roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_RIGHT)
-				)  # files shown', alignment=Qt.AlignLeft)
-
-			self.tree(
-				DataTreeBuilder(
-					FilesTreeRoot(filteredProjectItems),
-					childrenMaker,
-					labelMaker,
-					iconMaker,
-					toolTipMaker,
-					columnCount=1,
-					suppressUpdate=False,
-					showRoot=False,
-					onDoubleClick=onDoubleClick,
-					onContextMenu=onContextMenu,
-					onCopy=onCopy,
-					onCut=onCut,
-					onPaste=onPaste,
-					onDelete=onDelete,
-					isSelected=isSelected,
-					getId=lambda x: x.label,
-				),
-				loadDeferred=True,
-				roundedCorners=maskCorners(roundedCorners, CORNERS.BOTTOM),
-				overlap=adjustOverlap(overlap, (None, 0, None, None))
+			treeBuilder = treeBuilderBuilder(filterContext.filteredChoices)
+			headerBuilder = headerBuilderBuilder() if headerBuilderBuilder is not None else None
+			filterContext = self.filteredTree(
+				filterContext,
+				treeBuilder,
+				headerBuilder,
+				headerVisible=headerVisible,
+				loadDeferred=loadDeferred,
+				columnResizeModes=columnResizeModes,
+				stretchLastColumn=stretchLastColumn,
+				**kwargs
 			)
 
-	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[tuple[int, int]], bool, bool, SearchOptions]:
+		return filterContext.selectedValue, filterContext
+
+	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[IndexSpan], bool, bool, SearchOptions]:
 		def onGUI(gui: DatapackEditorGUI, text: Optional[str], searchExpr: Optional[str], outerGUI: DatapackEditorGUI) -> None:
-			with gui.vLayout(verticalSpacing=0):
-				with gui.hLayout(horizontalSpacing=0):
-					#with gui.hLayout(horizontalSpacing=0):
-					gui.customData['prevPressed'] = gui.toolButton(icon=icons.prev, tip='previous', overlap=(0, 0, 1, 1), parentShortcut=QKeySequence.FindPrevious)
-					gui.customData['nextPressed'] = gui.toolButton(icon=icons.next, tip='next', overlap=(1, 0, 1, 1), parentShortcut=QKeySequence.FindNext)
+			with gui.vLayout(seamless=True):
+				with gui.hLayout(seamless=True):
+					with gui.hPanel(seamless=True):
+						gui.customData['prevPressed'] = gui.framelessButton(icon=icons.prev, tip='previous', margins=gui.smallDefaultMargins, parentShortcut=QKeySequence.FindPrevious)
+						gui.customData['nextPressed'] = gui.framelessButton(icon=icons.next, tip='next', margins=gui.smallDefaultMargins, parentShortcut=QKeySequence.FindNext)
 					gui.customData['searchExpr'] = searchExpr if searchExpr is not None else gui.customData.get('searchExpr', '')
 					gui.customData['searchExpr'] = gui.textField(gui.customData['searchExpr'], placeholderText='find... [Ctrl+F]', isMultiline=False, overlap=(1, 0, 1, 1), parentShortcut=QKeySequence.Find)
 
-					searchMode = SearchMode.RegEx if gui.toolButton('.*', tip='RegEx', overlap=(1, 0, 1, 1), checkable=True) else SearchMode.Normal
-					isCaseSensitive = gui.toolButton('Aa', tip='case sensitive', checkable=True, overlap=(1, -1))
-					isMultiLine = False  # gui.toggleLeft(None, 'Multiline', enabled=isRegex)
-					gui.customData['searchOptions'] = SearchOptions(searchMode, isCaseSensitive, isMultiLine)
+					with gui.hPanel(seamless=True):
+						searchMode = SearchMode.RegEx if gui.framelessButton('.*', tip='RegEx', margins=gui.smallDefaultMargins, checkable=True) else SearchMode.Normal
+						isCaseSensitive = gui.framelessButton('Aa', tip='case sensitive', margins=gui.smallDefaultMargins, checkable=True)
+						isMultiLine = False  # gui.toggleLeft(None, 'Multiline', enabled=isRegex)
+						gui.customData['searchOptions'] = SearchOptions(searchMode, isCaseSensitive, isMultiLine)
 
 					# do actual search:
 					try:
-						searcher = makeTextSearcher(gui.customData['searchExpr'].encode('utf-8'), gui.customData['searchOptions'])
+						searcher: Callable[[str], Iterator[IndexSpan]] = makeTextSearcher(gui.customData['searchExpr'].encode('utf-8'), gui.customData['searchOptions'])
 					except Exception as e:
 						errorText = str(e)
 						gui.customData['searchResults'] = []
@@ -691,7 +568,8 @@ class DatapackEditorGUI(AutoGUI):
 		searchGUI = self.subGUI(
 			DatapackEditorGUI,
 			guiFunc=lambda gui, text=text, searchExpr=searchExpr, outerGUI=self: onGUI(gui, text, searchExpr, outerGUI),
-			suppressRedrawLogging=True
+			suppressRedrawLogging=True,
+			seamless=True
 			# onInit=lambda w, document=document: onInit(w, document)
 		)
 		searchGUI._name = 'searchBar'
@@ -704,35 +582,29 @@ class DatapackEditorGUI(AutoGUI):
 			searchGUI.customData['nextPressed'], \
 			searchGUI.customData['searchOptions']
 
-	@property
-	def _errorIcons(self) -> dict[str, QIcon]:
-		return {
-			'error': icons.errorColored,
-			'warning': icons.warningColored,
-			'info': icons.infoColored,
-		}
+	@staticmethod
+	def getErrorIcon(style: str) -> Optional[QIcon]:
+		match style:
+			case 'error': return icons.errorColored
+			case 'warning': return icons.warningColored
+			case 'info': return icons.infoColored
+			case _: return None
 
-	def errorsSummaryGUI(self: DatapackEditorGUI, errorCounts: documents.ErrorCounts, **kwargs):
+	def errorsSummaryGUI(self: DatapackEditorGUI, errorCounts: ErrorCounts, **kwargs):
 		errorsTip = 'errors'
 		warningsTip = 'warnings'
 		hintsTip = 'hints'
 
-		errorIcons = self._errorIcons
-
-		#self.hSeparator()  # parser & config errors:
-		self.label(errorIcons['error'], tip=errorsTip, **kwargs)
-		self.label(f'{errorCounts.parserErrors + errorCounts.configErrors}', tip=errorsTip, **kwargs)
-		#self.hSeparator()  # config warnings:
-		self.label(errorIcons['warning'], tip=warningsTip, **kwargs)
-		self.label(f'{errorCounts.configWarnings}', tip=warningsTip, **kwargs)
-		#self.hSeparator()  # config hints:
-		self.label(errorIcons['info'], tip=hintsTip, **kwargs)
-		self.label(f'{errorCounts.configHints}', tip=hintsTip, **kwargs)
-		#self.hSeparator()  # config hints:
+		self.label(self.getErrorIcon('error'), tip=errorsTip, **kwargs)
+		self.label(f'{errorCounts.errors}', tip=errorsTip, **kwargs)
+		self.label(self.getErrorIcon('warning'), tip=warningsTip, **kwargs)
+		self.label(f'{errorCounts.warnings}', tip=warningsTip, **kwargs)
+		self.label(self.getErrorIcon('info'), tip=hintsTip, **kwargs)
+		self.label(f'{errorCounts.hints}', tip=hintsTip, **kwargs)
 
 	def errorsSummarySimpleGUI(self: DatapackEditorGUI, errorCounts: ErrorCounts, **kwargs):
 		self.hSeparator()
-		self.label(f'errors: {errorCounts.parserErrors + errorCounts.configErrors:3} | warnings: {errorCounts.configWarnings:3} | hints: {errorCounts.configHints:3}')
+		self.label(f'errors: {errorCounts.errors:3} | warnings: {errorCounts.warnings:3} | hints: {errorCounts.hints:3}')
 		self.hSeparator()
 
 	def drawError(self, error: GeneralError, **kwargs):
@@ -770,11 +642,9 @@ class DatapackEditorGUI(AutoGUI):
 			errorMsg = error.htmlMessage.replace('\n', '')
 			return (errorMsg, positionMsg)[i]
 
-		errorIcons = self._errorIcons
-
 		def getIcon(error: GeneralError, i: int) -> Optional[QIcon]:
 			if i == 0:
-				return errorIcons.get(error.style)
+				return self.getErrorIcon(error.style)
 			else:
 				return None
 
@@ -817,11 +687,11 @@ def drawCodeField(
 
 	forceLocate = False
 
-	font = applicationSettings.appearance.monospaceFont
+	font = getApplicationSettings().appearance.monospaceFont
 
-	with gui.vLayout(verticalSpacing=0):
+	with gui.vLayout(seamless=True):
 		# actual GUI:
-		with gui.hLayout(horizontalSpacing=0):
+		with gui.hLayout(seamless=True):
 			searchExpr, searchResults, prevPressed, nextPressed, searchOptions = gui.searchBar(code, searchExpr=None)
 			highlightErrors = gui.toolButton(checked=highlightErrors, icon=icons.spellCheck, tip='highlight errors', checkable=True, overlap=(1, -1), roundedCorners=CORNERS.NONE)
 			if nextPressed or prevPressed:
@@ -836,7 +706,7 @@ def drawCodeField(
 			searchOptions=searchOptions,
 			returnCursorPos=True,
 			#onCursorPositionChanged=lambda a, b, g=gui: g.customData.__setitem__('currentCursorPos', (a, b)) ,
-			errors=errors,
+			errors=errors if highlightErrors else [],
 			font=font,
 			**codeFieldKwargs,
 			**kwargs
@@ -845,9 +715,94 @@ def drawCodeField(
 	return code, highlightErrors, cursorPos, forceLocate
 
 
+class EditableSerializableDataclassList(PropertyDecorator):
+	"""docstring for List"""
+	def __init__(
+			self,
+			name: str,
+			treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]],
+			*,
+			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
+			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
+			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			dialogWidth: Optional[int] = None, dialogHeight: Optional[int] = None,
+	):
+		super().__init__()
+		self.name: str = name
+		self.treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]] = treeBuilderBuilder
+		self.headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = headerBuilderBuilder
+		self.getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = getStrChoices
+		self.filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterFunc
+		self.dialogWidth: Optional[int] = dialogWidth
+		self.dialogHeight: Optional[int] = dialogHeight
 
 
+@registerDecoratorDrawer(EditableSerializableDataclassList)
+def drawList(gui_: DatapackEditorGUI, values_: list[_TT], type_: Optional[Type[list[_TT]]], decorator_: EditableSerializableDataclassList, drawProperty_: InnerDrawPropertyFunc[list[_TT]], owner_: SerializableDataclass, **kwargs) -> _TT:
+	innerType_ = get_args(type_)[0]
 
-__documentDrawers: dict[Type[Document], DocumentGUIFunc] = {}
-DocumentDrawer = AddToDictDecorator(__documentDrawers)
-getDocumentDrawer = ft.partial(getIfKeyIssubclassOrEqual, __documentDrawers)
+	def _addRoot(gui: DatapackEditorGUI):
+		newVal, isOk = gui.askUserInput(
+			f"Add",
+			innerType_(),
+			width=int(decorator_.dialogWidth * gui.scale) if decorator_.dialogWidth is not None else None,
+			height=int(decorator_.dialogHeight * gui.scale) if decorator_.dialogHeight is not None else None,
+		)
+		if isOk:
+			values_.append(newVal)
+
+	def _editRoot(gui: DatapackEditorGUI, value: _TT):
+		newVal, isOk = gui.askUserInput(
+			f"Edit",
+			copy.deepcopy(value),
+			width=int(decorator_.dialogWidth * gui.scale) if decorator_.dialogWidth is not None else None,
+			height=int(decorator_.dialogHeight * gui.scale) if decorator_.dialogHeight is not None else None,
+		)
+		if isOk:
+			value.copyFrom(newVal)
+
+	def _removeRoot(gui: DatapackEditorGUI, value: _TT):
+		# todo ask user
+		values_.remove(value)
+
+	def _moveRootUp(value: _TT):
+		idx = values_.index(value)
+		if idx > 0:
+			values_[idx - 1], values_[idx] = values_[idx], values_[idx - 1]
+
+	def _moveRootDown(value: _TT):
+		idx = values_.index(value)
+		if idx < len(values_) - 1:
+			values_[idx], values_[idx + 1] = values_[idx + 1], values_[idx]
+
+	contextId = f'{decorator_.name}_listContext'
+	listContext = gui_.customData.get(contextId)
+	if listContext is None:
+		listContext = SearchableListContext()
+
+	with gui_.vLayout(seamless=True):
+		selected, listContext = gui_.filteredTreeWithSearchField(
+			values_,
+			listContext,
+			decorator_.treeBuilderBuilder,
+			headerBuilderBuilder=decorator_.headerBuilderBuilder,
+			getStrChoices=decorator_.getStrChoices,
+			filterFunc=decorator_.filterFunc,
+		)
+		gui_.customData[contextId] = listContext
+
+		with gui_.hPanel(seamless=True):
+			canMoveDown = selected is not None and values_ and values_[-1] is not selected
+			canMoveUp = selected is not None and values_ and values_[0] is not selected
+			gui_.addHSpacer(0, SizePolicy.Expanding)
+			if gui_.toolButton(icon=icons.edit, tip='Edit', enabled=selected is not None):
+				_editRoot(gui_, selected)
+			if gui_.toolButton(icon=icons.up, tip='Move up', enabled=canMoveUp):
+				_moveRootUp(selected)
+			if gui_.toolButton(icon=icons.down, tip='Move down', enabled=canMoveDown):
+				_moveRootDown(selected)
+			if gui_.toolButton(icon=icons.remove, tip='Remove selected', enabled=selected is not None):
+				_removeRoot(gui_, selected)
+			if gui_.toolButton(icon=icons.add, tip='Add', enabled=True):
+				_addRoot(gui_)
+	return values_

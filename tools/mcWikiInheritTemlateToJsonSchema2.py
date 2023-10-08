@@ -9,10 +9,10 @@ from Cat.utils import openOrCreate
 from Cat.utils.collections_ import AddToDictDecorator, Stack, OrderedMultiDict
 from Cat.utils.logging_ import logError
 from Cat.utils.typing_ import replace_tuple
-from model.json import emitter
-from model.json.core import *
-from model.parsing.parser import IndexMapper
-from model.utils import Span
+from corePlugins.json import emitter
+from corePlugins.json.core import *
+from base.model.parsing.parser import IndexMapper
+from base.model.utils import Span, NULL_SPAN
 
 INDENT = '\t'
 NL = '\n'
@@ -21,32 +21,32 @@ f',{NL}'
 
 
 def jNull() -> JsonNull:
-	return JsonNull(Span(), None)
+	return JsonNull(NULL_SPAN, None)
 
 
 def jBool(value: bool) -> JsonBool:
-	return JsonBool(Span(), None, value)
+	return JsonBool(NULL_SPAN, None, value)
 
 
 def jNum(value: int | float) -> JsonNumber:
-	return JsonNumber(Span(), None, value)
+	return JsonNumber(NULL_SPAN, None, value)
 
 
 def jStr(value: str) -> JsonString:
-	return JsonString(Span(), None, value, IndexMapper())
+	return JsonString(NULL_SPAN, None, value, IndexMapper())
 
 
 def jArr(elements: list[JsonData]) -> JsonArray:
-	return JsonArray(Span(), None, list(elements))
+	return JsonArray(NULL_SPAN, None, list(elements))
 
 
 def makeJProp(key: str, value: JsonData) -> JsonProperty:
-	return JsonProperty(Span(), None, jStr(key), value)
+	return JsonProperty(NULL_SPAN, None, jStr(key), value)
 
 
 def jObj(props: OrderedDict[str, JsonData]) -> JsonObject:
 	properties = OrderedMultiDict((key, makeJProp(key, value)) for key, value in props.items())
-	return JsonObject(Span(), None, properties)
+	return JsonObject(NULL_SPAN, None, properties)
 
 
 SchemaTypeType = Literal['object', 'array', 'union', 'any', 'string', 'enum', 'boolean', 'integer', 'float', 'null', 'calculated']

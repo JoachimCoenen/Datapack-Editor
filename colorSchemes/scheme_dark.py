@@ -6,9 +6,8 @@ from PyQt5.QtGui import QColor, qGray
 import numpy as np
 
 from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
-from gui.themes.theme import addColorScheme, ColorScheme, Style, StylesModifier, updateGlobalStylesToMatchUIColors, GlobalStyles
+from base.model.theme import addColorScheme, ColorScheme, Style, StylesModifier, updateGlobalStylesToMatchUIColors, GlobalStyles
 
-enabled = True
 
 _DO_PRINT = False
 
@@ -29,9 +28,11 @@ def buildColorScheme() -> ColorScheme:
 	scheme.globalStyles.defaultStyle |= Style(background=scheme.uiColors.Window)
 
 	for language, styles in lightScheme.styles2.items():
-		print(f"STYLES:")
+		if _DO_PRINT:
+			print(f"STYLES:")
 		styles._styles = {name: invertStyle(style, blackColor, f'{language}:{name}') for name, style in styles._styles.items()}
-		print(f"MODIFIERS:")
+		if _DO_PRINT:
+			print(f"MODIFIERS:")
 		styles.innerLanguageStyleModifiers = {name: invertStylesModifier(stylesMode, blackColor, f'{language}:{name}') for name, stylesMode in styles.innerLanguageStyleModifiers.items()}
 		scheme.styles2[language] = styles
 
@@ -185,6 +186,7 @@ def qGrayF(color: QColor) -> float:
 
 def colorToStr(c: QColor):
 	return c.name()
+
 
 class _MaxFuncCallError(RuntimeError):
 	pass

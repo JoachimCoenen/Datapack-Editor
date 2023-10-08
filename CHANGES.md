@@ -1,7 +1,46 @@
 ## Next Version
+### Features 
+ * Plugin support
+   * Plugins can...:
+     * add sidebars & bottombars (GUI).
+     * define parser, stylers, & contextProviders for new languages.
+     * add new contexts for existing languages.
+     * add new schemas for existing & new languages.
+     * add schema mappings (which schema to used for what file).
+     * add custom document types (like `.json`, `.mcfunction`, or even `.png`).
+     * add custom settings (aka. SettingsAspect).
+     * add custom functionality to Projects (aka. ProjectAspect, mostly useful for file content indexing for custom languages or filetypes).
+     * define custom indices for Roots (aka. IndexBundle).
+     * customize what happens when a new project gets created (via.ProjectCreators).
+ * Projects:
+   * Multi-root Projects! Projects can have multiple subprojects (called Roots) now.
+   * Project configuration is now stored inside the project folder as `.dpeproj`.
+   * Directories can be excluded on a per-project basis.
+ * Indentation & Whitespace:
+   * Added indentation settings for documents.
+   * Added whitespace visibility setting.
+   * Added `globalStyles.whiteSpaceStyle` setting to color schemes.
+ * Misc
+   * Multiple Minecraft versions can be configured simultaneously.
+ * JSON Schemas:
+   * Added schema for loot tables (minecraft:loot_table)
+   * Added schema for item modifiers (minecraft:item_modifier)
+
 ### Improvements
- * Improved parsing and validation performance for files with many errors
- * Drastically improved parsing and validation performance for json files in certain circumstances
+ * Improved layout of the Setup Dialog shown when the application is started for the first time.
+ * New and improved dialog for opening existing and creating new projects.
+ * Json schemas are now stored as Json files and can be viewed in the editor
+
+### Fixes
+ * Save As now selects correct file extension by default.
+ * Saving an untitled file now correctly opens the Save As dialog instead of just saving the file to `untitled n`.
+ * Fixed potential crashes when loading or saving files, settings, etc.
+ * Fixed renamed files not being recognized correctly.
+ * Fixed parsing of numbers in JSON files
+ * Fixed crashes caused by the DocumentLexer.
+ * Fixed syntax highlighting desyncing from actual text.
+ * Fixed index mapping for escape sequences in JSON strings.
+
 
 ## Version 0.4.0-alpha
 ### Features
@@ -16,6 +55,8 @@
    * a common search location for dependencies can be changed in settings (default location is `C:/Users/<your username>/.dpe/dependencies`).
 
 ### Improvements
+ * Improved parsing and validation performance for files with many errors
+ * Drastically improved parsing and validation performance for json files in certain circumstances
  * Drag & drop files into the editor to open them
 
 
@@ -45,6 +86,7 @@
  * Reverted changes to resource location parsing.
  * Fixed validation of `minecraft:component` command argument returning wrong error type.
 
+
 ## Version 0.2.1-alpha
 ### Fixes
  * Fixed crash in `clickableRangesForFilterArgs(...)` (issue #19).
@@ -52,6 +94,7 @@
 
 ### Improvements
  * Slightly improved suggestions for coordinates
+
 
 ## Version 0.2.0-alpha
 ### Features

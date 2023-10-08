@@ -1,3 +1,4 @@
+pip install PyQt5 QScintilla QtAwesome recordclass timerit watchdog markdown minecraft_data nbtlib
 mkdir build
 cd build
 rem DANGER!:

@@ -9,8 +9,8 @@ from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFram
 from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
 from Cat.utils.profiling import ProfiledAction, TimedAction
 from gui.datapackEditorGUI import DatapackEditorGUI
-from session.documents import Document
-from session.session import getSession
+from base.model.documents import Document
+from base.model.session import getSession
 
 
 class ProfileParsingDialog(CatFramelessWindowMixin, QDialog):

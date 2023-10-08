@@ -1,0 +1,7 @@
+{
+  "$schema": "dpe/json/schema",
+  "$libraries": {
+    "item_modifier": "item_modifier-library.json"
+  },
+  "$body": { "$defRef": "item_modifier:item_modifier-body" }
+} 

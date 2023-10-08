@@ -2,32 +2,52 @@ from __future__ import annotations
 import os
 from math import floor
 from operator import attrgetter
-from typing import Optional, Sequence
+from typing import Optional, Sequence, NewType
 
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent
+from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent, QIcon
 from PyQt5.QtWidgets import QMainWindow, QApplication
 
-import Cat
-from Cat.CatPythonGUI.GUI import CORNERS, NO_OVERLAP, NO_MARGINS, SizePolicy, Overlap, RoundedCorners, maskCorners, adjustOverlap
-from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton
+from Cat.CatPythonGUI.GUI import CORNERS, NO_OVERLAP, SizePolicy, RoundedCorners, pythonGUI, catWidgetMixins, Widgets
+from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton, FileExtensionFilter
 from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from Cat.CatPythonGUI.GUI.icons import iconCombiner, CompositionMode
 from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
 from Cat.icons import icons
-from gui.editors import DatapackFilesEditor, DocumentsViewsContainerEditor
+from Cat.icons.icons import _Icons
+from base.gui.newProjectDialog import NewProjectDialog
+from base.gui.documentsViewEditor import DocumentsViewsContainerEditor
 from gui.profileParsingDialog import ProfileParsingDialog
-from gui.themes import theme
+from base.model import theme
 from keySequences import KEY_SEQUENCES
-from model.utils import Span, GeneralError
-from session.session import getSession, WindowId, saveSessionToFile
-from session.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts
-from gui.checkAllDialog import CheckAllDialog
-from gui.searchAllDialog import SearchAllDialog
-from gui.spotlightSearch import SpotlightSearchGui
-from model.pathUtils import FilePath
+from base.model.utils import GeneralError
+from base.model.session import getSession, saveSessionToFile, GLOBAL_SIGNALS
+from base.model.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts, getAllFileExtensionFilters, getDocumentTypeForDocument
+from base.gui.checkAllDialog import CheckAllDialog
+from base.gui.searchAllDialog import SearchAllDialog
+from base.gui.spotlightSearch import SpotlightSearchGui
 from gui.datapackEditorGUI import DatapackEditorGUI
-from settings import applicationSettings
-from settings.settingsDialog import SettingsDialog
+from base.plugin import PLUGIN_SERVICE, SideBarTabGUIFunc, ToolBtnFunc
+from base.model.applicationSettings import applicationSettings
+from base.gui.settingsDialog import SettingsDialog
+
+
+class _DpeIcons:
+	__slots__ = ()
+	_shadowedChevronDown = (
+		(_Icons.chevronDown, dict(mode=CompositionMode.Erase, scale=.5, offset=(+0.00 + .3, -0.10 + .3))),
+		(_Icons.chevronDown, dict(mode=CompositionMode.Erase, scale=.5, offset=(-0.051 + .3, -0.051 + .3))),
+		(_Icons.chevronDown, dict(mode=CompositionMode.Erase, scale=.5, offset=(-0.10 + .3, +0.00 + .3))),
+		(_Icons.chevronDown, dict(scale=.5, offset=(+0.00 + .3, +0.00 + .3)))
+	)
+
+	project_chevronDown: QIcon = iconCombiner(_Icons.project, *_shadowedChevronDown)
+
+
+dpeIcons = _DpeIcons()
+
+
+ALL_FILES_FILTER: FileExtensionFilter = ('All files', '*')
 
 
 def frange(a: float, b: float, jump: float, *, includeLAst: bool = False):
@@ -35,6 +55,9 @@ def frange(a: float, b: float, jump: float, *, includeLAst: bool = False):
 	cnt = cnt + 1 if includeLAst else cnt
 	for i in range(cnt):
 		yield a + jump * i
+
+
+WindowId = NewType('WindowId', str)
 
 
 class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
@@ -75,9 +98,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		self._gui._name = f'main Window GUI {id}'
 		self._id: WindowId = id
 		MainWindow.registerMainWindow(self, id)
-		self._disableContentMargins = True
-		self._disableSidebarMargins = True
-		self._drawTitleToolbarBorder = False
+		self.disableContentMargins = True
+		self.disableSidebarMargins = True
+		self.disableBottombarMargins = True
+		self.drawTitleToolbarBorder = True
 		self.roundedCorners = CORNERS.ALL
 
 		# TODO: change initial _lastOpenPath:
@@ -86,14 +110,15 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		#GUI
 		self.checkAllDialog = CheckAllDialog(self)
 		self.searchAllDialog = SearchAllDialog(self)
-		self.settingsDialog = SettingsDialog(self)
+		self.settingsDialog = SettingsDialog(self, GUICls=DatapackEditorGUI)
 		self.profileParsingDialog = ProfileParsingDialog(self)
 		self.currentDocumenSubGUI: Optional[DatapackEditorGUI] = None
 
 		self.setAcceptDrops(True)
 
 		getSession().documents.onCanCloseModifiedDocument = self._canCloseModifiedDocument
-		getSession().onError.reconnect('showError', lambda e, title: self._gui.showWarningDialog(title, str(e)))
+		GLOBAL_SIGNALS.onError.reconnect('showError', lambda e, title: self._gui.showWarningDialog(title, str(e)))
+		GLOBAL_SIGNALS.onWarning.reconnect('showWarning', lambda e, title: self._gui.showWarningDialog(title, '' if e is None else str(e)))
 
 		# close document as shortcut:
 		# self.closeDocumentShortcut = QShortcut(KEY_SEQUENCES.CLOSE_DOCUMENT, self, lambda d=document, s=self: self._safelyCloseDocument(gui, getSession().selectedDocument),
@@ -115,7 +140,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	def dropEvent(self, e: QDropEvent):
 		for url in e.mimeData().urls():
 			filePath = url.toLocalFile()
-			self._tryOpenOrSelectDocument(filePath)
+			getSession().tryOpenOrSelectDocument(filePath)
 
 	# properties:
 
@@ -129,24 +154,8 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 
 	# GUI:
 
-	def _mainAreaGUI(self, gui: DatapackEditorGUI, overlap: Overlap, roundedCorners: RoundedCorners):
-		contentsMargins = self._mainAreaMargins
-		with gui.vLayout(contentsMargins=contentsMargins):
-			self.OnGUI(gui)
-
 	def OnGUI(self, gui: DatapackEditorGUI):
-		# app = cast(QApplication, QApplication.instance())
-		# self._updateApplicationDisplayName(app)
-		tabBarOverlap = (0, 1, 0, 1) if self.drawTitleToolbarBorder else (0, 0, 0, 1)
-		with gui.vSplitter(handleWidth=self.windowSpacing) as splitter:
-			# main Panel:
-			with splitter.addArea(stretchFactor=2, id_='mainPanel', verticalSpacing=0):
-				gui.editor(DocumentsViewsContainerEditor, getSession().documents.viewsC, roundedCorners=CORNERS.LEFT).redrawLater('MainWindow.OnGUI(...)')
-			# bottom Panel:
-			with splitter.addArea(stretchFactor=0, id_='bottomPanel', verticalSpacing=0):
-				bottomPanel = gui.subGUI(type(gui), lambda gui: self.bottomPanelGUI(gui, roundedCorners=(True,  False,  True, False), cornerRadius=self.windowCornerRadius))
-				bottomPanel.redrawGUI()
-		# getSession().documents.onSelectedDocumentChanged.reconnect('mainWindowGUI', self.redraw)
+		gui.editor(DocumentsViewsContainerEditor, getSession().documents.viewsC, seamless=True).redrawLater('MainWindow.OnGUI(...)')
 		self._saveSession()
 
 	def OnToolbarGUI(self, gui: DatapackEditorGUI):
@@ -155,10 +164,36 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	def OnStatusbarGUI(self, gui: DatapackEditorGUI):
 		mg = self._gui.margin if self.disableStatusbarMargins else 0
 		with gui.hLayout(contentsMargins=(mg, 0, mg, 0)):
-			pass
+			gui.label("this is a status bar.")
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		gui.editor(DatapackFilesEditor, getSession(), roundedCorners=CORNERS.RIGHT).redrawLater()
+		tabs: list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]] = []
+		for plugin in PLUGIN_SERVICE.activePlugins:
+			tabs.extend(plugin.sideBarTabs())
+
+		with gui.hPanel(seamless=True, roundedCorners=CORNERS.RIGHT):
+			with gui.vPanel(seamless=True, windowPanel=True, hSizePolicy=SizePolicy.Fixed.value):
+				index = gui.tabBar(
+					[tab[0] for tab in tabs],
+					drawBase=False,
+					documentMode=True,
+					expanding=False,
+					position=TabPosition.West,
+					vSizePolicy=SizePolicy.Expanding.value
+				)
+			if tabs:
+				_, guiFunc, toolBtnFunc = tabs[index]
+
+				if toolBtnFunc is not None:
+					toolBtnFunc(gui)
+					gui.hSeparator()
+
+				subGui = gui.subGUI(type(gui), guiFunc, seamless=True)
+				subGui.redrawGUILater()
+
+	def OnBottombarGUI(self, gui: DatapackEditorGUI):
+		bottomPanel = gui.subGUI(type(gui), lambda gui: self.bottomPanelGUI(gui), seamless=True)
+		bottomPanel.redrawGUI()
 
 	def documentToolBarGUI(self, gui: DatapackEditorGUI, button, btnCorners, btnOverlap, btnMargins):
 		button = gui.framelessButton
@@ -169,9 +204,9 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				self._createNewDocument(gui)
 
 			if button(icon=icons.open, tip='Open File', **btnKwArgs, windowShortcut=QKeySequence.Open):
-				filePath = gui.showFileDialog(self._lastOpenPath, [('All files', '*')], style='open')
+				filePath = gui.showFileDialog(self._lastOpenPath, [*getAllFileExtensionFilters(), ALL_FILES_FILTER], selectedFilter=ALL_FILES_FILTER, style='open')
 				if filePath:
-					self._tryOpenOrSelectDocument(filePath)
+					getSession().tryOpenOrSelectDocument(filePath)
 
 			isEnabled = True  # bool(document) and os.path.exists(document.filePathForDisplay)
 			if button(icon=icons.save, tip='Save File', **btnKwArgs, enabled=isEnabled, windowShortcut=QKeySequence.Save):
@@ -180,19 +215,15 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			if button(icon=icons.saveAs, tip='Save As', **btnKwArgs, enabled=bool(document), windowShortcut=KEY_SEQUENCES.SAVE_AS):
 				self._saveAs(gui, document)
 
-			if button(icon=icons.refresh, tip='Reload File', **btnKwArgs, enabled=bool(document), windowShortcut=QKeySequence.Refresh):
-				filePath = document.filePath
-				if filePath:
-					try:
-						document.loadFromFile()
-					except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-						getSession().showAndLogError(e)
+			if button(icon=icons.refresh, tip='Reload File', **btnKwArgs, enabled=bool(document) and not document.isNew, windowShortcut=QKeySequence.Refresh):
+				if not document.isNew:
+					getSession().reloadDocument(document)
 
-			with gui.hLayout(horizontalSpacing=0):
-				if button(icon=icons.undo, tip='Undo', roundedCorners=maskCorners(btnCorners, CORNERS.LEFT), overlap=btnOverlap, margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Undo):
+			with gui.hLayout(seamless=True, roundedCorners=btnCorners, overlap=btnOverlap):
+				if button(icon=icons.undo, tip='Undo', margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Undo):
 					document.undoRedoStack.undoOnce()
 
-				if button(icon=icons.redo, tip='Redo', roundedCorners=maskCorners(btnCorners, CORNERS.RIGHT), overlap=adjustOverlap(btnOverlap, (1, None, None, None)), margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Redo):
+				if button(icon=icons.redo, tip='Redo', margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Redo):
 					document.undoRedoStack.redoOnce()
 
 			if button(icon=icons.camera, tip='parse MCFunction', **btnKwArgs, enabled=document is not None):
@@ -203,7 +234,13 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				# 	filePath = "D:/Programming/Python/MinecraftDataPackEditor/sessions/mcFunction.ast"
 				# 	with openOrCreate(filePath, "w") as outFfile:
 				# 		formatVal((func, errors), s=FW(outFfile))
-				# 	self._tryOpenOrSelectDocument(filePath)
+				# 	getSession().tryOpenOrSelectDocument(filePath)
+
+	def projectMenu(self, gui: DatapackEditorGUI):
+		hasOpenedProject = getSession().hasOpenedProject
+		with gui.popupMenu() as menu:
+			menu.addAction('Open / Create Project', lambda: self._openOrCreateProjectDialog(gui), icon=icons.project),
+			menu.addAction('Close Project', lambda: self._closeProjectDialog(gui), icon=icons.project, enabled=hasOpenedProject),
 
 	def toolBarGUI2(self, gui: DatapackEditorGUI):
 		# TODO: INVESTIGATE calculation of hSpacing:
@@ -220,8 +257,8 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 
 		with gui.hLayout(horizontalSpacing=hSpacing):
 			hasOpenedProject = getSession().hasOpenedProject
-			if button(icon=icons.globeAlt, tip='Switch Project' if hasOpenedProject else 'Load Project', **btnKwArgs, default=not hasOpenedProject):
-				self._loadWorldDialog(gui)
+			if button(icon=dpeIcons.project_chevronDown, tip='Project...', **btnKwArgs, default=not hasOpenedProject):
+				self.projectMenu(gui)
 
 			docToolBarGUI = gui.subGUI(type(gui), lambda g: self.documentToolBarGUI(g, button=button, btnCorners=btnCorners, btnOverlap=btnOverlap, btnMargins=btnMargins), hSizePolicy=SizePolicy.Fixed.value)
 			getSession().documents.onSelectedDocumentChanged.reconnect('documentToolBarGUI', docToolBarGUI.host.redraw)
@@ -249,17 +286,39 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 
 			if applicationSettings.debugging.isDeveloperMode:
 				gui.hSeparator()
+				if button(icon=icons.chevronDown, tip='developer tools', **btnKwArgs, enabled=True):
+					self.devToolsDropDownGUI(gui)
 
-				if button(icon=icons.stopwatch, tip='Profile Parsing', **btnKwArgs, enabled=True):
-					self.profileParsingDialog.show()
+				# if button(icon=icons.stopwatch, tip='Profile Parsing', **btnKwArgs, enabled=True):
+				# 	self.profileParsingDialog.show()
 
-				Cat.CatPythonGUI.GUI.pythonGUI.profilingEnabled = gui.toggleSwitch(Cat.CatPythonGUI.GUI.pythonGUI.profilingEnabled, enabled=True)
-				gui.label('P')
+				# pythonGUI.PROFILING_ENABLED = gui.toggleSwitch(pythonGUI.PROFILING_ENABLED, enabled=True)
+				# gui.label('P')
 
 			if self.isToolbarInTitleBar:
 				gui.hSeparator()
 
-	def bottomPanelGUI(self, gui: DatapackEditorGUI, roundedCorners: RoundedCorners, cornerRadius: float):
+	def devToolsDropDownGUI(self, gui: DatapackEditorGUI):
+		def setProfilingEnabled(checked):
+			pythonGUI.PROFILING_ENABLED = checked
+
+		def setLayoutInfoAsToolTip(checked):
+			pythonGUI.ADD_LAYOUT_INFO_AS_TOOL_TIP = checked
+
+		def setDebugLayout(checked):
+			Widgets.DEBUG_LAYOUT = checked
+
+		def setDebugPaintEvent(checked):
+			catWidgetMixins.DO_DEBUG_PAINT_EVENT = checked
+
+		with gui.popupMenu(atMousePosition=False) as popup:
+			popup.addAction('Profile Parsing', self.profileParsingDialog.show, icon=icons.stopwatch)
+			popup.addAction('profiling Enabled', setProfilingEnabled, icon=icons.stopwatch, checkable=True, checked=pythonGUI.PROFILING_ENABLED)
+			popup.addToggle('layout info as tool tip', pythonGUI.ADD_LAYOUT_INFO_AS_TOOL_TIP, setLayoutInfoAsToolTip)
+			popup.addToggle('debug layout', Widgets.DEBUG_LAYOUT, setDebugLayout)
+			popup.addToggle('debug paint event', catWidgetMixins.DO_DEBUG_PAINT_EVENT, setDebugPaintEvent)
+
+	def bottomPanelGUI(self, gui: DatapackEditorGUI):
 		document = self.selectedDocument
 
 		# connect to errorChanged Signal:
@@ -269,46 +328,37 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		getSession().documents.onSelectedDocumentChanged.reconnect('bottomPanelGUI', lambda: gui.host.redrawLater('onSelectedDocumentChanged'))
 
 		tabs = [
-			(('Errors', TabOptions(icon=icons.error)),     (
+			(TabOptions('Errors', icon=icons.error),     (
 				lambda *args, **kwargs: self._gitConsoleRefreshTimer.stop() or self.documentErrorsGUI(*args, **kwargs),
 				None
 			)),
-			(('Console', TabOptions(icon=icons.terminal),), (
+			(TabOptions('Console', icon=icons.terminal), (
 				lambda *args, **kwargs: None,
 				lambda *args, **kwargs: None,
 			)),
 		]
-		with gui.vLayout(verticalSpacing=0, contentsMargins=NO_MARGINS):
-			with gui.hPanel(contentsMargins=(0, 0, gui.margin, 0), overlap=(0, -1), roundedCorners=maskCorners(roundedCorners, CORNERS.TOP), windowPanel=True):
+		with gui.vLayout(seamless=True):
+			with gui.hLayout(seamless=True):  # , windowPanel=True):
 				index = gui.tabBar(
 					[tab[0] for tab in tabs],
 					drawBase=False,
 					documentMode=True,
 					expanding=False,
 					position=TabPosition.North,
-					overlap=(0, -1),
-					roundedCorners=maskCorners(roundedCorners, CORNERS.TOP_LEFT),
-					# cornerRadius=cornerRadius,
 					hSizePolicy=SizePolicy.Expanding.value
 				)
 				guiFunc, toolBtnFunc = tabs[index][1]
 
 				if toolBtnFunc is not None:
-					toolBtnFunc(gui, overlap=(0, -1))
+					toolBtnFunc(gui)
 					gui.hSeparator()
 				if document is not None:
-					gui.errorsSummaryGUI(getErrorCounts([], document.errors))
+					gui.errorsSummaryGUI(getErrorCounts(document.errors))
 
-			with gui.vPanel(
-				vSizePolicy=SizePolicy.Expanding.value,
-				contentsMargins=NO_MARGINS,
-				roundedCorners=maskCorners(roundedCorners, CORNERS.BOTTOM),
-				cornerRadius=cornerRadius,
-				windowPanel=True
-			):
-				guiFunc(gui, roundedCorners=maskCorners(roundedCorners, CORNERS.BOTTOM), cornerRadius=cornerRadius)
+			with gui.vLayout(seamless=True):  # vSizePolicy=SizePolicy.Expanding.value, seamless=True, windowPanel=True):
+				guiFunc(gui)
 
-	def documentErrorsGUI(self, gui: DatapackEditorGUI, roundedCorners: RoundedCorners, cornerRadius: float) -> None:
+	def documentErrorsGUI(self, gui: DatapackEditorGUI) -> None:
 		document: Optional[Document] = self.selectedDocument
 		if document is not None:
 			errors: Sequence[GeneralError] = document.errors
@@ -318,8 +368,6 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		gui.errorsList(
 			errors,
 			onDoubleClicked=lambda e: (document.locatePosition(e.position, e.end) if e.position is not None else None) or self._gui.redrawGUI(),
-			roundedCorners=roundedCorners,
-			cornerRadius=cornerRadius
 		)
 
 	# Dialogs:
@@ -335,8 +383,13 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			QApplication.setStyle(newStyle)
 
 	def _saveAsDialog(self, gui: DatapackEditorGUI, document: Document) -> str:
-		# TODO: better save dialog (with proper filters)
-		filePath = gui.showFileDialog(document.filePathForDisplay, [('All files', '*')], style='save')
+		dt = getDocumentTypeForDocument(document)
+		if dt is not None:
+			selectedFilter = dt.fileExtensionFilter
+			selectedFilter = [(selectedFilter[0], f) for f in selectedFilter[1]][0]
+		else:
+			selectedFilter = ALL_FILES_FILTER
+		filePath = gui.showFileDialog(document.unitedFilePath, [*getAllFileExtensionFilters(expanded=True), ALL_FILES_FILTER], selectedFilter=selectedFilter, style='save')
 		if filePath:
 			self._lastOpenPath = os.path.dirname(filePath)
 		return filePath
@@ -359,13 +412,20 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		return documentType
 
 	@staticmethod
-	def _loadWorldDialog(gui: DatapackEditorGUI) -> None:
+	def _closeProjectDialog(gui: DatapackEditorGUI) -> None:
 		session = getSession()
-		oldPath = session.project.path
-		# oldPath = applicationSettings.minecraft.savesLocation
-		newPath = gui.showFolderDialog(oldPath)
-		if newPath is not None:
-			session.openProject(newPath)
+		if gui.askUser("Close Project", "Are you sure?", style=MessageBoxStyle.Warning):
+			getSession().closeProject()
+
+	@staticmethod
+	def _openOrCreateProjectDialog(gui: DatapackEditorGUI) -> None:
+		with gui.overlay():
+			page, isOk = NewProjectDialog.showModal()
+			if not isOk:
+				return
+
+			with gui.waitCursor():
+				page.acceptAction(gui)
 
 	# Fields:
 
@@ -399,38 +459,14 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		filePath = self._saveAsDialog(gui, document)
 		if filePath:
 			document.filePath = filePath
-			try:
-				document.saveToFile()
-			except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-				getSession().showAndLogError(e)
-				return False
-			return True
+			getSession().saveDocument(document)
 		return False
 
 	def _saveOrSaveAs(self, gui: DatapackEditorGUI, document: Document) -> bool:
-		filePath = document.filePath
-		if not filePath:
+		if document.isNew:
 			return self._saveAs(gui, document)
 		else:
-			try:
-				document.saveToFile()
-			except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-				getSession().showAndLogError(e)
-				return False
-			return True
-
-	def _tryOpenOrSelectDocument(self, filePath: FilePath, selectedSpan: Optional[Span] = None):
-		# find Document if is already open:
-		if filePath is None:
-			cd = getSession().documents.currentDocument
-			if cd is None:
-				return
-			filePath = cd.filePath
-		try:
-			QTimer.singleShot(250, lambda: getSession().documents.openOrShowDocument(filePath, selectedSpan))
-			self._gui.redrawGUILater()
-		except (FileNotFoundError, PermissionError) as e:  # TODO: catch other openFile Errors
-			getSession().showAndLogError(e)
+			return getSession().saveDocument(document)
 
 	def _safelyCloseDocument(self, gui: DatapackEditorGUI, document: Document):
 		getSession().documents.safelyCloseDocument(document)
@@ -451,19 +487,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				self._saveOrSaveAs(self._gui, doc)  # will reset documentChanged
 				return not doc.documentChanged
 			elif msgBoxResult == MessageBoxButton.Discard:
-				return True  # close it anyways
+				return True  # close it anyway
 			else:  # Cancel
 				return False
 
 	@property
 	def selectedDocument(self) -> Optional[Document]:
 		return getSession().documents.currentView.selectedDocument
-
-					
-					
-					
-					
-					
-					
-					
-					
