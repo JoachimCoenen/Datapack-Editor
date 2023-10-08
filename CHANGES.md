@@ -10,6 +10,9 @@
    * Added `globalStyles.whiteSpaceStyle` setting to color schemes.
  * Misc
    * Multiple Minecraft versions can be configured simultaneously.
+ * JSON Schemas:
+   * Added schema for loot tables (minecraft:loot_table)
+   * Added schema for item modifiers (minecraft:item_modifier)
 
 ### Improvements
  * Improved layout of the Setup Dialog shown when the application is started for the first time.
@@ -21,7 +24,7 @@
  * Saving an untitled file now correctly opens the Save As dialog instead of just saving the file to `untitled n`.
  * Fixed potential crashes when loading or saving files, settings, etc.
  * Fixed renamed files not being recognized correctly.
- * Fixed parsing of numbers in json
+ * Fixed parsing of numbers in JSON files
  * Fixed crashes caused by the DocumentLexer.
  * Fixed syntax highlighting desyncing from actual text.
  * Fixed index mapping for escape sequences in JSON strings.

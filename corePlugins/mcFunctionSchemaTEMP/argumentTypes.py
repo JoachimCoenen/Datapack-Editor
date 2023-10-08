@@ -383,6 +383,13 @@ MINECRAFT_ITEM_STACK = ArgumentType(
 	* <code>stick{foo:bar}</code>""",
 )
 
+MINECRAFT_LOOT_TABLE = ArgumentType(
+	name='minecraft:loot_table',
+	description="{{Arg desc|je=resource_location}}",
+	description2="""resource location of a loot table.""",
+	examples="""""",
+)
+
 MINECRAFT_MESSAGE = ArgumentType(
 	name='minecraft:message',
 	description="Must be a plain text. Can include spaces as well as target selectors. The game replaces entity selectors in the message with the list of selected entities' names, which is formatted as \"name1 and name2\" for two entities, or \"name1, name2, ... and namen\" for n entities.",
@@ -494,10 +501,7 @@ MINECRAFT_PREDICATE = ArgumentType(
 	name='minecraft:predicate',
 	description="{{Arg desc|je=resource_location}}",
 	description2="""resource location of a predicate.""",
-	examples="""
-	* {{cd|foo}}
-	* {{cd|foo:bar}}
-	* {{cd|012}}""",
+	examples="""""",
 )
 
 MINECRAFT_RESOURCE_LOCATION = ArgumentType(
@@ -506,8 +510,7 @@ MINECRAFT_RESOURCE_LOCATION = ArgumentType(
 	description2="""""",
 	examples="""
 	* {{cd|foo}}
-	* {{cd|foo:bar}}
-	* {{cd|012}}""",
+	* {{cd|foo:bar}}""",
 )
 
 MINECRAFT_ROTATION = ArgumentType(
@@ -674,6 +677,7 @@ __all__ = [
 	'MINECRAFT_ITEM_PREDICATE',
 	'MINECRAFT_ITEM_SLOT',
 	'MINECRAFT_ITEM_STACK',
+	'MINECRAFT_LOOT_TABLE',
 	'MINECRAFT_MESSAGE',
 	'MINECRAFT_MOB_EFFECT',
 	'MINECRAFT_NBT_COMPOUND_TAG',

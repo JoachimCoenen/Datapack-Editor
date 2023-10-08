@@ -2013,7 +2013,7 @@ def buildMCFunctionSchemaFor_v1_17(version: FullMCData) -> MCFunctionSchema:
 	BASIC_COMMAND_INFO[b'locate'].next = [
 		ArgumentSchema(
 			name='StructureType',
-			type=makeLiteralsArgumentType([strToBytes(s.path) for s in version.structures]),
+			type=makeLiteralsArgumentType([strToBytes(s.path) for s in version.structures] or [b'NO_OPTIONS']),
 		),
 	]
 
@@ -2103,7 +2103,7 @@ def buildMCFunctionSchemaFor_v1_17(version: FullMCData) -> MCFunctionSchema:
 			next=[
 				ArgumentSchema(
 					name='loot_table',
-					type=MINECRAFT_RESOURCE_LOCATION,
+					type=MINECRAFT_LOOT_TABLE,
 					next=[
 						ArgumentSchema(
 							name='pos',
@@ -2129,7 +2129,7 @@ def buildMCFunctionSchemaFor_v1_17(version: FullMCData) -> MCFunctionSchema:
 			next=[
 				ArgumentSchema(
 					name='loot_table',
-					type=MINECRAFT_RESOURCE_LOCATION,
+					type=MINECRAFT_LOOT_TABLE,
 				),
 			]
 		),

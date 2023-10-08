@@ -571,6 +571,14 @@ class PredicateHandler(ResourceLocationLikeHandler):
 		return ResourceLocationSchema('', 'predicate')
 
 
+@argumentContext(MINECRAFT_LOOT_TABLE.name)
+class ResourceLocationHandler(ResourceLocationLikeHandler):
+
+	@property
+	def schema(self) -> ResourceLocationSchema:
+		return ResourceLocationSchema('', 'loot_table')
+
+
 @argumentContext(MINECRAFT_RESOURCE_LOCATION.name)
 class ResourceLocationHandler(ResourceLocationLikeHandler):
 

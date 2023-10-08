@@ -1,0 +1,182 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$definitions": {
+
+    "constant_number": {
+      "$type": "union",
+      "options": [
+        { "$type": "float" },
+        { "$type": "integer" }
+      ]
+    },
+		
+    "number_provider": {
+      "$type": "union",
+      "options": [
+        {  "$defRef": "constant_number" },
+        {
+          "$type": "object",
+          "properties": {
+            "type": {
+              "optional": false,
+              "value": {
+                "$type": "enum",
+                "options": {
+                  "constant": "A constant value.",
+                  "minecraft:constant": "A constant value.",
+                  "uniform": "A random number following a uniform distribution between two values (inclusive).",
+                  "minecraft:uniform": "A random number following a uniform distribution between two values (inclusive).",
+                  "binomial": "A random number following a binomial distribution.",
+                  "minecraft:binomial": "A random number following a binomial distribution.",
+                  "score": "To query and use a scoreboard value.",
+                  "minecraft:score": "To query and use a scoreboard value.",
+                  "": "",
+                  "minecraft:": ""
+                }
+              },
+              "description": "The number provider type."
+            },
+            "value": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": {
+                "constant": { "$defRef": "constant_number" },
+                "minecraft:constant": { "$defRef": "constant_number" }
+              },
+              "description": "The exact value."
+            },
+            "min": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": {
+                "uniform": { "$defRef": "number_provider" },
+                "minecraft:uniform": { "$defRef": "number_provider" }
+              },
+              "description": "The minimum value."
+            },
+            "max": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": {
+                "uniform": { "$defRef": "number_provider" },
+                "minecraft:uniform": { "$defRef": "number_provider" }
+              },
+              "description": "The maximum value."
+            },
+            "n": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": {
+                "binomial": { "$defRef": "number_provider" },
+                "minecraft:binomial": { "$defRef": "number_provider" }
+              },
+              "description": "The amount of trials."
+            },
+            "p": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": {
+                "binomial": { "$defRef": "number_provider" },
+                "minecraft:binomial": { "$defRef": "number_provider" }
+              },
+              "description": "The probability of success on an individual trial."
+            },
+            "target": {
+              "optional": true,
+              "default": "score",
+              "decidingProp": "type",
+              "values": {
+                "score": { "$defRef": "%%16!" },
+                "minecraft:score": { "$defRef": "%%16!" }
+              }
+            },
+            "score": {
+              "optional": true,
+              "default": "target",
+              "decidingProp": "type",
+              "values": {
+                "score": { "$defRef": "%%17!" },
+                "minecraft:score": { "$defRef": "%%17!" }
+              },
+              "description": "The scoreboard objective to query on the selected player name or UUID."
+            },
+            "scale": {
+              "optional": true,
+              "default": 1.0,
+              "decidingProp": "type",
+              "values": {
+                "score": { "$type": "float" },
+                "minecraft:score": { "$type": "float" }
+              },
+              "description": "The scoreboard objective to query on the selected player name or UUID."
+            }
+          }
+        }
+      ]
+    },
+    "%uuid": {
+      "$type": "string",
+      "type": "minecraft:uuid"
+    },
+    "loot_context_killer": {
+      "$type": "enum",
+      "options": {
+        "this": "the invoking entity",
+        "minecraft:this": "the invoking entity",
+        "killer": "the entity that killed the invoking entity",
+        "minecraft:killer": "the entity that killed the invoking entity",
+        "direct_killer": "the entity that *directly* killed the invoking entity",
+        "minecraft:direct_killer": "the entity that *directly* killed the invoking entity",
+        "killer_player": "only select the killer if they are a player",
+        "minecraft:killer_player": "only select the killer if they are a player"
+      }
+    },
+    "%%16!": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "properties": {
+            "type": {
+              "optional": false,
+              "value": {
+                "$type": "enum",
+                "options": {
+                  "fixed": "manually specify a player name or UUID",
+                  "minecraft:fixed": "manually specify a player name or UUID",
+                  "context": "use an entity from loot context",
+                  "minecraft:context": "use an entity from loot context"
+                }
+              },
+              "description": "Set to `fixed` to manually specify a player name or UUID. Set to `context` to use an entity from loot context."
+            },
+            "name": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": {
+                "fixed": { "$defRef": "%uuid" },
+                "minecraft:fixed": { "$defRef": "%uuid" }
+              },
+              "description": "Included only if type is set to `fixed`. Specifies the name of the player, or the entity's UUID (in hyphenated hexadecimal format) whose score to query."
+            },
+            "target": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": {
+                "context": { "$defRef": "loot_context_killer" },
+                "minecraft:context": { "$defRef": "loot_context_killer" }
+              },
+              "description": "Included only if type is set to context. Specifies an entity from loot context to query the score of. Use `this` for the invoking entity, `killer` for the entity that killed the invoking entity, `direct_killer` for the entity that *directly* killed the invoking entity, or `player_killer` to select the killer only if they are a player."
+            }
+          }
+        },
+        { "$defRef": "loot_context_killer" }
+      ]
+    },
+    "%%17!": {
+      "$type": "string",
+      "type": "minecraft:objective"
+    }
+  }
+}

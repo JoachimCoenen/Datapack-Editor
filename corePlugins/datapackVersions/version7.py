@@ -111,6 +111,14 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/item_type'),
 		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).tags.items
 	),
+	# EntryHandlerInfo( # TODO: later Versions only
+	# 	folder=f'data/{NAME_SPACE_VAR}/tags/instruments/',
+	# 	extension='.json',
+	# 	isTag=True,
+	# 	includeSubdirs=True,
+	# 	buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/instrument'),
+	# 	getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).tags.instruments
+	# ),
 
 	# WorldGenInfos:
 	EntryHandlerInfo(
@@ -283,6 +291,8 @@ def loadJsonSchemas() -> dict[str, JsonSchema]:
 		'minecraft:predicate': JSON_SCHEMA_LOADER.loadSchema('minecraft:predicate', os.path.join(v7Dir, 'predicate.json')),
 		'minecraft:recipe': JSON_SCHEMA_LOADER.loadSchema('minecraft:recipe', os.path.join(v7Dir, 'recipe.json')),
 		'minecraft:pack': JSON_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v7Dir, 'pack.json')),
+		'minecraft:loot_table': JSON_SCHEMA_LOADER.loadSchema('minecraft:loot_table', os.path.join(v7Dir, 'loot_table.json')),
+		'minecraft:item_modifier': JSON_SCHEMA_LOADER.loadSchema('minecraft:item_modifier', os.path.join(v7Dir, 'item_modifier.json')),
 	}
 	return v7Schemas
 

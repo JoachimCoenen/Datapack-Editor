@@ -78,7 +78,7 @@ def validateJsonNumber(data: JsonData, schema: JsonNumberSchema, *, errorsIO: li
 		errorsIO.append(wrongTypeError(schema, data))
 		return
 
-	if schema.typeName == JsonIntSchema.typeName and type(data.data) is float:
+	if schema.typeName == JsonIntSchema.typeName and type(data.data) is float and int(data.data) != data.data:
 		msg = EXPECTED_BUT_GOT_MSG.format('integer', 'float')
 		errorsIO.append(JsonSemanticsError(msg, data.span))
 

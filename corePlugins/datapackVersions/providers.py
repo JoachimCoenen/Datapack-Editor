@@ -1,4 +1,3 @@
-from math import inf
 from typing import Optional
 
 from base.model.utils import MDStr
@@ -17,12 +16,16 @@ def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[JsonObject
 	for state in states:
 		valueDescr: MDStr = MDStr("")
 		if state.values:
-			value = JsonStringOptionsSchema(options={val: MDStr("") for val in state.values}, description=valueDescr, allowMultilineStr=False)
+			values = state.values
 		elif state.type == BRIGADIER_BOOL.name:
-			value = JsonBoolSchema(description=valueDescr)
-		elif state.type == BRIGADIER_INTEGER.name:
-			range_ = state.range or (-inf, inf)
-			value = JsonIntSchema(minVal=range_[0], maxVal=range_[1], description=valueDescr)
+			values = ['true', 'false']
+		elif state.type == BRIGADIER_INTEGER.name and state.range is not None:
+			values = [str(i) for i in range(state.range[0], state.range[1] + 1)]
+		else:
+			values = None
+
+		if values is not None:
+			value = JsonStringOptionsSchema(options={val: MDStr("") for val in values}, description=valueDescr, allowMultilineStr=False)
 		else:
 			value = JsonStringSchema(type=state.type, description=valueDescr, allowMultilineStr=False)
 

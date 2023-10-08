@@ -17,6 +17,19 @@ MINECRAFT_NBT_COMPOUND_TAG = JsonArgType(
 	* <code>{foo:bar}</code>"""),
 )
 
+MINECRAFT_NBT_PATH = JsonArgType(
+	name='minecraft:nbt_path',
+	description=MDStr("Must be an NBT path."),
+	description2=MDStr(""""""),
+	examples=MDStr("""
+	* {{cd|foo}}
+	* {{cd|foo.bar}}
+	* {{cd|foo[0]}}
+	* {{cd|[0]}}
+	* <code>[]</code>
+	* <code>{foo:bar}</code>"""),
+)
+
 MINECRAFT_NBT_TAG = JsonArgType(
 	name='minecraft:nbt_tag',
 	description=MDStr("Must be an NBT tag of any type in SNBT format."),

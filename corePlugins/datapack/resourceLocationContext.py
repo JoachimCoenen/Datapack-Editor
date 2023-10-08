@@ -299,6 +299,40 @@ class CommandStorageContext(ResourceLocationContext):
 		self._checkIsResourceLocation(node, errorsIO)
 
 
+@resourceLocationContext('loot_table', allowTags=False)
+class LootTableContext(ResourceLocationContext):
+
+	@property
+	def name(self) -> str:
+		return 'loot_table'
+
+	def tagsFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
+		return ()
+
+	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
+		return (contents.loot_tables,) if (contents := dp.indexBundles.get(DatapackContents)) is not None else ()
+
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
+		return ()
+
+
+@resourceLocationContext('instrument', allowTags=False)
+class InstrumentContext(ResourceLocationContext):
+
+	@property
+	def name(self) -> str:
+		return 'instrument'
+
+	def tagsFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
+		return (contents.tags.instruments,) if (contents := dp.indexBundles.get(DatapackContents)) is not None else ()
+
+	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
+		return ()
+
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
+		return mc.instruments
+
+
 @resourceLocationContext('any_no_tag', allowTags=False)
 @resourceLocationContext('any', allowTags=True)
 class AnyContext(ResourceLocationContext):

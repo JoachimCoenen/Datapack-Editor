@@ -87,7 +87,7 @@ class JsonMeta(MetaInfo):
 			return MDStr('')
 
 		from corePlugins.json import JSON_ID
-		json, errors = parse(file, filePath=self.filePath, language=JSON_ID, schema=None, allowMultilineStr=True)
+		json, errors = parse(file, filePath=self.filePath, language=JSON_ID, schema=None)
 
 		from corePlugins.json.core import JsonObject, JsonString
 		if json is not None and isinstance(json, JsonObject):
@@ -111,6 +111,7 @@ class TagInfos(IndexBundle):
 	functions: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 	game_events: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 	items: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	instruments: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 
 
 @dataclass
