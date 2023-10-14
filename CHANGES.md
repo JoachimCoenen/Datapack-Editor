@@ -3,6 +3,9 @@
  * Added Minecraft version selector to project creation dialog.
  * Improved appearance of project creation dialog.
 
+### Fixes
+ * Removed unnecessary button.
+
 
 ## Version 0.5.0-alpha
 ### Features 

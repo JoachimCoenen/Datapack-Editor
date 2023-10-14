@@ -226,16 +226,6 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				if button(icon=icons.redo, tip='Redo', margins=btnMargins, hSizePolicy=SizePolicy.Fixed.value, enabled=bool(document), windowShortcut=QKeySequence.Redo):
 					document.undoRedoStack.redoOnce()
 
-			if button(icon=icons.camera, tip='parse MCFunction', **btnKwArgs, enabled=document is not None):
-				gui.showErrorDialog('parse MCFunction', 'This feature ha not been implemented yet')
-				# if self.selectedDocument is not None:
-				# 	text = self.selectedDocument.strContent
-				# 	func, errors = parseMCFunction(getSession().minecraftData.commands, text)
-				# 	filePath = "D:/Programming/Python/MinecraftDataPackEditor/sessions/mcFunction.ast"
-				# 	with openOrCreate(filePath, "w") as outFfile:
-				# 		formatVal((func, errors), s=FW(outFfile))
-				# 	getSession().tryOpenOrSelectDocument(filePath)
-
 	def projectMenu(self, gui: DatapackEditorGUI):
 		hasOpenedProject = getSession().hasOpenedProject
 		with gui.popupMenu() as menu:
