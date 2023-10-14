@@ -50,7 +50,7 @@ class DatapackProjectCreatorData(SerializableDataclass):
 	)
 
 	description: str = field(
-		default='[{"text":" "new_datapack" ","color":"white"}{"text":"\nCreated with","color":"white"},{"text":"Data Pack Editor","color":"yellow"}] ',
+		default='[{"text": "new_datapack", "color":"white"}, {"text":"\\nCreated with","color":"white"}, {"text":"Data Pack Editor", "color":"yellow"}] ',
 		metadata=catMeta(
 			kwargs=dict(label='Description', isMultiline=True),
 		)
