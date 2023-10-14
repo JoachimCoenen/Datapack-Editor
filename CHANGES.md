@@ -1,3 +1,8 @@
+## Next Version
+### Improvements
+ * Added Minecraft version selector to project creation dialog.
+
+
 ## Version 0.5.0-alpha
 ### Features 
  * Plugin support

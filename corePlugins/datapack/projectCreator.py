@@ -12,7 +12,7 @@ from Cat.utils.utils import openOrCreate
 from base.model.pathUtils import joinFilePath, FilePathStr
 from base.model.project.project import Project, ProjectRoot
 from base.model.project.projectCreator import ProjectCreator
-from .aspect import DatapackAspect
+from .aspect import DatapackAspect, allRegisteredMinecraftVersions, minecraftVersionValidator
 from .datapackContents import NAME_SPACE_VAR
 from .dpVersions import getAllDPVersions
 from corePlugins.minecraft.resourceLocation import isNamespaceValid
@@ -41,9 +41,6 @@ def validateNamespace(namespace: str) -> Optional[pd.ValidatorResult]:
 @dataclass
 class DatapackProjectCreatorData(SerializableDataclass):
 
-	# name: str = field(metadata=catMeta(
-	# 	kwargs=dict(label='Name'),
-	# ))
 	namespace: str = field(
 		default='new_datapack',
 		metadata=catMeta(
@@ -65,6 +62,17 @@ class DatapackProjectCreatorData(SerializableDataclass):
 			kwargs=dict(label='Datapack Version'),
 			decorators=[
 				pd.ComboBox(choices=property(lambda self: getAllDPVersions().keys())),
+			]
+		)
+	)
+
+	minecraftVersion: str = field(
+		default='1.17',
+		metadata=catMeta(
+			kwargs=dict(label='Minecraft Version'),
+			decorators=[
+				pd.ComboBox(choices=property(lambda self: allRegisteredMinecraftVersions()), editable=True),
+				pd.Validator(minecraftVersionValidator),
 			]
 		)
 	)
@@ -104,6 +112,7 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 		gui.propertyField(data, 'namespace')
 		gui.propertyField(data, 'description')
 		gui.propertyField(data, 'dpVersion')
+		gui.propertyField(data, 'minecraftVersion')
 		gui.propertyField(data, 'generateDependenciesJson')
 		gui.propertyField(data, 'generatePackMcMeta')
 		gui.propertyField(data, 'generateSkeleton')
@@ -111,8 +120,13 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 
 	def initializeProject(self, gui: DatapackEditorGUI, project: Project) -> None:
 		data = self.data
-		project.aspects.get(DatapackAspect).dpVersion = data.dpVersion
+		# setup aspect:
+		datapackAspect = project.aspects.get(DatapackAspect)
+		datapackAspect.dpVersion = data.dpVersion
+		datapackAspect.minecraftVersion = data.minecraftVersion
+		# setup structure (roots, etc.)
 		newRoot = project.addRoot(ProjectRoot(project.name, project.path))
+		# setup files:
 		if data.generatePackMcMeta:
 			self.generatePackMcMetaFile(newRoot)
 		if data.generateDependenciesJson:
