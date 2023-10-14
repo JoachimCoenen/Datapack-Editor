@@ -128,11 +128,14 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# additional
+# pyCharm
 .idea/
+
+# additional
 profiling/
 sessions/
 settings.json
 dist/
 releases/
 trials/
+temp/
