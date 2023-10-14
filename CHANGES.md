@@ -1,3 +1,8 @@
+## Next Version
+### Fixes
+ * Fixed the description property in pack.mcmeta to be a [raw Json Text](https://minecraft.wiki/w/Raw_JSON_text_format) instead of a plain string
+
+
 ## Version 0.5.1-alpha
 ### Improvements
  * Added Minecraft version selector to project creation dialog.

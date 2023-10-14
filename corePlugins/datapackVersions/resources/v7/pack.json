@@ -1,5 +1,8 @@
 {
 	"$schema": "dpe/json/schema",
+  "$libraries": {
+    "rawJsonText": "rawJsonText-library.json"
+  },
 	"description": "Configuration file defining the metadata of a data pack for Minecraft.",
 	"$body": {
 		"$type": "object",
@@ -9,7 +12,7 @@
 				"$type": "object",
 				"properties": {
 					"pack_format": { "$type": "integer" },
-					"description": { "$type": "string" }
+					"description": { "$defRef": "rawJsonText:rawJsonText" }
 				}
 			}
 		}
