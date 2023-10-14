@@ -150,6 +150,7 @@ class OpenExistingDialogPage(DialogPage[OpenExistingData]):
 class CreateNewDialogPage(DialogPage[CreateNewData]):
 
 	creators: list[ProjectCreator] = field(default_factory=list)
+	projectOptionsShown: bool = field(default=True, init=False)
 
 	def __post_init__(self) -> None:
 		self.creators = [
@@ -166,7 +167,8 @@ class CreateNewDialogPage(DialogPage[CreateNewData]):
 			gui.propertyField(data, 'parentDirectory')
 			gui.propertyField(data, 'resultingDirectoryPath')
 
-		with gui.collapsibleGroupBox("Project Options") as optionsShown:
+		with gui.collapsibleGroupBox("Project Options", isOpen=self.projectOptionsShown) as optionsShown:
+			self.projectOptionsShown = optionsShown
 			if optionsShown:
 				self._creatorsGUI(gui)
 
@@ -177,7 +179,7 @@ class CreateNewDialogPage(DialogPage[CreateNewData]):
 		creators = self.creators
 		with gui.vLayout(seamless=True), gui.hSplitter() as splitter:
 			with splitter.addArea(stretchFactor=0, seamless=True):
-				selectedCreator: Optional[ProjectCreator] = gui.tree(
+				treeResult = gui.tree(
 					DataListBuilder(
 						creators,
 						labelMaker=lambda c, i: c.title,
@@ -188,9 +190,13 @@ class CreateNewDialogPage(DialogPage[CreateNewData]):
 					),
 					headerVisible=True,
 					loadDeferred=True,
-				).selectedItem
+				)
+				if creators and treeResult.selectedItem is None:
+					gui.selectRow(treeResult.selectionModel, 0)
+
 			with splitter.addArea(stretchFactor=1, seamless=True):
 				with gui.scrollBox():
+					selectedCreator: Optional[ProjectCreator] = treeResult.selectedItem
 					if selectedCreator is not None:
 						selectedCreator.onGUI(gui)
 
@@ -294,7 +300,7 @@ class NewProjectDialog(PythonGUIDialog):
 		guiPages = self.guiPages.copy()
 		with gui.tabWidget() as tabs:
 			for pageId, dialogPage in guiPages.items():
-				with tabs.addView(dialogPage.tabOptions, id_=pageId, windowPanel=True):
+				with tabs.addView(dialogPage.tabOptions, id_=pageId, windowPanel=True, contentsMargins=(-1, -1, -1, 0)):
 					dialogPage.onGUI(gui)
 
 		self.selectedPageId = tabs.selectedView
@@ -369,4 +375,3 @@ class NewProjectDialog(PythonGUIDialog):
 					else:
 						continue
 			return page, True
-

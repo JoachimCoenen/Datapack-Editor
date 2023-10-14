@@ -420,7 +420,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	@staticmethod
 	def _openOrCreateProjectDialog(gui: DatapackEditorGUI) -> None:
 		with gui.overlay():
-			page, isOk = NewProjectDialog.showModal()
+			page, isOk = NewProjectDialog.showModal(width=int(680 * gui.scale), height=int(680 * gui.scale))
 			if not isOk:
 				return
 

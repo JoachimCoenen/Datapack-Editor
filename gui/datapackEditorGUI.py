@@ -252,13 +252,13 @@ class DatapackEditorGUI(AutoGUI):
 				key = event.key()
 				if key == Qt.Key_Down:
 					context.index += 1
-					context.selectionModel.setCurrentIndex(context.selectionModel.model().index(context.index, 0, QModelIndex()), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+					self.selectRow(context.selectionModel, context.index)
 					result = True
 				elif key == Qt.Key_Up:
 					context.index -= 1
 					if context.index < 0:
 						context.index = len(context.filteredChoices)-1
-					context.selectionModel.setCurrentIndex(context.selectionModel.model().index(context.index, 0, QModelIndex()), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+					self.selectRow(context.selectionModel, context.index)
 					result = True
 				elif key == Qt.Key_Tab:
 					# do Tab Completion:
@@ -336,7 +336,7 @@ class DatapackEditorGUI(AutoGUI):
 
 				if len(context.filteredChoices) == 1:
 					context.index = 0
-					context.selectionModel.setCurrentIndex(context.selectionModel.model().index(context.index, 0, QModelIndex()), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+					self.selectRow(context.selectionModel, context.index)
 
 			return context
 
@@ -469,10 +469,13 @@ class DatapackEditorGUI(AutoGUI):
 		# 		treeResult.treeView.scrollTo(currentIndex)  has bad performance characteristics :'(
 
 		if len(context.filteredChoices) == 1:
-			model_index = selectionModel.model().index(0, 0, QModelIndex())
-			selectionModel.setCurrentIndex(model_index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+			self.selectRow(selectionModel, 0)
 		context.selectedValue = treeResult.selectedItem
 		return context
+
+	def selectRow(self, selectionModel: QItemSelectionModel, row: int):
+		model_index = selectionModel.model().index(row, 0, QModelIndex())
+		selectionModel.setCurrentIndex(model_index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
 	def filteredTreeWithSearchField(
 			self,
