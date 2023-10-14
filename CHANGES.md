@@ -1,4 +1,4 @@
-## Next Version
+## Version 0.5.1-alpha
 ### Improvements
  * Added Minecraft version selector to project creation dialog.
  * Improved appearance of project creation dialog.

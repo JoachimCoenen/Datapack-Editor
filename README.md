@@ -12,19 +12,24 @@ An advanced editor for Minecraft Datapacks for Minecraft 1.17 and 1.18+. _Curren
 
 
 ## Features
-- Open or create a new datapack
-- Syntax highlighting 
-- Error checking
-- Rich code suggestions and code completion for `.mcFunction` and `.json` files
-- custom themes
-- Ctrl-Click to follow symbols (functions & function tags, block tags, ... )
-- Multi-tab & multi-view editor
-- Quickly find and open files
-- Search all files
-- Validate all files (for `.mcFunction` and `.json` files)
-- Add, rename and delete files and folders via the left-side tree view
-- supports dependencies between datapacks via `dependencies.json`
-- Program remembers last session after closing
+- Basic features
+  - Syntax highlighting 
+  - Error checking
+  - Rich code suggestions and code completion for `.mcFunction` and `.json` files
+  - Add, rename and delete files and folders via the left-side tree view
+- Customization
+  - custom themes
+  - plugin support
+- Navigation:
+  - Ctrl-Click to follow symbols (functions & function tags, block tags, ... )
+  - Multi-tab & multi-view editor
+  - Quickly find and open files with `Ctrl`+`P`
+  - Search all files
+- Project
+  - Open or create a new datapack project
+  - Validate all files (for `.mcFunction` and `.json` files) within a project
+  - Multi-root projects
+  - supports dependencies between datapacks / projects via `dependencies.json`
 
 
 ## Keyboard Shortcuts
