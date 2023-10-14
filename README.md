@@ -80,7 +80,7 @@ This program is not affiliated with Mojang Studios.
 [MainWindow1_IMG]:    screenshots/mainWindow.png    "Main Window"
 [QuickFind_IMG]:      screenshots/quickFind.png     "Quick Find"
 
-[MCWikiGeneralDisclaimer_LINK]:  https://github.com/JoachimCoenen/Datapack-Editor/releases "Minecraft Wiki:General disclaimer"
+[MCWikiGeneralDisclaimer_LINK]:  https://minecraft.wiki/w/Minecraft_Wiki:General_disclaimer "Minecraft Wiki:General disclaimer"
 
 [Releases_LINK]:                 https://github.com/JoachimCoenen/Datapack-Editor/releases "Datapack-Editor/releases"
 [DownloadLatest_LINK]:           https://github.com/JoachimCoenen/Datapack-Editor/releases/latest  "latest"

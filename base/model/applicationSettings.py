@@ -189,7 +189,7 @@ class AboutSettings(SerializableDataclass):
 
 	homepage: str = field(default="""<font><a href="https://www.github.com/JoachimCoenen/Datapack-Editor">github.com/JoachimCoenen/Datapack-Editor</a></font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Homepage', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
-	disclaimer: str = field(default="""<font>Some information is taken from the Minecraft Wiki (see <a href="https://minecraft.gamepedia.com/Minecraft_Wiki:General_disclaimer">Minecraft Wiki:General disclaimer</a>).</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Disclaimer', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
+	disclaimer: str = field(default="""<font>Some information is taken from the Minecraft Wiki (see <a href="https://minecraft.wiki/w/Minecraft_Wiki:General_disclaimer">Minecraft Wiki:General disclaimer</a>).</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Disclaimer', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
 	affiliation: str = field(default="""<font>This program is not affiliated with Mojang Studios.</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
