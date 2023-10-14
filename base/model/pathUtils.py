@@ -1,4 +1,3 @@
-#  Copyright (c) 2021 ASCon Systems GmbH. All Rights Reserved
 from __future__ import annotations
 import os
 import re

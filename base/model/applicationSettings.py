@@ -7,7 +7,7 @@ import traceback
 from abc import ABC
 from dataclasses import dataclass, field
 from json import JSONDecodeError
-from typing import final, TypeVar, Type, Optional
+from typing import final, Type, Optional
 
 from PyQt5.Qsci import QsciScintillaBase
 from PyQt5.QtCore import Qt
@@ -156,24 +156,6 @@ class DebugSettings(SerializableDataclass):
 			serialize=False
 		)
 	)
-
-	loadedPlugins: list[tuple[str]] = field(
-		init=False,
-		metadata=catMeta(
-			readOnly=True,
-			serialize=False,
-			decorators=[pd.Title("Loaded Plugins")],
-			kwargs=dict(headers=("plugins",), label=None)
-		)
-	)
-
-
-def getLoadedPlugins(self) -> list[tuple[str]]:
-	from base.plugin import PLUGIN_SERVICE
-	return [(plugin.name,) for plugin in PLUGIN_SERVICE.activePlugins]
-
-
-DebugSettings.loadedPlugins = property(getLoadedPlugins)
 
 
 @final

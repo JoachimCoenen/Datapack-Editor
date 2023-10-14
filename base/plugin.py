@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sys import exit  # required when running packaged as an executable. See: https://stackoverflow.com/questions/45066518/nameerror-name-exit-is-not-defined
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -173,10 +174,28 @@ class PluginBase(ABC):
 
 	@property
 	def name(self) -> str:
+		"""
+		The plugin identifier usually in the format "<namespace>:<plugin_name>_plugin".
+		::
+			E.g.:
+			  dpe:json_plugin
+			  dpe:mc_function_plugin
+			  cce:project_files
+		:return:
+		"""
 		return self._name
 
 	def initPlugin(self) -> None:
 		pass
+
+	@property
+	def displayName(self) -> str:
+		"""
+		Override this property to give your plugin a proper display name.
+		By defaults returns this plugins' identifier (name).
+		:return:
+		"""
+		return self.name
 
 	@abstractmethod
 	def dependencies(self) -> set[str]:
@@ -253,4 +272,5 @@ def loadAllPlugins(baseModuleName: str, pluginsDir: FilePathStr) -> None:
 			# all multi-file plugins (plugins inside a package
 			FolderAndFileFilter('/*', r'__init__\.py'),
 		],
-		initMethodName='initPlugin')
+		initMethodName='initPlugin'
+	)

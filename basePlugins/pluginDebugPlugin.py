@@ -16,13 +16,13 @@ from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFu
 
 
 def initPlugin():
-	PLUGIN_SERVICE.registerPlugin('PluginDebug', PluginDebugPlugin())
+	PLUGIN_SERVICE.registerPlugin('PluginDebugPlugin', PluginDebugPlugin())
 
 
 class PluginDebugPlugin(PluginBase):
 
 	def dependencies(self) -> set[str]:
-		return set()
+		return {'PluginPlugin'}
 
 	def optionalDependencies(self) -> set[str]:
 		return {'ProjectFiles'}  # ordering of gui elements
