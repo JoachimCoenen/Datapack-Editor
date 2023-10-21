@@ -7,17 +7,17 @@ from typing import Optional, Type, Sequence, Callable, TypeVar, Collection, Any,
 from PyQt5.QtCore import QTimer
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileModifiedEvent, FileDeletedEvent, FileMovedEvent, FileClosedEvent
 
-from Cat import undoRedo
-from Cat.GUI import propertyDecorators as pd
-from Cat.GUI.components import codeEditor
-from Cat.GUI.enums import FileExtensionFilter
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from Cat.undoRedo import UndoRedoStack2, MakeMementoIfDiffFunc
-from Cat.utils import utils
-from Cat.utils.logging_ import logWarning
-from Cat.utils.profiling import logInfo, logError, TimedMethod
+from cat import undoRedo
+from cat.GUI import propertyDecorators as pd
+from cat.GUI.components import codeEditor
+from cat.GUI.enums import FileExtensionFilter
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.undoRedo import UndoRedoStack2, MakeMementoIfDiffFunc
+from cat.utils import utils
+from cat.utils.logging_ import logWarning
+from cat.utils.profiling import logInfo, logError, TimedMethod
 
-from Cat.utils.signals import CatSignal
+from cat.utils.signals import CatSignal
 from base.model import filesystemEvents
 from base.model.defaultSchemaProvider import getSchemaMapping
 from base.model.parsing.contextProvider import parseNPrepare, getContextProvider

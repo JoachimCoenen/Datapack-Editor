@@ -5,10 +5,10 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import NewType, TypeVar, Generic, Type, Optional, Iterator, Any, Callable, cast, overload, Mapping
 
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from Cat.utils.collections_ import getIfKeyIssubclass, AddToDictDecorator
-from Cat.utils.formatters import formatVal
-from Cat.utils.logging_ import logFatal
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils.collections_ import getIfKeyIssubclass, AddToDictDecorator
+from cat.utils.formatters import formatVal
+from cat.utils.logging_ import logFatal
 
 AspectType = NewType('AspectType', str)
 

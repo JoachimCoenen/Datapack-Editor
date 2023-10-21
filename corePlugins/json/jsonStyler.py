@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, Callable, Type
 
-from Cat.utils.collections_ import AddToDictDecorator
+from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum
 from .core import *
 from base.model.parsing.tree import Node

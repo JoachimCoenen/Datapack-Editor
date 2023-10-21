@@ -7,9 +7,9 @@ from typing import Optional, ClassVar, final
 
 from recordclass import as_dataclass
 
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
-from Cat.utils.logging_ import logWarning
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils.graphs import collectAndSemiTopolSortAllNodes
+from cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
 from base.model.pathUtils import FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
 from base.model.aspect import AspectDict, Aspect, SerializableDataclassWithAspects

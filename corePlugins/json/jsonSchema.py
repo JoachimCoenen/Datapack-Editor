@@ -7,8 +7,8 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
 from typing import Optional, TypeVar, Type, Callable, Mapping, Any, Generator, AbstractSet, Generic, TypeAlias, final
 
-from Cat.utils import Nothing, Anything
-from Cat.utils.collections_ import AddToDictDecorator
+from cat.utils import Nothing, Anything
+from cat.utils.collections_ import AddToDictDecorator
 from . import JSON_ID
 from .core import *
 from base.model.parsing.bytesUtils import strToBytes

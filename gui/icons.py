@@ -2,9 +2,9 @@ import os
 
 from PyQt5.QtGui import QIcon
 
-from Cat.GUI.components import catWidgetMixins
-from Cat.GUI.icons import CompositionMode, iconCombiner, iconFromSVG, _Icons as CatIcons, iconGetter
-from Cat.utils import getExePath
+from cat.GUI.components import catWidgetMixins
+from cat.GUI.icons import CompositionMode, iconCombiner, iconFromSVG, _Icons as CatIcons, iconGetter
+from cat.utils import getExePath
 
 _ICON_IN_TREE_OPTIONS = dict(color_on=lambda: catWidgetMixins.standardBaseColors.Icon)
 

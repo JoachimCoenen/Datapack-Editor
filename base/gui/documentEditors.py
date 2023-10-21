@@ -6,13 +6,13 @@ from typing import TypeVar, Generic, final, Optional, Type
 from PyQt5.Qsci import QsciLexer
 from PyQt5.QtCore import Qt, pyqtSignal
 
-from Cat.GUI import SizePolicy, getStyles
-from Cat.GUI.pythonGUI import EditorBase
-from Cat.GUI.components import codeEditor
-from Cat.utils import format_full_exc, override
-from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
-from Cat.utils.formatters import indentMultilineStr
-from Cat.utils.profiling import logError
+from cat.GUI import SizePolicy, getStyles
+from cat.GUI.pythonGUI import EditorBase
+from cat.GUI.components import codeEditor
+from cat.utils import format_full_exc, override
+from cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
+from cat.utils.formatters import indentMultilineStr
+from cat.utils.profiling import logError
 from base.model.documents import TextDocument, Document, ParsedDocument
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.utils import LanguageId

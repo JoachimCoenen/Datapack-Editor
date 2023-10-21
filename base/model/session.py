@@ -7,10 +7,10 @@ from typing import Callable, ClassVar, Optional, overload
 
 from PyQt5.QtCore import QTimer
 
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from Cat.utils import format_full_exc, getExePath, openOrCreate, Singleton
-from Cat.utils.logging_ import logError
-from Cat.utils.signals import CatBoundSignal, CatSignal
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils import format_full_exc, getExePath, openOrCreate, Singleton
+from cat.utils.logging_ import logError
+from cat.utils.signals import CatBoundSignal, CatSignal
 from base.model.documents import Document
 from base.model.pathUtils import FilePath, FilePathStr, FilePathTpl, unitePathTpl
 from base.model.project.project import Project

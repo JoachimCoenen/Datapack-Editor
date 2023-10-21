@@ -1,6 +1,6 @@
 from copy import copy
 
-from Cat.utils.collections_ import ChainedList
+from cat.utils.collections_ import ChainedList
 from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunction.command import CommandSchema, KeywordSchema, ArgumentSchema, TERMINAL, COMMANDS_ROOT, SwitchSchema, MCFunctionSchema
 from base.model.parsing.bytesUtils import strToBytes

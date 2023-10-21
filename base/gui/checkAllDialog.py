@@ -8,13 +8,13 @@ from typing import Optional, Collection
 from PyQt5.QtCore import pyqtSignal, QEventLoop, QObject, Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QDialog, QSizePolicy, QWidget
 
-from Cat.GUI import SizePolicy
-from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.GUI.utilities import connect
+from cat.GUI import SizePolicy
+from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from cat.GUI.utilities import connect
 from gui.icons import icons
-from Cat.utils import format_full_exc, BusyIndicator
-from Cat.utils.formatters import SW, formatDictOnly
-from Cat.utils.profiling import TimedMethod, logError
+from cat.utils import format_full_exc, BusyIndicator
+from cat.utils.formatters import SW, formatDictOnly
+from cat.utils.profiling import TimedMethod, logError
 from base.model.project.project import Root
 from base.model.session import getSession
 from basePlugins.projectFiles import FilesIndex

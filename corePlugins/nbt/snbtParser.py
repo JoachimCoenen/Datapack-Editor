@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, Type, Union, Callable, NamedTuple, overload, TypeVar, ClassVar
 
-from Cat.utils.collections_ import OrderedDict
+from cat.utils.collections_ import OrderedDict
 from base.model.messages import *
 from .snbtTokenizer import SNBTTokenizer, Token, TokenType
 from .tags import *

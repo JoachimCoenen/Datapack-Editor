@@ -6,20 +6,20 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDialog
 from qtpy import QtCore
 
-from Cat.GUI.autoGUI import AutoGUI
-from Cat.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, getStyles
-from Cat.GUI.components import catWidgetMixins
-from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from cat.GUI.autoGUI import AutoGUI
+from cat.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, getStyles
+from cat.GUI.components import catWidgetMixins
+from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from gui.icons import icons
-from Cat.utils import getExePath, logging_
-from Cat.utils.formatters import FW
-from Cat.utils.logging_ import loggingIndentInfo
+from cat.utils import getExePath, logging_
+from cat.utils.formatters import FW
+from cat.utils.logging_ import loggingIndentInfo
 from base.model import filesystemEvents
 from base.model.session import loadSessionFromFile
 from base.plugin import PLUGIN_SERVICE, loadAllPlugins, getBasePluginsDir, getCorePluginsDir, getPluginsDir
 from gui.datapackEditorGUI import DatapackEditorGUI
 from mainWindow import MainWindow, WindowId
-from Cat.utils.profiling import Timer
+from cat.utils.profiling import Timer
 from base.model.applicationSettings import saveApplicationSettings, loadApplicationSettings, resetApplicationSettings, \
 	getApplicationSettings
 

@@ -7,7 +7,7 @@ from recordclass import as_dataclass
 
 import markdown
 
-from Cat.utils import escapeForXmlTextContent, GlobalGeneratingCache, strings
+from cat.utils import escapeForXmlTextContent, GlobalGeneratingCache, strings
 
 LanguageId = NewType('LanguageId', str)
 
@@ -195,7 +195,7 @@ def wrapInMarkdownCode(text: str) -> MDStr:
 
 
 def addStyle(message: str, /, style: str) -> MDStr:
-	from Cat.GUI import PythonGUI
+	from cat.GUI import PythonGUI
 	md = f'<div style="{PythonGUI.helpBoxStyles[style]}">{message}</div>'
 	return MDStr(md)
 

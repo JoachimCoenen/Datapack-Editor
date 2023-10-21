@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from Cat.utils.collections_ import OrderedMultiDict
+from cat.utils.collections_ import OrderedMultiDict
 from corePlugins.minecraft.resourceLocation import ResourceLocationNode
 from corePlugins.mcFunction.command import ParsedArgument, CommandPart
 from corePlugins.nbt.tags import CompoundTag

@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from Cat.utils.collections_ import AddToDictDecorator
+from cat.utils.collections_ import AddToDictDecorator
 from .core import *
 from base.model.messages import *
 from base.model.utils import Message, Span, GeneralError, Position

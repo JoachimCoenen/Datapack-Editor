@@ -3,10 +3,10 @@ from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeVar, Iterable, Optional, Type, final
 
-from Cat.utils import Decorator
-from Cat.utils.collections_ import AddToDictDecorator
-from Cat.utils.collections_.collections_ import IfKeyIssubclassGetter
-from Cat.utils.logging_ import logWarning
+from cat.utils import Decorator
+from cat.utils.collections_ import AddToDictDecorator
+from cat.utils.collections_.collections_ import IfKeyIssubclassGetter
+from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import parse, IndexMapper
 from base.model.parsing.tree import Node, Schema
 from base.model.pathUtils import FilePath

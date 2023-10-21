@@ -6,9 +6,9 @@ from operator import itemgetter
 from typing import Callable, Literal, NamedTuple, Optional, Protocol, Union, TypeVar
 from zipfile import ZipFile, BadZipFile
 
-from Cat.processFiles import makeSearchPath, processRecursively
-from Cat.utils.collections_ import Stack
-from Cat.utils.profiling import logWarning
+from cat.processFiles import makeSearchPath, processRecursively
+from cat.utils.collections_ import Stack
+from cat.utils.profiling import logWarning
 
 
 FilePathStr = str

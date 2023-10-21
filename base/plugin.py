@@ -9,12 +9,12 @@ from typing import Protocol, Iterable, TYPE_CHECKING, Optional, Type
 
 from PyQt5.Qsci import QsciLexerCustom
 
-from Cat.GUI.components.codeEditor import CodeEditorLexer
-from Cat.GUI.pythonGUI import TabOptions
-from Cat.utils import getExePath
-from Cat.utils.collections_ import AddToDictDecorator
-from Cat.utils.graphs import getCycles, semiTopologicalSort2
-from Cat.utils.logging_ import logError, logWarning, logInfo, logFatal, loggingIndentInfo
+from cat.GUI.components.codeEditor import CodeEditorLexer
+from cat.GUI.pythonGUI import TabOptions
+from cat.utils import getExePath
+from cat.utils.collections_ import AddToDictDecorator
+from cat.utils.graphs import getCycles, semiTopologicalSort2
+from cat.utils.logging_ import logError, logWarning, logInfo, logFatal, loggingIndentInfo
 from base.gui.documentLexer import DocumentLexer
 from base.gui.styler import registerStyler, CatStyler
 from base.model.applicationSettings import SettingsAspect, getApplicationSettings, ApplicationSettings

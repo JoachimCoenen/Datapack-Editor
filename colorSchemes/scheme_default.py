@@ -2,8 +2,8 @@ from typing import Callable
 
 from PyQt5.QtGui import QColor
 
-from Cat.GUI.components.catWidgetMixins import BaseColors
-from Cat.utils.collections_ import AddToDictDecorator
+from cat.GUI.components.catWidgetMixins import BaseColors
+from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, StyleIdEnum
 from base.model.utils import LanguageId
 from base.model.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors, StyleFont

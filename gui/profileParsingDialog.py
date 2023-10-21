@@ -4,10 +4,10 @@ from typing import Optional
 
 from PyQt5.QtWidgets import QDialog, QWidget
 
-from Cat.GUI import SizePolicy
-from Cat.GUI.components.treeBuilders import DataListBuilder
-from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.utils.profiling import ProfiledAction, TimedAction
+from cat.GUI import SizePolicy
+from cat.GUI.components.treeBuilders import DataListBuilder
+from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from cat.utils.profiling import ProfiledAction, TimedAction
 from gui.datapackEditorGUI import DatapackEditorGUI
 from base.model.documents import Document
 from base.model.session import getSession

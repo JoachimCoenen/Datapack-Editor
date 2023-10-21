@@ -4,8 +4,8 @@ from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
 from typing import Type, Optional, ClassVar
 
-from Cat.utils import Decorator
-from Cat.utils.collections_ import AddToDictDecorator
+from cat.utils import Decorator
+from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StyleId
 from .argumentTypes import *
 from .command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument

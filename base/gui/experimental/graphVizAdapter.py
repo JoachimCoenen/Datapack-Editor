@@ -8,8 +8,8 @@ from typing import Optional
 import graphviz
 from graphviz.graphs import BaseGraph
 
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from Cat.utils.formatters import indentMultilineStr
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils.formatters import indentMultilineStr
 
 
 class GraphRenderError(Exception):

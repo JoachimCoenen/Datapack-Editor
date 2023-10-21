@@ -7,11 +7,11 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import NewType, Optional, Callable, Iterator, cast, Sequence, ClassVar
 
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from Cat.utils import override
-from Cat.utils.collections_ import Stack
-from Cat.utils.profiling import logInfo
-from Cat.utils.signals import CatSignal
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils import override
+from cat.utils.collections_ import Stack
+from cat.utils.profiling import logInfo
+from cat.utils.signals import CatSignal
 from base.model.utils import Span
 from base.model.pathUtils import FilePath, toDisplayPath
 from base.model.documents import Document, DocumentTypeDescription, loadDocument

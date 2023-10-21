@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import Iterable, Optional, Callable, cast, Any
 
-from Cat.utils import Decorator, flatmap
+from cat.utils import Decorator, flatmap
 from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import joinFilePath, dirFromFilePath

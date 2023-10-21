@@ -5,8 +5,8 @@ from typing import Optional, Any
 
 from PyQt5.QtGui import QIcon
 
-from Cat.GUI.components.treeBuilders import DataTreeBuilder
-from Cat.GUI.pythonGUI import TabOptions
+from cat.GUI.components.treeBuilders import DataTreeBuilder
+from cat.GUI.pythonGUI import TabOptions
 from gui.icons import icons
 from base.model.project.index import Index, IndexBundle
 from base.model.project.project import Root

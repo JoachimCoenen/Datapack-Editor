@@ -1,8 +1,8 @@
 import os
 from dataclasses import dataclass, field
 
-from Cat.GUI import propertyDecorators as pd
-from Cat.Serializable.serializableDataclasses import catMeta
+from cat.GUI import propertyDecorators as pd
+from cat.Serializable.serializableDataclasses import catMeta
 from base.model.applicationSettings import SettingsAspect
 from base.model.aspect import AspectType
 

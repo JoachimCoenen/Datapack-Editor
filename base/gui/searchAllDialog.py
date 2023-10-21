@@ -6,16 +6,16 @@ from PyQt5.QtCore import QEventLoop, pyqtSignal, QTimer
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
-from Cat.GUI import CORNERS, PythonGUI
-from Cat.GUI.components.Widgets import HTMLDelegate
-from Cat.GUI.components.codeEditor import SearchOptions, SearchMode
-from Cat.GUI.components.treeBuilders import DataTreeBuilder
-from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.GUI.utilities import connectOnlyOnce
+from cat.GUI import CORNERS, PythonGUI
+from cat.GUI.components.Widgets import HTMLDelegate
+from cat.GUI.components.codeEditor import SearchOptions, SearchMode
+from cat.GUI.components.treeBuilders import DataTreeBuilder
+from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from cat.GUI.utilities import connectOnlyOnce
 from gui.icons import icons
-from Cat.utils import escapeForXml
-from Cat.utils.collections_ import OrderedMultiDict
-from Cat.utils.profiling import TimedMethod
+from cat.utils import escapeForXml
+from cat.utils.collections_ import OrderedMultiDict
+from cat.utils.profiling import TimedMethod
 from base.model.project.project import Root
 from base.model.session import getSession
 from basePlugins.projectFiles import FilesIndex

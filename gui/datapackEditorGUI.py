@@ -14,18 +14,18 @@ from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy, QTreeView
 
-from Cat.GUI import Style, RoundedCorners, Overlap, CORNERS, TreeBuilderABC
-from Cat.GUI.autoGUI import AutoGUI
-from Cat.GUI.components.Widgets import CatTextField, HTMLDelegate
-from Cat.GUI.components.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, IndexSpan
-from Cat.GUI.components.treeBuilders import DataListBuilder
-from Cat.GUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
-from Cat.GUI.enums import ResizeMode, SizePolicy
-from Cat.GUI.pythonGUI import MenuItemData
-from Cat.Serializable.serializableDataclasses import SerializableDataclass
-from Cat.Serializable.utils import PropertyDecorator, get_args
+from cat.GUI import Style, RoundedCorners, Overlap, CORNERS, TreeBuilderABC
+from cat.GUI.autoGUI import AutoGUI
+from cat.GUI.components.Widgets import CatTextField, HTMLDelegate
+from cat.GUI.components.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, IndexSpan
+from cat.GUI.components.treeBuilders import DataListBuilder
+from cat.GUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
+from cat.GUI.enums import ResizeMode, SizePolicy
+from cat.GUI.pythonGUI import MenuItemData
+from cat.Serializable.serializableDataclasses import SerializableDataclass
+from cat.Serializable.utils import PropertyDecorator, get_args
 from gui.icons import icons
-from Cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
+from cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
 from base.model.applicationSettings import getApplicationSettings
 from base.model.documents import ErrorCounts
 from base.model.pathUtils import FilePath, unitePath

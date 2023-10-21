@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, Callable, Type
 
-from Cat.utils.collections_ import AddToDictDecorator
+from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum
 from.tags import *
 from base.model.parsing.tree import Node
@@ -118,7 +118,7 @@ class SNBTStyler(CatStyler[NBTTag]):
 
 
 # def run():
-# 	from Cat.utils.formatters import formatVal
+# 	from cat.utils.formatters import formatVal
 # 	styler = SNBTStyler(lambda x, y: None, {}, 5)
 # 	print(f"styler.localStylesCount = {styler.localStylesCount}")
 # 	print(f"styler.localStyles = {formatVal(styler.localStyles)}")

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import TypeVar, Generic, ClassVar, Optional, Collection
 
-from Cat.utils.collections_ import OrderedDict
+from cat.utils.collections_ import OrderedDict
 from base.model.parsing.tree import Node, Schema
 from base.model.utils import LanguageId
 

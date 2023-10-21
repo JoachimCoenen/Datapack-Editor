@@ -3,7 +3,7 @@ for Minecraft version 1.17
 """
 from typing import AbstractSet, Mapping
 
-from Cat.utils.collections_ import FrozenDict
+from cat.utils.collections_ import FrozenDict
 from corePlugins.minecraft_data.customData import Gamerule
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes

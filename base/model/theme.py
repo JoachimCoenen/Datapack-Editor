@@ -9,12 +9,12 @@ from typing import TypeVar, Generic, Union, Optional, Iterable
 
 from PyQt5.QtGui import QFont, QColor
 
-from Cat.GUI.components.catWidgetMixins import BaseColors
-from Cat.processFiles import processRecursively
-from Cat.utils import getExePath
-from Cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
-from Cat.utils.logging_ import logDebug, logWarning, logError
-from Cat.utils.profiling import TimedFunction
+from cat.GUI.components.catWidgetMixins import BaseColors
+from cat.processFiles import processRecursively
+from cat.utils import getExePath
+from cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
+from cat.utils.logging_ import logDebug, logWarning, logError
+from cat.utils.profiling import TimedFunction
 from base.model.utils import LanguageId
 from base.modules import loadAllModules, FolderAndFileFilter
 
@@ -308,7 +308,7 @@ def currentColorScheme() -> ColorScheme:
 
 
 def currentColorSchemeUpdated() -> None:
-	from Cat.GUI.components import catWidgetMixins
+	from cat.GUI.components import catWidgetMixins
 	uiColors = currentColorScheme().uiColors
 	catWidgetMixins.setGUIColors(uiColors)
 

@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Optional, Sequence, Union
 
-from Cat.utils import escapeForXml
-from Cat.utils.collections_ import Stack
+from cat.utils import escapeForXml
+from cat.utils.collections_ import Stack
 from .command import *
 from .utils import CommandSyntaxError, EXPECTED_ARGUMENT_SEPARATOR_MSG
 from .stringReader import StringReader

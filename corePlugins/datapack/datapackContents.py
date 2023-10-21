@@ -3,8 +3,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional, TypeVar, Type, Callable, Mapping
 
-from Cat.utils.profiling import logError
-from Cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty
+from cat.utils.profiling import logError
+from cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty
 from base.model.aspect import AspectType
 from base.model.project.index import Index, IndexBundle
 from base.model.parsing.parser import parse

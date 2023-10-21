@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from Cat.utils import first
+from cat.utils import first
 from base.gui.styler import StyleId
 from base.model.utils import LanguageId
 from corePlugins.mcFunction.command import ParsedArgument

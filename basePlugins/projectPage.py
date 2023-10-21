@@ -6,13 +6,13 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 from recordclass import as_dataclass
 
-from Cat.GUI import SizePolicy, NO_MARGINS, MessageBoxStyle, propertyDecorators as pd
-from Cat.GUI.components.treeBuilders import DataTreeBuilder
-from Cat.GUI.pythonGUI import TabOptions
-from Cat.Serializable.serializableDataclasses import getDecorators
+from cat.GUI import SizePolicy, NO_MARGINS, MessageBoxStyle, propertyDecorators as pd
+from cat.GUI.components.treeBuilders import DataTreeBuilder
+from cat.GUI.pythonGUI import TabOptions
+from cat.Serializable.serializableDataclasses import getDecorators
 from gui.icons import icons
-from Cat.utils import format_full_exc
-from Cat.utils.logging_ import logError
+from cat.utils import format_full_exc
+from cat.utils.logging_ import logError
 from base.model.aspect import getAspectsForClass
 from base.model.project.project import Project, ProjectRoot, Root, DependencyDescr, ProjectAspect
 from base.model.session import getSession

@@ -5,10 +5,10 @@ from typing import Optional
 
 from PyQt5.QtCore import Qt
 
-import Cat.GUI.propertyDecorators as pd
-from Cat.GUI import SizePolicy
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from Cat.utils.utils import openOrCreate
+import cat.GUI.propertyDecorators as pd
+from cat.GUI import SizePolicy
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils.utils import openOrCreate
 from base.model.pathUtils import joinFilePath, FilePathStr
 from base.model.project.project import Project, ProjectRoot
 from base.model.project.projectCreator import ProjectCreator

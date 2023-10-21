@@ -2,11 +2,11 @@ import os
 import re
 from typing import Optional, Callable, NamedTuple, Union
 
-from Cat.processFiles import processRecursively
-from Cat.utils import openOrCreate
-from Cat.utils.collections_ import AddToDictDecorator, Stack, OrderedMultiDict
-from Cat.utils.formatters import indentMultilineStr
-from Cat.utils.typing_ import replace_tuple
+from cat.processFiles import processRecursively
+from cat.utils import openOrCreate
+from cat.utils.collections_ import AddToDictDecorator, Stack, OrderedMultiDict
+from cat.utils.formatters import indentMultilineStr
+from cat.utils.typing_ import replace_tuple
 
 
 INDENT = '\t'
@@ -40,7 +40,7 @@ def addImports(text, name):
 	imports = NL.join(im for im in ALL_IMPORTS if not im.endswith(name))
 	ALL_IMPORTS.clear()
 	return (
-		f"from Cat.utils import Anything\n"
+		f"from cat.utils import Anything\n"
 		f"from {DATA_IMPORT_PREFIX}.json.argTypes import *\n"
 		f"from {DATA_IMPORT_PREFIX}.json.utils import *\n"
 		f"from model.json.core import *\n"

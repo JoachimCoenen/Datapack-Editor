@@ -2,11 +2,11 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional, Callable
 
-from Cat.GUI import propertyDecorators as pd
-from Cat.GUI.propertyDecorators import ValidatorResult
-from Cat.Serializable.serializableDataclasses import catMeta
-from Cat.utils import first
-from Cat.utils.logging_ import logWarning
+from cat.GUI import propertyDecorators as pd
+from cat.GUI.propertyDecorators import ValidatorResult
+from cat.Serializable.serializableDataclasses import catMeta
+from cat.utils import first
+from cat.utils.logging_ import logWarning
 from base.model.applicationSettings import getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.aspect import AspectType

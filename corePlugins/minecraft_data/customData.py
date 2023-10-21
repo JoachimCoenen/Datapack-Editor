@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from types import ModuleType
 from typing import Mapping, ClassVar, Sequence
 
-from Cat.utils.collections_ import FrozenDict
+from cat.utils.collections_ import FrozenDict
 from base.modules import loadAllModules, FolderAndFileFilter
 from .resourceLocation import ResourceLocation
 

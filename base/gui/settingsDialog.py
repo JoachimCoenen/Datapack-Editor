@@ -5,15 +5,15 @@ from typing import NamedTuple, Optional, Type
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
-from Cat.GUI.autoGUI import AutoGUI
-from Cat.GUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
-from Cat.GUI import CORNERS, propertyDecorators as pd
-from Cat.GUI.components.treeBuilders import DataTreeBuilder
-from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, getDecorators, getKWArg
+from cat.GUI.autoGUI import AutoGUI
+from cat.GUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
+from cat.GUI import CORNERS, propertyDecorators as pd
+from cat.GUI.components.treeBuilders import DataTreeBuilder
+from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from cat.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
+from cat.Serializable.serializableDataclasses import SerializableDataclass, getDecorators, getKWArg
 from gui.icons import icons
-from Cat.utils import showInFileSystem
+from cat.utils import showInFileSystem
 from base.model import theme
 from base.model.applicationSettings import AboutQt, ApplicationSettings, applicationSettings, setApplicationSettings,\
 	saveApplicationSettings, ColorSchemePD

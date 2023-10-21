@@ -13,10 +13,10 @@ from PyQt5.Qsci import QsciScintillaBase
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontDatabase
 
-from Cat.GUI import getStyles, propertyDecorators as pd
-from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from Cat.utils import getExePath, override
-from Cat.utils.profiling import logError
+from cat.GUI import getStyles, propertyDecorators as pd
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils import getExePath, override
+from cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory
 
 from base.model.aspect import AspectDict, Aspect, AspectType, SerializableDataclassWithAspects, getAspectsForClass

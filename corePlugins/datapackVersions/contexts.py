@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import Optional, Iterable, Any
 
-from Cat.utils.logging_ import logError
+from cat.utils.logging_ import logError
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
 from corePlugins.mcFunction.stringReader import StringReader

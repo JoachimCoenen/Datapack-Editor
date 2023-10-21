@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from Cat.utils.logging_ import logWarning, logInfo
+from cat.utils.logging_ import logWarning, logInfo
 from base.model.pathUtils import FilePathStr
 from .core import JsonSchema
 from .jsonSchema import SchemaBuilderOrchestrator

@@ -7,7 +7,7 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
 
-from Cat.utils.logging_ import logInfo, logDebug
+from cat.utils.logging_ import logInfo, logDebug
 
 
 class _Watches:

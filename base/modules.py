@@ -6,10 +6,10 @@ import sys
 from types import ModuleType
 from typing import Optional, Callable, Iterable, NamedTuple
 
-from Cat.processFiles import processRecursively
-from Cat.utils import openOrCreate, format_full_exc
-from Cat.utils.logging_ import logError, logInfo, loggingIndent, loggingIndentInfo
-from Cat.utils.profiling import TimedFunction
+from cat.processFiles import processRecursively
+from cat.utils import openOrCreate, format_full_exc
+from cat.utils.logging_ import logError, logInfo, loggingIndent, loggingIndentInfo
+from cat.utils.profiling import TimedFunction
 from base.model.pathUtils import FilePathStr, normalizeDirSeparatorsStr
 from base.model.utils import Message
 

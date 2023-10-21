@@ -7,7 +7,7 @@ from typing import AbstractSet, Mapping, ClassVar, Optional
 
 import minecraft_data
 
-from Cat.utils.collections_ import FrozenDict
+from cat.utils.collections_ import FrozenDict
 from base.model.utils import MDStr
 from .resourceLocation import ResourceLocation
 

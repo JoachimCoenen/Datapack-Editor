@@ -4,9 +4,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional, AbstractSet, Callable
 
-from Cat.utils import CachedProperty
-from Cat.utils.collections_ import OrderedMultiDict
-from Cat.utils.profiling import ProfiledFunction
+from cat.utils import CachedProperty
+from cat.utils.collections_ import OrderedMultiDict
+from cat.utils.profiling import ProfiledFunction
 from .core import *
 from .lexer import JsonTokenizer
 from .schema import enrichWithSchema, pathify

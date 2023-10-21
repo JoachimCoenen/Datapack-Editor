@@ -3,9 +3,9 @@ from typing import Callable, Optional, overload
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QPen, QBrush
 
-from Cat.GUI import PythonGUI, Style
-from Cat.GUI.components.renderArea import ArrowType, CatPainter, Pens, Polyline, Rect, Vector
-from Cat.GUI.pythonGUI import PythonGUIDialog
+from cat.GUI import PythonGUI, Style
+from cat.GUI.components.renderArea import ArrowType, CatPainter, Pens, Polyline, Rect, Vector
+from cat.GUI.pythonGUI import PythonGUIDialog
 from base.model.session import getSession
 
 try:

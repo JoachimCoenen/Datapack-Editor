@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional
 
-from Cat.utils.collections_ import AddToDictDecorator
+from cat.utils.collections_ import AddToDictDecorator
 from base.model.parsing.tree import Node, Schema, TokenLike
 from base.model.pathUtils import FilePath
 from base.model.utils import Message, ParsingError, Position, GeneralError, LanguageId, MDStr, Span, wrapInMarkdownCode, NULL_SPAN

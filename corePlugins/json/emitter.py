@@ -4,7 +4,7 @@ from collections import OrderedDict
 from functools import partial
 from typing import Any, Optional, Union, Type, Callable
 
-from Cat.utils.collections_ import AddToDictDecorator
+from cat.utils.collections_ import AddToDictDecorator
 from .core import *
 
 

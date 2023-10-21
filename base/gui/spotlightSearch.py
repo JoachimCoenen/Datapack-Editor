@@ -6,13 +6,13 @@ from PyQt5.QtGui import QFocusEvent, QFont, QKeyEvent, QMoveEvent, QResizeEvent
 from PyQt5.QtWidgets import QWidget, QLayout
 from recordclass import as_dataclass
 
-from Cat.GUI import SizePolicy
-from Cat.GUI.components.catWidgetMixins import CORNERS, NO_MARGINS, NO_OVERLAP, Overlap, RoundedCorners
-from Cat.GUI.components.Widgets import CatTextField
-from Cat.GUI.pythonGUI import PythonGUIDialog, PythonGUI
-from Cat.GUI.utilities import connect, CrashReportWrapped
-from Cat.utils.profiling import ProfiledFunction, TimedMethod
-from Cat import utils
+from cat.GUI import SizePolicy
+from cat.GUI.components.catWidgetMixins import CORNERS, NO_MARGINS, NO_OVERLAP, Overlap, RoundedCorners
+from cat.GUI.components.Widgets import CatTextField
+from cat.GUI.pythonGUI import PythonGUIDialog, PythonGUI
+from cat.GUI.utilities import connect, CrashReportWrapped
+from cat.utils.profiling import ProfiledFunction, TimedMethod
+from cat import utils
 from base.model.utils import FuzzyMatch, SearchTerms, getSearchTerms, getFuzzyMatch2
 from basePlugins.projectFiles import FilesIndex
 from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries

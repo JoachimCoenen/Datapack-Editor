@@ -7,9 +7,9 @@ from math import inf
 from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable, NamedTuple
 from weakref import ref, ReferenceType
 
-from Cat.utils import CachedProperty, Anything, Nothing
-from Cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
-from Cat.utils.logging_ import logWarning
+from cat.utils import CachedProperty, Anything, Nothing
+from cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
+from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import IndexMapper
 from base.model.parsing.tree import Node, Schema
 from base.model.utils import GeneralError, MDStr, LanguageId, Span, NULL_SPAN

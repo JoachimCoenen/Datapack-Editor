@@ -2,8 +2,8 @@ import re
 from abc import abstractmethod, ABC
 from typing import Iterable, Optional, Any, cast
 
-from Cat.utils import escapeForXml, Decorator
-from Cat.utils.profiling import logError
+from cat.utils import escapeForXml, Decorator
+from cat.utils.profiling import logError
 from base.model.parsing.contextProvider import ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
 from .argumentTypes import LiteralsArgumentType, ArgumentType
 from .command import *

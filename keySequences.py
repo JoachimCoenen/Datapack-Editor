@@ -1,7 +1,7 @@
 from PyQt5.QtGui import QKeySequence
 
-from Cat import utils
-from Cat.utils import CachedProperty
+from cat import utils
+from cat.utils import CachedProperty
 
 
 class KeySequences:

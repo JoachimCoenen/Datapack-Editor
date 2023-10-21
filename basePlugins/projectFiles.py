@@ -10,11 +10,11 @@ from PyQt5.QtGui import QIcon
 from recordclass import as_dataclass
 from watchdog.events import FileSystemEventHandler, FileClosedEvent, FileModifiedEvent, FileDeletedEvent, FileCreatedEvent, FileMovedEvent
 
-from Cat.GUI.pythonGUI import TabOptions, EditorBase, MenuItemData, SizePolicy
-from Cat.GUI.components.treeBuilders import DataTreeBuilder
-from Cat.Serializable.serializableDataclasses import catMeta
+from cat.GUI.pythonGUI import TabOptions, EditorBase, MenuItemData, SizePolicy
+from cat.GUI.components.treeBuilders import DataTreeBuilder
+from cat.Serializable.serializableDataclasses import catMeta
 from gui.icons import icons
-from Cat.utils import DeferredCallOnceMethod, openOrCreate
+from cat.utils import DeferredCallOnceMethod, openOrCreate
 from base.model import filesystemEvents
 from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDirSeparators, splitPath, normalizeDirSeparatorsStr, unitePath, \
 	fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, getAllFilesFromArchive, isExcludedDirectory

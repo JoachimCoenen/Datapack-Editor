@@ -1,4 +1,4 @@
-from Cat.utils import Anything
+from cat.utils import Anything
 from .core import *
 
 

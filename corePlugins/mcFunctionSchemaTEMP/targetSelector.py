@@ -1,7 +1,7 @@
 import re
 from typing import Optional
 
-from Cat.utils.collections_ import OrderedMultiDict
+from cat.utils.collections_ import OrderedMultiDict
 from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
 from corePlugins.mcFunction.commandContext import argumentContext, ArgumentContext, getArgumentContext, makeParsedArgument
