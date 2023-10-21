@@ -1,0 +1,3 @@
+[submodule "cat-gui"]
+	path = cat
+	url = https://github.com/JoachimCoenen/cat-gui
