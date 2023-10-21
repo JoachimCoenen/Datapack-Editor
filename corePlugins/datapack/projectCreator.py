@@ -5,9 +5,9 @@ from typing import Optional
 
 from PyQt5.QtCore import Qt
 
-import Cat.CatPythonGUI.AutoGUI.propertyDecorators as pd
-from Cat.CatPythonGUI.GUI import SizePolicy
-from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
+import Cat.GUI.propertyDecorators as pd
+from Cat.GUI import SizePolicy
+from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from Cat.utils.utils import openOrCreate
 from base.model.pathUtils import joinFilePath, FilePathStr
 from base.model.project.project import Project, ProjectRoot

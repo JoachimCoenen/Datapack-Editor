@@ -8,10 +8,10 @@ from PyQt5.QtCore import QTimer
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileModifiedEvent, FileDeletedEvent, FileMovedEvent, FileClosedEvent
 
 from Cat import undoRedo
-from Cat.CatPythonGUI.GUI import codeEditor
-from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
-from Cat.CatPythonGUI.GUI.enums import FileExtensionFilter
-from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
+from Cat.GUI import propertyDecorators as pd
+from Cat.GUI.components import codeEditor
+from Cat.GUI.enums import FileExtensionFilter
+from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from Cat.undoRedo import UndoRedoStack2, MakeMementoIfDiffFunc
 from Cat.utils import utils
 from Cat.utils.logging_ import logWarning

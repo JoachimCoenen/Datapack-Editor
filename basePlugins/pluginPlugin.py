@@ -3,13 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Type
 
-from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
-from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.AutoGUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
-from Cat.CatPythonGUI.GUI import SizePolicy
-from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
-from Cat.Serializable.dataclassJson import catMeta, SerializableDataclass
-from Cat.icons import icons
+from Cat.GUI.autoGUI import AutoGUI
+from Cat.GUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
+from Cat.GUI import SizePolicy, propertyDecorators as pd
+from Cat.GUI.components.treeBuilders import DataListBuilder
+from Cat.Serializable.serializableDataclasses import catMeta, SerializableDataclass
+from gui.icons import icons
 from base.gui.experimental.graphVizView import showGraphDialogSafe
 from base.gui.experimental.pluginGraph import buildPluginGraph
 from base.model.applicationSettings import SettingsAspect

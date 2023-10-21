@@ -2,9 +2,9 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional, Callable
 
-from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
-from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
-from Cat.Serializable.dataclassJson import catMeta
+from Cat.GUI import propertyDecorators as pd
+from Cat.GUI.propertyDecorators import ValidatorResult
+from Cat.Serializable.serializableDataclasses import catMeta
 from Cat.utils import first
 from Cat.utils.logging_ import logWarning
 from base.model.applicationSettings import getApplicationSettings

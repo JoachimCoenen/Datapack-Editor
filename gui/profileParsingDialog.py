@@ -4,9 +4,9 @@ from typing import Optional
 
 from PyQt5.QtWidgets import QDialog, QWidget
 
-from Cat.CatPythonGUI.GUI import SizePolicy
-from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
+from Cat.GUI import SizePolicy
+from Cat.GUI.components.treeBuilders import DataListBuilder
+from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from Cat.utils.profiling import ProfiledAction, TimedAction
 from gui.datapackEditorGUI import DatapackEditorGUI
 from base.model.documents import Document

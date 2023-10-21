@@ -3,9 +3,9 @@ from typing import Callable, Optional, overload
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QPen, QBrush
 
-from Cat.CatPythonGUI.GUI import PythonGUI, Style
-from Cat.CatPythonGUI.GUI.pythonGUI import PythonGUIDialog
-from Cat.CatPythonGUI.GUI.renderArea import ArrowType, CatPainter, Pens, Polyline, Rect, Vector
+from Cat.GUI import PythonGUI, Style
+from Cat.GUI.components.renderArea import ArrowType, CatPainter, Pens, Polyline, Rect, Vector
+from Cat.GUI.pythonGUI import PythonGUIDialog
 from base.model.session import getSession
 
 try:
@@ -133,11 +133,11 @@ if HAS_GRAPHVIZ:
 		return pen, brush
 
 	@overload
-	def _drawLabeledBase(cp: CatPainter, node: DotGraphLabeledBase, *, labelRect: Rect, labelStyle: str): ...
+	def _drawLabeledBase(cp: CatPainter, node: DotGraphLabeledBase, *, labelRect: Rect, labelStyle: str, pen: QPen): ...
 	@overload
-	def _drawLabeledBase(cp: CatPainter, node: DotGraphLabeledBase, *, labelPos: Vector, labelStyle: str): ...
+	def _drawLabeledBase(cp: CatPainter, node: DotGraphLabeledBase, *, labelPos: Vector, labelStyle: str, pen: QPen): ...
 
-	def _drawLabeledBase(cp: CatPainter, node: DotGraphLabeledBase, *, labelRect: Optional[Rect] = None, labelPos: Optional[Vector] = None, labelStyle: str):
+	def _drawLabeledBase(cp: CatPainter, node: DotGraphLabeledBase, *, labelRect: Optional[Rect] = None, labelPos: Optional[Vector] = None, labelStyle: str, pen: QPen):
 		if node.label is not None:
 			if True or node.label.startswith('<'):
 				doc = cp.getTextDocument('', font=node.fontname, size=node.fontsize)
@@ -176,8 +176,8 @@ if HAS_GRAPHVIZ:
 	# 		else:
 	# 			cp.text(node.label, labelRect, font=node.fontname, size=node.fontsize, pen=pen)
 
-	def _drawObjectLabel(cp: CatPainter, node: DotGraphObject, nodeRect: Rect, labelStyle: str):
-		_drawLabeledBase(cp, node, labelRect=nodeRect.adjusted(-1, -1, +2, +1), labelStyle=labelStyle)
+	def _drawObjectLabel(cp: CatPainter, node: DotGraphObject, nodeRect: Rect, labelStyle: str, pen: QPen):
+		_drawLabeledBase(cp, node, labelRect=nodeRect.adjusted(-1, -1, +2, +1), labelStyle=labelStyle, pen=pen)
 
 
 	def _drawObject(cp: CatPainter, node: DotGraphObject, nodePen: QPen, nodeBrush: QBrush, tableStyle: str):
@@ -194,11 +194,11 @@ if HAS_GRAPHVIZ:
 		else:
 			cp.borderRect(nodeRect, pen=Pens.red)
 
-		_drawObjectLabel(cp, node, nodeRect, tableStyle)
+		_drawObjectLabel(cp, node, nodeRect, tableStyle, pen=pen)
 
 
-	def _drawEdgeLabel(cp: CatPainter, edge: DotGraphEdge, labelStyle: str):
-		_drawLabeledBase(cp, edge, labelPos=p2v(edge.lp), labelStyle=labelStyle)
+	def _drawEdgeLabel(cp: CatPainter, edge: DotGraphEdge, labelStyle: str, pen: QPen):
+		_drawLabeledBase(cp, edge, labelPos=p2v(edge.lp), labelStyle=labelStyle, pen=pen)
 		# if edge.label is not None:
 		# 	doc = cp.getTextDocument('', font=edge.fontname, size=edge.fontsize)
 		# 	doc.setDefaultStyleSheet(labelStyle)
@@ -240,7 +240,7 @@ if HAS_GRAPHVIZ:
 			line = Polyline(line.values[1:], isClosed=False)
 		cp.spline(line, pen=pen)
 
-		_drawEdgeLabel(cp, edge, labelStyle)
+		_drawEdgeLabel(cp, edge, labelStyle, pen=pen)
 
 else:
 	def graphDialogInner(self: PythonGUIDialog, gui: PythonGUI, dotGraph: DotGraph) -> None:

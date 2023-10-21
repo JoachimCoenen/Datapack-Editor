@@ -8,13 +8,14 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent, QIcon
 from PyQt5.QtWidgets import QMainWindow, QApplication
 
-from Cat.CatPythonGUI.GUI import CORNERS, NO_OVERLAP, SizePolicy, RoundedCorners, pythonGUI, catWidgetMixins, Widgets
-from Cat.CatPythonGUI.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton, FileExtensionFilter
-from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.CatPythonGUI.GUI.icons import iconCombiner, CompositionMode
-from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
-from Cat.icons import icons
-from Cat.icons.icons import _Icons
+from Cat.GUI import CORNERS, NO_OVERLAP, SizePolicy, RoundedCorners
+from Cat.GUI import pythonGUI
+from Cat.GUI.components import Widgets, catWidgetMixins
+from Cat.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton, FileExtensionFilter
+from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from Cat.GUI.icons import iconCombiner, CompositionMode
+from Cat.GUI.pythonGUI import TabOptions
+from gui.icons import icons, _Icons
 from base.gui.newProjectDialog import NewProjectDialog
 from base.gui.documentsViewEditor import DocumentsViewsContainerEditor
 from gui.profileParsingDialog import ProfileParsingDialog

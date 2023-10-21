@@ -8,10 +8,10 @@ from typing import Optional, Collection
 from PyQt5.QtCore import pyqtSignal, QEventLoop, QObject, Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QDialog, QSizePolicy, QWidget
 
-from Cat.CatPythonGUI.GUI import SizePolicy
-from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.CatPythonGUI.utilities import connect
-from Cat.icons import icons
+from Cat.GUI import SizePolicy
+from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from Cat.GUI.utilities import connect
+from gui.icons import icons
 from Cat.utils import format_full_exc, BusyIndicator
 from Cat.utils.formatters import SW, formatDictOnly
 from Cat.utils.profiling import TimedMethod, logError

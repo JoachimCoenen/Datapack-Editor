@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import NewType, TypeVar, Generic, Type, Optional, Iterator, Any, Callable, cast, overload, Mapping
 
-from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
+from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from Cat.utils.collections_ import getIfKeyIssubclass, AddToDictDecorator
 from Cat.utils.formatters import formatVal
 from Cat.utils.logging_ import logFatal

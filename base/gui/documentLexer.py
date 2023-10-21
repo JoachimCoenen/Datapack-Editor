@@ -5,8 +5,8 @@ from PyQt5.Qsci import QsciLexerCustom, QsciLexer, QsciScintilla
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QColor
 
-from Cat.CatPythonGUI.GUI.codeEditor import CodeEditor, MyQsciAPIs, AutoCompletionTree, CallTipInfo, CEPosition
-from Cat.CatPythonGUI.utilities import CrashReportWrapped
+from Cat.GUI.components.codeEditor import CodeEditor, MyQsciAPIs, AutoCompletionTree, CallTipInfo, CEPosition
+from Cat.GUI.utilities import CrashReportWrapped
 from Cat.utils import override, HTMLStr
 from Cat.utils.logging_ import logWarning
 from base.gui.styler import DEFAULT_STYLE_ID, getStyler, StyleId, StylerCtx

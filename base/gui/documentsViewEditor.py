@@ -2,10 +2,10 @@ from typing import Optional
 
 from PyQt5.QtCore import Qt
 
-from Cat.CatPythonGUI.GUI.catWidgetMixins import CatFramedWidgetMixin
-from Cat.CatPythonGUI.GUI.enums import TabPosition, SizePolicy
-from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase, TabOptions
-from Cat.icons import icons
+from Cat.GUI.pythonGUI import EditorBase, TabOptions
+from Cat.GUI.components.catWidgetMixins import CatFramedWidgetMixin
+from Cat.GUI.enums import TabPosition, SizePolicy
+from gui.icons import icons
 from Cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
 from base.gui.documentEditors import getDocumentEditor

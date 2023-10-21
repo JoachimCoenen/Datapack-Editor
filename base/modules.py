@@ -6,7 +6,7 @@ import sys
 from types import ModuleType
 from typing import Optional, Callable, Iterable, NamedTuple
 
-from Cat.extensions import processRecursively
+from Cat.processFiles import processRecursively
 from Cat.utils import openOrCreate, format_full_exc
 from Cat.utils.logging_ import logError, logInfo, loggingIndent, loggingIndentInfo
 from Cat.utils.profiling import TimedFunction

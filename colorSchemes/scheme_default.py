@@ -2,7 +2,7 @@ from typing import Callable
 
 from PyQt5.QtGui import QColor
 
-from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
+from Cat.GUI.components.catWidgetMixins import BaseColors
 from Cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, StyleIdEnum
 from base.model.utils import LanguageId

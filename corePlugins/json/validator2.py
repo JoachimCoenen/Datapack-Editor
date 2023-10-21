@@ -27,8 +27,10 @@ def validateJson(data: JsonData, errorsIO: list[GeneralError]) -> None:
 		validator = getSchemaValidator(data.schema.typeName, None)
 		validator(data, data.schema, errorsIO=errorsIO)
 	else:
-		msg = NO_JSON_SCHEMA_MSG.format(data.typeName)
-		errorsIO.append(JsonSemanticsError(msg, Span(data.span.start)))
+		# error has already been logged, because no schema means this node (or one of its parents) was unexpected.
+		# msg = NO_JSON_SCHEMA_MSG.format(data.typeName)
+		# errorsIO.append(JsonSemanticsError(msg, Span(data.span.start)))
+		pass
 
 
 class ValidatorFunc(Protocol):

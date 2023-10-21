@@ -5,7 +5,7 @@ from dataclasses import replace, fields
 from PyQt5.QtGui import QColor, qGray
 import numpy as np
 
-from Cat.CatPythonGUI.GUI.catWidgetMixins import BaseColors
+from Cat.GUI.components.catWidgetMixins import BaseColors
 from base.model.theme import addColorScheme, ColorScheme, Style, StylesModifier, updateGlobalStylesToMatchUIColors, GlobalStyles
 
 

@@ -9,8 +9,8 @@ from typing import Protocol, Iterable, TYPE_CHECKING, Optional, Type
 
 from PyQt5.Qsci import QsciLexerCustom
 
-from Cat.CatPythonGUI.GUI.codeEditor import CodeEditorLexer
-from Cat.CatPythonGUI.GUI.pythonGUI import TabOptions
+from Cat.GUI.components.codeEditor import CodeEditorLexer
+from Cat.GUI.pythonGUI import TabOptions
 from Cat.utils import getExePath
 from Cat.utils.collections_ import AddToDictDecorator
 from Cat.utils.graphs import getCycles, semiTopologicalSort2

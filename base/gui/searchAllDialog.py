@@ -6,13 +6,13 @@ from PyQt5.QtCore import QEventLoop, pyqtSignal, QTimer
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
-from Cat.CatPythonGUI.GUI import CORNERS, PythonGUI
-from Cat.CatPythonGUI.GUI.Widgets import HTMLDelegate
-from Cat.CatPythonGUI.GUI.codeEditor import SearchOptions, SearchMode
-from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.CatPythonGUI.GUI.treeBuilders import DataTreeBuilder
-from Cat.CatPythonGUI.utilities import connectOnlyOnce
-from Cat.icons import icons
+from Cat.GUI import CORNERS, PythonGUI
+from Cat.GUI.components.Widgets import HTMLDelegate
+from Cat.GUI.components.codeEditor import SearchOptions, SearchMode
+from Cat.GUI.components.treeBuilders import DataTreeBuilder
+from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from Cat.GUI.utilities import connectOnlyOnce
+from gui.icons import icons
 from Cat.utils import escapeForXml
 from Cat.utils.collections_ import OrderedMultiDict
 from Cat.utils.profiling import TimedMethod

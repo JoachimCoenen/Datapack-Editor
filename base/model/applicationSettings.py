@@ -13,9 +13,8 @@ from PyQt5.Qsci import QsciScintillaBase
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontDatabase
 
-from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
-from Cat.CatPythonGUI.GUI import getStyles
-from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
+from Cat.GUI import getStyles, propertyDecorators as pd
+from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from Cat.utils import getExePath, override
 from Cat.utils.profiling import logError
 from PyQt5.QtWidgets import QStyleFactory

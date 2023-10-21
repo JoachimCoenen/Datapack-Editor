@@ -7,7 +7,7 @@ from typing import Callable, ClassVar, Optional, overload
 
 from PyQt5.QtCore import QTimer
 
-from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
+from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from Cat.utils import format_full_exc, getExePath, openOrCreate, Singleton
 from Cat.utils.logging_ import logError
 from Cat.utils.signals import CatBoundSignal, CatSignal

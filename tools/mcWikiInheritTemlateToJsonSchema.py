@@ -2,7 +2,7 @@ import os
 import re
 from typing import Optional, Callable, NamedTuple, Union
 
-from Cat.extensions import processRecursively
+from Cat.processFiles import processRecursively
 from Cat.utils import openOrCreate
 from Cat.utils.collections_ import AddToDictDecorator, Stack, OrderedMultiDict
 from Cat.utils.formatters import indentMultilineStr

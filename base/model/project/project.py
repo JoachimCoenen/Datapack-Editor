@@ -7,7 +7,7 @@ from typing import Optional, ClassVar, final
 
 from recordclass import as_dataclass
 
-from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
+from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from Cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from Cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle

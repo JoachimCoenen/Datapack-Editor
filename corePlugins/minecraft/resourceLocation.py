@@ -5,7 +5,7 @@ from dataclasses import dataclass, field, replace
 from itertools import chain
 from typing import Optional, Collection, Iterable, final, Mapping
 
-from Cat.CatPythonGUI.GUI.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
+from Cat.GUI.components.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from Cat.utils import Deprecated, Decorator
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator

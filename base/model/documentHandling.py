@@ -3,12 +3,12 @@ open document, close document, select document, move to view, etc. ...
 """
 from __future__ import annotations
 
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import NewType, Optional, Callable, Iterator, cast, Sequence, ClassVar
 
-from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
-from Cat.utils import abstract, override
-from Cat.utils.abc_ import abstractmethod
+from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from Cat.utils import override
 from Cat.utils.collections_ import Stack
 from Cat.utils.profiling import logInfo
 from Cat.utils.signals import CatSignal
@@ -25,7 +25,6 @@ class ViewId:
 
 
 @dataclass(repr=False, slots=True)
-@abstract
 class ViewBase(SerializableDataclass):
 	parent: Optional[ViewContainer] = field(default=None, init=False, metadata=catMeta(serialize=True))
 	manager: DocumentsManager

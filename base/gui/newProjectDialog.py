@@ -6,12 +6,12 @@ from typing import Optional, Any, TypeVar, Generic
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QDialog
 
-import Cat.CatPythonGUI.AutoGUI.propertyDecorators as pd
-from Cat.CatPythonGUI.GUI.catTabBar import TabOptions
-from Cat.CatPythonGUI.GUI.enums import *
-from Cat.CatPythonGUI.GUI.pythonGUI import PythonGUIDialog
-from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder
-from Cat.Serializable.dataclassJson import catMeta, SerializableDataclass
+import Cat.GUI.propertyDecorators as pd
+from Cat.GUI.pythonGUI import PythonGUIDialog
+from Cat.GUI.components.catTabBar import TabOptions
+from Cat.GUI.enums import *
+from Cat.GUI.components.treeBuilders import DataListBuilder
+from Cat.Serializable.serializableDataclasses import catMeta, SerializableDataclass
 from Cat.utils.utils import sanitizeFileName
 from base.model.pathUtils import FilePathStr, joinFilePath, unitePathTpl
 from base.model.project.projectCreator import ProjectCreator

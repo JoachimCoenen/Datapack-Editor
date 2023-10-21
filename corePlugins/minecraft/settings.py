@@ -4,10 +4,10 @@ from typing import Optional
 
 from PyQt5.QtGui import QIcon
 
-from Cat.CatPythonGUI.AutoGUI import propertyDecorators as pd
-from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
-from Cat.CatPythonGUI.GUI.treeBuilders import DataListBuilder, StringHeaderBuilder
-from Cat.Serializable.dataclassJson import catMeta, SerializableDataclass
+from Cat.GUI import propertyDecorators as pd
+from Cat.GUI.propertyDecorators import ValidatorResult
+from Cat.GUI.components.treeBuilders import DataListBuilder, StringHeaderBuilder
+from Cat.Serializable.serializableDataclasses import catMeta, SerializableDataclass
 
 from base.model.applicationSettings import SettingsAspect
 from base.model.aspect import AspectType

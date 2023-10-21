@@ -195,7 +195,7 @@ def wrapInMarkdownCode(text: str) -> MDStr:
 
 
 def addStyle(message: str, /, style: str) -> MDStr:
-	from Cat.CatPythonGUI.GUI import PythonGUI
+	from Cat.GUI import PythonGUI
 	md = f'<div style="{PythonGUI.helpBoxStyles[style]}">{message}</div>'
 	return MDStr(md)
 

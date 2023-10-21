@@ -6,7 +6,7 @@ from operator import itemgetter
 from typing import Callable, Literal, NamedTuple, Optional, Protocol, Union, TypeVar
 from zipfile import ZipFile, BadZipFile
 
-from Cat.extensions import makeSearchPath, processRecursively
+from Cat.processFiles import makeSearchPath, processRecursively
 from Cat.utils.collections_ import Stack
 from Cat.utils.profiling import logWarning
 

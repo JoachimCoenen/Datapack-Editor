@@ -3,7 +3,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional, TypeVar, overload, Type
 
-from Cat.extensions import makeSearchPath
+from Cat.processFiles import makeSearchPath
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePathTpl

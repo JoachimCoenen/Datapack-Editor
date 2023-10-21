@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import functools as ft
 from dataclasses import replace
 from typing import TypeVar, Generic, final, Optional, Type
@@ -5,11 +6,10 @@ from typing import TypeVar, Generic, final, Optional, Type
 from PyQt5.Qsci import QsciLexer
 from PyQt5.QtCore import Qt, pyqtSignal
 
-from Cat.CatPythonGUI.GUI import SizePolicy, getStyles, codeEditor
-from Cat.CatPythonGUI.GUI.codeEditor import getLexer
-from Cat.CatPythonGUI.GUI.pythonGUI import EditorBase
+from Cat.GUI import SizePolicy, getStyles
+from Cat.GUI.pythonGUI import EditorBase
+from Cat.GUI.components import codeEditor
 from Cat.utils import format_full_exc, override
-from Cat.utils.abc_ import abstractmethod
 from Cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
 from Cat.utils.formatters import indentMultilineStr
 from Cat.utils.profiling import logError
@@ -168,7 +168,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		)
 
 	def codeEditorForDoc(self, gui: DatapackEditorGUI, document: TextDocument, *, autoIndent: bool = True, **kwargs) -> None:
-		lexerCls = getLexer(document.language)
+		lexerCls = codeEditor.getLexer(document.language)
 		if type(self._currentLexer) is lexerCls:
 			lexer = self._currentLexer
 		else:

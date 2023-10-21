@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import TypeVar, Generic
 
-from Cat.CatPythonGUI.AutoGUI.propertyDecorators import ValidatorResult
-from Cat.Serializable.dataclassJson import SerializableDataclass
+from Cat.GUI.propertyDecorators import ValidatorResult
+from Cat.Serializable.serializableDataclasses import SerializableDataclass
 from base.model.project.project import Project
 from gui.datapackEditorGUI import DatapackEditorGUI
 

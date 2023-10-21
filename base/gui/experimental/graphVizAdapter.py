@@ -8,7 +8,7 @@ from typing import Optional
 import graphviz
 from graphviz.graphs import BaseGraph
 
-from Cat.Serializable.dataclassJson import SerializableDataclass, catMeta
+from Cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from Cat.utils.formatters import indentMultilineStr
 
 

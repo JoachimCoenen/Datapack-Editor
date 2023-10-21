@@ -6,11 +6,11 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDialog
 from qtpy import QtCore
 
-from Cat.CatPythonGUI.AutoGUI.autoGUI import AutoGUI
-from Cat.CatPythonGUI.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, \
-	getStyles, catWidgetMixins
-from Cat.CatPythonGUI.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from Cat.icons import icons
+from Cat.GUI.autoGUI import AutoGUI
+from Cat.GUI import _StyleProperty, setStyles, Style, Styles, SizePolicy, MessageBoxButton, applyStyle, getStyles
+from Cat.GUI.components import catWidgetMixins
+from Cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
+from gui.icons import icons
 from Cat.utils import getExePath, logging_
 from Cat.utils.formatters import FW
 from Cat.utils.logging_ import loggingIndentInfo
@@ -200,6 +200,7 @@ def start(argv) -> QtWidgets.QApplication:
 
 		window = MainWindow(WindowId('0'))
 		window.show()
+		window.resize(1280, 720)
 		window.redraw()
 
 		# from trials import iconsPreview
