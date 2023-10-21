@@ -112,6 +112,7 @@ class TagInfos(IndexBundle):
 	game_events: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 	items: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 	instruments: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
+	recipes: Index[ResourceLocation, JsonMeta] = field(default_factory=Index, init=False, metadata=dict(dpe=dict(isIndex=True)))
 
 
 @dataclass

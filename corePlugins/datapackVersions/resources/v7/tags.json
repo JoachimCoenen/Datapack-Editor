@@ -77,7 +77,7 @@
     "block_type": { "$ref": "tags", "schema": "block_type" },
     "entity_type": { "$ref": "tags", "schema": "entity_type" },
     "fluid_type": { "$ref": "tags", "schema": "fluid_type" },
-    "function": { "$ref": "tags", "schema": "function" },
+    "function": { "$ref": "tags", "schema": "function_type" },
     "game_event": { "$ref": "tags", "schema": "game_event" },
     "item_type": { "$ref": "tags", "schema": "item_type" }
   }

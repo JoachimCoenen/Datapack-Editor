@@ -1,0 +1,201 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "base": "_base.json"
+  },
+  "$definitions": {
+    "location": {
+      "$type": "object",
+      "properties": {
+        "biome": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:resource_location",
+            "args": { "schema": "biome" }
+          },
+          "description": "The biome the entity is currently in. This tag is a [ [resource location] ] for a biome (see [ [Biome#Biome IDs] ] for the ones used in vanilla)."
+        },
+        "block": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "blocks": {
+                "optional": true,
+                "value": {
+                  "$type": "array",
+                  "element": {
+                    "$type": "string",
+                    "type": "minecraft:resource_location",
+                    "args": { "schema": "block" }
+                  }
+                },
+                "description": "A list of [ [Java Edition data values#Blocks|block IDs] ]."
+              },
+              "tag": {
+                "optional": true,
+                "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "block_tag" } },
+                "description": "The block [ [tag] ]."
+              },
+              "nbt": {
+                "optional": true,
+                "value": {
+                  "$type": "string",
+                  "allowMultilineStr": true, 
+                  "type": "minecraft:nbt_compound_tag"
+                },
+                "description": "The block NBT."
+              },
+              "state": {
+                "optional": true,
+                "value": {
+                  "$type": "object",
+                  "default-property": {
+                    "optional": true,
+                    "value": {
+                      "$type": "union",
+                      "options": [
+                        {
+                          "$type": "union",
+                          "options": [
+                            { "$type": "integer" },
+                            { "$type": "boolean" },
+                            { "$type": "string" }
+                          ],
+                          "description": "Block property key and value pair."
+                        },
+                        { "$ref": "base:valOrRange", "type": "integer" }
+                      ]
+                    },
+                    "description": "Block property key and value pair."
+                  },
+                  "properties": {},
+                  "description": "''key'': None"
+                },
+                "description": "A map of block property names to values. Test will fail if the block doesn't match."
+              }
+            }
+          },
+          "description": "The block at the location."
+        },
+        "dimension": {
+          "optional": true,
+          "value": { "$type": "string" },
+          "description": "The dimension the entity is currently in."
+        },
+        "feature": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:resource_location",
+            "args": { "schema": "structure" }
+          },
+          "description": "{{until|java 1.19}}: The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
+        },
+        "fluid": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "fluid": {
+                "optional": true,
+                "value": {
+                  "$type": "string",
+                  "type": "minecraft:resource_location",
+                  "args": { "schema": "fluid" }
+                },
+                "description": "The [ [Java Edition data values#Fluids|fluid ID] ]."
+              },
+              "tag": {
+                "optional": true,
+                "value": { "$type": "string" },
+                "description": "The fluid [ [tag] ]."
+              },
+              "state": {
+                "optional": true,
+                "value": {
+                  "$type": "object",
+                  "default-property": {
+                    "optional": true,
+                    "value": {
+                      "$type": "union",
+                      "options": [
+                        {
+                          "$type": "union",
+                          "options": [
+                            { "$type": "integer" },
+                            { "$type": "boolean" },
+                            { "$type": "string" }
+                          ],
+                          "description": "Fluid property key and value pair."
+                        },
+                        { "$ref": "base:valOrRange", "type": "integer" }
+                      ]
+                    },
+                    "description": "Fluid property key and value pair."
+                  },
+                  "properties": {},
+                  "description": "''key'': None"
+                },
+                "description": "A map of fluid property names to values. Test will fail if the fluid doesn't match."
+              }
+            }
+          },
+          "description": "The fluid at the location."
+        },
+        "light": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "light": {
+                "optional": true,
+                "value": { "$ref": "base:valOrRange", "type": "integer" },
+                "description": "The light Level of visible light. Calculated using: <code>(max(sky-darkening,block))</code>."
+              }
+            }
+          },
+          "description": "The light at the location."
+        },
+        "position": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "x": {
+                "optional": true,
+                "value": { "$ref": "base:valOrRange", "type": "float" },
+                "description": "The x position."
+              },
+              "y": {
+                "optional": true,
+                "value": { "$ref": "base:valOrRange", "type": "float" },
+                "description": "The y position."
+              },
+              "z": {
+                "optional": true,
+                "value": { "$ref": "base:valOrRange", "type": "float" },
+                "description": "The z position."
+              }
+            }
+          }
+        },
+        "smokey": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "True if the block is closely above a campfire or soul campfire."
+        },
+        "structure": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:resource_location",
+            "args": { "schema": "structure" }
+          },
+          "description": "{{upcoming|java 1.19}}: The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
+        }
+      }
+    }
+  }
+}

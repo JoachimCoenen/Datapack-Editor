@@ -192,7 +192,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		extension='.json',
 		isTag=False,
 		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:advancements'),
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:advancement'),
 		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).advancements
 	),
 	EntryHandlerInfo(
@@ -293,6 +293,7 @@ def loadJsonSchemas() -> dict[str, JsonSchema]:
 		'minecraft:pack': JSON_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v7Dir, 'pack.json')),
 		'minecraft:loot_table': JSON_SCHEMA_LOADER.loadSchema('minecraft:loot_table', os.path.join(v7Dir, 'loot_table.json')),
 		'minecraft:item_modifier': JSON_SCHEMA_LOADER.loadSchema('minecraft:item_modifier', os.path.join(v7Dir, 'item_modifier.json')),
+		'minecraft:advancement': JSON_SCHEMA_LOADER.loadSchema('minecraft:advancement', os.path.join(v7Dir, 'advancements/advancement.json')), # advancement.json is for datapack version 20!
 	}
 	return v7Schemas
 

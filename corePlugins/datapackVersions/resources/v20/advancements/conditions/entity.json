@@ -1,0 +1,512 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "location": "location.json",
+    "item": "item.json",
+    "base": "_base.json"
+  },
+  "$definitions": {
+    "entity": {
+      "$type": "object",
+      "properties": {
+        "catType": {
+          "optional": true,
+          "value": { "$type": "string" },
+          "description": " {{until|java 1.19}}: Check the variant of this cat. Accepts a resource location for the texture of the cat's variant. To be moved under <code>type_specific</code> in 1.19."
+        },
+        "distance": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "absolute": {
+                "optional": true,
+                "value": { "$ref": "base:range", "type": "float" },
+                "description": "Test the distance between the two points in 3D space."
+              },
+              "horizontal": {
+                "optional": true,
+                "value": { "$ref": "base:range", "type": "float" },
+                "description": "Test the distance between the two points, ignoring the Y value."
+              },
+              "x": {
+                "optional": true,
+                "value": { "$ref": "base:range", "type": "float" },
+                "description": "Test the absolute difference between the X-coordinates of the two points."
+              },
+              "y": {
+                "optional": true,
+                "value": { "$ref": "base:range", "type": "float" },
+                "description": "Test the absolute difference between the Y-coordinates of the two points."
+              },
+              "z": {
+                "optional": true,
+                "value": { "$ref": "base:range", "type": "float" },
+                "description": "Test the absolute difference between the Z-coordinates of the two points."
+              }
+            }
+          },
+          "description": "To test the distance to the entity this predicate is invoked upon. Passes if the calculated distance is between the entered <code>min</code> and <code>max</code>, inclusive."
+        },
+        "effects": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "null": {
+                "optional": true,
+                "value": {
+                  "$type": "object",
+                  "properties": {
+                    "ambient": {
+                      "optional": true,
+                      "value": { "$type": "boolean" },
+                      "description": "Test whether the effect is from a beacon."
+                    },
+                    "amplifier": {
+                      "optional": true,
+                      "value": { "$ref": "base:valOrRange", "type": "integer" },
+                      "description": "Test if the effect's amplifier matches an exact value. Level I is represented by 0."
+                    },
+                    "duration": {
+                      "optional": true,
+                      "value": { "$ref": "base:valOrRange", "type": "integer" },
+                      "description": "Test if the effect's remaining time (in ticks) matches an exact value."
+                    },
+                    "visible": {
+                      "optional": true,
+                      "value": { "$type": "boolean" },
+                      "description": "Test if the effect has visible particles."
+                    }
+                  }
+                },
+                "description": "A status effect that must be present."
+              }
+            },
+            "description": "<minecraft:effect_name>: None"
+          },
+          "description": "For testing the active [ [Effect|status effects] ] on the entity."
+        },
+        "equipment": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "mainhand": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's main hand."
+              },
+              "offhand": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's offhand."
+              },
+              "head": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's head armour slot."
+              },
+              "chest": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's chest  armour slot."
+              },
+              "legs": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's legs armour slot."
+              },
+              "feet": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's feet armour slot."
+              }
+            }
+          },
+          "description": "For testing the items that this entity holds in its equipment slots."
+        },
+        "fishing_hook": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "in_open_water": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Whether the fishing hook was in [ [Fishing#Junk_and_treasure|open water] ]."
+              }
+            }
+          },
+          "description": " {{until|java 1.19}}: Test properties of the fishing hook that just got reeled in by this entity. To be moved under <code>type_specific</code> in 1.19."
+        },
+        "flags": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "is_baby": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not a baby variant."
+              },
+              "is_on_fire": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not on fire."
+              },
+              "is_sneaking": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not sneaking."
+              },
+              "is_sprinting": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not sprinting."
+              },
+              "is_swimming": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not swimming."
+              }
+            }
+          },
+          "description": "To test flags of the entity."
+        },
+        "lightning_bolt": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "blocks_set_on_fire": {
+                "optional": true,
+                "value": { "$ref": "base:valOrRange", "type": "integer" },
+                "description": "Test if the number of blocks set on fire by this lightning bolt matches an exact value."
+              },
+              "entity_struck": {
+                "optional": true,
+                "value": { "$defRef": "entity" },
+                "description": "Test the properties of entities struck by this lightning bolt. Passes if at least one of the struck entities matches the entered conditions."
+              }
+            }
+          },
+          "description": "{{until|java 1.19}}: To check information about this lightning bolt; fails when entity is not a lightning bolt. To be moved under <code>type_specific</code> in 1.19."
+        },
+        "location": {
+          "optional": true,
+          "value": { "$defRef": "location:location" },
+          "description": "Test properties of this entity's location."
+        },
+        "nbt": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:nbt_compound_tag"
+          },
+          "description": "An NBT string."
+        },
+        "passenger": {
+          "optional": true,
+          "value": { "$defRef": "entity" },
+          "description": "Test the entity directly riding this entity."
+        },
+        "player": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "looking_at": {
+                "optional": true,
+                "value": { "$defRef": "entity" },
+                "description": "Test properties of the entity that this player is looking at, as long as it is visible and within a radius of 100 blocks. Visibility is defined through the line from the player's eyes to the entity's eyes, rather than the direction that the player is looking in."
+              },
+              "advancements": {
+                "optional": true,
+                "value": {
+                  "$type": "object",
+                  "properties": {
+                    "null": {
+                      "optional": true,
+                      "value": {
+                        "$type": "union",
+                        "options": [
+                          { "$type": "boolean" },
+                          {
+                            "$type": "object",
+                            "properties": {
+                              "null": {
+                                "optional": true,
+                                "value": { "$type": "boolean" },
+                                "description": "Key is one of the criteria of the advancement, value is <code>true</code> or <code>false</code> to test for completed/not completed respectively."
+                              }
+                            },
+                            "description": "<criterion id>: None"
+                          }
+                        ]
+                      },
+                      "description": "Test whether an advancement is granted or not granted. Key is an advancement ID, value is <code>true</code> or <code>false</code> to test for granted/not granted respectively."
+                    }
+                  },
+                  "description": "<advancement id>: None"
+                },
+                "description": "To test the player's [ [advancements] ]."
+              },
+              "gamemode": {
+                "optional": true,
+                "value": { "$type": "string" },
+                "description": "Test the [ [Game modes|game mode] ] of this player. Valid values are <code>survival</code>, <code>creative</code>, <code>adventure</code> and <code>spectator</code>."
+              },
+              "level": {
+                "optional": true,
+                "value": { "$ref": "base:valOrRange", "type": "integer" },
+                "description": "Test if the experience level of this player matches an exact value."
+              },
+              "recipes": {
+                "optional": true,
+                "value": {
+                  "$type": "object",
+                  "properties": {
+                    "null": {
+                      "optional": true,
+                      "value": { "$type": "boolean" },
+                      "description": "Key is the recipe ID; value is <code>true</code> or <code>false</code> to test for known/unknown respectively."
+                    }
+                  },
+                  "description": "<recipe id>: None"
+                },
+                "description": "To test if [ [recipe] ]s are known or unknown to this player."
+              },
+              "stats": {
+                "optional": true,
+                "value": {
+                  "$type": "array",
+                  "element": {
+                    "$type": "object",
+                    "properties": {
+                      "type": {
+                        "optional": true,
+                        "value": { "$type": "string" },
+                        "description": "The statistic type. Valid values are <code>minecraft:custom</code>, <code>minecraft:crafted</code>, <code>minecraft:used</code>, <code>minecraft:broken</code>, <code>minecraft:mined</code>, <code>minecraft:killed</code>, <code>minecraft:picked_up</code>, <code>minecraft:dropped</code> and <code>minecraft:killed_by</code>."
+                      },
+                      "stat": {
+                        "optional": true,
+                        "value": { "$type": "string" },
+                        "description": "The statistic ID to test."
+                      },
+                      "value": {
+                        "optional": true,
+                        "value": { "$ref": "base:valOrRange", "type": "integer" },
+                        "description": "Test if the value of the statistic matches an exact number."
+                      }
+                    },
+                    "description": " A statistic to test."
+                  }
+                },
+                "description": "To test the player's [ [statistics] ]."
+              }
+            }
+          },
+          "description": "{{until|java 1.19}}: Tests properties unique to players; fails when this entity is not a player. To be moved under <code>type_specific</code> in 1.19."
+        },
+        "stepping_on": {
+          "optional": true,
+          "value": { "$defRef": "location:location" },
+          "description": "Test properties of the block the entity is standing on, using a location predicate."
+        },
+        "team": {
+          "optional": true,
+          "value": { "$type": "string" },
+          "description": "Passes if the [ [Scoreboard#Teams|team] ] of this entity matches this string."
+        },
+        "type": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:resource_location",
+            "args": { "schema": "entity" }
+          },
+          "description": "Test this entity's type. Accepts an [ [Data values/Entity IDs|entity ID] ]."
+        },
+        "targeted_entity": {
+          "optional": true,
+          "value": { "$defRef": "entity" },
+          "description": "Test properties of the entity which this entity is targeting for attacks."
+        },
+        "vehicle": {
+          "optional": true,
+          "value": { "$defRef": "entity" },
+          "description": "Test properties of the vehicle entity that this entity is riding upon."
+        },
+        "type_specific": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "type": {
+                "optional": false,
+                "value": { "$type": "string" },
+                "description": "Dictates which type-specific properties to test for.<p style=\"padding-block-end: 1em; margin: 0 0 0 0;\">The possible values for {{nbt|string|type}} and associated extra contents:</p>"
+              },
+              "variant": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "cat": {
+                    "$type": "string",
+                    "description": "A resource location specifying a cat variant. Valid values are <code>minecraft:all_black</code>, <code>minecraft:black</code>, <code>minecraft:british</code>, <code>minecraft:calico</code>, <code>minecraft:jellie</code>, <code>minecraft:persian</code>, <code>minecraft:ragdoll</code>, <code>minecraft:red</code>, <code>minecraft:siamese</code>, <code>minecraft:tabby</code>, or <code>minecraft:white</code>."
+                  },
+                  "frog": {
+                    "$type": "string",
+                    "description": "A resource location specifying a frog variant. Valid values are <code>minecraft:cold</code>, <code>minecraft:temperate</code>, or <code>minecraft:warm</code>."
+                  }
+                }
+              },
+              "in_open_water": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "fishing_hook": {
+                    "$type": "boolean",
+                    "description": "Whether the fishing hook was in [ [Fishing#Junk_and_treasure|open water] ]."
+                  }
+                }
+              },
+              "blocks_set_on_fire": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "lightning": { "$ref": "base:valOrRange", "type": "integer" }
+                },
+                "description": "Test the number of blocks set on fire by this lightning bolt is between a minimum and maximum value."
+              },
+              "entity_struck": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "lightning": {
+                    "$type": "object",
+                    "properties": {},
+                    "description": "Test the properties of entities struck by this lightning bolt. Passes if at least one of the struck entities matches the entered conditions."
+                  }
+                }
+              },
+              "looking_at": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": { "player": { "$defRef": "entity" } }
+              },
+              "advancements": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "player": {
+                    "$type": "object",
+                    "properties": {
+                      "null": {
+                        "optional": true,
+                        "value": {
+                          "$type": "union",
+                          "options": [
+                            { "$type": "boolean" },
+                            {
+                              "$type": "object",
+                              "properties": {
+                                "null": {
+                                  "optional": true,
+                                  "value": { "$type": "boolean" },
+                                  "description": "Key is one of the criteria of the advancement, value is <code>true</code> or <code>false</code> to test for completed/not completed respectively."
+                                }
+                              },
+                              "description": "<criterion id>: None"
+                            }
+                          ]
+                        },
+                        "description": "Test whether an advancement is granted or not granted. Key is an advancement ID, value is <code>true</code> or <code>false</code> to test for granted/not granted respectively."
+                      }
+                    },
+                    "description": "<advancement id>: To test the player's [ [advancements] ]."
+                  }
+                }
+              },
+              "gamemode": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "player": {
+                    "$type": "string",
+                    "description": "Test the [ [Game modes|game mode] ] of this player. Valid values are <code>survival</code>, <code>creative</code>, <code>adventure</code> and <code>spectator</code>."
+                  }
+                }
+              },
+              "level": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "player": { "$ref": "base:valOrRange", "type": "integer" }
+                },
+                "description": "Test if the experience level of this player matches an exact value or is between <code>min</code> and <code>max</code> values, inclusive."
+              },
+              "recipes": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "player": {
+                    "$type": "object",
+                    "properties": {
+                      "null": {
+                        "optional": true,
+                        "value": { "$type": "boolean" },
+                        "description": "Key is the recipe ID; value is <code>true</code> or <code>false</code> to test for known/unknown respectively."
+                      }
+                    },
+                    "description": "<recipe id>: To test if [ [recipe] ]s are known or unknown to this player."
+                  }
+                }
+              },
+              "stats": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "player": {
+                    "$type": "array",
+                    "element": {
+                      "$type": "object",
+                      "properties": {
+                        "type": {
+                          "optional": true,
+                          "value": { "$type": "string" },
+                          "description": "The statistic type. Valid values are <code>minecraft:custom</code>, <code>minecraft:crafted</code>, <code>minecraft:used</code>, <code>minecraft:broken</code>, <code>minecraft:mined</code>, <code>minecraft:killed</code>, <code>minecraft:picked_up</code>, <code>minecraft:dropped</code> and <code>minecraft:killed_by</code>."
+                        },
+                        "stat": {
+                          "optional": true,
+                          "value": { "$type": "string" },
+                          "description": "The statistic ID to test."
+                        },
+                        "value": {
+                          "optional": true,
+                          "value": { "$ref": "base:valOrRange", "type": "integer" },
+                          "description": "Test if the value of the statistic matches an exact number."
+                        }
+                      },
+                      "description": " A statistic to test."
+                    }
+                  }
+                }
+              },
+              "size": {
+                "optional": true,
+                "decidingProp": "type",
+                "values": {
+                  "slime": { "$ref": "base:valOrRange", "type": "integer" }
+                },
+                "description": "Test if the size of this slime matches an exact value or is between <code>min</code> and <code>max</code> values, inclusive."
+              }
+            }
+          },
+          "description": "{{upcoming|java 1.19}}: To test entity properties that can only be applied to certain entity types.  Supersedes <code>lightning_bolt</code>, <code>player</code>, <code>fishing_hook</code> and <code>catType</code>."
+        }
+      }
+    }
+  }
+}

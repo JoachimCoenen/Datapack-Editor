@@ -1,0 +1,63 @@
+{
+  "$schema": "dpe/json/schema/library",
+    "$libraries": {
+    "entity": "entity.json"
+  },
+  "$definitions": {
+    "damage_type": {
+      "$type": "object",
+      "properties": {
+        "bypasses_armor": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage bypassed the armor of the player (suffocation damage predominantly)."
+        },
+        "bypasses_invulnerability": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage bypassed the invulnerability status of the player (void or {{cmd|kill}} damage). "
+        },
+        "bypasses_magic": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage was caused by starvation."
+        },
+        "direct_entity": {
+          "optional": true,
+          "value": { "$defRef": "entity:entity" },
+          "description": "The entity that was the direct cause of the damage."
+        },
+        "is_explosion": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage originated from an explosion."
+        },
+        "is_fire": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage originated from fire."
+        },
+        "is_magic": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage originated from magic."
+        },
+        "is_projectile": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage originated from a projectile."
+        },
+        "is_lightning": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage originated from lightning."
+        },
+        "source_entity": {
+          "optional": true,
+          "value": { "$defRef": "entity:entity" },
+          "description": "Checks the entity that was the source of the damage (for example: The skeleton that shot the arrow)."
+        }
+      }
+    }
+  }
+}

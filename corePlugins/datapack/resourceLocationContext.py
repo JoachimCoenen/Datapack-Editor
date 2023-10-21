@@ -100,7 +100,9 @@ class FluidContext(ResourceLocationContext):
 		return mc.fluids
 
 
-@resourceLocationContext('function', allowTags=True)
+@resourceLocationContext('function', allowTags=False)
+@resourceLocationContext('function_type', allowTags=True)
+@resourceLocationContext('function_tag', allowTags=True, onlyTags=True)
 class FunctionContext(ResourceLocationContext):
 	@property
 	def name(self) -> str:
@@ -331,6 +333,23 @@ class InstrumentContext(ResourceLocationContext):
 
 	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.instruments
+
+
+@resourceLocationContext('recipe', allowTags=False)
+class InstrumentContext(ResourceLocationContext):
+
+	@property
+	def name(self) -> str:
+		return 'recipe'
+
+	def tagsFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
+		return (contents.tags.recipes,) if (contents := dp.indexBundles.get(DatapackContents)) is not None else ()
+
+	def valuesFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
+		return (contents.recipes,) if (contents := dp.indexBundles.get(DatapackContents)) is not None else ()
+
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
+		return ()
 
 
 @resourceLocationContext('any_no_tag', allowTags=False)

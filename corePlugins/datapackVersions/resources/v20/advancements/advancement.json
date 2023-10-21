@@ -1,0 +1,1195 @@
+{
+  "$schema": "dpe/json/schema",
+  "$libraries": {
+    "rawJsonText": "../rawJsonText-library.json",
+    "entity": "conditions/entity.json",
+    "item": "conditions/item.json",
+    "damage": "conditions/damage.json",
+    "damage_type": "conditions/damage_type.json",
+    "location": "conditions/location.json",
+    "distance": "conditions/distance.json",
+    "base": "conditions/_base.json",
+    "predicate": "../predicate-library.json"
+  },
+  "$body": { "$defRef": "advancement" },
+  "$templates": {},
+  "$definitions": {
+    "advancement": {
+      "$type": "object",
+      "properties": {
+        "display": {
+          "description": "Data related to the advancement's display.",
+          "value": {
+            "$type": "object",
+            "properties": {
+              "icon": {
+                "description": "Object containing data for the advancement's icon.",
+                "value": {
+                  "$type": "object",
+                  "properties": {
+                    "item": {
+                      "description": "The item's [ [Resource location|ID] ].",
+                      "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } }
+                    },
+                    "nbt": {
+                      "description": "A string containing [ [NBT format#SNBT_format|SNBT] ] that may modify the item's appearance on the icon.",
+                      "value": {
+                        "$type": "string",
+                        "type": "minecraft:nbt_compound_tag"
+                      },
+                      "optional": true
+                    }
+                  }
+                }
+              },
+              "title": {
+                "description": "A [ [Raw JSON text format|JSON text component] ] for the title of this advancement.",
+                "value": { "$defRef": "rawJsonText:rawJsonText" }
+              },
+              "frame": {
+                "description": "Type of frame for the icon. {{code|challenge}} for [ [File:Advancement-fancy-raw.png|25px] ], {{code|goal}} for [ [File:Advancement-oval-raw.png|25px] ], {{code|task}} for [ [File:Advancement-plain-raw.png|25px] ]. Defaults to {{cd|task}}.",
+                "value": {
+                  "$type": "enum",
+                  "options": {
+                    "challenge": "",
+                    "goal": "",
+                    "task": "",
+                    "minecraft:challenge": "",
+                    "minecraft:goal": "",
+                    "minecraft:task": ""
+                  }
+                },
+                "default": "task",
+                "optional": true
+              },
+              "background": {
+                "description": "The directory for the background to use in this advancement tab (used only for the root advancement).",
+                "value": { "$type": "string" },
+                "optional": true
+              },
+              "description": {
+                "description": "A [ [Raw JSON text format|JSON text component] ] for the description text of this advancement.",
+                "value": { "$defRef": "rawJsonText:rawJsonText" }
+              },
+              "show_toast": {
+                "description": "Whether to show a toast to the player when this advancement has been completed. Defaults to {{cd|true}}.",
+                "value": { "$type": "boolean" },
+                "optional": true
+              },
+              "announce_to_chat": {
+                "description": "Whether to announce in the chat when this advancement has been completed. Defaults to {{cd|true}}.",
+                "value": { "$type": "boolean" },
+                "optional": true
+              },
+              "hidden": {
+                "description": "Whether to hide this advancement and all its children from the advancement screen until this advancement have been completed. Has no effect on root advancements themselves, but still affects all their children. Defaults to {{cd|false}}.",
+                "value": { "$type": "boolean" },
+                "optional": true
+              }
+            }
+          },
+          "optional": true
+        },
+        "parent": {
+          "description": "The parent advancement directory of this advancement. If absent, this advancement is a root advancement. Circular references cause a loading failure.",
+          "value": { "$type": "string" },
+          "optional": true
+        },
+        "criteria": {
+          "description": "The criteria to be tracked by this advancement.",
+          "value": {
+            "$type": "object",
+            "description": "<criterionName>: None",
+            "properties": {},
+            "default-property": {
+              "description": "The key is a unique name given to the criterion.",
+              "value": {
+                "$type": "object",
+                "properties": {
+                  "trigger": {
+                    "description": "The [ [#List of triggers|trigger] ] for this criterion.",
+                    "value": {
+                      "$type": "enum",
+                      "options": {
+                        "allay_drop_item_on_block": "Triggers when an allay drops an item on a block. Available extra conditions:",
+                        "avoid_vibration": "Triggers when a vibration event is ignored because the source player is crouching. No extra conditions.",
+                        "bee_nest_destroyed": "Triggers when the player breaks a bee nest or beehive. Available extra conditions:",
+                        "bred_animals": "Triggers after the player breeds 2 [[animals]]. Available extra conditions:",
+                        "brewed_potion": "Triggers after the player takes any item out of a [[brewing stand]]. Available extra conditions:",
+                        "changed_dimension": "Triggers after the player travels between two [[dimensions]]. Available extra conditions:",
+                        "channeled_lightning": "Triggers after the player successfully uses the Channeling enchantment on an entity or a lightning rod. Available extra conditions:",
+                        "construct_beacon": "Triggers after the player changes the structure of a [[beacon]]. (When the beacon updates itself). Available extra conditions:",
+                        "consume_item": "Triggers when the player consumes an item. Available extra conditions:",
+                        "cured_zombie_villager": "Triggers when the player cures a [[zombie villager]]. Available extra conditions:",
+                        "effects_changed": "Triggers after the player gets a [[status effect]] applied or taken from them. Available extra conditions:",
+                        "enchanted_item": "Triggers after the player enchants an item through an [[enchanting table]] (does not get triggered through an [[anvil]], or through [[command]]s). Available extra conditions:",
+                        "enter_block": "Every tick, triggers once for each block the player's hitbox is inside (up to 12 blocks, the maximum number of blocks the player can stand in). Available extra conditions:",
+                        "entity_hurt_player": "Triggers after a player gets hurt (even when it's not caused by an entity). Available extra conditions:",
+                        "entity_killed_player": "Triggers after a living [[entity]] kills a player. Available extra conditions:",
+                        "fall_from_height": "Triggers when a player lands after falling. Available extra conditions:",
+                        "filled_bucket": "Triggers after the player fills a bucket. Available extra conditions:",
+                        "fishing_rod_hooked": "Triggers after the player successfully catches an item with a fishing rod or pulls an entity with a fishing rod. Available extra conditions:",
+                        "hero_of_the_village": "Triggers when a [[raid]] ends in victory and the player has attacked at least one raider from that raid. No extra conditions.",
+                        "impossible": "Never triggers.<!--Commands don't trigger triggers, they grant criteria.--> No available conditions.",
+                        "inventory_changed": "Triggers after any changes happen to the player's [[inventory]]. Available extra conditions:",
+                        "item_durability_changed": "Triggers after any item in the inventory has been damaged in any form. Available extra conditions:",
+                        "item_used_on_block": "Triggers when the player {{control|uses}} their hand or an item on a block. Available extra conditions:",
+                        "kill_mob_near_sculk_catalyst": "Triggers after a player is the source of a [[mob]] or player being killed within the range of a [[sculk catalyst]]. Available extra conditions:",
+                        "killed_by_crossbow": "Triggers after the player kills a [[mob]] or player using a crossbow in ranged combat. Available extra conditions:",
+                        "levitation": "Triggers when the player has the levitation [[status effect]]. Available extra conditions:",
+                        "lightning_strike": "Triggers when a lightning bolt disappears from the world, only for players within a 256 block radius of the lightning bolt. Available extra conditions:",
+                        "location": "Triggers every 20 [[tick]]s (1 second). No extra conditions.",
+                        "nether_travel": "Triggers when the player travels to the [[Nether]] and then returns to the [[Overworld]]. Available extra conditions:",
+                        "placed_block": "Triggers when the player places a block. Available extra conditions:",
+                        "player_generates_container_loot": "Triggers when the player generates the contents of a container with a loot table set. Available extra conditions:",
+                        "player_hurt_entity": "Triggers after the player hurts a [[mob]] or player. Available extra conditions:",
+                        "player_interacted_with_entity": "Triggers when the player interacts with an entity. Available extra conditions:",
+                        "player_killed_entity": "Triggers after a player is the source of a [[mob]] or player being killed. Available extra conditions:",
+                        "recipe_crafted": "Triggers when the player crafts a recipe in a crafting table, stonecutter or smithing table. Available extra conditions:",
+                        "recipe_unlocked": "Triggers after the player unlocks a [[Crafting#Complete recipe list|recipe]] (using a [[knowledge book]] for example). Available extra conditions:",
+                        "ride_entity_in_lava": "Triggers when a player mounts an entity walking on lava and while the entity moves with them. Available extra conditions:",
+                        "shot_crossbow": "Triggers when the player shoots a crossbow. Available extra conditions:",
+                        "slept_in_bed": "Triggers when the player enters a [[bed]]. No extra conditions.",
+                        "slide_down_block": "Triggers when the player slides down a block. Available extra conditions:",
+                        "started_riding": "Triggers when the player starts riding a vehicle or an entity starts riding a vehicle currently ridden by the player. No extra conditions.",
+                        "summoned_entity": "Triggers after an [[entity]] has been summoned. Works with [[iron golem]]s (pumpkin and iron blocks), [[snow golem]]s (pumpkin and snow blocks), the [[ender dragon]] (end crystals) and the [[wither]] (wither skulls and soul sand/soul soil). Using [[dispenser]]s, commands, or [[piston]]s to place the wither skulls or pumpkins will still activate this trigger. Available extra conditions:",
+                        "tame_animal": "Triggers after the player tames an [[Mob#Tameable mobs|animal]]. Available extra conditions:",
+                        "target_hit": "Triggers when the player shoots a [[target]] block. Available extra conditions:",
+                        "thrown_item_picked_up_by_entity": "Triggers after the player throws an item and another entity picks it up. Available extra conditions:",
+                        "thrown_item_picked_up_by_player": "Triggers when a player picks up an item thrown by another entity. Available extra conditions:",
+                        "tick": "Triggers every [[tick]] (20 times a second). No extra conditions.",
+                        "used_ender_eye": "Triggers when the player uses an [[eye of ender]] (in a world where [[stronghold]]s generate). Available extra conditions:",
+                        "used_totem": "Triggers when the player uses a totem. Available extra conditions:",
+                        "using_item": "Triggers for every tick that the player uses an item that is used continuously. It is known to trigger for [[bow]]s, [[crossbow]]s, [[honey bottle]]s, [[milk bucket]]s, [[potion]]s, [[shield]]s, [[spyglass]]es, [[trident]]s, [[food|food items]], [[eye of ender|eyes of ender]], etc. Most items that activate from a single click, such as [[fishing rod]]s, do not affect this trigger. Available extra conditions:",
+                        "villager_trade": "Triggers after the player trades with a [[villager]] or a [[wandering trader]]. Available extra conditions:",
+                        "voluntary_exile": "Triggers when the player causes a [[raid]]. No extra conditions.",
+                        "minecraft:allay_drop_item_on_block": "Triggers when an allay drops an item on a block. Available extra conditions:",
+                        "minecraft:avoid_vibration": "Triggers when a vibration event is ignored because the source player is crouching. No extra conditions.",
+                        "minecraft:bee_nest_destroyed": "Triggers when the player breaks a bee nest or beehive. Available extra conditions:",
+                        "minecraft:bred_animals": "Triggers after the player breeds 2 [[animals]]. Available extra conditions:",
+                        "minecraft:brewed_potion": "Triggers after the player takes any item out of a [[brewing stand]]. Available extra conditions:",
+                        "minecraft:changed_dimension": "Triggers after the player travels between two [[dimensions]]. Available extra conditions:",
+                        "minecraft:channeled_lightning": "Triggers after the player successfully uses the Channeling enchantment on an entity or a lightning rod. Available extra conditions:",
+                        "minecraft:construct_beacon": "Triggers after the player changes the structure of a [[beacon]]. (When the beacon updates itself). Available extra conditions:",
+                        "minecraft:consume_item": "Triggers when the player consumes an item. Available extra conditions:",
+                        "minecraft:cured_zombie_villager": "Triggers when the player cures a [[zombie villager]]. Available extra conditions:",
+                        "minecraft:effects_changed": "Triggers after the player gets a [[status effect]] applied or taken from them. Available extra conditions:",
+                        "minecraft:enchanted_item": "Triggers after the player enchants an item through an [[enchanting table]] (does not get triggered through an [[anvil]], or through [[command]]s). Available extra conditions:",
+                        "minecraft:enter_block": "Every tick, triggers once for each block the player's hitbox is inside (up to 12 blocks, the maximum number of blocks the player can stand in). Available extra conditions:",
+                        "minecraft:entity_hurt_player": "Triggers after a player gets hurt (even when it's not caused by an entity). Available extra conditions:",
+                        "minecraft:entity_killed_player": "Triggers after a living [[entity]] kills a player. Available extra conditions:",
+                        "minecraft:fall_from_height": "Triggers when a player lands after falling. Available extra conditions:",
+                        "minecraft:filled_bucket": "Triggers after the player fills a bucket. Available extra conditions:",
+                        "minecraft:fishing_rod_hooked": "Triggers after the player successfully catches an item with a fishing rod or pulls an entity with a fishing rod. Available extra conditions:",
+                        "minecraft:hero_of_the_village": "Triggers when a [[raid]] ends in victory and the player has attacked at least one raider from that raid. No extra conditions.",
+                        "minecraft:impossible": "Never triggers.<!--Commands don't trigger triggers, they grant criteria.--> No available conditions.",
+                        "minecraft:inventory_changed": "Triggers after any changes happen to the player's [[inventory]]. Available extra conditions:",
+                        "minecraft:item_durability_changed": "Triggers after any item in the inventory has been damaged in any form. Available extra conditions:",
+                        "minecraft:item_used_on_block": "Triggers when the player {{control|uses}} their hand or an item on a block. Available extra conditions:",
+                        "minecraft:kill_mob_near_sculk_catalyst": "Triggers after a player is the source of a [[mob]] or player being killed within the range of a [[sculk catalyst]]. Available extra conditions:",
+                        "minecraft:killed_by_crossbow": "Triggers after the player kills a [[mob]] or player using a crossbow in ranged combat. Available extra conditions:",
+                        "minecraft:levitation": "Triggers when the player has the levitation [[status effect]]. Available extra conditions:",
+                        "minecraft:lightning_strike": "Triggers when a lightning bolt disappears from the world, only for players within a 256 block radius of the lightning bolt. Available extra conditions:",
+                        "minecraft:location": "Triggers every 20 [[tick]]s (1 second). No extra conditions.",
+                        "minecraft:nether_travel": "Triggers when the player travels to the [[Nether]] and then returns to the [[Overworld]]. Available extra conditions:",
+                        "minecraft:placed_block": "Triggers when the player places a block. Available extra conditions:",
+                        "minecraft:player_generates_container_loot": "Triggers when the player generates the contents of a container with a loot table set. Available extra conditions:",
+                        "minecraft:player_hurt_entity": "Triggers after the player hurts a [[mob]] or player. Available extra conditions:",
+                        "minecraft:player_interacted_with_entity": "Triggers when the player interacts with an entity. Available extra conditions:",
+                        "minecraft:player_killed_entity": "Triggers after a player is the source of a [[mob]] or player being killed. Available extra conditions:",
+                        "minecraft:recipe_crafted": "Triggers when the player crafts a recipe in a crafting table, stonecutter or smithing table. Available extra conditions:",
+                        "minecraft:recipe_unlocked": "Triggers after the player unlocks a [[Crafting#Complete recipe list|recipe]] (using a [[knowledge book]] for example). Available extra conditions:",
+                        "minecraft:ride_entity_in_lava": "Triggers when a player mounts an entity walking on lava and while the entity moves with them. Available extra conditions:",
+                        "minecraft:shot_crossbow": "Triggers when the player shoots a crossbow. Available extra conditions:",
+                        "minecraft:slept_in_bed": "Triggers when the player enters a [[bed]]. No extra conditions.",
+                        "minecraft:slide_down_block": "Triggers when the player slides down a block. Available extra conditions:",
+                        "minecraft:started_riding": "Triggers when the player starts riding a vehicle or an entity starts riding a vehicle currently ridden by the player. No extra conditions.",
+                        "minecraft:summoned_entity": "Triggers after an [[entity]] has been summoned. Works with [[iron golem]]s (pumpkin and iron blocks), [[snow golem]]s (pumpkin and snow blocks), the [[ender dragon]] (end crystals) and the [[wither]] (wither skulls and soul sand/soul soil). Using [[dispenser]]s, commands, or [[piston]]s to place the wither skulls or pumpkins will still activate this trigger. Available extra conditions:",
+                        "minecraft:tame_animal": "Triggers after the player tames an [[Mob#Tameable mobs|animal]]. Available extra conditions:",
+                        "minecraft:target_hit": "Triggers when the player shoots a [[target]] block. Available extra conditions:",
+                        "minecraft:thrown_item_picked_up_by_entity": "Triggers after the player throws an item and another entity picks it up. Available extra conditions:",
+                        "minecraft:thrown_item_picked_up_by_player": "Triggers when a player picks up an item thrown by another entity. Available extra conditions:",
+                        "minecraft:tick": "Triggers every [[tick]] (20 times a second). No extra conditions.",
+                        "minecraft:used_ender_eye": "Triggers when the player uses an [[eye of ender]] (in a world where [[stronghold]]s generate). Available extra conditions:",
+                        "minecraft:used_totem": "Triggers when the player uses a totem. Available extra conditions:",
+                        "minecraft:using_item": "Triggers for every tick that the player uses an item that is used continuously. It is known to trigger for [[bow]]s, [[crossbow]]s, [[honey bottle]]s, [[milk bucket]]s, [[potion]]s, [[shield]]s, [[spyglass]]es, [[trident]]s, [[food|food items]], [[eye of ender|eyes of ender]], etc. Most items that activate from a single click, such as [[fishing rod]]s, do not affect this trigger. Available extra conditions:",
+                        "minecraft:villager_trade": "Triggers after the player trades with a [[villager]] or a [[wandering trader]]. Available extra conditions:",
+                        "minecraft:voluntary_exile": "Triggers when the player causes a [[raid]]. No extra conditions."
+                      }
+                    }
+                  },
+                  "conditions": {
+                    "description": "Object containing conditions that need to be met when the trigger gets activated. The criterion is marked completed when the trigger activates and all conditions passed.",
+                    "value": {
+                      "$type": "object",
+                      "properties": {
+                        "player": {
+                          "description": "Checks properties of the player that would get the advancement. Not available for <code>minecraft:impossible</code> trigger.",
+                          "value": {
+                            "$type": "union",
+                            "options": [
+                              {
+                                "$type": "object",
+                                "inherits": [ { "defRef": "entity:entity" } ],
+                                "properties": {}
+                              },
+                              {
+                                "$type": "array",
+                                "element": { "$defRef": "predicate:predicate-body" }
+                              }
+                            ]
+                          },
+                          "optional": true
+                        },
+                        "location": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "allay_drop_item_on_block": { "$defRef": "%location-allay_drop_item_on_block" },
+                            "item_used_on_block": { "$defRef": "%location-item_used_on_block" },
+                            "placed_block": { "$defRef": "%location-placed_block" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "block": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "bee_nest_destroyed": { "$defRef": "%block-bee_nest_destroyed" },
+                            "enter_block": { "$defRef": "%block-enter_block" },
+                            "slide_down_block": { "$defRef": "%block-slide_down_block" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "item": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "bee_nest_destroyed": { "$defRef": "%item-bee_nest_destroyed" },
+                            "consume_item": { "$defRef": "%item-consume_item" },
+                            "enchanted_item": { "$defRef": "%item-enchanted_item" },
+                            "filled_bucket": { "$defRef": "%item-filled_bucket" },
+                            "fishing_rod_hooked": { "$defRef": "%item-fishing_rod_hooked" },
+                            "item_durability_changed": { "$defRef": "%item-item_durability_changed" },
+                            "player_interacted_with_entity": { "$defRef": "%item-player_interacted_with_entity" },
+                            "shot_crossbow": { "$defRef": "%item-shot_crossbow" },
+                            "thrown_item_picked_up_by_entity": { "$defRef": "%item-thrown_item_picked_up_by_entity" },
+                            "thrown_item_picked_up_by_player": { "$defRef": "%item-thrown_item_picked_up_by_player" },
+                            "used_totem": { "$defRef": "%item-used_totem" },
+                            "using_item": { "$defRef": "%item-using_item" },
+                            "villager_trade": { "$defRef": "%item-villager_trade" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "num_bees_inside": {
+                          "decidingProp": "../trigger",
+                          "values": { "bee_nest_destroyed": { "$defRef": "%num_bees_inside-bee_nest_destroyed" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "child": {
+                          "decidingProp": "../trigger",
+                          "values": { "bred_animals": { "$defRef": "%parent_partner_child-bred_animals" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "parent": {
+                          "decidingProp": "../trigger",
+                          "values": { "bred_animals": { "$defRef": "%parent_partner_child-bred_animals" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "partner": {
+                          "decidingProp": "../trigger",
+                          "values": { "bred_animals": { "$defRef": "%parent_partner_child-bred_animals" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "potion": {
+                          "decidingProp": "../trigger",
+                          "values": { "brewed_potion": { "$defRef": "%potion-brewed_potion" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "from": {
+                          "decidingProp": "../trigger",
+                          "values": { "changed_dimension": { "$defRef": "%from-changed_dimension" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "to": {
+                          "decidingProp": "../trigger",
+                          "values": { "changed_dimension": { "$defRef": "%to-changed_dimension" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "victims": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "channeled_lightning": { "$defRef": "%victims-channeled_lightning" },
+                            "killed_by_crossbow": { "$defRef": "%victims-killed_by_crossbow" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "level": {
+                          "decidingProp": "../trigger",
+                          "values": { "construct_beacon": { "$defRef": "%level-construct_beacon" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "villager": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "cured_zombie_villager": { "$defRef": "%villager-cured_zombie_villager" },
+                            "villager_trade": { "$defRef": "%villager-villager_trade" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "zombie": {
+                          "decidingProp": "../trigger",
+                          "values": { "cured_zombie_villager": { "$defRef": "%zombie-cured_zombie_villager" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "effects": {
+                          "decidingProp": "../trigger",
+                          "values": { "effects_changed": { "$defRef": "%effects-effects_changed" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "source": {
+                          "decidingProp": "../trigger",
+                          "values": { "effects_changed": { "$defRef": "%source-effects_changed" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "levels": {
+                          "decidingProp": "../trigger",
+                          "values": { "enchanted_item": { "$defRef": "%levels-enchanted_item" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "state": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "enter_block": { "$defRef": "%state-enter_block" },
+                            "slide_down_block": { "$defRef": "%state-slide_down_block" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "damage": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "entity_hurt_player": { "$defRef": "%damage-entity_hurt_player" },
+                            "player_hurt_entity": { "$defRef": "%damage-player_hurt_entity" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "entity": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "entity_killed_player": { "$defRef": "%entity-entity_killed_player" },
+                            "fishing_rod_hooked": { "$defRef": "%entity-checkAppliedToEntity" },
+                            "kill_mob_near_sculk_catalyst": { "$defRef": "%entity-checkAppliedToEntity" },
+                            "player_hurt_entity": { "$defRef": "%entity-checkAppliedToEntity" },
+                            "player_interacted_with_entity": { "$defRef": "%entity-checkAppliedToEntity" },
+                            "player_killed_entity": { "$defRef": "%entity-checkAppliedToEntity" },
+                            "summoned_entity": { "$defRef": "%entity-checkAppliedToEntity" },
+                            "tame_animal": { "$defRef": "%entity-checkAppliedToEntity" },
+                            "thrown_item_picked_up_by_entity": { "$defRef": "%entity-checkAppliedToEntity" },
+                            "thrown_item_picked_up_by_player": { "$defRef": "%entity-checkAppliedToEntity" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "killing_blow": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "entity_killed_player": { "$defRef": "%killing_blow-kill_entity_or_player" },
+                            "kill_mob_near_sculk_catalyst": { "$defRef": "%killing_blow-kill_entity_or_player" },
+                            "player_killed_entity": { "$defRef": "%killing_blow-kill_entity_or_player" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "start_position": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "fall_from_height": { "$defRef": "%start_position" },
+                            "nether_travel": { "$defRef": "%start_position" },
+                            "ride_entity_in_lava": { "$defRef": "%start_position" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "distance": {
+                          "decidingProp": "../trigger",
+                          "values": {
+                            "fall_from_height": { "$defRef": "%distance-traveled_or_fallen" },
+                            "levitation": { "$defRef": "%distance-traveled_or_fallen" },
+                            "nether_travel": { "$defRef": "%distance-traveled_or_fallen" },
+                            "ride_entity_in_lava": { "$defRef": "%distance-traveled_or_fallen" },
+                            "used_ender_eye": { "$defRef": "%distance-used_ender_eye" }
+                          },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "rod": {
+                          "decidingProp": "../trigger",
+                          "values": { "fishing_rod_hooked": { "$defRef": "%rod-fishing_rod_hooked" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "items": {
+                          "decidingProp": "../trigger",
+                          "values": { "inventory_changed": { "$defRef": "%items-inventory_changed" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "slots": {
+                          "decidingProp": "../trigger",
+                          "values": { "inventory_changed": { "$defRef": "%slots-inventory_changed" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "delta": {
+                          "decidingProp": "../trigger",
+                          "values": { "item_durability_changed": { "$defRef": "%delta-item_durability_changed" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "durability": {
+                          "decidingProp": "../trigger",
+                          "values": { "item_durability_changed": { "$defRef": "%durability-item_durability_changed" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "unique_entity_types": {
+                          "decidingProp": "../trigger",
+                          "values": { "killed_by_crossbow": { "$defRef": "%unique_entity_types-killed_by_crossbow" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "duration": {
+                          "decidingProp": "../trigger",
+                          "values": { "levitation": { "$defRef": "%duration-levitation" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "lightning": {
+                          "decidingProp": "../trigger",
+                          "values": { "lightning_strike": { "$defRef": "%lightning-lightning_strike" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "bystander": {
+                          "decidingProp": "../trigger",
+                          "values": { "lightning_strike": { "$defRef": "%bystander-lightning_strike" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "loot_table": {
+                          "decidingProp": "../trigger",
+                          "values": { "player_generates_container_loot": { "$defRef": "%loot_table-player_generates_container_loot" } },
+                          "optionalPrefixes": [ "minecraft:" ]
+                        },
+                        "recipe_id": {
+                          "decidingProp": "../trigger",
+                          "values": { "recipe_crafted": { "$defRef": "%recipe_id-recipe_crafted" } },
+                          "optionalPrefixes": [ "minecraft:" ]
+                        },
+                        "ingredients": {
+                          "decidingProp": "../trigger",
+                          "values": { "recipe_crafted": { "$defRef": "%ingredients-recipe_crafted" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "recipe": {
+                          "decidingProp": "../trigger",
+                          "values": { "recipe_unlocked": { "$defRef": "%recipe-recipe_unlocked" } },
+                          "optionalPrefixes": [ "minecraft:" ]
+                        },
+                        "signal_strength": {
+                          "decidingProp": "../trigger",
+                          "values": { "target_hit": { "$defRef": "%signal_strength-target_hit" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        },
+                        "projectile": {
+                          "decidingProp": "../trigger",
+                          "values": { "target_hit": { "$defRef": "%projectile-target_hit" } },
+                          "optionalPrefixes": [ "minecraft:" ],
+                          "optional": true
+                        }
+                      }
+                    },
+                    "optional": true
+                  }
+                }
+              },
+              "optional": true
+            }
+          }
+        },
+        "requirements": {
+          "description": "Defines how these criteria above are completed to grant the advancement. Contains sublists, which in turn contain names of criteria from this advancement (all the {{cd|<criterionName>}}s). When a criterion is newly completed or revoked, the advancement is granted if all sublists have at least one criterion within them completed. Optional, defaults to requiring all criteria completed.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "array",
+              "description": " Sublist within {{nbt|list|requirements}}, contains strings of {{cd|<criterionName>}}s. If a sublist is empty, the advancement is unachievable without cheats.",
+              "element": {
+                "$type": "string",
+                "description": " A criterion name."
+              }
+            }
+          },
+          "optional": true
+        },
+        "rewards": {
+          "description": "An object representing the rewards provided when this advancement is obtained.",
+          "value": {
+            "$type": "object",
+            "properties": {
+              "recipes": {
+                "description": "To unlock [ [recipe] ]s.",
+                "value": {
+                  "$type": "array",
+                  "element": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "recipe" } }
+                },
+                "optional": true
+              },
+              "loot": {
+                "description": "To give items from [ [loot table] ]s to the player.",
+                "value": {
+                  "$type": "array",
+                  "element": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "loot_table" } }
+                },
+                "optional": true
+              },
+              "experience": {
+                "description": "To give an amount of [ [experience] ]. Defaults to 0.",
+                "value": { "$type": "integer" },
+                "default": 0,
+                "optional": true
+              },
+              "function": {
+                "description": "To run a [ [Function (Java Edition)|function] ]. [ [Tag#Function Tags|Function tags] ] are not allowed.",
+                "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "function" } },
+                "optional": true
+              }
+            }
+          },
+          "optional": true
+        },
+        "sends_telemetry_event": {
+          "description": "Determines whether [ [telemetry] ] data should be collected when this advancement is achieved or not. Defaults to false.",
+          "value": { "$type": "boolean" },
+          "optional": true
+        }
+      }
+    },
+    "%location-allay_drop_item_on_block": {
+      "$type": "array",
+      "description": "Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The origin is the location of the block the item was dropped on, the block state belongs to that block, and the tool is the item dropped on the block. The {{cd|this}} entity is the player that would get the advancement.",
+      "element": { "$defRef": "predicate:predicate-body" }
+    },
+    "%location-item_used_on_block": {
+      "$type": "array",
+      "description": "Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The origin is the location of the block the item was used on, the block state belongs to that block, and the tool is the item used on the block. The {{cd|this}} entity is the player that would get the advancement.",
+      "element": { "$defRef": "predicate:predicate-body" }
+    },
+    "%location-placed_block": {
+      "$type": "array",
+      "description": "Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The origin is the location of the block placed, the block state belongs to that block, and the tool is the item used to place the block. The {{cd|this}} entity is the player that would get the advancement.",
+      "element": { "$defRef": "predicate:predicate-body" }
+    },
+    "%block-bee_nest_destroyed": {
+      "$type": "string",
+      "description": "Checks the block that was destroyed. Accepts block IDs."
+    },
+    "%block-enter_block": {
+      "$type": "string",
+      "description": "The block that the player is standing in. Accepts [ [Data values#Block IDs|block ID] ]s.",
+      "type": "minecraft:resource_location",
+      "args": { "schema": "block" }
+    },
+    "%block-slide_down_block": {
+      "$type": "string",
+      "description": "The block that the player slid on."
+    },
+    "%item-bee_nest_destroyed": {
+      "$type": "object",
+      "description": "The item used to break the block.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-consume_item": {
+      "$type": "object",
+      "description": "The item that was consumed.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-enchanted_item": {
+      "$type": "object",
+      "description": "The item after it has been enchanted.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-filled_bucket": {
+      "$type": "object",
+      "description": "The item resulting from filling the bucket.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-fishing_rod_hooked": {
+      "$type": "object",
+      "description": "The item that was caught.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-item_durability_changed": {
+      "$type": "object",
+      "description": "The item before it was damaged, allows you to check the durability before the item was damaged.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-player_interacted_with_entity": {
+      "$type": "object",
+      "description": "The item which was in the player's hand during interaction.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-shot_crossbow": {
+      "$type": "object",
+      "description": "The crossbow that is used. ",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-thrown_item_picked_up_by_entity": {
+      "$type": "object",
+      "description": "The thrown item which was picked up.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-thrown_item_picked_up_by_player": {
+      "$type": "object",
+      "description": "The item thrown.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-used_totem": {
+      "$type": "object",
+      "description": "The item, only works with totem items.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-using_item": {
+      "$type": "object",
+      "description": "The item that is used.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%item-villager_trade": {
+      "$type": "object",
+      "description": "The item that was purchased. The \"count\" tag checks the count from one trade, not multiple.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%num_bees_inside-bee_nest_destroyed": {
+      "$type": "union",
+      "description": "The number of bees that were inside the bee nest/beehive before it was broken.",
+      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+    },
+    "%parent_partner_child-bred_animals": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "The parent, its partner or the child.",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"parent\", \"partner\", or \"child\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The origin of the predicate is the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%potion-brewed_potion": {
+      "$type": "string",
+      "description": "A [ [Potion#Item data|brewed potion ID] ].",
+      "type": "minecraft:resource_location",
+      "args": { "schema": "potion" }
+    },
+    "%from-changed_dimension": {
+      "$type": "string", 
+      "type": "minecraft:resource_location", 
+      "args": { "schema": "recipe" },
+      "description": "The dimension the entity traveled from. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)."
+    },
+    "%to-changed_dimension": {
+      "$type": "string",
+      "description": "The dimension the entity traveled to. Same accepted values as above."
+    },
+    "%victims-channeled_lightning": {
+      "$type": "array",
+      "description": "The victims hit by the lightning summoned by the Channeling enchantment. All entities in this list must be hit.",
+      "element": {
+        "$type": "union",
+        "options": [
+          {
+            "$type": "object",
+            "description": "A victim.",
+            "inherits": [ { "defRef": "entity:entity" } ],
+            "properties": {}
+          },
+          {
+            "$type": "array",
+            "description": "Another format for the victim. Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the victim hit by the lighting, with the origin being the position of the player that would get the advancement.",
+            "element": { "$defRef": "predicate:predicate-body" }
+          }
+        ]
+      }
+    },
+    "%victims-killed_by_crossbow": {
+      "$type": "array",
+      "description": "A list of victims. All of the entries must be matched, and one killed entity may match only one entry.",
+      "element": {
+        "$type": "union",
+        "options": [
+          {
+            "$type": "object",
+            "description": "A killed entities.",
+            "inherits": [ { "defRef": "entity:entity" } ],
+            "properties": {}
+          },
+          {
+            "$type": "array",
+            "description": "Another format for the victim. Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the victim, with the origin being the position of the player that would get the advancement.",
+            "element": { "$defRef": "predicate:predicate-body" }
+          }
+        ]
+      }
+    },
+    "%level-construct_beacon": {
+      "$type": "union",
+      "description": "The level of the updated beacon structure.",
+      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+    },
+    "%villager-cured_zombie_villager": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "The villager that is the result of the conversion. The 'type' tag is redundant since it will always be \"villager\".",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"villager\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the villager, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%villager-villager_trade": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "The villager the item was purchased from.",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"villager\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the villager, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%zombie-cured_zombie_villager": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "The zombie villager right before the conversion is complete (not when it is initiated). The 'type' tag is redundant since it will always be \"zombie_villager\".",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"zombie\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the zombie villager, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%effects-effects_changed": {
+      "$type": "object",
+      "description": "<minecraft:effect_name>: A list of active status effects the player currently has.",
+      "properties": {},
+      "default-property": {
+        "description": "The key name is a [ [Java Edition data values|status effect] ] name.",
+        "value": {
+          "$type": "object",
+          "properties": {
+            "ambient": {
+              "description": "Whether the effect is from a beacon.",
+              "value": { "$type": "boolean" },
+              "optional": true
+            },
+            "amplifier": {
+              "description": "The effect amplifier.",
+               "value": { "$ref": "base:valOrRange", "type": "integer" },
+              "optional": true
+            },
+            "duration": {
+              "description": "The effect duration in ticks.",
+              "value": { "$ref": "base:valOrRange", "type": "integer" },
+              "optional": true
+            },
+            "visible": {
+              "description": "Whether the effect has visible particles.",
+              "value": { "$type": "boolean" },
+              "optional": true
+            }
+          }
+        },
+        "optional": true
+      }
+    },
+    "%source-effects_changed": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "The entity that was the source of the status effect. When there is no entity or when the effect was self-applied or removed, the test passes only if the source is not specified.",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"source\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the source, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%levels-enchanted_item": {
+      "$type": "union",
+      "description": "The levels spent by the player on the enchantment.",
+      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+    },
+    "%state-enter_block": {
+      "$type": "object",
+      "description": "''key'': A map of [ [Block states|block property] ] names to values. Errors if the block doesn't have these properties.",
+      "properties": {},
+      "default-property": {
+        "description": "Block property key and value pair.",
+        "value": {
+          "$type": "union",
+          "options": [
+            {
+              "$type": "union",
+              "description": "Block property key and value pair.",
+              "options": [
+                { "$type": "integer" },
+                { "$type": "boolean" },
+                { "$type": "string" }
+              ]
+            },
+            {
+              "$type": "object",
+              "properties": {
+                "max": {
+                  "description": "A maximum value.",
+                  "value": {
+                    "$type": "union",
+                    "description": "A maximum value.",
+                    "options": [
+                      { "$type": "integer" },
+                      { "$type": "boolean" },
+                      { "$type": "string" }
+                    ]
+                  },
+                  "optional": true
+                },
+                "min": {
+                  "description": "A minimum value.",
+                  "value": {
+                    "$type": "union",
+                    "description": "A minimum value.",
+                    "options": [
+                      { "$type": "integer" },
+                      { "$type": "boolean" },
+                      { "$type": "string" }
+                    ]
+                  },
+                  "optional": true
+                }
+              }
+            }
+          ]
+        },
+        "optional": true
+      }
+    },
+    "%state-slide_down_block": {
+      "$type": "object",
+      "description": "''key'': A map of [ [Block states|block property] ] names to values. Errors if the block doesn't have these properties.",
+      "properties": {},
+      "default-property": {
+        "description": "Block property key and value pair.",
+        "value": {
+          "$type": "union",
+          "options": [
+            {
+              "$type": "union",
+              "description": "Block property key and value pair.",
+              "options": [
+                { "$type": "integer" },
+                { "$type": "boolean" },
+                { "$type": "string" }
+              ]
+            },
+            {
+              "$type": "object",
+              "properties": {
+                "max": {
+                  "description": "A maximum value.",
+                  "value": {
+                    "$type": "union",
+                    "description": "A maximum value.",
+                    "options": [
+                      { "$type": "integer" },
+                      { "$type": "boolean" },
+                      { "$type": "string" }
+                    ]
+                  },
+                  "optional": true
+                },
+                "min": {
+                  "description": "A minimum value.",
+                  "value": {
+                    "$type": "union",
+                    "description": "A minimum value.",
+                    "options": [
+                      { "$type": "integer" },
+                      { "$type": "boolean" },
+                      { "$type": "string" }
+                    ]
+                  },
+                  "optional": true
+                }
+              }
+            }
+          ]
+        },
+        "optional": true
+      }
+    },
+    "%damage-entity_hurt_player": {
+      "$type": "object",
+      "description": "Checks the damage done to the player.",
+      "inherits": [ { "defRef": "damage:damage" } ],
+      "properties": {}
+    },
+    "%damage-player_hurt_entity": {
+      "$type": "object",
+      "description": "The damage that was dealt.",
+      "inherits": [ { "defRef": "damage:damage" } ],
+      "properties": {}
+    },
+    "%entity-entity_killed_player": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "Checks the entity that was the source of the damage that killed the player (for example: The skeleton that shot the arrow).",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"entity\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the entity that kills the player, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%entity-checkAppliedToEntity": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "The entity that was damaged / interacted with / damaged / killed / summoned / tamed / pulled or has picked up / thrown the item. When fishing and no entity is pulled, it will be the fishing bobber",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"entity\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the entity, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%killing_blow-kill_entity_or_player": {
+      "$type": "object",
+      "description": "The type of damage that killed an entity or the player.",
+      "inherits": [ { "defRef": "damage_type:damage_type" } ],
+      "properties": {}
+    },
+    "%start_position": {
+      "$type": "object",
+      "description": "A location predicate for the last position before the falling started / the player teleported / mounted the entity.",
+      "inherits": [ { "defRef": "location:location" } ],
+      "properties": {}
+    },
+    "%distance-traveled_or_fallen": {
+      "$type": "object",
+      "description": "The distance between the start position and the player's current position or psition when they returned from the Nether.",
+      "inherits": [ { "defRef": "distance:distance" } ],
+      "properties": {}
+    },
+    "%distance-used_ender_eye": {
+      "$type": "union",
+      "description": "The horizontal distance between the player and the stronghold.",
+      "options": [{ "$ref": "base:valOrRange", "type": "float" }]
+    },
+    "%rod-fishing_rod_hooked": {
+      "$type": "object",
+      "description": "The fishing rod used.",
+      "inherits": [ { "defRef": "item:item" } ],
+      "properties": {}
+    },
+    "%items-inventory_changed": {
+      "$type": "array",
+      "description": "A list of items in the player's inventory. All items in the list must be in the player's inventory, but not all items in the player's inventory have to be in this list.",
+      "element": {
+        "$type": "object",
+        "description": "An item stack.",
+        "inherits": [ { "defRef": "item:item" } ],
+        "properties": {}
+      }
+    },
+    "%slots-inventory_changed": {
+      "$type": "object",
+      "properties": {
+        "empty": {
+          "description": "The amount of slots empty in the inventory.",
+          "value": { "$ref": "base:valOrRange", "type": "integer" },
+          "optional": true
+        },
+        "full": {
+          "description": "The amount of slots completely filled (stacksize) in the inventory.",
+          "value": { "$ref": "base:valOrRange", "type": "integer" },
+          "optional": true
+        },
+        "occupied": {
+          "description": "The amount of slots occupied in the inventory.",
+          "value": { "$ref": "base:valOrRange", "type": "integer" },
+          "optional": true
+        }
+      }
+    },
+    "%delta-item_durability_changed": {
+      "$type": "union",
+      "description": "The change in durability (negative numbers are used to indicate a decrease in durability).",
+      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+    },
+    "%durability-item_durability_changed": {
+      "$type": "union",
+      "description": "The remaining durability of the item.",
+      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+    },
+    "%unique_entity_types-killed_by_crossbow": {
+      "$type": "union",
+      "description": "The exact count of types of entities killed.",
+      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+    },
+    "%duration-levitation": {
+      "$type": "union",
+      "description": "The duration of the levitation in ticks.",
+      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+    },
+    "%lightning-lightning_strike": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "The lightning bolt that disappeared.",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"lightning\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the lightning, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%bystander-lightning_strike": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "An entity not hurt by the lightning strike but in a certain area around it.",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"bystander\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the bystander, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    },
+    "%loot_table-player_generates_container_loot": {
+      "$type": "string",
+      "description": "<span style=\"color:red;\">'''*'''</span>: The resource location of the generated loot table."
+    },
+    "%recipe_id-recipe_crafted": {
+      "$type": "string",
+      "description": "<span style=\"color:red;\">'''*'''</span>: The recipe that was crafted."
+    },
+    "%ingredients-recipe_crafted": {
+      "$type": "array",
+      "description": "An array of item predicates for the recipe ingredients. Each item can only match one predicate, and every predicate needs to pass for the criterion to be granted.",
+      "element": {
+        "$type": "object",
+        "description": "A single predicate.",
+        "inherits": [ { "defRef": "item:item" } ],
+        "properties": {}
+      }
+    },
+    "%recipe-recipe_unlocked": {
+      "$type": "string",
+      "description": "<span style=\"color:red;\">'''*'''</span>: The recipe that was unlocked."
+    },
+    "%signal_strength-target_hit": {
+      "$type": "union",
+      "description": "The redstone signal that will come out of the target block.",
+      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+    },
+    "%projectile-target_hit": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "description": "The projectile hit the target block.",
+          "inherits": [ { "defRef": "entity:entity" } ],
+          "properties": {}
+        },
+        {
+          "$type": "array",
+          "description": "Another format for \"projectile\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the projectile, with the origin being the position of the player that would get the advancement.",
+          "element": { "$defRef": "predicate:predicate-body" }
+        }
+      ]
+    }
+  }
+}

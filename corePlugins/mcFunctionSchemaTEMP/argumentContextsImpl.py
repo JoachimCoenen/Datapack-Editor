@@ -347,7 +347,7 @@ class FunctionHandler(ResourceLocationLikeHandler):
 
 	@property
 	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'function')
+		return ResourceLocationSchema('', 'function_type')
 
 
 @argumentContext(MINECRAFT_GAME_PROFILE.name)

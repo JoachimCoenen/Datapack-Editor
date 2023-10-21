@@ -86,7 +86,7 @@ class DatapackVersionsPlugin(PluginBase):
 
 			# DatapackContents:
 			SchemaMapping(
-				schemaId='minecraft:advancements',
+				schemaId='minecraft:advancement',
 				pathFilter='data/*/advancements/**.json',
 			),
 			SchemaMapping(
