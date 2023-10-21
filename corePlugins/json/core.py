@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from math import inf
 from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable, NamedTuple
+from weakref import ref, ReferenceType
 
 from Cat.utils import CachedProperty, Anything, Nothing
 from Cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
@@ -116,6 +117,11 @@ class JsonData(JsonNode, Generic[_TJD], ABC):
 	typeName: ClassVar[str] = 'JsonData'
 	data: _TJD
 	path: str = field(default='', init=False)
+	_parent: Optional[ReferenceType[JsonObject | JsonArray]] = field(default=None, init=False)
+
+	@property
+	def parent(self) -> Optional[JsonObject | JsonArray]:
+		return self._parent and self._parent()
 
 
 @dataclass
@@ -175,6 +181,11 @@ class JsonArray(JsonData[Array]):
 	data: Array
 	typeName: ClassVar[str] = 'array'
 
+	def __post_init__(self):
+		selfRef = ref(self)
+		for d in self.data:
+			d._parent = selfRef
+
 	@property
 	def children(self) -> Collection[JsonData]:
 		return self.data
@@ -201,6 +212,12 @@ class JsonProperty(JsonNode):
 class JsonObject(JsonData[Object]):
 	data: Object
 	typeName: ClassVar[str] = 'object'
+
+	def __post_init__(self):
+		selfRef = ref(self)
+		for prop in self.data.values():
+			prop.key._parent = selfRef
+			prop.value._parent = selfRef
 
 	@property
 	def children(self) -> Collection[JsonProperty]:
@@ -375,6 +392,36 @@ class JsonKeySchema(JsonStringSchema):
 JSON_KEY_SCHEMA = JsonKeySchema(allowMultilineStr=None)
 
 
+DECIDING_PROP_NOT_FOUND = object()
+
+
+@dataclass
+class DecidingPropNotFound:
+	msg: str
+
+
+def getDecidingPropValue(decidingProp: tuple[int, str], parent: JsonObject) -> JsonTypes | DecidingPropNotFound:
+	lookback, decidingPropName = decidingProp
+	decidingPropParent = parent
+	for _ in range(lookback):
+		decidingPropParent = decidingPropParent.parent
+		if decidingPropParent is None:
+			msg = f"encountered missing parent while resolving decidingProp with lookback={lookback}."
+			logWarning(msg)
+			return DecidingPropNotFound(msg)
+	if not isinstance(decidingPropParent, JsonObject):
+		msg = f"resolved parent of decidingProp is not a JsonObject, but rather a {decidingPropParent.typeName} with decidingProp={decidingProp}."
+		logWarning(msg)
+		return DecidingPropNotFound(msg)
+
+	dp = decidingPropParent.data.get(decidingPropName)
+	if dp is not None:
+		dVal = getattr(dp.value, 'data')
+	else:
+		dVal = None
+	return dVal
+
+
 class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 	DATA_TYPE: ClassVar[Type[JsonNode]] = JsonProperty
 	typeName: ClassVar[str] = 'property'
@@ -397,7 +444,7 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 			value: Optional[JsonSchema[_TT2]],
 			optional: bool = False,
 			default: JsonTypes = None,
-			decidingProp: Optional[str] = None,
+			decidingProp: Optional[tuple[int, str]] = None,
 			values: dict[Union[tuple[Union[str, int, bool], ...], Union[str, int, bool]], JsonSchema[_TT2]] = None,
 			requires: Optional[tuple[str, ...]] = None,
 			hates: tuple[str, ...] = (),
@@ -408,7 +455,7 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 		self.optional: bool = optional
 		self.default: Optional[_TT2] = default
 		self.value: Optional[JsonSchema[_TT2]] = value
-		self.decidingProp: Optional[str] = decidingProp
+		self.decidingProp: Optional[tuple[int, str]] = decidingProp
 		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = {}
 		if requires is None:
 			requires = ()
@@ -434,13 +481,12 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 		# 	return self.value
 		decidingProp = self.decidingProp
 		if decidingProp is not None:
-			dp = parent.data.get(decidingProp)
-			if dp is not None:
-				dVal = getattr(dp.value, 'data')
-			else:
-				dVal = None
+			dVal = getDecidingPropValue(decidingProp, parent)
+			if isinstance(dVal, DecidingPropNotFound):
+				return JsonUnionSchema(description=MDStr(dVal.msg), options=[], allowMultilineStr=None)
 			if not callable(getattr(dVal, '__hash__', None)):
-				dVal = None
+				msg = f"value of decidingProp is not a simple value, but rather a {type(dVal).__name__}."
+				return JsonUnionSchema(description=MDStr(msg), options=[], allowMultilineStr=None)
 			selectedSchema = self.values.get(dVal, self.value)
 		else:
 			selectedSchema = self.value
@@ -461,7 +507,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonObject
 	typeName: ClassVar[str] = 'object'
 	_fields: ClassVar[dict[str, Any]] = dict(
-		inherites=(),
+		inherits=(),
 		properties=Nothing
 	)
 
@@ -483,7 +529,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 		anythingProp = None
 
 		for inherit in self.inherits:
-			if not inherit.decidingProp:
+			if inherit.decidingProp is None:
 				for prop in inherit.schema.propertiesDict.values():
 					anythingProp = self._addProp(anythingProp, prop, propsDict)
 			else:
@@ -531,7 +577,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 			# TODO: do better logging when deciding props don't match:
 			logWarning(f"Cannot join properties with differing deciding props {[prop1.decidingProp, prop2.decidingProp]!r}. prop.name = {prop1.name!r}, locations = [({prop1.filePath!r}, {prop1.span}), ({prop2.filePath!r}, {prop2.span}]")
 			return prop2
-		if prop1.decidingProp:
+		if prop1.decidingProp is not None:
 			values = prop1.values.copy()
 			for decVal, val in prop2.values.items():
 				if decVal in values:
@@ -581,7 +627,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 @dataclass
 class Inheritance:
 	schema: JsonObjectSchema
-	decidingProp: Optional[str] = None
+	decidingProp: Optional[tuple[int, str]] = None
 	decidingValues: tuple[str, ...] = ()
 
 

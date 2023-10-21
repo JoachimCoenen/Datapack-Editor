@@ -390,7 +390,7 @@ class SchemaBuilder:
 		else:
 			self.error(MDStr(f"No template \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
 
-	def getNamespace(self, refNode: JString):
+	def getNamespace(self, refNode: JString) -> tuple[Optional[SchemaLibrary], str, str]:
 		ns, _, lref = refNode.data.rpartition(':')
 		library = refNode.ctx.libraries.get(ns)
 		if library is None:
@@ -590,6 +590,7 @@ class SchemaBuilderOrchestrator:
 
 	def getFullPath(self, path: str) -> str:
 		fullPath = os.path.join(self.baseDir, path)
+		fullPath = os.path.abspath(fullPath)
 		fullPath = normalizeDirSeparators(fullPath)
 		return fullPath
 
@@ -652,13 +653,19 @@ class SchemaBuilderOrchestrator:
 				completePartialParse(partialLibrary)
 
 
-_typeHandlers: dict[str, Callable[[SchemaBuilder, JObject], Generator[JsonSchema]]] = {}
+def decodeDecidingProp(decidingProp: Optional[str]) -> Optional[tuple[int, str]]:
+	if decidingProp is not None:
+		lookback = 0
+		while decidingProp.startswith('../', lookback * 3):
+			lookback += 1
+		decidingProp = lookback, decidingProp[lookback * 3:]
+	return decidingProp
 
 
 def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySchema:
 	type_ = self.optStrVal(node, '$type') or self.optStrVal(node, '$defRef')
 	if type_ is not None:
-		value = node
+		valueNode = node
 		description = None
 		optional = False
 		default = None
@@ -667,7 +674,9 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 		hates = ()
 		deprecated = False
 		allowMultilineStr = None
-		values = JD(None, node.ctx)
+		valuesNode = JD(None, node.ctx)
+		prefixesNode = JD(None, node.ctx)
+		prefixes = []
 	else:
 		description, deprecated, allowMultilineStr = readCommonValues(self, node)
 		optional = self.optBoolVal(node, 'optional', False)
@@ -682,20 +691,32 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 		requires = tuple(elem.n.data for elem in self.optArrayVal2(node, 'requires', JsonString))
 		hates = tuple(elem.n.data for elem in self.optArrayVal2(node, 'hates', JsonString))
 
-		value = self.optObject(node, 'value')
-		values = self.optObject(node, 'values')
+		valueNode = self.optObject(node, 'value')
+		valuesNode = self.optObject(node, 'values')
+		prefixesNode = self.optArray(node, 'optionalPrefixes')
+		prefixes = self.optArrayVal2(node, 'optionalPrefixes', JsonString) if prefixesNode.n is not None else []
 
-	if value.n is not None:
-		value = self.parseType(value)
+	if valueNode.n is not None:
+		value = self.parseType(valueNode)
 		values = None
-	elif values.n is not None:
+		if prefixesNode.n is not None:
+			self.error(MDStr(f"'optionalPrefixes' only work with property 'values' and 'decidingProp'. it will be ignored"), span=node.span, ctx=node.ctx, style='warning')
+
+	elif valuesNode.n is not None:
 		value = None
 		if decidingProp is None:
 			self.error(MDStr(f"Missing property 'decidingProp' required by property 'values'"), span=node.span, ctx=node.ctx)
 		values = {
-			key: self.parseType(self.reqObject(values, key))
-			for key in values.n.data.keys()
+			key: self.parseType(self.reqObject(valuesNode, key))
+			for key in valuesNode.n.data.keys()
 		}
+		if prefixes:
+			prefixes = [''] + [prefix.data for prefix in prefixes]
+			values = {
+				f'{prefix}{key}': type_
+				for key, type_ in values.items()
+				for prefix in prefixes
+			}
 	else:
 		self.error(MDStr(f"Missing required property: oneOf('value', 'values')"), span=node.span, ctx=node.ctx)
 
@@ -705,7 +726,7 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 		value=value,
 		optional=optional,
 		default=default,  # todo
-		decidingProp=decidingProp,
+		decidingProp=decodeDecidingProp(decidingProp),
 		values=values,
 		requires=requires,
 		hates=hates,
@@ -727,11 +748,12 @@ def inheritanceHandler(self: SchemaBuilder, node: JObject) -> Inheritance:
 		self.error(MDStr(f"Definition \"{refNode.data}\" is not an object schema."), span=refNode.span, ctx=refNode.ctx)
 	return Inheritance(
 		schema=refSchema,
-		decidingProp=decidingProp,
+		decidingProp=decodeDecidingProp(decidingProp),
 		decidingValues=tuple(dv.data for dv in decidingValues),
 	)
 
 
+_typeHandlers: dict[str, Callable[[SchemaBuilder, JObject], Generator[JsonSchema]]] = {}
 typeHandler = AddToDictDecorator(_typeHandlers)
 
 
@@ -775,16 +797,15 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 @typeHandler('array')
 def arrayHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	description, deprecated, allowMultilineStr = readCommonValues(self, node)
-	partialElement = self.handleTypePartial(self.reqObject(node, 'element'))
-	element = next(partialElement)
+	element = self.reqObject(node, 'element')
 	objectSchema = JsonArraySchema(
 		description=description,
-		element=element,
+		element=None,
 		deprecated=deprecated,
 		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema
-	completePartialParse(partialElement)
+	objectSchema.element = self.parseType(element)
 
 
 @typeHandler('union')

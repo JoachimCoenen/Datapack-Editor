@@ -317,6 +317,18 @@
 					"requires": ["values"],
 					"value": { "$ref": "orRef", "type": { "$type": "string" } }
 				},
+				"optionalPrefixes": {
+					"optional": true,
+					"requires": ["values"],
+					"value": { 
+						"$ref": "orRef", 
+						"type": { 
+							"$type": "array", 
+							"element": { "$ref": "orRef", "type": { "$type": "string" } }
+						}
+					},
+					"description": "If set and array is not empty, each of the prefixes will be added before each key in values in addition to the original value. e.g. {\"optionalPrefixes\": [\"AA\", \"BB\"], \"values\": { \"foo\": ...}} -> foo, AAfoo, BBfoo"
+				},
 				"values": {
 					"requires": ["decidingProp"],
 					"value": {
