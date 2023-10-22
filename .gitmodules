@@ -1,3 +1,6 @@
 [submodule "cat-gui"]
 	path = cat
 	url = https://github.com/JoachimCoenen/cat-gui
+[submodule "minecraft-data"]
+	path = corePlugins/minecraft_data/data
+	url = https://github.com/PrismarineJS/minecraft-data.git

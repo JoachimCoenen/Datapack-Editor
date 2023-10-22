@@ -28,7 +28,7 @@ class FullMCData:
 	instruments: AbstractSet[ResourceLocation]
 	structures: AbstractSet[ResourceLocation]
 
-	slots: Mapping[bytes, int]
+	slots: Mapping[bytes, Optional[int]]
 	blockStates: Mapping[ResourceLocation, list[BlockStateType]]
 	gamerules: Sequence[Gamerule]
 
@@ -82,11 +82,11 @@ FullMCData.EMPTY = buildFullMCData('EMPTY', MCData.EMPTY, CustomMCData.EMPTY)
 
 def loadAllVersionsFullMcData() -> list[FullMCData]:
 	from .customData import ALL_SUPPORTED_VERSIONS as CUSTOM_DATA_VERSIONS
-	from .mcdAdapter import ALL_SUPPORTED_VERSIONS as MINECRAFT_DATA_VERSIONS
-	allVersionNames: set[str] = set(CUSTOM_DATA_VERSIONS.keys())
+	from .mcdAdapter import getMCDataForVersion
+	allVersionNames = sorted(CUSTOM_DATA_VERSIONS.keys())
 
 	return [
-		buildFullMCData(name, MINECRAFT_DATA_VERSIONS.get(name), CUSTOM_DATA_VERSIONS.get(name))
+		buildFullMCData(name, getMCDataForVersion(name), CUSTOM_DATA_VERSIONS.get(name))
 		for name in allVersionNames
 	]
 

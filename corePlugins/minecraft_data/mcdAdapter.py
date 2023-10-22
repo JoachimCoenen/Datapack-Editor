@@ -3,13 +3,19 @@ import json
 import os
 import re
 from dataclasses import dataclass, replace
-from typing import AbstractSet, Mapping, ClassVar, Optional
+from typing import AbstractSet, Mapping, ClassVar, Optional, Any
 
-import minecraft_data
+from base.model.pathUtils import normalizeDirSeparatorsStr
+from cat.utils.logging_ import logWarning, logError, loggingIndentInfo
 
 from cat.utils.collections_ import FrozenDict
 from base.model.utils import MDStr
 from .resourceLocation import ResourceLocation
+
+
+_MINECRAFT_DATA_REL_PATH: str = 'data/data/'
+_FILE_ABS_PATH: str = normalizeDirSeparatorsStr(os.path.dirname(__file__)).removesuffix('/') + '/'
+_MINECRAFT_DATA_ABS_PATH: str = f'{_FILE_ABS_PATH}{_MINECRAFT_DATA_REL_PATH}'
 
 
 @dataclass
@@ -53,27 +59,45 @@ MCData.EMPTY = MCData(
 )
 
 
-def fillFromMinecraftData(version: str) -> MCData:
+def fillFromVersion(version: str) -> Optional[MCData]:
+	with loggingIndentInfo(f"Loading data for Minecraft version '{version}'."):
+		minecraftData = _loadRawDataForVersion(version)
+		return minecraftData and _getMinecraftDataFromRaw(version, minecraftData)
+
+
+def _getMinecraftDataFromRaw(version: str, mcd: dict[str, Any]) -> MCData:
 	EMPTY_LIST = []
-	mcd = minecraft_data(version)
 	data = MCData(
 		name=version,
-		blocks=rlsFromData(mcd.blocks_list) if hasattr(mcd, 'blocks_list') else set(),
-		items=rlsFromData(mcd.items_list, [dict(name='air')]) if hasattr(mcd, 'items_list') else set(),
-		entities=rlsFromData(mcd.entities_list) if hasattr(mcd, 'entities_list') else set(),
-		effects=fixCapitalizations(rlsFromData(mcd.effects_list)) if hasattr(mcd, 'effects_list') else set(),
-		enchantments=rlsFromData(mcd.enchantments_list) if hasattr(mcd, 'enchantments_list') else set(),
-		biomes=rlsFromData(mcd.biomes_list) if hasattr(mcd, 'biomes_list') else set(),
-		particles=rlsFromData(mcd.particles_list) if hasattr(mcd, 'particles_list') else set(),
-		instruments=rlsFromData(mcd.instruments_list) if hasattr(mcd, 'instruments_list') else set(),
-		blockStates={ResourceLocation.fromString(block['name']): buildBlockStates(block.get('states', EMPTY_LIST)) for block in mcd.blocks_list} if hasattr(mcd, 'blocks_list') else {},
-
+		blocks=rlsFromData(mcd.get('blocks', EMPTY_LIST)),
+		items=rlsFromData([dict(name='air')], mcd.get('items', EMPTY_LIST)),  # put air default first, so that, if mcd contains an entry for air, it will overwrite our default.
+		entities=rlsFromData(mcd.get('entities', EMPTY_LIST)),
+		effects=fixCapitalizations(rlsFromData(mcd.get('effects', EMPTY_LIST))),
+		enchantments=rlsFromData(mcd.get('enchantments', EMPTY_LIST)),
+		biomes=rlsFromData(mcd.get('biomes', EMPTY_LIST)),
+		particles=rlsFromData(mcd.get('particles', EMPTY_LIST)),
+		instruments=rlsFromData(mcd.get('instruments', EMPTY_LIST)),
+		blockStates=rlsBlockStatesFromData(mcd.get('blocks', EMPTY_LIST)),
 	)
 	return data
 
 
 def rlsFromData(*mcdLists: list[dict]) -> set[ResourceLocation]:
-	return {ResourceLocation.fromString(f"minecraft:{d['name']}") for mcdList in mcdLists for d in mcdList}
+	# return {ResourceLocation.fromString(f"minecraft:{d['name']}") for mcdList in mcdLists for d in mcdList}
+	return {
+		ResourceLocation.fromString(d['name'])
+		for mcdList in mcdLists
+		for d in mcdList
+	}
+
+
+def rlsBlockStatesFromData(*mcdLists: list[dict]) -> dict[ResourceLocation, list[BlockStateType]]:
+	EMPTY_LIST = []
+	return {
+		ResourceLocation.fromString(block['name']): buildBlockStates(block.get('states', EMPTY_LIST))
+		for mcdList in mcdLists
+		for block in mcdList
+	}
 
 
 def fixCapitalization(origResLoc: ResourceLocation) -> ResourceLocation:
@@ -107,31 +131,49 @@ def buildBlockState(state: dict) -> BlockStateType:
 	return bs
 
 
-def _getAllVersions() -> list[str]:
-	_dir = os.path.join(
-		os.path.dirname(minecraft_data.__file__), "data/data/"
-	)
-	with open(os.path.join(_dir, 'dataPaths.json')) as f:
-		dataPaths = json.load(f)
-	edition = 'pc'
-	return [name for name in dataPaths[edition].keys() if name not in FORBIDDEN_VERSIONS]
+def getMCDataForVersion(version: str) -> Optional[MCData]:
+	if version not in _ALL_LOADED_VERSIONS:
+		_ALL_LOADED_VERSIONS[version] = fillFromVersion(version)
+	return _ALL_LOADED_VERSIONS[version]
 
 
-FORBIDDEN_VERSIONS = {
-	'2.0',
-}
+_ALL_LOADED_VERSIONS: dict[str, Optional[MCData]] = {}
 
 
-def loadAllMcDataVersions() -> list[MCData]:
-	versionNames = _getAllVersions()
-	versions = [fillFromMinecraftData(name) for name in versionNames]
-	return versions
+def _getAllDataPaths() -> dict[str, dict[str, dict[str, str]]]:
+	global _ALL_DATA_PATHS
+	if _ALL_DATA_PATHS is None:
+		dataPathsPath = os.path.join(_MINECRAFT_DATA_ABS_PATH, 'dataPaths.json')
+		with open(dataPathsPath, encoding='utf-8') as f:
+			_ALL_DATA_PATHS = json.load(f)
+	return _ALL_DATA_PATHS
 
 
-def loadAllVersions() -> dict[str, MCData]:
-	versionNames = _getAllVersions()
-	versionsDict = {name: fillFromMinecraftData(name) for name in versionNames}
-	return versionsDict
+_ALL_DATA_PATHS = None
 
 
-ALL_SUPPORTED_VERSIONS = loadAllVersions()
+def _getDataPaths(version: str) -> Optional[dict[str, str]]:
+	allDataPaths = _getAllDataPaths()
+	result = allDataPaths['pc'].get(version)
+	if not isinstance(result, (dict, type(None))):
+		logError(f"while loading data for Minecraft version '{version}'.")
+	return result
+
+
+def _loadRawDataForVersion(version: str) -> Optional[dict[str, Any]]:
+	dataPaths = _getDataPaths(version)
+	if dataPaths is None:
+		return None
+	return _loadRawData(dataPaths, version)
+
+
+def _loadRawData(dataPaths: dict[str, str], version: str) -> dict[str, Any]:
+	data = {}
+	for filename, folder in dataPaths.items():
+		path = os.path.join(_MINECRAFT_DATA_ABS_PATH, folder, f'{filename}.json')
+		try:
+			with open(path, encoding='utf-8') as fp:
+				data[filename] = json.load(fp)
+		except OSError as ex:
+			logWarning(ex, f"while loading data for Minecraft version '{version}'.")
+	return data

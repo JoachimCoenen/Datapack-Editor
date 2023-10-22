@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from types import ModuleType
-from typing import Mapping, ClassVar, Sequence
+from typing import Mapping, ClassVar, Sequence, Optional
 
 from cat.utils.collections_ import FrozenDict
 from base.modules import loadAllModules, FolderAndFileFilter
@@ -29,7 +29,7 @@ class CustomMCData:
 	gameEvents: AbstractSet[ResourceLocation]  # introduced in version 1.19
 	structures: AbstractSet[ResourceLocation]
 
-	slots: Mapping[bytes, int]
+	slots: Mapping[bytes, Optional[int]]
 	gamerules: Sequence[Gamerule]
 
 	EMPTY: ClassVar[CustomMCData]
@@ -55,7 +55,7 @@ def _loadAllVersions() -> dict[str, ModuleType]:
 	)
 
 	modules = loadAllModules(
-		'minecraft_data.versions',
+		'corePlugins.minecraft_data.versions',
 		versionsDir,
 		[
 			# all single-file plugins
