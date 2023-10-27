@@ -1,0 +1,7 @@
+{
+  "$schema": "dpe/json/schema",
+  "$libraries": {
+    "loot_table": "loot_table-library.json"
+  },
+  "$body": { "$defRef": "loot_table:loot_table" }
+} 

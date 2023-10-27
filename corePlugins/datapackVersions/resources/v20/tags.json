@@ -1,0 +1,84 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$templates": {
+    "tags": {
+      "$params": {
+        "schema": { "type": "string" }
+      },
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "description": {
+            "optional": true,
+            "value": {
+              "$type": "string"
+            },
+            "description": "A textual description of the contents of this file. Will be ignored by Minecraft."
+          },
+          "replace": {
+            "optional": true,
+            "default": false,
+            "value": {
+              "$type": "boolean"
+            },
+            "description": "Whether or not contents of this tag should completely replace tag contents from different lower priority data packs with the same resource location. When `false` the tag's content is appended to the contents of the higher priority data packs, instead."
+          },
+          "values": {
+            "optional": false,
+            "value": {
+              "$type": "array",
+              "element": {
+                "$type": "union",
+                "options": [
+                  {
+                    "$type": "string",
+                    "type": "minecraft:resource_location",
+                    "args": {
+                      "schema": { "$ref": "#schema" }
+                    },
+                    "description": "An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`."
+                  },
+                  {
+                    "$type": "object",
+                    "properties": {
+                      "id": {
+                        "optional": false,
+                        "value": {
+                          "$type": "string",
+                          "type": "minecraft:resource_location",
+                          "args": {
+                            "schema": { "$ref": "#schema" }
+                          }
+                        },
+                        "description": "A string in one of the string formats above."
+                      },
+                      "required": {
+                        "optional": true,
+                        "default": true,
+                        "value": {
+                          "$type": "boolean"
+                        },
+                        "description": "Whether or not loading this tag should fail if this entry is not found, `true` by default (also for the string entries). A tag that fails to load can still be referenced in any data pack and be (re)defined in other data packs. In other words, only the entries in this JSON file is ignored if this entry cannot be found."
+                      }
+                    },
+                    "description": "An entry with additional options. (1.16.2+) "
+                  }
+                ]
+              }
+            },
+            "description": "A list of mix and match of object names and tag names. For tags, recursive reference is possible, but a circular reference causes a loading failure. "
+          }
+        },
+        "description": "Allow grouping of items, blocks, fluids, entity types, or functions together using JSON files."
+      }
+    }
+  },
+  "$definitions": {
+    "block_type": { "$ref": "tags", "schema": "block_type" },
+    "entity_type": { "$ref": "tags", "schema": "entity_type" },
+    "fluid_type": { "$ref": "tags", "schema": "fluid_type" },
+    "function": { "$ref": "tags", "schema": "function_type" },
+    "game_event": { "$ref": "tags", "schema": "game_event" },
+    "item_type": { "$ref": "tags", "schema": "item_type" }
+  }
+}
