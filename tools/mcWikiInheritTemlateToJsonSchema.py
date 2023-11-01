@@ -36,6 +36,14 @@ DATA_IMPORT_PREFIX = 'model.data'
 SCHEMA_IMPORT_PREFIX = f'{DATA_IMPORT_PREFIX}.json.schemas'
 
 
+class LineNoLine(NamedTuple):
+	lineNo: int
+	line: str
+
+
+LineNoLineStack = Stack[LineNoLine]
+
+
 def addImports(text, name):
 	imports = NL.join(im for im in ALL_IMPORTS if not im.endswith(name))
 	ALL_IMPORTS.clear()
@@ -55,7 +63,7 @@ def convert3(text: str, name: str, *, forceOptional: bool) -> str:
 	original = text
 	text = extractOnlyinclude(text)
 	lines = text.splitlines()
-	linesStack = Stack(reversed([x for x in enumerate(lines, start=1)]))
+	linesStack = LineNoLineStack(reversed([LineNoLine(*x) for x in enumerate(lines, start=1)]))
 	schema = handleObjectSchema(linesStack, 1, None, None, forceOptional)
 	schema = f"{name} = {schema}\n"
 	return addImports(schema, name)
@@ -65,7 +73,7 @@ def convert2(text: str, name: str, imports: str, *, forceOptional: bool) -> str:
 	original = text
 	text = extractOnlyinclude(text)
 	lines = text.splitlines()
-	linesStack = Stack(reversed([x for x in enumerate(lines, start=1)]))
+	linesStack = LineNoLineStack(reversed([LineNoLine(*x) for x in enumerate(lines, start=1)]))
 	doc, props = handleProperties(linesStack, 2, None, forceOptional=forceOptional)
 	propsStr = indentMultilineStr(SEP.join(props), indent=INDENT)
 	schema = buildObjectSchema([], doc)
@@ -102,7 +110,7 @@ class Proptions(NamedTuple):
 	deprecated: bool
 
 
-def handleProp(lineNoLine: tuple[int, str], linesStack: Stack[tuple[int, str]], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> Union[str, Proptions]:
+def handleProp(lineNoLine: LineNoLine, linesStack: LineNoLineStack, depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> Union[str, Proptions]:
 	lineNo, line = lineNoLine
 	if (match := PROPERTY_UNION_PATTERN.match(line, depth)) is not None:
 		typeMarkers = match.group(1)
@@ -159,15 +167,16 @@ def handleProp(lineNoLine: tuple[int, str], linesStack: Stack[tuple[int, str]], 
 		return '# ' + line
 
 
-def handlePropertiesInner(linesStack: Stack[tuple[int, str]], depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> list[Union[str, Proptions]]:
+def handlePropertiesInner(linesStack: LineNoLineStack, depth: int, depProp: Optional[tuple[str, str]], *, forceOptional: bool) -> list[Union[str, Proptions]]:
 	properties = []
 	lastProp: Optional[Proptions] = None
 	while linesStack:
-		lineNo, line = linesStack.peek()
+		lineNoLine = linesStack.peek()
+		line = lineNoLine.line
 		if not line.startswith('*' * depth + ' '):
 			if line.startswith('*' * depth):
 				linesStack.pop()
-				print(f"too many asterisks at start of line {lineNo}: {line!r}")
+				print(f"too many asterisks at start of line {lineNoLine.lineNo}: {line!r}")
 				properties.append('# ' + line)
 				continue
 			break
@@ -184,7 +193,7 @@ def handlePropertiesInner(linesStack: Stack[tuple[int, str]], depth: int, depPro
 			name = match.group(1)
 			properties.extend(handlePropertiesInner(linesStack, depth + 1, (lastProp.name, name), forceOptional=forceOptional))
 		else:
-			prop = handleProp((lineNo, line), linesStack, depth, depProp, forceOptional=forceOptional)
+			prop = handleProp(lineNoLine, linesStack, depth, depProp, forceOptional=forceOptional)
 			if isinstance(prop, Proptions):
 				lastProp = prop
 			properties.append(prop)
@@ -226,12 +235,12 @@ def buildObjectSchema(properties: list[str], doc: Optional[str]) -> str:
 		return f"JsonObjectSchema(properties=[\n{propertiesStr}\n])"
 
 
-_schemaHandlers: dict[str, Callable[[Stack[tuple[int, str]], int, Optional[str], Optional[str], bool], str]] = {}
+_schemaHandlers: dict[str, Callable[[LineNoLineStack, int, Optional[str], Optional[str], bool], str]] = {}
 schemaHandler = AddToDictDecorator(_schemaHandlers)
 
 
 @schemaHandler('compound')
-def handleObjectSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleObjectSchema(linesStack: LineNoLineStack, depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	# are we inheriting anything?
 	lineNo, line = linesStack.peek()
 	if (match := INHERIT_PATTERN.match(line, depth + 1)) is not None:
@@ -251,7 +260,7 @@ def handleObjectSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Opti
 	return buildObjectSchema(propStrings, doc)
 
 
-def handleProperties(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], *, forceOptional: bool) -> tuple[Optional[str], list[str]]:
+def handleProperties(linesStack: LineNoLineStack, depth: int, doc: Optional[str], *, forceOptional: bool) -> tuple[Optional[str], list[str]]:
 	properties = handlePropertiesInner(linesStack, depth, None, forceOptional=forceOptional)
 	propStrings = []
 	byName: OrderedMultiDict[str, Proptions] = OrderedMultiDict()
@@ -320,20 +329,20 @@ def handleProperties(linesStack: Stack[tuple[int, str]], depth: int, doc: Option
 
 @schemaHandler('bool')
 @schemaHandler('boolean')
-def handleBoolSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleBoolSchema(linesStack: LineNoLineStack, depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonBoolSchema({docStr})"
 
 
 @schemaHandler('int')
-def handleIntSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleIntSchema(linesStack: LineNoLineStack, depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonIntSchema({docStr})"
 
 
 @schemaHandler('double')
 @schemaHandler('float')
-def handleFloatSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleFloatSchema(linesStack: LineNoLineStack, depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 	return f"JsonFloatSchema({docStr})"
 
@@ -345,7 +354,7 @@ NBT_MATCHER_1 = re.compile(r'(?<!{{)nbt')
 
 
 @schemaHandler('string')
-def handleStrSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleStrSchema(linesStack: LineNoLineStack, depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	docStr = f'description=MDStr({doc!r})' if doc else ''
 
 	docToAnalyze = doc if doc else parentDoc
@@ -367,7 +376,7 @@ def handleStrSchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optiona
 
 
 @schemaHandler('list')
-def handleArraySchema(linesStack: Stack[tuple[int, str]], depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
+def handleArraySchema(linesStack: LineNoLineStack, depth: int, doc: Optional[str], parentDoc: Optional[str], forceOptional: bool) -> str:
 	if linesStack:
 		lineNo, line = linesStack.peek()
 		if not line.startswith('*' * (depth + 1) + ' '):
