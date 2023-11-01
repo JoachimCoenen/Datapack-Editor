@@ -34,37 +34,29 @@
         "terms": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "alternative": { "$defRef": "predicate-body" },
-            "minecraft:alternative": { "$defRef": "predicate-body" }
-          },
+          "values": { "alternative": { "$defRef": "predicate-body" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "Evaluates a list of conditions and passes if any one of them passes. Invokable from any context."
         },
         "term": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "inverted": { "$defRef": "single_predicate" },
-            "minecraft:inverted": { "$defRef": "single_predicate" }
-          },
+          "values": { "inverted": { "$defRef": "single_predicate" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "The condition to be negated, following the same structure as outlined here, recursively."
         },
         "block": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "block_state_property": { "$defRef": "%%2!" },
-            "minecraft:block_state_property": { "$defRef": "%%2!" }
-          },
+          "values": { "block_state_property": { "$defRef": "%%2!" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "A block ID. The test fails if the block doesn't match."
         },
         "properties": {
           "optional": true,
           "decidingProp": "condition",
-          "values": {
-            "block_state_property": { "$defRef": "%%3!" },
-            "minecraft:block_state_property": { "$defRef": "%%3!" }
-          },
+          "values": { "block_state_property": { "$defRef": "%%3!" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "(Optional) A map of block property names to values. All values are strings. The test fails if the block doesn't match."
         },
         "predicate": {
@@ -72,33 +64,27 @@
           "decidingProp": "condition",
           "values": {
             "damage_source_properties": { "$defRef": "predicate-damage_type" },
-            "minecraft:damage_source_properties": { "$defRef": "predicate-damage_type" },
             "entity_properties": { "$defRef": "predicate-entity_properties" },
-            "minecraft:entity_properties": { "$defRef": "predicate-entity_properties" },
             "location_check": { "$defRef": "predicate-location_check" },
-            "minecraft:location_check": { "$defRef": "predicate-location_check" },
-            "match_tool": { "$defRef": "predicate-match_tool" },
-            "minecraft:match_tool": { "$defRef": "predicate-match_tool" }
-          }
+            "match_tool": { "$defRef": "predicate-match_tool" }
+          },
+          "optionalPrefixes": ["minecraft:"]
         },
         "entity": {
           "optional": false,
           "decidingProp": "condition",
           "values": {
             "entity_properties": { "$defRef": "%%11!" },
-            "minecraft:entity_properties": { "$defRef": "%%11!" },
-            "entity_scores": { "$defRef": "%%11!" },
-            "minecraft:entity_scores": { "$defRef": "%%11!" }
+            "entity_scores": { "$defRef": "%%11!" }
           },
+          "optionalPrefixes": ["minecraft:"],
           "description": "The entity to check. Set to `this` to use the entity that invoked this condition, `killer` for the killer of the `this` entity, or `killer_player` to only select the killer if they are a player."
         },
         "scores": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "entity_scores": { "$defRef": "%%19!" },
-            "minecraft:entity_scores": { "$defRef": "%%19!" }
-          },
+          "values": { "entity_scores": { "$defRef": "%%19!" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "Scores to check. All specified scores must pass for the condition to pass."
         },
         "inverse": {
@@ -143,46 +129,37 @@
           "decidingProp": "condition",
           "values": {
             "random_chance": { "$defRef": "%%24!" },
-            "minecraft:random_chance": { "$defRef": "%%24!" },
-            "random_chance_with_looting": { "$defRef": "%%24!" },
-            "minecraft:random_chance_with_looting": { "$defRef": "%%24!" }
+            "random_chance_with_looting": { "$defRef": "%%24!" }
           },
+          "optionalPrefixes": ["minecraft:"],
           "description": "(Base-)Success rate as a number `0.0-1.0`."
         },
         "looting_multiplier": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "random_chance_with_looting": { "$defRef": "%%24!" },
-            "minecraft:random_chance_with_looting": { "$defRef": "%%24!" }
-          },
+          "values": { "random_chance_with_looting": { "$defRef": "%%24!" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "Looting adjustment to the base success rate. Formula is `chance + (looting_level * looting_multiplier)`."
         },
         "name": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "reference": { "$defRef": "%%26!" },
-            "minecraft:reference": { "$defRef": "%%26!" }
-          },
+          "values": { "reference": { "$defRef": "%%26!" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "The resource location of the predicate to invoke. A cyclic reference causes a parsing failure."
         },
         "enchantment": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "table_bonus": { "$defRef": "%%27!" },
-            "minecraft:table_bonus": { "$defRef": "%%27!" }
-          },
+          "values": { "table_bonus": { "$defRef": "%%27!" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "Resource location of enchantment."
         },
         "chances": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "table_bonus": { "$defRef": "%%28!" },
-            "minecraft:table_bonus": { "$defRef": "%%28!" }
-          },
+          "values": { "table_bonus": { "$defRef": "%%28!" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "List of probabilities for enchantment level, indexed from 0."
         },
         "value": {
@@ -190,10 +167,9 @@
           "decidingProp": "condition",
           "values": {
             "time_check": { "$defRef": "%%29!" },
-            "minecraft:time_check": { "$defRef": "%%29!" },
-            "value_check": { "$defRef": "%%30!" },
-            "minecraft:value_check": { "$defRef": "%%30!" }
-          }
+            "value_check": { "$defRef": "%%30!" }
+          },
+          "optionalPrefixes": ["minecraft:"]
         },
         "period": {
           "optional": true,
@@ -207,10 +183,8 @@
         "range": {
           "optional": false,
           "decidingProp": "condition",
-          "values": {
-            "value_check": { "$defRef": "%%32!" },
-            "minecraft:value_check": { "$defRef": "%%32!" }
-          },
+          "values": { "value_check": { "$defRef": "%%32!" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "The number or range of numbers to compare  value against."
         },
         "raining": {
@@ -269,12 +243,10 @@
       "$type": "enum",
       "options": {
         "this": "the entity that invoked this condition",
-        "minecraft:this": "the entity that invoked this condition",
         "killer": "the killer of the `this` entity",
-        "minecraft:killer": "the killer of the `this` entity",
-        "killer_player": "only select the killer if they are a player",
-        "minecraft:killer_player": "only select the killer if they are a player"
-      }
+        "killer_player": "only select the killer if they are a player"
+      },
+      "optionalPrefixes": ["minecraft:"]
     },
     "%%19!": {
       "$type": "object",

@@ -23,7 +23,7 @@
 				"decidingProp": "$schema",
 				"values": {
 					"dpe/json/schema": {
-						"$defRef": "schemaOrRef" 
+						"$defRef": "schemaOrRef"
 					}
 				}
 			},
@@ -49,12 +49,16 @@
 												"array": "",
 												"object": ""
 											}
+										},
+										"default": {
+											"optional": true,
+											"value": { "$defRef": "anyOrRef" }
 										}
 									}
 								},
 								"properties": {}
 							},
-							"$body": { "$defRef": "schemaOrRef" }
+							"$body": { "$defRef": "anyOrRef" }
 						}
 					}
 				}
@@ -69,6 +73,7 @@
 			}
 		}
 	},
+	
 	"$templates": {
 		"orRef": {
 			"$params": {
@@ -78,98 +83,102 @@
 				"$type": "union",
 				"options": [
 					{ "$ref": "#type" },
-					{
-						"$type": "object",
+					{ "$type": "object",
 						"properties": {
 							"$ref": { "$type": "string", "type": "dpe:tmpl_ref" }
 						},
-						"default-property": { "$type": "any" }
+						"default-property": { "$type": "any" } // todo add calculated properties for params.
 					}
 				]
 			}
+		},
+
+		"descriptionProp": {
+			"$params": {},
+			"$body": {
+				"optional": true,
+				"value": { "$defRef": "descriptionOrRef" }
+			}
+		},
+
+		"deprecatedProp": {
+			"$params": {},
+			"$body": {
+				"optional": true,
+				"default": false,
+				"value": { "$defRef": "booleanOrRef" }
+			}
+		},
+
+		"arrayOrRef": {
+			"$params": {
+				"element": { "type": "object" }
+			},
+			"$body": { "$ref": "orRef", "type": {
+				"$type": "array",
+				"element": { "$ref": "#element" }
+			}}
 		}
 	},
 	"$definitions": {
-		"schema": {
+		"%schema": {
 			"$type": "object",
 			"properties": {
 				"$type": {
-					"value": {
-						"$ref": "orRef",
-						"type": {
-							"$type": "enum",
-							"options": {
-								"object": "A Json object.",
-								"array": "A JSON array.",
-								"union": "One of a collection possible types.",
-								"string": "A text.",
-								"enum": "",
-								"boolean": "Either `true` or `false`.",
-								"integer": "An integer.",
-								"float": "A floating point number.",
-								"null": "The `null value.",
-								"calculated": "a typecalculated at runtime.",
-								"any": "Can be anything."
-							}
+					"value": { "$ref": "orRef", "type": {
+						"$type": "enum",
+						"options": {
+							"object": "A Json object.",
+							"array": "A JSON array.",
+							"union": "One of a collection possible types.",
+							"string": "A text.",
+							"enum": "A text. But with a fixed set of valid values.",
+							"boolean": "Either `true` or `false`.",
+							"integer": "An integer.",
+							"float": "A floating point number.",
+							"null": "The `null value.",
+							"calculated": "a typecalculated at runtime.",
+							"any": "Can be anything."
 						}
-					}
+					}}
 				},
-				"description": {
-					"optional": true,
-					"default": false,
-					"value": {
-						"$ref": "orRef",
-						"type": {
-							"$type": "string",
-							"type": "markdown"
-						}
-					}
-				},
-				"deprecated": {
-					"optional": true,
-					"default": false,
-					"value": { "$ref": "orRef", "type": { "$type": "boolean" } }
-				},
+				"description": { "$ref": "descriptionProp" },
+				"deprecated": { "$ref": "deprecatedProp" },
 				"allowMultilineStr": {
 					"optional": true,
 					"default": null,
-					"value": { "$ref": "orRef", "type": { "$type": "union", "options": [{"$type": "boolean"}, {"$type": "null"}] } }
+					"value": { "$ref": "orRef", "type": {
+						"$type": "union", "options": [{"$type": "boolean"}, {"$type": "null"}]
+					}}
 				},
 				"inherits": {
-					"description": "this object schema inherits all properties from these schemas",
+					"description": "the object schema inherits all properties from these schemas",
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {
 						"object": {
-							"$ref": "orRef",
-							"type": {
-								"$type": "array", 
-								"element": {
-									"$ref": "orRef",
-									"type": { 
-										"$type": "object",
-										"properties": {
-											"defRef": { "$type": "string", "type": "dpe:def_ref" },
-											"decidingProp": {
-												"optional": true,
-												"requires": ["decidingValues"],
-												"value": { "$ref": "orRef", "type": { "$type": "string" } }
-											},
-											"decidingValues": {
-												"requires": ["decidingProp"],
-												"value": {
-													"$ref": "orRef",
-													"type": {
-														"$type": "array",
-														"element": { "$ref": "orRef", "type": { "$type": "string" } },
-														"properties": {}
-													}
-												}
-											}
-										}
+							"$ref": "arrayOrRef",
+							"element": { "$ref": "orRef", "type": {
+								"$type": "object",
+								"properties": {
+									"defRef": { "$type": "string", "type": "dpe:def_ref" },
+									"decidingProp": {
+										"optional": true,
+										"requires": ["decidingValues"],
+										"value": { "$defRef": "stringOrRef" }
+									},
+									"decidingValues": {
+										"requires": ["decidingProp"],
+										"value": { "$defRef": "arrayOfStringOrRef" }
+									},
+									"optionalPrefixes": {
+										"optional": true,
+										"requires": ["decidingValues"],
+										"value": { "$defRef": "arrayOfStringOrRef" },
+										"description": "If set and array is not empty, each of the prefixes will be added before each key in decidingValues in addition to the original value. e.g. {\"optionalPrefixes\": [\"AA\", \"BB\"], \"decidingValues\": { \"foo\": ...}} -> foo, AAfoo, BBfoo"
 									}
 								}
-							}
+							}}
 						}
 					}
 				},
@@ -177,7 +186,7 @@
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {
-						"object": { "$ref": "orRef", "type": { "$defRef": "propertyOrSchema" } }
+						"object": { "$defRef": "propertyOrSchemaOrRef" }
 					}
 				},
 				"properties": {
@@ -185,194 +194,168 @@
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {
-						"object": {
-							"$ref": "orRef",
-							"type": {
-								"$type": "object", 
-								"default-property": { "$defRef": "propertyOrSchema" }
-							}
-						}
+						"object": { "$ref": "orRef", "type": {
+							"$type": "object",
+							"default-property": { "$defRef": "propertyOrSchemaOrRef" }
+						}}
 					}
 				},
 				"element": {
 					"decidingProp": "$type",
 					"values": {
-						"array": { "$ref": "orRef", "type": { "$defRef": "schemaOrRef" } }
+						"array": { "$defRef": "schemaOrRef" }
 					}
 				},
 				"options": {
 					"decidingProp": "$type",
 					"values": {
 						"union": {
-							"$ref": "orRef",
-							"type": {
-								"$type": "array",
-								"element": { "$ref": "orRef", "type": { "$defRef": "schemaOrRef" } }
-							}
+							"$ref": "arrayOrRef",
+							"element": { "$defRef": "schemaOrRef" }
 						},
-						"enum": {
-							"$ref": "orRef",
-							"type": {
-								"$type": "object",
-								"default-property": {
-									"$ref": "orRef",
-									"type": {
-										"$type": "string",
-										"type": "markdown",
-										"description": "a description of the option"
-									}
-								}
-							}
-						}
+						"enum": { "$ref": "orRef", "type": {
+							"$type": "object",
+							"default-property": { "$defRef": "descriptionOrRef" }
+						}}
 					}
+				},
+				"optionalPrefixes": {
+					"optional": true,
+					"requires": ["options"],
+					"decidingProp": "$type",
+					"values": {
+						"enum": { "$defRef": "arrayOfStringOrRef" }
+					},
+					"description": "If set and array is not empty, each of the prefixes will be added before each option in options in addition to the original value. e.g. {\"optionalPrefixes\": [\"AA\", \"BB\"], \"options\": { \"foo\": ...}} -> foo, AAfoo, BBfoo"
 				},
 				"type": {
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {
-						"string": { "$ref": "orRef", "type": { "$type": "string", "type": "dpe:json_arg_type"  } }
+						"string": { "$ref": "orRef", "type": {
+							"$type": "string", "type": "dpe:json_arg_type"
+						}}
 					}
 				},
 				"args": {
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {
-						"string": {
-							"$ref": "orRef",
-							"type": {
-								"$type": "object",
-								"default-property": { "$type": "any" }
-							}
-						}
+						"string": { "$ref": "orRef", "type": {
+							"$type": "object",
+							"default-property": { "$type": "any" }
+						}}
 					}
 				},
 				"min": {
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {
-						"integer": { "$ref": "orRef", "type": { "$type": "integer" } },
-						"float": { "$ref": "orRef", "type": { "$type": "float" } }
+						"integer": { "$defRef": "integerOrRef" },
+						"float": { "$defRef": "floatOrRef" }
 					}
 				},
 				"max": {
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {
-						"integer": { "$ref": "orRef", "type": { "$type": "integer" } },
-						"float": { "$ref": "orRef", "type": { "$type": "float" } }
+						"integer": { "$defRef": "integerOrRef" },
+						"float": { "$defRef": "floatOrRef" }
 					}
 				},
 				"function": {
 					"optional": false,
 					"decidingProp": "$type",
 					"values": {
-						"calculated": { "$ref": "orRef", "type": { "$type": "string" } }
+						"calculated": { "$defRef": "stringOrRef" }
 					}
 				}
 			}
 		},
 		
-		"schemaOrRef": {
+		"property": {
+			"$type": "object",
+			"properties": {
+				"description": { "$ref": "descriptionProp" },
+				"deprecated": { "$ref": "deprecatedProp" },
+				"optional": {
+					"optional": true,
+					"default": false,
+					"value": { "$defRef": "booleanOrRef" }
+				},
+				"default": {
+					"optional": true,
+					"value": { "$defRef": "anyOrRef" }
+				},
+				"decidingProp": {
+					"optional": true,
+					"requires": ["values"],
+					"value": { "$defRef": "stringOrRef" }
+				},
+				"optionalPrefixes": {
+					"optional": true,
+					"requires": ["values"],
+					"value": { "$defRef": "arrayOfStringOrRef" },
+					"description": "If set and array is not empty, each of the prefixes will be added before each key in values in addition to the original value. e.g. {\"optionalPrefixes\": [\"AA\", \"BB\"], \"values\": { \"foo\": ...}} -> foo, AAfoo, BBfoo"
+				},
+				"values": {
+					"requires": ["decidingProp"],
+					"value": { "$ref": "orRef", "type": {
+						"$type": "object",
+						"default-property": { "$defRef": "schemaOrRef" },
+						"properties": {}
+					}}
+				},
+				"value": {
+					"hates": ["decidingProp"],
+					"value": { "$defRef": "schemaOrRef" }
+				},
+				"requires": {
+					"optional": true,
+					"value": { "$defRef": "arrayOfStringOrRef" }
+				},
+				"hates": {
+					"optional": true,
+					"value": { "$defRef": "arrayOfStringOrRef" }
+				}
+			}
+		},
+		
+		"schemaOrRef": { "$ref": "orRef", "type":  {
 			"$type": "union",
 			 "options": [
-				{ "$defRef": "schema" },
+				{ "$defRef": "%schema" },
 				{ "$type": "object",
 					"properties": {
 						"$defRef": { "$type": "string", "type": "dpe:def_ref" }
 					}
 				}
 			]
-		},
+		}},
 		
-		"property": {
-			"$type": "object",
-			"properties": {
-				"description": {
-					"optional": true,
-					"default": false,
-					"value": {
-						"$ref": "orRef",
-						"type": {
-							"$type": "string",
-							"type": "markdown"
-						}
-					}
-				},
-				"deprecated": {
-					"optional": true,
-					"default": false,
-					"value": { "$ref": "orRef", "type": { "$type": "boolean" } }
-				},
-				"optional": {
-					"optional": true,
-					"default": false,
-					"value": { "$ref": "orRef", "type": { "$type": "boolean" } }
-				},
-				"default": {
-					"optional": true,
-					"value": { "$ref": "orRef", "type": { "$type": "any" } }
-				},
-				"decidingProp": {
-					"optional": true,
-					"requires": ["values"],
-					"value": { "$ref": "orRef", "type": { "$type": "string" } }
-				},
-				"optionalPrefixes": {
-					"optional": true,
-					"requires": ["values"],
-					"value": { 
-						"$ref": "orRef", 
-						"type": { 
-							"$type": "array", 
-							"element": { "$ref": "orRef", "type": { "$type": "string" } }
-						}
-					},
-					"description": "If set and array is not empty, each of the prefixes will be added before each key in values in addition to the original value. e.g. {\"optionalPrefixes\": [\"AA\", \"BB\"], \"values\": { \"foo\": ...}} -> foo, AAfoo, BBfoo"
-				},
-				"values": {
-					"requires": ["decidingProp"],
-					"value": {
-						"$ref": "orRef",
-						"type": {
-							"$type": "object",
-							"default-property": { "$ref": "orRef", "type": { "$defRef": "schemaOrRef" } },
-							"properties": {}
-						}
-					}
-				},
-				"value": {
-					"hates": ["decidingProp"],
-					"value": { "$ref": "orRef", "type": { "$defRef": "schemaOrRef" } }
-				},
-				"requires": {
-					"optional": true,
-					"value": {
-						"$ref": "orRef",
-						"type": {
-							"$type": "array",
-							"element": { "$ref": "orRef", "type": { "$type": "string" } }
-						}
-					}
-				},
-				"hates": {
-					"optional": true,
-					"value": {
-						"$ref": "orRef",
-						"type": {
-							"$type": "array",
-							"element": { "$ref": "orRef", "type": { "$type": "string" } }
-						}
-					}
-				}
-			}
-		},
-		
-		"propertyOrSchema": {
+		"propertyOrSchemaOrRef": {
 			"$type": "union",
 			"options": [
 				{ "$defRef": "property" },
 				{ "$defRef": "schemaOrRef" }
 			]
-		}
+		},
+		
+		"stringOrRef": { "$ref": "orRef", "type": { "$type": "string" } },
+		"booleanOrRef": { "$ref": "orRef", "type": { "$type": "boolean" } },
+		"integerOrRef": { "$ref": "orRef", "type": { "$type": "integer" } },
+		"floatOrRef": { "$ref": "orRef", "type": { "$type": "float" } },
+		"anyOrRef": { "$ref": "orRef", "type": { "$type": "any" } },
+		
+		"arrayOfStringOrRef": {
+			"$ref": "arrayOrRef",
+			"element": { "$defRef": "stringOrRef" }
+		},
+
+		"descriptionOrRef": { "$ref": "orRef", "type": {
+			"$type": "string",
+			"type": "markdown",
+			"description": "a textual description of the option"
+		}}
 	}
 }

@@ -1,7 +1,6 @@
 {
   "$schema": "dpe/json/schema",
   "$libraries": {
-    "common": "recipe/serializers/common.json",
     "cooking": "recipe/serializers/cooking.json"
   },
   "$body": { "$defRef": "recipe" },
@@ -11,162 +10,115 @@
       "$type": "object",
       "inherits": [
         {
-          "defRef": "common:common",
-          "decidingProp": "type",
-          "decidingValues": [
-            "blasting",
-            "minecraft:blasting",
-            "campfire_cooking",
-            "minecraft:campfire_cooking",
-            "crafting_shaped",
-            "minecraft:crafting_shaped",
-            "crafting_shapeless",
-            "minecraft:crafting_shapeless",
-            "smelting",
-            "minecraft:smelting",
-            "smithing",
-            "minecraft:smithing",
-            "smoking",
-            "minecraft:smoking",
-            "stonecutting",
-            "minecraft:stonecutting"
-          ]
-        },
-        {
           "defRef": "cooking:cooking",
           "decidingProp": "type",
           "decidingValues": [
             "blasting",
-            "minecraft:blasting",
             "campfire_cooking",
-            "minecraft:campfire_cooking",
             "smelting",
-            "minecraft:smelting",
-            "smoking",
-            "minecraft:smoking"
-          ]
+            "smoking"
+          ],
+          "optionalPrefixes": ["minecraft:"]
         }
       ],
       "properties": {
         "type": {
-          "description": "",
+          "description": "A [ [resource location] ] indicating the type of serializer of the recipe.",
           "value": { 
             "$type": "enum",
             "options": {
               "blasting": "",
-              "minecraft:blasting": "",
               "campfire_cooking": "",
-              "minecraft:campfire_cooking": "",
               "crafting_shaped": "",
-              "minecraft:crafting_shaped": "",
               "crafting_shapeless": "",
-              "minecraft:crafting_shapeless": "",
               "smelting": "",
-              "minecraft:smelting": "",
               "smithing": "",
-              "minecraft:smithing": "",
               "smoking": "",
-              "minecraft:smoking": "",
               "stonecutting": "",
-              "minecraft:stonecutting": "",
-			  
               "crafting_special_armordye": "",
-              "minecraft:crafting_special_armordye": "",
               "crafting_special_bannerduplicate": "",
-              "minecraft:crafting_special_bannerduplicate": "",
               "crafting_special_bookcloning": "",
-              "minecraft:crafting_special_bookcloning": "",
               "crafting_special_firework_rocket": "",
-              "minecraft:crafting_special_firework_rocket": "",
               "crafting_special_firework_star": "",
-              "minecraft:crafting_special_firework_star": "",
               "crafting_special_firework_star_fade": "",
-              "minecraft:crafting_special_firework_star_fade": "",
               "crafting_special_mapcloning": "",
-              "minecraft:crafting_special_mapcloning": "",
               "crafting_special_mapextending": "",
-              "minecraft:crafting_special_mapextending": "",
               "crafting_special_repairitem": "",
-              "minecraft:crafting_special_repairitem": "",
               "crafting_special_shielddecoration": "",
-              "minecraft:crafting_special_shielddecoration": "",
               "crafting_special_shulkerboxcoloring": "",
-              "minecraft:crafting_special_shulkerboxcoloring": "",
               "crafting_special_tippedarrow": "",
-              "minecraft:crafting_special_tippedarrow": "",
-              "crafting_special_suspiciousstew": "",
-              "minecraft:crafting_special_suspiciousstew": ""
-            }
+              "crafting_special_suspiciousstew": ""
+            },
+            "optionalPrefixes": ["minecraft:"]
           }
+        },
+        "group": { 
+          "description": "A string identifier. Used to group multiple recipes together in the [ [recipe book] ].",
+          "decidingProp": "type",
+          "values": {
+            "blasting": {"$type": "string" },
+            "campfire_cooking": {"$type": "string" },
+            "crafting_shaped": {"$type": "string" },
+            "crafting_shapeless": {"$type": "string" },
+            "smelting": {"$type": "string" },
+            "smithing": {"$type": "string" },
+            "smoking": {"$type": "string" },
+            "stonecutting": {"$type": "string" }
+          },
+          "optionalPrefixes": ["minecraft:"],
+          "optional": true
         },
         "pattern": {
           "decidingProp": "type",
-          "values": {
-            "minecraft:crafting_shaped": { "$defRef": "%pattern-crafting_shaped" },
-            "crafting_shaped": { "$defRef": "%pattern-crafting_shaped" }
-          },
+          "values": { "crafting_shaped": { "$defRef": "%pattern-crafting_shaped" } },
+          "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
         "key": {
           "decidingProp": "type",
-          "values": {
-            "minecraft:crafting_shaped": { "$defRef": "%key-crafting_shaped" },
-            "crafting_shaped": { "$defRef": "%key-crafting_shaped" }
-          },
+          "values": { "crafting_shaped": { "$defRef": "%key-crafting_shaped" } },
+          "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
         "result": {
           "decidingProp": "type",
           "values": {
-            "minecraft:crafting_shaped": { "$defRef": "%result-crafting_shaped" },
             "crafting_shaped": { "$defRef": "%result-crafting_shaped" },
-            "minecraft:crafting_shapeless": { "$defRef": "%result-crafting_shapeless" },
             "crafting_shapeless": { "$defRef": "%result-crafting_shapeless" },
-            "minecraft:smithing": { "$defRef": "%result-smithing" },
             "smithing": { "$defRef": "%result-smithing" },
-            "minecraft:stonecutting": { "$defRef": "%result-stonecutting" },
             "stonecutting": { "$defRef": "%result-stonecutting" }
           },
+          "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
         "ingredients": {
           "decidingProp": "type",
-          "values": {
-            "minecraft:crafting_shapeless": { "$defRef": "%ingredients-crafting_shapeless" },
-            "crafting_shapeless": { "$defRef": "%ingredients-crafting_shapeless" }
-          },
+          "values": { "crafting_shapeless": { "$defRef": "%ingredients-crafting_shapeless" } },
+          "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
         "base": {
           "decidingProp": "type",
-          "values": {
-            "minecraft:smithing": { "$defRef": "%base-smithing" },
-            "smithing": { "$defRef": "%base-smithing" }
-          },
+          "values": { "smithing": { "$defRef": "%base-smithing" } },
+          "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
         "addition": {
           "decidingProp": "type",
-          "values": {
-            "minecraft:smithing": { "$defRef": "%addition-smithing" },
-            "smithing": { "$defRef": "%addition-smithing" }
-          },
+          "values": { "smithing": { "$defRef": "%addition-smithing" } },
+          "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
         "ingredient": {
           "decidingProp": "type",
-          "values": {
-            "minecraft:stonecutting": { "$defRef": "%ingredient-stonecutting" },
-            "stonecutting": { "$defRef": "%ingredient-stonecutting" }
-          },
+          "values": { "stonecutting": { "$defRef": "%ingredient-stonecutting" } },
+          "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
         "count": {
           "decidingProp": "type",
-          "values": {
-            "minecraft:stonecutting": { "$defRef": "%count-stonecutting" },
-            "stonecutting": { "$defRef": "%count-stonecutting" }
-          },
+          "values": { "stonecutting": { "$defRef": "%count-stonecutting" } },
+          "optionalPrefixes": ["minecraft:"],
           "optional": true
         }
       }

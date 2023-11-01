@@ -5,7 +5,8 @@ import os.path
 import sys
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
-from typing import Optional, TypeVar, Type, Callable, Mapping, Any, Generator, AbstractSet, Generic, TypeAlias, final
+from typing import Optional, TypeVar, Type, Callable, Mapping, Any, Generator,\
+	AbstractSet, Generic, TypeAlias, final, overload, Literal, NoReturn, cast, Iterator
 
 from cat.utils import Nothing, Anything
 from cat.utils.collections_ import AddToDictDecorator
@@ -15,6 +16,10 @@ from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.parser import parse
 from base.model.pathUtils import normalizeDirSeparators, fromDisplayPath, loadBinaryFile, ZipFilePool
 from base.model.utils import GeneralError, MDStr, Span, SemanticsError, WrappedError
+
+TEMPLATE_REF_PROP = '$ref'
+DEF_REF_PROP = '$defRef'
+OPTIONAL_PREFIXES_PROP = 'optionalPrefixes'
 
 JSON_TYPE_NAMES = {'null', 'boolean', 'number', 'string', 'array', 'object'}
 
@@ -52,7 +57,6 @@ class JD(V[_TJSD], Generic[_TJSD, _TT2]):
 		return self.n.typeName
 
 
-#JD = J[JsonData]
 JInvalid: TypeAlias = JD[JsonInvalid, None]
 JNull: TypeAlias = JD[JsonNull, None]
 JBool: TypeAlias = JD[JsonBool, bool]
@@ -88,7 +92,6 @@ class TemplateParam:
 	name: str
 	type: str
 	description: MDStr
-	optional: bool
 	default: Optional[JD]
 	span: Span
 
@@ -117,6 +120,11 @@ class SchemaBuilder:
 	@staticmethod
 	def createError(message: MDStr, span: Span, style: str) -> SemanticsError:
 		return SemanticsError(message, span=span, style=style)
+
+	@overload
+	def error(self, message: MDStr, *, span: Span, ctx: TemplateContext, style: Literal['error'] = 'error') -> NoReturn: ...
+	@overload
+	def error(self, message: MDStr, *, span: Span, ctx: TemplateContext, style: Literal['warning', 'hint']) -> None: ...
 
 	def error(self, message: MDStr, *, span: Span, ctx: TemplateContext, style: str = 'error') -> None:
 		error = self.createError(message, span, style)
@@ -184,29 +192,29 @@ class SchemaBuilder:
 		yield None
 
 		libraries = self.optObjectRaw(root, '$libraries')
-		if libraries.n is not None:
+		if libraries is not None:
 			partialLibraries = self.parseLibrariesPartial(libraries, ctx)
 			next(partialLibraries)
 		else:
 			partialLibraries = None
 
 		templates = self.optObjectRaw(root, '$templates')
-		if templates.n is not None:
+		if templates is not None:
 			self.parseTemplates(templates, ctx)
 
 		definitions = self.optObjectRaw(root, '$definitions')
-		if definitions.n is not None:
-			partialDefinition = self.parseDefinitionsPartial(definitions, ctx)
-			next(partialDefinition)
+		if definitions is not None:
+			partialDefinitions = self.parseDefinitionsPartial(definitions, ctx)
+			next(partialDefinitions)
 		else:
-			partialDefinition = None
+			partialDefinitions = None
 
 		yield None
 
 		if partialLibraries is not None:
 			completePartialParse(partialLibraries)
-		if partialDefinition is not None:
-			completePartialParse(partialDefinition)
+		if partialDefinitions is not None:
+			completePartialParse(partialDefinitions)
 
 	def parseBody(self, body: JObject) -> JsonSchema:
 		return self.parseType(body)
@@ -269,7 +277,7 @@ class SchemaBuilder:
 				self.error(MDStr(f"args {name!r} already defined before at {args[name].value.span.start}"), span=prop.key.span, ctx=refNode.ctx)
 			if (param := remainingParams.pop(name, None)) is not None:
 				arg = prop.value
-				arg = self.fromRef(JD(arg, refNode.ctx))
+				arg = self.fromRef2(arg, refNode.ctx)
 				if arg.typeName != param.type:
 					msg = f"Unexpected argument type. Got {arg.typeName}, but expected type: {param.type}"
 					self.error(MDStr(msg), span=arg.span, ctx=arg.ctx)
@@ -281,23 +289,13 @@ class SchemaBuilder:
 		for name, param in remainingParams.items():
 			if param.default is not None:
 				args[name] = TemplateArg(JD(param.default.n, templateCtx))
-			elif param.optional:
-				args[name] = TemplateArg(JD(None, templateCtx))
 			else:
 				self.error(MDStr(f"missing argument for param {name!r}."), span=refNode.span, ctx=refNode.ctx)
 		return args
 
-	def resolveDefRef(self, refNode: JString) -> JsonSchema:
-		library, ns, lref = self.getNamespace(refNode)
-		if (definition := library.definitions.get(lref)) is not None:
-			return definition
-		else:
-			self.error(MDStr(f"No definition \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
-			return JsonAnySchema(allowMultilineStr=None)
-
 	def handleTypePartial(self, node: JObject) -> Generator[JsonSchema]:
-		refNode = self.optStr(node, '$defRef')
-		if refNode.n is not None:
+		refNode = self.optStr(node, DEF_REF_PROP)
+		if refNode is not None:
 			if len(node.data) > 1:
 				self.error(MDStr(f"no additional attributes allowed for referenced definitions."), span=refNode.span, style='warning', ctx=node.ctx)
 			yield self.resolveDefRef(refNode)
@@ -323,11 +321,8 @@ class SchemaBuilder:
 	def parseTemplate(self, node: JObject, span: Span) -> SchemaTemplate:
 		description = MDStr(self.optStrVal(node, 'description', ''))
 		paramsNode = self.optObject(node, '$params')
-		if paramsNode.n is not None:
-			params = self.parseParams(paramsNode)
-		else:
-			params = OrderedDict()
-		body = self.reqObjectRaw(node, '$body')
+		params = self.parseParams(paramsNode) if paramsNode is not None else OrderedDict()
+		body = self.reqObjectRaw(node, '$body')  # will be resolved later, if necessary.
 
 		template = SchemaTemplate(
 			description=description,
@@ -351,44 +346,16 @@ class SchemaBuilder:
 	def parseParam(self, node: JObject, name: str, span: Span) -> TemplateParam:
 		type_ = MDStr(self.reqEnumVal(node, 'type', JSON_TYPE_NAMES))
 		description = MDStr(self.optStrVal(node, 'description', ''))
-		optional = self.optBoolVal(node, 'optional', False)
-		# default = self.optVal(node, 'default')
-		default = node.data.get('default')
-		if default is not None:
-			default = self.fromRef(JD(default.value, node.ctx))
+		default = self._optProp(node, 'default')
 
 		param = TemplateParam(
 			name=name,
 			type=type_,
 			description=description,
-			optional=optional,
 			default=default,
 			span=span
 		)
 		return param
-
-	def fromRef(self, node: JD) -> JD:
-		if not isinstance(node.n, JsonObject):
-			return node
-		refNode = self.optStr(node, '$ref')
-		if refNode.n is None:
-			return node
-		ref = refNode.data
-
-		if ref.startswith('#'):
-			arg = refNode.ctx.arguments.get(ref[1:])
-			if arg is None:
-				self.error(MDStr(f"no parameter \"{ref[1:]}\" registered in current context ({refNode.ctx.filePath})."), span=refNode.span, ctx=refNode.ctx)
-			return self.fromRef(arg.value)
-
-		library, ns, lref = self.getNamespace(refNode)
-
-		if (template := library.templates.get(lref)) is not None:
-			templateCtx = TemplateContext(lref, library.filePath, library.libraries, {})
-			templateCtx.arguments.update(self.parseArguments(node, template, templateCtx))
-			return JD(template.body, templateCtx)
-		else:
-			self.error(MDStr(f"No template \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
 
 	def getNamespace(self, refNode: JString) -> tuple[Optional[SchemaLibrary], str, str]:
 		ns, _, lref = refNode.data.rpartition(':')
@@ -401,28 +368,45 @@ class SchemaBuilder:
 				), ctx=refNode.ctx)
 		return library, ns, lref
 
+	def resolveDefRef(self, refNode: JString) -> JsonSchema:
+		library, ns, lref = self.getNamespace(refNode)
+		if (definition := library.definitions.get(lref)) is not None:
+			return definition
+		else:
+			self.error(MDStr(f"No definition \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
+			return JsonAnySchema(allowMultilineStr=None)
+
+	def fromRef(self, node: JD) -> JD:
+		if not isinstance(node.n, JsonObject):
+			return node
+		if (refNode := self.optStr(node, TEMPLATE_REF_PROP)) is None:
+			return node
+
+		ref = refNode.data
+		if ref.startswith('#'):
+			arg = refNode.ctx.arguments.get(ref[1:])
+			if arg is None:
+				self.error(MDStr(f"no parameter \"{ref[1:]}\" registered in current context ({refNode.ctx.filePath})."), span=refNode.span, ctx=refNode.ctx)
+			return self.fromRef(arg.value)
+
+		library, ns, lref = self.getNamespace(refNode)
+
+		if (template := library.templates.get(lref)) is not None:
+			templateCtx = TemplateContext(lref, library.filePath, library.libraries, {})
+			templateCtx.arguments.update(self.parseArguments(node, template, templateCtx))
+			return self.fromRef(JD(template.body, templateCtx))  # be aware of possible infinite recursion!
+		else:
+			self.error(MDStr(f"No template \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
+
+	def fromRef2(self, data: _TJSD, ctx: TemplateContext) -> JD[_TJSD]:
+		return self.fromRef(JD(data, ctx))
+
 	def checkType(self, data: JD, type_: Type[_TJSD]) -> JD[_TJSD]:
 		if isinstance(data.n, type_):
 			return data
 		msg = f"Unexpected type. Got {type(data.n)}, but expected type: {type_}"
 		self.error(MDStr(msg), span=data.span, ctx=data.ctx)
 		raise ValueError(msg)
-
-	def fromRefCheckType(self, node: JD, type_: Type[_TJSD]) -> JD[_TJSD]:
-		value = self.fromRef(node)
-		return self.checkType(value, type_)
-
-	def _req(self, obj: JObject, key: str) -> JD:
-		if (prop := obj.n.data.get(key)) is not None:
-			return JD(prop.value, obj.ctx)
-		msg = MDStr(f"Missing required property '{key}'")
-		self.error(msg, span=obj.span, ctx=obj.ctx)
-		raise ValueError(msg)
-
-	def _opt(self, obj: JObject, key: str) -> JD:
-		if (prop := obj.n.data.get(key)) is not None:
-			return self.fromRef(JD(prop.value, obj.ctx))
-		return JD(None, obj.ctx)
 
 	def checkOptions(self, data: JD[_TJSD], options: AbstractSet[_TT]) -> JD[_TJSD]:
 		if data.n.data in options:
@@ -432,23 +416,27 @@ class SchemaBuilder:
 		self.error(MDStr(msg), span=data.span, ctx=data.ctx)
 		raise ValueError(msg)
 
-	def reqType(self, obj: JObject, key: str, type_: Type[_TJSD]) -> JD[_TJSD]:
+	def _reqProp(self, obj: JObject, key: str) -> JD:
 		if (prop := obj.n.data.get(key)) is not None:
-			return self.fromRefCheckType(JD(prop.value, obj.ctx), type_)
-		msg = f"Missing required property '{key}'"
-		self.error(MDStr(msg), span=obj.span, ctx=obj.ctx)
+			return JD(prop.value, obj.ctx)
+		msg = MDStr(f"Missing required property '{key}'")
+		self.error(msg, span=obj.span, ctx=obj.ctx)
 		raise ValueError(msg)
 
-	def optType(self, obj: JObject, key: str, type_: Type[_TJSD], default: _TD = None) -> JD[_TJSD | _TD]:
+	def _optProp(self, obj: JObject, key: str) -> Optional[JD]:
 		if (prop := obj.n.data.get(key)) is not None:
-			return self.fromRefCheckType(JD(prop.value, obj.ctx), type_)
-		return JD(default, obj.ctx)
+			return self.fromRef2(prop.value, obj.ctx)
+		return None
+
+	def reqType(self, obj: JObject, key: str, type_: Type[_TJSD]) -> JD[_TJSD]:
+		data = self._reqProp(obj, key)
+		return self.checkType(self.fromRef(data), type_)
 
 	def reqBool(self, obj: JObject, key: str):
-		return self.reqType(obj, key, JsonBool).n
+		return self.reqType(obj, key, JsonBool)
 
 	def reqNumber(self, obj: JObject, key: str):
-		return self.reqType(obj, key, JsonNumber).n
+		return self.reqType(obj, key, JsonNumber)
 
 	def reqStr(self, obj: JObject, key: str):
 		return self.reqType(obj, key, JsonString)
@@ -460,27 +448,31 @@ class SchemaBuilder:
 		return self.reqType(obj, key, JsonObject)
 
 	def reqObjectRaw(self, obj: JObject, key: str):
-		return self.checkType(self._req(obj, key), JsonObject)
+		return self.checkType(self._reqProp(obj, key), JsonObject)
 
-	def optBool(self, obj: JObject, key: str, default=None):
-		return self.optType(obj, key, JsonBool, default).n
+	def optType(self, obj: JObject, key: str, type_: Type[_TJSD]) -> Optional[JD[_TJSD]]:
+		data = self._optProp(obj, key)
+		return self.checkType(self.fromRef(data), type_) if data is not None else None
 
-	def optNumber(self, obj: JObject, key: str, default=None):
-		return self.optType(obj, key, JsonNumber, default).n
+	def optBool(self, obj: JObject, key: str):
+		return self.optType(obj, key, JsonBool)
 
-	def optStr(self, obj: JObject, key: str, default=None):
-		return self.optType(obj, key, JsonString, default)
+	def optNumber(self, obj: JObject, key: str):
+		return self.optType(obj, key, JsonNumber)
 
-	def optArray(self, obj: JObject, key: str, default=None):
-		return self.optType(obj, key, JsonArray, default)
+	def optStr(self, obj: JObject, key: str):
+		return self.optType(obj, key, JsonString)
 
-	def optObject(self, obj: JObject, key: str, default=None):
-		return self.optType(obj, key, JsonObject, default)
+	def optArray(self, obj: JObject, key: str):
+		return self.optType(obj, key, JsonArray)
 
-	def optObjectRaw(self, obj: JObject, key: str, default=None):
+	def optObject(self, obj: JObject, key: str):
+		return self.optType(obj, key, JsonObject)
+
+	def optObjectRaw(self, obj: JObject, key: str):
 		if (prop := obj.n.data.get(key)) is not None:
 			return self.checkType(JD(prop.value, obj.ctx), JsonObject)
-		return JD(default, obj.ctx)
+		return None
 
 	def reqBoolVal(self, obj: JObject, key: str) -> bool:
 		return self.reqType(obj, key, JsonBool).n.data
@@ -501,45 +493,41 @@ class SchemaBuilder:
 
 	def reqArrayVal2(self, obj: JObject, key: str, type_: Type[_TJN]) -> list[JD[_TJN]]:
 		array = self.reqType(obj, key, JsonArray)
-		return [self.fromRefCheckType(JD(elem, array.ctx), type_) for elem in array.n.data]
-
-	def optVal(self, obj: JObject, key: str, default: _TD = None) -> V[JsonTypes | _TD]:
-		if (prop := obj.n.data.get(key)) is not None:
-			value = self.fromRef(JD(prop.value, obj.ctx))
-			return V(value.n.data, value.ctx)
-		return V(default, obj.ctx)
+		ctx = array.ctx
+		return [self.checkType(self.fromRef2(elem, ctx), type_) for elem in array.n.data]
 
 	def optBoolVal(self, obj: JObject, key: str, default: _TD = None) -> bool | _TD:
-		if (data := self.optType(obj, key, JsonBool, None).n) is not None:
-			return data.data
+		if (data := self.optType(obj, key, JsonBool)) is not None:
+			return data.n.data
 		return default
 
 	def optNumberVal(self, obj: JObject, key: str, default: _TD = None) -> int | float | _TD:
-		if (data := self.optType(obj, key, JsonNumber, None).n) is not None:
-			return data.data
+		if (data := self.optType(obj, key, JsonNumber)) is not None:
+			return data.n.data
 		return default
 
 	def optStrVal(self, obj: JObject, key: str, default: _TD = None) -> str | _TD:
-		if (data := self.optType(obj, key, JsonString, None).n) is not None:
-			return data.data
+		if (data := self.optType(obj, key, JsonString)) is not None:
+			return data.n.data
 		return default
 
 	def optEnumVal(self, obj: JObject, key: str, options: AbstractSet[str], default: _TD = None) -> str | _TD:
 		data = self.optStr(obj, key)
-		if data.n is not None:
+		if data is not None:
 			return self.checkOptions(data, options).n.data
 		return default
 
-	def optArrayVal(self, obj: JObject, key: str, default: _TD = None) -> V[list[JsonData] | _TD]:
-		array = self.optType(obj, key, JsonArray, None)
-		if array.n is not None:
+	def optArrayVal(self, obj: JObject, key: str) -> Optional[V[list[JsonData]]]:
+		array = self.optType(obj, key, JsonArray)
+		if array is not None:
 			return V(array.n.data, array.ctx)
-		return V(default, obj.ctx)
+		return None
 
 	def optArrayVal2(self, obj: JObject, key: str, type_: Type[_TJSD]) -> list[JD[_TJSD]]:
-		array = self.optArrayVal(obj, key, None)
-		if array.n is not None:
-			return [self.fromRefCheckType(JD(elem, array.ctx), type_) for elem in array.n]
+		array = self.optType(obj, key, JsonArray)
+		if array is not None:
+			ctx = array.ctx
+			return [self.checkType(self.fromRef2(elem, ctx), type_) for elem in array.n.data]
 		return []
 
 
@@ -653,17 +641,17 @@ class SchemaBuilderOrchestrator:
 				completePartialParse(partialLibrary)
 
 
-def decodeDecidingProp(decidingProp: Optional[str]) -> Optional[tuple[int, str]]:
-	if decidingProp is not None:
-		lookback = 0
-		while decidingProp.startswith('../', lookback * 3):
-			lookback += 1
-		decidingProp = lookback, decidingProp[lookback * 3:]
-	return decidingProp
+def decodeDecidingProp(decidingProp: Optional[str]) -> Optional[DecidingPropRef]:
+	if decidingProp is None:
+		return None
+	lookback = 0
+	while decidingProp.startswith('../', lookback * 3):
+		lookback += 1
+	return DecidingPropRef(lookback, decidingProp[lookback * 3:])
 
 
 def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySchema:
-	type_ = self.optStrVal(node, '$type') or self.optStrVal(node, '$defRef')
+	type_ = self.optStrVal(node, '$type') or self.optStrVal(node, DEF_REF_PROP)
 	if type_ is not None:
 		valueNode = node
 		description = None
@@ -674,35 +662,33 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 		hates = ()
 		deprecated = False
 		allowMultilineStr = None
-		valuesNode = JD(None, node.ctx)
-		prefixesNode = JD(None, node.ctx)
-		prefixes = []
+		valuesNode = None
+		prefixes, prefixesSpan = [], None
 	else:
 		description, deprecated, allowMultilineStr = readCommonValues(self, node)
 		optional = self.optBoolVal(node, 'optional', False)
-		default = self._opt(node, 'default')
-		if default.n is not None:
+		default = self._optProp(node, 'default')
+		if default is not None:
 			default = toPyValue(self, default)
 		else:
 			default = None
 		decidingProp = self.optStrVal(node, 'decidingProp', None)
 		# reqVal = self.optArrayVal(node, 'requires', [])
-		# requires = tuple(self.fromRefCheckType(data, reqValCtx, JsonString).n.data for data in reqVal)
+		# requires = tuple(self.checkType(fromRef(data), JsonString).n.data for data in reqVal)
 		requires = tuple(elem.n.data for elem in self.optArrayVal2(node, 'requires', JsonString))
 		hates = tuple(elem.n.data for elem in self.optArrayVal2(node, 'hates', JsonString))
 
 		valueNode = self.optObject(node, 'value')
 		valuesNode = self.optObject(node, 'values')
-		prefixesNode = self.optArray(node, 'optionalPrefixes')
-		prefixes = self.optArrayVal2(node, 'optionalPrefixes', JsonString) if prefixesNode.n is not None else []
+		prefixes, prefixesSpan = _readOptionalPrefixes(self, node)
 
-	if valueNode.n is not None:
+	if valueNode is not None:
 		value = self.parseType(valueNode)
 		values = None
-		if prefixesNode.n is not None:
-			self.error(MDStr(f"'optionalPrefixes' only work with property 'values' and 'decidingProp'. it will be ignored"), span=node.span, ctx=node.ctx, style='warning')
+		if prefixesSpan is not None:  # we have prefixes!
+			self.error(MDStr(f"'optionalPrefixes' only work with property 'values' and 'decidingProp'. it will be ignored"), span=prefixesSpan, ctx=node.ctx, style='warning')
 
-	elif valuesNode.n is not None:
+	elif valuesNode is not None:
 		value = None
 		if decidingProp is None:
 			self.error(MDStr(f"Missing property 'decidingProp' required by property 'values'"), span=node.span, ctx=node.ctx)
@@ -710,15 +696,14 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 			key: self.parseType(self.reqObject(valuesNode, key))
 			for key in valuesNode.n.data.keys()
 		}
-		if prefixes:
-			prefixes = [''] + [prefix.data for prefix in prefixes]
-			values = {
-				f'{prefix}{key}': type_
-				for key, type_ in values.items()
-				for prefix in prefixes
-			}
+		values = {
+			f'{prefix}{key}': type_
+			for key, type_ in values.items()
+			for prefix in prefixes
+		}
 	else:
 		self.error(MDStr(f"Missing required property: oneOf('value', 'values')"), span=node.span, ctx=node.ctx)
+		raise ValueError()  # we should NEVER be here. But the type checker does not believe, that self.error(...) always raises an exception.
 
 	return PropertySchema(
 		name=name,
@@ -738,10 +723,21 @@ def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> PropertySc
 def inheritanceHandler(self: SchemaBuilder, node: JObject) -> Inheritance:
 	refNode = self.reqStr(node, 'defRef')
 	decidingProp = self.optStrVal(node, 'decidingProp', None)
+
+	prefixes, prefixesSpan = _readOptionalPrefixes(self, node)
+
 	if decidingProp:
-		decidingValues = self.reqArrayVal2(node, 'decidingValues', JsonString)
+		decidingValuesNodes = self.reqArrayVal2(node, 'decidingValues', JsonString)
+		decidingValues = tuple(
+			f'{prefix}{dv.data}'
+			for dv in decidingValuesNodes
+			for prefix in prefixes
+		)
+
 	else:
-		decidingValues = []
+		decidingValues = ()
+		if prefixesSpan is not None:
+			self.error(MDStr(f"'optionalPrefixes' only work with property 'decidingValues' and 'decidingProp'. it will be ignored"), span=prefixesSpan, ctx=node.ctx, style='warning')
 
 	refSchema = self.resolveDefRef(refNode)
 	if not isinstance(refSchema, JsonObjectSchema):
@@ -749,7 +745,7 @@ def inheritanceHandler(self: SchemaBuilder, node: JObject) -> Inheritance:
 	return Inheritance(
 		schema=refSchema,
 		decidingProp=decodeDecidingProp(decidingProp),
-		decidingValues=tuple(dv.data for dv in decidingValues),
+		decidingValues=decidingValues,
 	)
 
 
@@ -761,7 +757,7 @@ typeHandler = AddToDictDecorator(_typeHandlers)
 def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	defaultProp = self.optType(node, 'default-property', JsonObject)
-	if defaultProp.n is not None:
+	if defaultProp is not None:
 		properties = self.optObjectRaw(node, 'properties')
 	else:
 		properties = self.reqObjectRaw(node, 'properties')
@@ -778,11 +774,12 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	yield objectSchema
 
 	schemaProps = []
-	if properties.n is not None:
+	if properties is not None:
 		for name in properties.n.data.keys():
 			prop = self.reqType(properties, name, JsonObject)
 			schemaProps.append(propertyHandler(self, name, prop).setSpan(properties.n.data[name].value.span, properties.ctx.filePath))
-	if defaultProp.n is not None:
+	if defaultProp is not None:
+		# 'default-property' might be a reference, so get the span from the raw (non-resolved ) value!
 		schemaProps.append(propertyHandler(self, Anything(), defaultProp).setSpan(node.n.data['default-property'].value.span, node.ctx.filePath))
 
 	schemaInherits = []
@@ -800,7 +797,7 @@ def arrayHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	element = self.reqObject(node, 'element')
 	objectSchema = JsonArraySchema(
 		description=description,
-		element=None,
+		element=cast(JsonSchema, None),  # will be set later.
 		deprecated=deprecated,
 		allowMultilineStr=allowMultilineStr
 	)
@@ -845,8 +842,8 @@ def stringHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 
 	objectSchema = JsonStringSchema(
 		description=description,
-		type=_getJsonArgType(self, type_) if type_.n is not None else None,
-		args=toPyValue(self, args) if args.n is not None else None,
+		type=_getJsonArgType(self, type_) if type_ is not None else None,
+		args=toPyValue(self, args) if args is not None else None,
 		deprecated=deprecated,
 		allowMultilineStr=allowMultilineStr
 	)
@@ -858,7 +855,14 @@ def enumHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	options = self.reqObject(node, 'options')
 	oCtx = options.ctx
-	options2 = {self.fromRefCheckType(JD(p.key, oCtx), JsonString).data: self.fromRefCheckType(JD(p.value, oCtx), JsonString).data for p in options.data.values()}
+	options2: dict[str, MDStr] = {self.checkType(self.fromRef2(p.key, oCtx), JsonString).data: self.checkType(self.fromRef2(p.value, oCtx), JsonString).data for p in options.data.values()}
+
+	prefixes, prefixesSpan = _readOptionalPrefixes(self, node)
+	options2 = {
+		f'{prefix}{key}': descr
+		for key, descr in options2.items()
+		for prefix in prefixes
+	}
 
 	objectSchema = JsonStringOptionsSchema(
 		description=description,
@@ -976,12 +980,12 @@ def toPyValue(self: SchemaBuilder, data: JD) -> Any:
 
 @_toPyValueHandler('object')
 def _objectHandler(self: SchemaBuilder, node: JObject) -> dict:
-	return {toPyValue(self, self.fromRef(JD(p.key, node.ctx))): toPyValue(self, self.fromRef(JD(p.value, node.ctx))) for p in node.data.values()}
+	return {toPyValue(self, self.fromRef2(p.key, node.ctx)): toPyValue(self, self.fromRef2(p.value, node.ctx)) for p in node.data.values()}
 
 
 @_toPyValueHandler('array')
 def _arrayHandler(self: SchemaBuilder, node: JArray) -> list:
-	return [toPyValue(self, self.fromRef(JD(e, node.ctx))) for e in node.data]
+	return [toPyValue(self, self.fromRef2(e, node.ctx)) for e in node.data]
 
 
 @_toPyValueHandler('string')
@@ -990,6 +994,12 @@ def _arrayHandler(self: SchemaBuilder, node: JArray) -> list:
 @_toPyValueHandler('null')
 def _stringHandler(self: SchemaBuilder, node: JString) -> str:
 	return node.data
+
+
+def _readOptionalPrefixes(self: SchemaBuilder, node: JObject) -> tuple[list[str], Span]:
+	prefixesNode = self.optArray(node, OPTIONAL_PREFIXES_PROP)
+	prefixes = self.optArrayVal2(node, OPTIONAL_PREFIXES_PROP, JsonString) if prefixesNode is not None else []
+	return [''] + [prefix.data for prefix in prefixes], (prefixesNode and prefixesNode.span)
 
 
 def bytesFromFile(srcPath: str) -> bytes:
@@ -1018,28 +1028,37 @@ def bytesFromFile(srcPath: str) -> bytes:
 # 	return text
 
 
-def traverse(obj, memo: dict[int, JsonSchema], onHasMemo: Callable[[JsonSchema], Any], *, skipMemoCheck: bool = False):
-	if isinstance(obj, JsonSchema):
-		if id(obj) in memo and not skipMemoCheck:
-			return onHasMemo(obj)
-		memo[id(obj)] = obj
+def traverseSchema(obj: JsonSchema, onHasMemo: Callable[[JsonSchema], Any], *, memoIO: dict[int, JsonSchema], skipMemoCheck: bool = False) -> PyJsonObject:
+	if id(obj) in memoIO and not skipMemoCheck:
+		return onHasMemo(obj)
+	memoIO[id(obj)] = obj
 
-		result = OrderedDict()
-		result['$type'] = obj.typeName
-		for st in type(obj).__mro__:
-			for attr, defaultVal in getattr(st, '_fields', {}).items():
-				val = getattr(obj, attr)
-				if val is Nothing or val != defaultVal:
-					result[attr] = traverse(val, memo, onHasMemo)
-		obj.postProcessJsonStructure(result)
+	result = OrderedDict()
+	result['$type'] = obj.typeName
+	for st in type(obj).__mro__:
+		for attr, defaultVal in getattr(st, '_fields', {}).items():
+			val = getattr(obj, attr)
+			if val is Nothing or val != defaultVal:
+				result[attr] = traverse(val, onHasMemo, memoIO=memoIO)
+	obj.postProcessJsonStructure(result)
+	return result
+
+
+def traverseMapping(obj: Mapping[str, Any], onHasMemo: Callable[[JsonSchema], Any], *, memoIO: dict[int, JsonSchema], skipMemoCheck: bool = False) -> PyJsonObject:
+	return {key: traverse(val, onHasMemo, memoIO=memoIO) for key, val in obj.items()}
+
+
+def traverseList(obj: list | tuple, onHasMemo: Callable[[JsonSchema], Any], *, memoIO: dict[int, JsonSchema], skipMemoCheck: bool = False) -> PyJsonArray:
+	return [traverse(val, onHasMemo, memoIO=memoIO) for val in obj]
+
+
+def traverse(obj, onHasMemo: Callable[[JsonSchema], Any], *, memoIO: dict[int, JsonSchema]) -> PyJsonValue:
+	if isinstance(obj, JsonSchema):
+		result = traverseSchema(obj, onHasMemo, memoIO=memoIO, skipMemoCheck=False)  # don't skip memo checks recursively
 	elif isinstance(obj, (list, tuple)):
-		result = []
-		for val in obj:
-			result.append(traverse(val, memo, onHasMemo))
+		result = traverseList(obj, onHasMemo, memoIO=memoIO)
 	elif isinstance(obj, Mapping):
-		result = OrderedDict()
-		for key, val in obj.items():
-			result[key] = traverse(val, memo, onHasMemo)
+		result = traverseMapping(obj, onHasMemo, memoIO=memoIO)
 	else:
 		result = obj
 	return result
@@ -1048,16 +1067,16 @@ def traverse(obj, memo: dict[int, JsonSchema], onHasMemo: Callable[[JsonSchema],
 def buildJsonStructure(schema: JsonSchema):
 	sharedSchemas = findDuplicates(schema)
 
-	def onHasMemo2(obj: JsonSchema):
-		return {'$defRef': sharedSchemas[id(obj)][0]}
+	def onHasMemo2(obj: JsonSchema) -> dict[str, JsonSchema]:
+		return {DEF_REF_PROP: sharedSchemas[id(obj)][0]}
 
 	memo2 = {id_: obj for id_, (ref, obj) in sharedSchemas.items()}
 	definitions = {}
 	for id_, (ref, obj) in sharedSchemas.items():
-		definitions[ref] = traverse(obj, memo2, onHasMemo2, skipMemoCheck=True)
+		definitions[ref] = traverseSchema(obj, onHasMemo2, memoIO=memo2, skipMemoCheck=True)
 
 	# memo2 = {id_: obj for id_, (ref, obj) in sharedSchemas.items()}
-	body = traverse(schema, memo2, onHasMemo2)
+	body = traverseSchema(schema, onHasMemo2, memoIO=memo2)
 
 	structure = {
 		'$schema': 'dpe/json/schema',
@@ -1067,18 +1086,19 @@ def buildJsonStructure(schema: JsonSchema):
 	return structure
 
 
-def findDuplicates(schema: JsonSchema):
-	usageCounts = defaultdict(int)
+def findDuplicates(schema: JsonSchema) -> dict[int, tuple[str, JsonSchema]]:
+	usageCounts: defaultdict[int, int] = defaultdict(int)
 
 	def onHasMemo(obj: JsonSchema):
 		usageCounts[id(obj)] += 1
 		return None
 
-	memo = {}
-	traverse(schema, memo, onHasMemo)
-	sharedSchemas = {
+	memo: dict[int, JsonSchema] = {}
+	traverseSchema(schema, onHasMemo, memoIO=memo)
+	enumeratedUsageCounts: Iterator[tuple[int, tuple[int, int]]] = enumerate(usageCounts.items())
+	sharedSchemas: dict[int, tuple[str, JsonSchema]] = {
 		id_: (f'%%{i}!', memo[id_])
-		for i, (id_, cnt) in enumerate(usageCounts.items())
+		for i, (id_, cnt) in enumeratedUsageCounts
 	}
 	return sharedSchemas
 

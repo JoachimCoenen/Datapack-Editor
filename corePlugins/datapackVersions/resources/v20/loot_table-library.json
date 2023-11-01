@@ -27,21 +27,9 @@
               "barter": "* [[Bartering]] with piglins.",
               "advancement_reward": "* Loot table set as an [[Advancement/JSON_format|advancement's reward]].",
               "generic": "* Not used. Supplies all loot context parameters.\n* Specifying {{cd|\"type\":\"generic\"}} or omitting it means no checking for context parameters in this loot table when loading the data pack.",
-              "block": "* Loots from breaking a block.\n* The command {{cmd|loot &hellip; mine &lt;pos&gt;}}.",
-              
-              "minecraft:empty": "* Only used by the hardcoded empty loot table. Supplies no loot context parameters. \n* Specifying {{cd|\"type\":\"empty\"}} means no context parameters can be used in this loot table.",
-              "minecraft:chest": "* Opening of a container with loot table (can be {{#var:containers}}).\n* The command {{cmd|loot &hellip; loot &lt;loot_table&gt;}}.",
-              "minecraft:command": "* Not used for loot tables. Specifying {{cd|\"type\":\"command\"}} doesn't make sense.\n* Used internally by commands such as {{cmd|item modify}} or {{cmd|execute (if{{!}}unless) predicate}}.",
-              "minecraft:selector": "* Not used for loot tables. Specifying {{cd|\"type\":\"selector\"}} doesn't make sense.\n* Used internally by the {{cd|predicate}} [[Target selectors|target selector]] argument.",
-              "minecraft:fishing": "* [[Fishing]].\n* The command {{cmd|loot &hellip; fish &lt;loot_table&gt;}}.",
-              "minecraft:entity": "* Loot from a living entity's death.\n* The command {{cmd|loot &hellip; kill &lt;target&gt;}}.",
-              "minecraft:archaeology": "* Using a [[brush]] on [[suspicious sand]] that has a loot table.",
-              "minecraft:gift": "* Gift from a cat or villager.",
-              "minecraft:barter": "* [[Bartering]] with piglins.",
-              "minecraft:advancement_reward": "* Loot table set as an [[Advancement/JSON_format|advancement's reward]].",
-              "minecraft:generic": "* Not used. Supplies all loot context parameters.\n* Specifying {{cd|\"type\":\"generic\"}} or omitting it means no checking for context parameters in this loot table when loading the data pack.",
-              "minecraft:block": "* Loots from breaking a block.\n* The command {{cmd|loot &hellip; mine &lt;pos&gt;}}."
-            }
+              "block": "* Loots from breaking a block.\n* The command {{cmd|loot &hellip; mine &lt;pos&gt;}}."
+            },
+            "optionalPrefixes": ["minecraft:"]
           }
         },
         
@@ -123,17 +111,9 @@
               "empty": "Provides a loot entry that generates nothing into the loot pool.",
               "group": "All entry providers in the children list is applied into the loot pool. Can be used for convenience, e.g. if one condition applies for multiple entries.",
               "alternatives": "Only the first successful (conditions are met) entry provider, in order, is applied to the loot pool.",
-              "sequence": "The child entry providers are applied to the loot pool in sequential order, continuing until an entry provider's conditions are not met, then applying no more entry providers from the children.",
-              
-              "minecraft:item": "Provides a loot entry that drops a single item stack.",
-              "minecraft:tag": "Provides a loot entry that generates all item in an item tag, or multiple loot entries (each entry generates a single item in the item tag).",
-              "minecraft:loot_table": "Provides another loot table as a loot entry.",
-              "minecraft:dynamic": "Provides a loot entry that generates block-specific drops.",
-              "minecraft:empty": "Provides a loot entry that generates nothing into the loot pool.",
-              "minecraft:group": "All entry providers in the children list is applied into the loot pool. Can be used for convenience, e.g. if one condition applies for multiple entries.",
-              "minecraft:alternatives": "Only the first successful (conditions are met) entry provider, in order, is applied to the loot pool.",
-              "minecraft:sequence": "The child entry providers are applied to the loot pool in sequential order, continuing until an entry provider's conditions are not met, then applying no more entry providers from the children."
-            }
+              "sequence": "The child entry providers are applied to the loot pool in sequential order, continuing until an entry provider's conditions are not met, then applying no more entry providers from the children."
+            },
+            "optionalPrefixes": ["minecraft:"]
           }
         },
         
