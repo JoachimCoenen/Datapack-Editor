@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from typing import Optional, Iterable, Any
 
 from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
-from base.model.parsing.tree import Schema
+from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
 from base.model.utils import Span, Position, GeneralError, MDStr, LanguageId
 from .argumentTypes import *
@@ -14,6 +14,32 @@ from .utils import CommandSyntaxError
 
 def initPlugin() -> None:
 	pass
+
+
+def parseFromStringReader(sr: StringReader, filePath: FilePath, language: LanguageId, schema: Optional[Schema], *, errorsIO: list[GeneralError], **kwargs) -> Optional[Node]:
+	if sr.hasReachedEnd:
+		return None
+
+	data, errors = parseNPrepare(
+		# sr.text[sr.cursor:],  #todo why copy the text?
+		sr.text,
+		filePath=filePath,
+		language=language,
+		schema=schema,
+		line=sr.line,
+		lineStart=sr.lineStart,
+		cursor=sr.cursor,
+		cursorOffset=sr.cursorOffset,
+		**kwargs
+	)
+
+	errorsIO.extend(errors)
+	if data is not None:
+		sr.save()
+		sr.cursor += data.span.length  # TODO: use parser.cursor, etc. instead
+		sr.line = data.span.end.line
+		sr.lineStart = data.span.end.index - data.span.end.column
+	return data
 
 
 class ParsingHandler(ArgumentContext, ABC):
@@ -30,53 +56,18 @@ class ParsingHandler(ArgumentContext, ABC):
 		return {}
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		# remainder = sr.tryReadRemaining()
-		if sr.hasReachedEnd:
-			return None
-		sr.save()
 		schema = self.getSchema(ai)
 		language = self.getLanguage(ai)
-
-		data, errors = parseNPrepare(
-			sr.source[sr.cursor:],
-			filePath=filePath,
-			language=language,
-			schema=schema,
-			line=sr._lineNo,
-			lineStart=sr._lineStart,
-			cursor=0,
-			cursorOffset=sr.cursor + sr._lineStart,
-			**self.getParserKwArgs(ai)
-		)
-		# sr.tryReadRemaining()
-
-		errorsIO.extend(errors)
+		data = parseFromStringReader(sr, filePath, language, schema, errorsIO=errorsIO, **self.getParserKwArgs(ai))
 		if data is not None:
-			sr.cursor += data.span.length
-			sr._lineNo = data.span.end.line
-			sr._lineStart = data.span.end.index - data.span.end.column
 			return makeParsedArgument(sr, ai, value=data)
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		validateTree(node.value, node.source, errorsIO)
-		# errors = validateJson(node.value)
-		# nss = node.span.start
-		# for er in errors:
-		# 	s = Position(
-		# 		nss.line,
-		# 		nss.column + er.span.start.index,
-		# 		nss.index + er.span.start.index
-		# 	)
-		# 	e = Position(
-		# 		nss.line,
-		# 		nss.column + er.span.end.index,
-		# 		nss.index + er.span.end.index
-		# 	)
-		# 	if isinstance(er, GeneralError):
-		# 		er.span = Span(s, e)
-		# 	else:
-		# 		er = CommandSemanticsError(er.message, Span(s, e), er.style)
-		# 	errorsIO.append(er)
+
+	def getErsatzNodeForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		"""override in subclasses if you wnt to provide an ersatz node."""
+		return None
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		"""
@@ -87,8 +78,13 @@ class ParsingHandler(ArgumentContext, ABC):
 		:return:
 		"""
 		if node is not None:
-			return getSuggestions(node.value, node.source, pos, replaceCtx)
-		return []
+			value = node.value
+			source = node.source
+		else:
+			value = self.getErsatzNodeForSuggestions(ai, pos, replaceCtx)
+			source = b''
+
+		return getSuggestions(value, source, pos, replaceCtx)
 
 	def getDocumentation(self, node: ParsedArgument, pos: Position) -> MDStr:
 		docs = [

@@ -359,22 +359,6 @@ class StringReader:
 	# 	else:
 	# 		return string
 
-	def readResourceLocation(self, *, allowTag: bool = False) -> bytes:
-		# The namespace and the path of a resource location should only contain the following symbols:
-		#     0123456789 Numbers
-		#     abcdefghijklmnopqrstuvwxyz Lowercase letters
-		#     _ Underscore
-		#     - Hyphen/minus
-		#     . Dot
-		# The following characters are illegal in the namespace, but acceptable in the path:
-		#     / Forward slash (directory separator)
-		# The preferred naming convention for either namespace or path is snake_case.
-		pattern = rb'(?:[0-9a-zA-Z._-]+:)?[0-9a-zA-Z._/-]*'
-		if allowTag:
-			pattern = b'#?' + pattern
-		literal = self.tryReadRegex(re.compile(pattern))
-		return literal
-
 	def tryReadTildeNotation(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor

@@ -5,9 +5,25 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-@dataclass(order=False, eq=False, unsafe_hash=False, frozen=True)
+_BASE_PATTERN_BYTES = rb'(?:[0-9a-zA-Z._-]+:)?[0-9a-zA-Z._/-]*'
+
+RESOURCE_LOCATION_NO_TAG_PATTERN = re.compile(_BASE_PATTERN_BYTES)
+RESOURCE_LOCATION_PATTERN = re.compile(b'#?' + _BASE_PATTERN_BYTES)
+
+
+@dataclass(order=False, eq=False, unsafe_hash=False, frozen=True, slots=True)
 class ResourceLocation:
-	__slots__ = ('namespace', 'path', 'isTag')
+	"""
+	The namespace and the path of a resource location should only contain the following symbols:
+		- '0123456789' Numbers
+		- 'abcdefghijklmnopqrstuvwxyz' Lowercase letters
+		- '_' Underscore
+		- '-' Hyphen/minus
+		- '.' Dot
+	The following characters are illegal in the namespace, but acceptable in the path:
+		- '/' Forward slash (directory separator)
+	The preferred naming convention for either namespace or path is snake_case.
+	"""
 	namespace: Optional[str]
 	path: str
 	isTag: bool
@@ -21,7 +37,7 @@ class ResourceLocation:
 
 	@property
 	def actualNamespace(self) -> str:
-		return 'minecraft' if self.namespace is None else self.namespace
+		return self.namespace or 'minecraft'  #  'minecraft' if self.namespace is None else self.namespace
 
 	@property
 	def asString(self) -> str:
@@ -116,6 +132,8 @@ def isNamespaceValid(namespace: str) -> bool:
 
 
 __all__ = [
+	'RESOURCE_LOCATION_NO_TAG_PATTERN',
+	'RESOURCE_LOCATION_PATTERN',
 	'ResourceLocation',
 	'isNamespaceValid',
 ]

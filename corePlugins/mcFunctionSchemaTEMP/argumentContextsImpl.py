@@ -1,22 +1,20 @@
 import re
-from abc import abstractmethod, ABC
 from typing import Optional, Iterable, Any
 
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, CtxInfo, \
-	prepareTree
+from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
-from base.model.utils import Span, Position, GeneralError, MDStr, Message, LanguageId
+from base.model.utils import Span, Position, GeneralError, Message, LanguageId
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
 from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.mcFunction.utils import CommandSyntaxError, CommandSemanticsError
-from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode
+from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode, RESOURCE_LOCATION_ID
 from corePlugins.nbt.tags import NBTTagSchema
 from base.model.messages import *
-from .argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parseResourceLocation, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions
+from .argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parse2dPos, _get3dPosSuggestions, _get2dPosSuggestions, _readResourceLocation
 from .argumentTypes import *
 from .argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
 from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, validateFilterArgs
@@ -35,57 +33,35 @@ def initPlugin() -> None:
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
 
 
-class ResourceLocationLikeHandler(ArgumentContext, ABC):
-	# @property
-	# @abstractmethod
-	# def name(self) -> str:
-	# 	pass
-	#
-	# @abstractmethod
-	# def allowTags(self, ai: ArgumentSchema) -> bool:
-	# 	pass
-	#
-	# @abstractmethod
-	# def tagsFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-	# 	pass
-	#
-	# @abstractmethod
-	# def valuesFromDP(self, dp: Datapack) -> Iterable[Mapping[ResourceLocation, MetaInfo]]:
-	# 	pass
-	#
-	# @abstractmethod
-	# def valuesFromMC(self, mc: MCVersion) -> Iterable[ResourceLocation]:
-	# 	pass
+@argumentContext(MINECRAFT_DIMENSION.name, rlcSchema=ResourceLocationSchema('', 'dimension'))
+@argumentContext(MINECRAFT_ENTITY_SUMMON.name, rlcSchema=ResourceLocationSchema('', 'entity_summon'))
+@argumentContext(MINECRAFT_ENTITY_TYPE.name, rlcSchema=ResourceLocationSchema('', 'entity_type'))
+@argumentContext(MINECRAFT_FUNCTION.name, rlcSchema=ResourceLocationSchema('', 'function_type'))
+@argumentContext(MINECRAFT_ITEM_ENCHANTMENT.name, rlcSchema=ResourceLocationSchema('', 'enchantment'))
+@argumentContext(MINECRAFT_MOB_EFFECT.name, rlcSchema=ResourceLocationSchema('', 'mob_effect'))
+@argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle'))
+@argumentContext(MINECRAFT_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'predicate'))
+@argumentContext(MINECRAFT_LOOT_TABLE.name, rlcSchema=ResourceLocationSchema('', 'loot_table'))
+@argumentContext(MINECRAFT_RESOURCE_LOCATION.name, rlcSchema=ResourceLocationSchema('', 'any_no_tag'))
+@argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name, rlcSchema=ResourceLocationSchema('', 'any_no_tag'))  # TODO: add validation for objective_criteria
+@argumentContext(DPE_ADVANCEMENT.name, rlcSchema=ResourceLocationSchema('', 'advancement'))
+@argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome'))
+class ResourceLocationLikeHandler(ParsingHandler):
+	def __init__(self, rlcSchema: ResourceLocationSchema):
+		super().__init__()
+		self.rlcSchema: ResourceLocationSchema = rlcSchema
 
-	@property
-	@abstractmethod
-	def schema(self) -> ResourceLocationSchema:
-		pass
+	def getSchema(self, ai: ArgumentSchema) -> ResourceLocationSchema:
+		return self.rlcSchema
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, self.schema)
+	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
+		return RESOURCE_LOCATION_ID
 
-	def prepare(self, node: ParsedArgument, info: CtxInfo[ParsedArgument], errorsIO: list[GeneralError]) -> None:
-		prepareTree(node.value, node.source, info.filePath)
+	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
+		return dict(ignoreTrailingChars=True)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		validateTree(node.value, node.source, errorsIO)
-
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		if node is None:
-			value = ResourceLocationNode.fromString(b'', Span(pos), self.schema)
-			return getSuggestions(value, b'', pos, replaceCtx)
-		else:
-			return getSuggestions(node.value, node.source, pos, replaceCtx)
-
-	def getDocumentation(self, node: ParsedArgument, position: Position) -> MDStr:
-		return getDocumentation(node.value, node.source, position) or super(ResourceLocationLikeHandler, self).getDocumentation(node, position)
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		return getClickableRanges(node.value, node.source, node.span)
-
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
-		return onIndicatorClicked(node.value, node.source, position)
+	def getErsatzNodeForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.getSchema(ai))
 
 
 @argumentContext(MINECRAFT_ANGLE.name)
@@ -112,13 +88,15 @@ class BlockPosHandler(ArgumentContext):
 		return _get3dPosSuggestions(ai, node, pos, replaceCtx, useFloat=self.useFloat(ai))
 
 
-@argumentContext(MINECRAFT_BLOCK_STATE.name)
+@argumentContext(MINECRAFT_BLOCK_STATE.name, rlcSchema=ResourceLocationSchema('', 'block'))
+@argumentContext(MINECRAFT_BLOCK_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'block_type'))
 class BlockStateHandler(ArgumentContext):
-	def __init__(self, allowTag: bool = False):
+	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()
-		self._allowTag: bool = allowTag
+		self.rlcSchema: ResourceLocationSchema = rlcSchema
 
-	def faiForBS(self, bs: BlockStateType) -> FilterArgumentInfo:
+	@staticmethod
+	def faiForBS(bs: BlockStateType) -> FilterArgumentInfo:
 		if bs.values:
 			argType = makeLiteralsArgumentType([strToBytes(val) for val in bs.values])
 		else:
@@ -133,12 +111,9 @@ class BlockStateHandler(ArgumentContext):
 		blockStates = getCurrentFullMcData().getBlockStates(blockID)
 		return {strToBytes(argument.name): self.faiForBS(argument) for argument in blockStates}
 
-	rlcSchema = ResourceLocationSchema('', 'block')
-
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# block_id[block_states]{data_tags}
-		blockID = sr.readResourceLocation(allowTag=self._allowTag)
-		blockID = ResourceLocationNode.fromString(blockID, sr.currentSpan, self.rlcSchema)
+		blockID = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
 
 		# block states:
 		blockStatesDict = self._getBlockStatesDict(blockID)
@@ -190,7 +165,6 @@ class BlockStateHandler(ArgumentContext):
 
 		if blockID.span.__contains__(pos):
 			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
-			# suggestions += rlc.BlockContext(self._allowTag).getSuggestions(contextStr, cursorPos, replaceCtx)
 
 		if blockState.nbt is not None and blockState.nbt.span.__contains__(pos):
 			suggestions += getSuggestions(blockState.nbt, node.source, pos, replaceCtx)
@@ -218,14 +192,6 @@ class BlockStateHandler(ArgumentContext):
 			onIndicatorClicked(blockState.nbt, node.source, position)
 		else:
 			onIndicatorClickedForFilterArgs(blockState.states, position)
-
-
-@argumentContext(MINECRAFT_BLOCK_PREDICATE.name)
-class BlockPredicateHandler(BlockStateHandler):
-	def __init__(self):
-		super().__init__(allowTag=True)
-
-	rlcSchema = ResourceLocationSchema('', 'block_type')
 
 
 @argumentContext(MINECRAFT_COLUMN_POS.name)
@@ -261,14 +227,6 @@ class ComponentHandler(ParsingHandler):
 
 	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
 		return LanguageId('JSON')
-
-
-@argumentContext(MINECRAFT_DIMENSION.name)
-class DimensionHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'dimension')
 
 
 @argumentContext(MINECRAFT_ENTITY.name)
@@ -310,22 +268,6 @@ class EntityHandler(ArgumentContext):
 		onIndicatorClickedForFilterArgs(node.value.arguments, position)
 
 
-@argumentContext(MINECRAFT_ENTITY_SUMMON.name)
-class EntitySummonHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'entity_summon')
-
-
-@argumentContext(MINECRAFT_ENTITY_TYPE.name)
-class EntityTypeHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'entity_type')
-
-
 @argumentContext(MINECRAFT_FLOAT_RANGE.name)
 class FloatRangeHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
@@ -340,14 +282,6 @@ class FloatRangeHandler(ArgumentContext):
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return ['0...']
-
-
-@argumentContext(MINECRAFT_FUNCTION.name)
-class FunctionHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'function_type')
 
 
 @argumentContext(MINECRAFT_GAME_PROFILE.name)
@@ -372,14 +306,6 @@ class IntRangeHandler(ArgumentContext):
 		return ['0...']
 
 
-@argumentContext(MINECRAFT_ITEM_ENCHANTMENT.name)
-class ItemEnchantmentHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'enchantment')
-
-
 @argumentContext(MINECRAFT_ITEM_SLOT.name)
 class ItemSlotHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
@@ -397,18 +323,16 @@ class ItemSlotHandler(ArgumentContext):
 		return [bytesToStr(slot) for slot in getCurrentFullMcData().slots.keys()]
 
 
-@argumentContext(MINECRAFT_ITEM_STACK.name)
+@argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item'))
+@argumentContext(MINECRAFT_ITEM_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'item_type'))
 class ItemStackHandler(ArgumentContext):
-	def __init__(self, allowTag: bool = False):
+	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()
-		self._allowTag: bool = allowTag
-
-	rlcSchema = ResourceLocationSchema('', 'item')
+		self.rlcSchema: ResourceLocationSchema = rlcSchema
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
 		# item_id{data_tags}
-		itemID = sr.readResourceLocation(allowTag=self._allowTag)
-		itemID = ResourceLocationNode.fromString(itemID, sr.currentSpan, self.rlcSchema)
+		itemID = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
 
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
@@ -472,12 +396,6 @@ class ItemStackHandler(ArgumentContext):
 			onIndicatorClicked(itemStack.nbt, node.source, position)
 
 
-@argumentContext(MINECRAFT_ITEM_PREDICATE.name)
-class ItemPredicateHandler(ItemStackHandler):
-	def __init__(self):
-		super().__init__(allowTag=True)
-
-
 @argumentContext(MINECRAFT_MESSAGE.name)
 class MessageHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
@@ -485,14 +403,6 @@ class MessageHandler(ArgumentContext):
 		if message is None:
 			return None
 		return makeParsedArgument(sr, ai, value=message)
-
-
-@argumentContext(MINECRAFT_MOB_EFFECT.name)
-class MobEffectHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'mob_effect')
 
 
 # @argumentContext(MINECRAFT_NBT_COMPOUND_TAG.name)
@@ -544,55 +454,6 @@ class ObjectiveHandler(ArgumentContext):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		if len(node.value) > 16 and getCurrentFullMcData().name < '1.18':
 			errorsIO.append(CommandSemanticsError(OBJECTIVE_NAME_LONGER_THAN_16_MSG.format(), node.span, style='error'))
-
-
-@argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name)
-class ObjectiveCriteriaHandler(ArgumentContext):
-	rlcSchema = ResourceLocationSchema('', 'any_no_tag')
-
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
-		return _parseResourceLocation(sr, ai, self.rlcSchema)
-		# TODO: add validation for objective_criteria
-
-
-@argumentContext(MINECRAFT_PARTICLE.name)
-class ParticleHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'particle')
-
-
-@argumentContext(MINECRAFT_PREDICATE.name)
-class PredicateHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'predicate')
-
-
-@argumentContext(MINECRAFT_LOOT_TABLE.name)
-class ResourceLocationHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'loot_table')
-
-
-@argumentContext(MINECRAFT_RESOURCE_LOCATION.name)
-class ResourceLocationHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'any_no_tag')
-
-
-@argumentContext(DPE_ADVANCEMENT.name)
-class ResourceLocationHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'advancement')
 
 
 @argumentContext(MINECRAFT_ROTATION.name)
@@ -726,14 +587,6 @@ class Vec3Handler(ArgumentContext):
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return _get3dPosSuggestions(ai, node, pos, replaceCtx, useFloat=True)
-
-
-@argumentContext(DPE_BIOME_ID.name)
-class BiomeIdHandler(ResourceLocationLikeHandler):
-
-	@property
-	def schema(self) -> ResourceLocationSchema:
-		return ResourceLocationSchema('', 'biome')
 
 
 @argumentContext(ST_DPE_DATAPACK.name)

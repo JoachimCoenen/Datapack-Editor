@@ -3,8 +3,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, replace
 from itertools import chain
-from typing import Optional, Collection, Iterable, final, Mapping
+from typing import Optional, Collection, Iterable, final, Mapping, ClassVar
 
+from base.model.parsing.parser import ParserBase
 from cat.GUI.components.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from cat.utils import Deprecated, Decorator
 from base.model.parsing.bytesUtils import bytesToStr
@@ -13,23 +14,27 @@ from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath, FilePathTpl
 from base.model.project.project import Root
 from base.model.session import getSession
-from base.model.utils import Span, Position, GeneralError, SemanticsError, MDStr
+from base.model.utils import Span, Position, GeneralError, SemanticsError, MDStr, LanguageId
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData, FullMCData
-from corePlugins.minecraft_data.resourceLocation import isNamespaceValid, ResourceLocation
-from base.model.messages import INTERNAL_ERROR_MSG, EXPECTED_MSG, UNKNOWN_MSG
+from corePlugins.minecraft_data.resourceLocation import isNamespaceValid, ResourceLocation, RESOURCE_LOCATION_PATTERN
+from base.model.messages import INTERNAL_ERROR_MSG, EXPECTED_MSG, UNKNOWN_MSG, TRAILING_NOT_ALLOWED_MSG
+
+RESOURCE_LOCATION_ID = LanguageId('minecraft:resource_location')
 
 
 @dataclass(slots=True)
 class ResourceLocationSchema(Schema):
+	language: ClassVar[LanguageId] = RESOURCE_LOCATION_ID
 	name: str
 
 	def asString(self) -> str:
 		return self.name
 
 
-@dataclass(order=False, eq=False, unsafe_hash=False, frozen=True)
+@dataclass(order=False, eq=False, unsafe_hash=False, frozen=True, slots=True)
 class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema], ResourceLocation):
 	# TODO: maybe move to different module, or move ResourceLocationContext implementations?
+	language: ClassVar[LanguageId] = RESOURCE_LOCATION_ID
 
 	isValid: bool = field(default=True, compare=False, kw_only=True)
 	pointsToFile: bool = field(default=False, compare=False, kw_only=True)
@@ -45,13 +50,31 @@ class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema],
 	def children(self) -> Collection[ResourceLocationNode]:
 		return ()
 
-
 	__eq__ = ResourceLocation.__eq__
 	__lt__ = ResourceLocation.__lt__
 	__le__ = ResourceLocation.__le__
 	__gt__ = ResourceLocation.__gt__
 	__ge__ = ResourceLocation.__ge__
 	__hash__ = ResourceLocation.__hash__
+
+
+@dataclass
+class ResourceLocationParser(ParserBase[ResourceLocationNode, ResourceLocationSchema]):
+	ignoreTrailingChars: bool = False
+
+	def parse(self) -> Optional[ResourceLocationNode]:
+		p1 = self.currentPos
+		location = self.tryReadRegex(RESOURCE_LOCATION_PATTERN)
+		if location is None:
+			self.errorMsg(EXPECTED_MSG, RESOURCE_LOCATION_ID, span=Span(p1))
+			return None
+		p2 = self.currentPos
+		if not self.ignoreTrailingChars and self.cursor < self.length:
+			self.advanceLineCounterAndUpdatePos(self.length)
+			p3 = self.currentPos
+			self.errorMsg(TRAILING_NOT_ALLOWED_MSG, "characters", span=Span(p2, p3))
+
+		return ResourceLocationNode.fromString(location, Span(p1, p2), self.schema)
 
 
 @dataclass
@@ -243,6 +266,7 @@ def containsResourceLocation(rl: ResourceLocation, container: Iterable[ResourceL
 
 
 __all__ = [
+	'RESOURCE_LOCATION_ID',
 	'ResourceLocation',
 	'ResourceLocationSchema',
 	'ResourceLocationNode',

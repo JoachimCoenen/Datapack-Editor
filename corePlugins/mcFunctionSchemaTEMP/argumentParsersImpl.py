@@ -10,8 +10,8 @@ from corePlugins.nbt.tags import NBTTag, CompoundTag
 from .snbt import parseNBTTag
 from base.model.parsing.contextProvider import Suggestions
 from base.model.pathUtils import FilePath
-# from model.resourceLocationContext import getResourceLocationContext
 from base.model.utils import Position
+from ..mcFunction.argumentContextsImpl import parseFromStringReader
 
 
 def _parse2dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
@@ -93,10 +93,10 @@ def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePa
 		return None
 
 
-def _parseResourceLocation(sr: StringReader, ai: ArgumentSchema, schema: ResourceLocationSchema) -> Optional[ParsedArgument]:
-	# todo: rlc = getResourceLocationContext(schema.name)
-	# allowTag = rlc.allowTags
-	allowTag = True  # = rlc.allowTags
-	location = sr.readResourceLocation(allowTag=allowTag)
-	location = ResourceLocationNode.fromString(location, sr.currentSpan, schema)
+def _readResourceLocation(sr: StringReader, filePath: FilePath, schema: ResourceLocationSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ResourceLocationNode]:
+	return parseFromStringReader(sr, filePath, schema.language, schema, errorsIO=errorsIO, ignoreTrailingChars=True)
+
+
+def _parseResourceLocation(sr: StringReader, filePath: FilePath, ai: ArgumentSchema, schema: ResourceLocationSchema, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	location = _readResourceLocation(sr, filePath, schema, errorsIO=errorsIO)
 	return makeParsedArgument(sr, ai, value=location)
