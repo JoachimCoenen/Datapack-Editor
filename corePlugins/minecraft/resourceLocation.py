@@ -104,7 +104,7 @@ class ResourceLocationCtxProvider(ContextProvider[ResourceLocationNode]):
 			return getResourceLocationContext(schema.name)
 		return None
 
-	def prepareTree(self, filePath: FilePath) -> list[GeneralError]:
+	def prepareTree(self, filePath: FilePath, errorsIO: list[GeneralError]) -> None:
 		pass
 
 	def getCallTips(self, pos: Position) -> list[str]:

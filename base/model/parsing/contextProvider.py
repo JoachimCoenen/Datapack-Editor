@@ -126,11 +126,9 @@ class ContextProvider(Generic[_TNode], ABC):
 	def getContext(self, node: _TNode) -> Optional[Context]:
 		pass
 
-	def prepareTree(self, filePath: FilePath) -> list[GeneralError]:
-		errorsIO = []
+	def prepareTree(self, filePath: FilePath, errorsIO: list[GeneralError]) -> None:
 		info = CtxInfo(self, filePath)
 		self._prepareAll(self.tree, info, errorsIO)
-		return errorsIO
 
 	def _prepareAll(self, node: _TNode, info: CtxInfo, errorsIO: list[GeneralError]) -> None:
 		if (ctx := self.getContext(node)) is not None:
@@ -232,10 +230,9 @@ def getContext(node: _TNode, text: bytes) -> Optional[Context[_TNode]]:
 	return None
 
 
-def prepareTree(node: Node, text: bytes, filePath: FilePath) -> list[GeneralError]:
+def prepareTree(node: Node, text: bytes, filePath: FilePath, errorsIO: list[GeneralError]) -> None:
 	if (ctxProvider := getContextProvider(node, text)) is not None:
-		return ctxProvider.prepareTree(filePath)
-	return []
+		ctxProvider.prepareTree(filePath, errorsIO)
 
 
 def parseNPrepare(
@@ -266,7 +263,7 @@ def parseNPrepare(
 		**kwargs
 	)
 	if node is not None:
-		errors += prepareTree(node, text, filePath)
+		prepareTree(node, text, filePath, errorsIO=errors)
 	return node, errors
 
 

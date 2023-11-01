@@ -38,8 +38,8 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 				return getArgumentContext(schema.type)
 		return None
 
-	def prepareTree(self, filePath: FilePath) -> list[GeneralError]:
-		return []
+	def prepareTree(self, filePath: FilePath, errorsIO: list[GeneralError]) -> None:
+		pass
 
 	def validateTree(self, errorsIO: list[GeneralError]) -> None:
 		if isinstance(self.tree, MCFunction):
@@ -271,12 +271,12 @@ def makeParsedArgument(sr: StringReader, schema: Optional[CommandPartSchema], va
 
 
 def parseLiteral(sr: StringReader, ai: ArgumentSchema) -> Optional[ParsedArgument]:
+	assert isinstance(ai.type, LiteralsArgumentType)
 	literal = sr.tryReadRegex(re.compile(rb'\w+'))
 	if literal is None:
 		literal = sr.tryReadLiteral()
 	if literal is None:
 		return None
-	assert isinstance(ai.type, LiteralsArgumentType)
 	options: set[bytes] = set(ai.type.options)
 	if literal not in options:
 		sr.rollback()
