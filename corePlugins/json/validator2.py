@@ -46,15 +46,12 @@ getSchemaValidator = VALIDATORS_FOR_SCHEMAS.get
 
 
 @schemaValidator(PropertySchema.typeName)
-def validateJsonAny(data: JsonData, schema: PropertySchema, *, errorsIO: list[GeneralError]) -> None:
+def validateJsonProperty(data: JsonData, schema: PropertySchema, *, errorsIO: list[GeneralError]) -> None:
 	return
 
 
 @schemaValidator(JsonAnySchema.typeName)
 def validateJsonAny(data: JsonData, schema: JsonAnySchema, *, errorsIO: list[GeneralError]) -> None:
-	# if isinstance(data, JsonInvalid):
-	# 	errorsIO.append(wrongTypeError(schema, data))
-	# 	return
 	pass  # no error for invalid, because it's already invalid.
 
 
@@ -93,12 +90,8 @@ def validateJsonString(data: JsonData, schema: JsonStringSchema, *, errorsIO: li
 	if not isinstance(data, JsonString):
 		errorsIO.append(wrongTypeError(schema, data))
 		return
-	# TODO: validation of JsonString using JsonStringSchema.type
-
-	# if (argumentHandler := getJsonStringContext(schema.type)) is not None:
-	# 	argumentHandler.validate(data, errorsIO)
-	# else:
-	if schema.type is not None:
+	if schema.type is not None:  # specialized StringHandlers validate string on their own.
+		# if we end up here, no sppecialized string handler hs been found.
 		errorsIO.append(JsonSemanticsError(INTERNAL_ERROR_MSG.format(MISSING_JSON_STRING_HANDLER_MSG, schema.type), data.span, style='info'))
 
 
@@ -116,20 +109,17 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 		return
 
 	validatedProps: set[str] = set()
-	key: str
-	prop: JsonProperty
-	for key, prop in data.data.items():
-		if key in validatedProps:
-			msg = DUPLICATE_PROPERTY_MSG.format(repr(key))
+	for name, prop in data.data.items():
+		if name in validatedProps:
+			msg = DUPLICATE_PROPERTY_MSG.format(repr(name))
 			errorsIO.append(JsonSemanticsError(msg, prop.key.span))
 		else:
-			validatedProps.add(key)
+			validatedProps.add(name)
 
-		prop_schema = prop.schema
-		isUnknownProp = prop_schema is None or prop.value.schema is None
-		# isUnknownProp = key not in schema.propertiesDict or schema.propertiesDict[key].valueForParent(data) is None
+		prop_schema, value_schema = schema.getSchemaForPropAndVal(name, data)
+		isUnknownProp = prop_schema is None or value_schema is None
 		if isUnknownProp:
-			msg = UNKNOWN_PROPERTY_MSG.format(repr(key))
+			msg = UNKNOWN_PROPERTY_MSG.format(repr(name))
 			errorsIO.append(JsonSemanticsError(msg, prop.key.span))
 			continue
 
@@ -138,8 +128,8 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 			msg = REQUIRES_PROPERTY_SET_MSG.format(repr(prop_schema.requires))
 			errorsIO.append(JsonSemanticsError(msg, prop.key.span, style='warning'))
 
-		hasHatedProp = prop_schema.hates != () and any(p in data.data for p in prop_schema.hates)
-		if hasHatedProp:
+		hasIncompatibleProp = prop_schema.hates != () and any(p in data.data for p in prop_schema.hates)
+		if hasIncompatibleProp:
 			msg = INCOMPATIBLE_PROPERTY_MSG.format(repr(prop_schema.hates))
 			errorsIO.append(JsonSemanticsError(msg, prop.key.span, style='warning'))
 
@@ -149,9 +139,9 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 
 	for propSchema in schema.propertiesDict.values():
 		if propSchema.name not in validatedProps:
-			missingRequiredProp = propSchema.requires != () and all(p not in data.data for p in propSchema.requires)
-			hasIncompatibleProp = propSchema.hates != () and any(p in data.data for p in propSchema.hates)
-			isMandatory = propSchema.mandatory and not missingRequiredProp and not hasIncompatibleProp and propSchema.valueForParent(data) is not None
+			missingRequiredProp = propSchema.requires and all(p not in data.data for p in propSchema.requires)
+			hasIncompatibleProp = propSchema.hates and any(p in data.data for p in propSchema.hates)
+			isMandatory = propSchema.mandatory and not missingRequiredProp and not hasIncompatibleProp and propSchema.getValueSchemaForParent(data) is not None
 			if isMandatory:
 				msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(propSchema.name))
 				end = data.span.end
@@ -161,7 +151,7 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 
 @schemaValidator(JsonUnionSchema.typeName)
 def validateJsonUnion(data: JsonData, schema: JsonUnionSchema, *, errorsIO: list[GeneralError]) -> None:
-	# we could not decide on a schema previously, so show errors for option with least errors:
+	# we could not decide on a schema previously, so show errors for option with the least errors:
 
 	optionsToValidate = []
 	for opt in schema.allOptions:
@@ -174,7 +164,7 @@ def validateJsonUnion(data: JsonData, schema: JsonUnionSchema, *, errorsIO: list
 		errorsIO.append(wrongTypeError(schema, data))
 		return
 
-	optionsErrors = []
+	optionsErrors: list[list[GeneralError]] = []
 	for opt in optionsToValidate:
 		validator = getSchemaValidator(opt.typeName, None)
 		errors = []
@@ -184,10 +174,11 @@ def validateJsonUnion(data: JsonData, schema: JsonUnionSchema, *, errorsIO: list
 	minErrors = []
 	minErrorsLen = float('inf')
 	for errors in optionsErrors:
-		if len(errors) < minErrorsLen:
-			minErrorsLen = len(errors)
+		errorsLen = len([e for e in errors if e.style == 'error'])
+		if errorsLen < minErrorsLen:
+			minErrorsLen = errorsLen
 			minErrors = [errors]
-		elif len(errors) == minErrorsLen:
+		elif errorsLen == minErrorsLen:
 			minErrors.append(errors)
 
 	for errors in minErrors:

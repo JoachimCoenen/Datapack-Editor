@@ -3,11 +3,11 @@ from .core import *
 
 
 def enrichWithSchema(data: JsonData, schema: JsonSchema) -> bool:
-	data.schema = schema
+	# data.schema = schema
 	if schema is not None:
 		return _enrichWithSchemaInternal(data, schema)
 	else:
-		_enrichWithSchemaInternal(data, JSON_ANY_SCHEMA)
+		_enrichWithAnySchema(data)
 		data.schema = None
 		return False
 
@@ -40,7 +40,7 @@ def _enrichWithUnionSchema(data: JsonData, schema: JsonUnionSchema) -> bool:
 
 
 def _enrichArrayWithSchema(data: JsonArray, schema: JsonArraySchema) -> bool:
-	result = True
+	result = True  # todo: check, use false here, if array contains any values.
 	for v in data.data:
 		result |= enrichWithSchema(v, schema.element)
 	return result
@@ -58,36 +58,37 @@ def _enrichObjectWithSchema(data: JsonObject, schema: JsonObjectSchema) -> bool:
 			if prop.name not in data.data:
 				result = False
 
-	anythingProp = schema.anythingProp
 	for name, prop in data.data.items():
-		propSchema = schema.propertiesDict.get(name, anythingProp)
-		if propSchema is not None:
-			_enrichProperty(prop, propSchema, data)
-		else:
-			_enrichWithAnySchema(prop.value)
-			result = False
+		result = _enrichProperty(name, prop, schema, data) and result
 
 	return result
 
 
-def _enrichProperty(prop: JsonProperty, schema: SwitchingPropertySchema, parent: JsonObject):
-	prop.schema = schema
-	selectedSchema = schema.valueForParent(parent)
-	if selectedSchema is not None:
-		enrichWithSchema(prop.value, selectedSchema)
+def _enrichProperty(name: str, prop: JsonProperty, parentSchema: JsonObjectSchema, parent: JsonObject) -> bool:
+	propSchema, valueSchema = parentSchema.getSchemaForPropAndVal(name, parent)
+	if propSchema is not None:
+		prop.schema = propSchema
+		if valueSchema is not None:
+			return enrichWithSchema(prop.value, valueSchema)
+	return False
 
 
 def _enrichWithAnySchema(data: JsonData):
-	dataType = type(data)
-	data.schema = JSON_ANY_SCHEMA
+	if data.schema is None:
+		data.schema = JSON_ANY_SCHEMA
+		dataType = type(data)
+		if dataType is JsonArray:
+			for v in data.data:
+				_enrichWithAnySchema(v)
+		# elif dataType is JsonObject:
+		# 	for key, prop in data.data.items():
+		# 		if prop.schema is None:
+		# 			prop.schema = PropertySchema(name=key, value=JSON_ANY_SCHEMA, allowMultilineStr=None)
+		# 			_enrichWithAnySchema(prop.value)
 
-	if dataType is JsonArray:
-		for v in data.data:
-			_enrichWithAnySchema(v)
-	elif dataType is JsonObject:
-		for key, prop in data.data.items():
-			prop.schema = PropertySchema(name=key, value=JSON_ANY_SCHEMA, allowMultilineStr=None)
-			_enrichWithAnySchema(prop.value)
+
+def _enrichWithIllegalSchema(data: JsonData):
+	data.schema = JSON_ILLEGAL_SCHEMA
 
 
 def pathify(data: JsonData, path: str) -> None:

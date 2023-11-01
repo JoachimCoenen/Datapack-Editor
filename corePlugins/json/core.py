@@ -9,6 +9,7 @@ from weakref import ref, ReferenceType
 
 from recordclass import as_dataclass
 
+from cat.utils import CachedProperty, Anything, Nothing, NoneType
 from cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
 from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import IndexMapper
@@ -80,8 +81,13 @@ class Token:
 
 Array = list['JsonData']
 Object = OrderedMultiDict[str, 'JsonProperty']
+JsonValue = NoneType | bool | int | float | str | Array | Object
 
-JsonTypes = Union[None, bool, int, float, str, Array, Object]
+
+PyJsonArray = list['PyJsonValue']
+PyJsonObject = dict[str, 'PyJsonValue']
+PyJsonValue = NoneType | bool | int | float | str | PyJsonArray | PyJsonObject
+
 
 _TT = TypeVar('_TT')  # , NoneType, bool, int, float, str, Array, Object)
 _TT2 = TypeVar('_TT2')  # , NoneType, bool, int, float, str, Array, Object)
@@ -197,7 +203,7 @@ class JsonArray(JsonData[Array]):
 class JsonProperty(JsonNode):
 	key: JsonString
 	value: JsonData
-	schema: Optional[SwitchingPropertySchema] = field(hash=False, compare=False)
+	schema: Optional[PropertySchema] = field(hash=False, compare=False)
 
 	typeName: ClassVar[str] = 'property'
 
@@ -257,34 +263,6 @@ class JsonSchema(Schema, Generic[_TT], ABC):
 
 	def postProcessJsonStructure(self, structure: dict[str, Any]) -> None:
 		pass
-
-
-# class JsonSchemaRoot(Schema, Generic[_TT], ABC):
-# 	"""
-# 	Root of a JSON schema description.
-# 	"""
-# 	typeName: ClassVar[str] = 'JsonData'
-# 	language: ClassVar[LanguageId] = 'JSON'
-# 	_fields: ClassVar[dict[str, Any]] = dict(description='', deprecated=False)
-#
-# 	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: bool):
-# 		self.description: MDStr = description
-# 		self.deprecated: bool = deprecated
-# 		self.span: Span = NULL_SPAN
-# 		self.filePath: str = ''
-# 		self.allowMultilineStr: bool = allowMultilineStr
-#
-# 	@property
-# 	def asString(self) -> str:
-# 		return self.typeName
-#
-# 	def setSpan(self, newSpan: Span, filePath: str):
-# 		self.span = newSpan
-# 		self.filePath = filePath
-# 		return self
-#
-# 	def postProcessJsonStructure(self, structure: dict[str, Any]) -> None:
-# 		pass
 
 
 class JsonNullSchema(JsonSchema[JsonNull]):
@@ -394,21 +372,26 @@ class JsonKeySchema(JsonStringSchema):
 JSON_KEY_SCHEMA = JsonKeySchema(allowMultilineStr=None)
 
 
-DECIDING_PROP_NOT_FOUND = object()
+@as_dataclass(hashable=True, readonly=True)
+class DecidingPropRef:
+	lookback: int
+	name: str
+
+	def __str__(self):
+		return f'(lookback={self.lookback!r}, name={self.name!r})'
 
 
-@dataclass
+@as_dataclass(hashable=True, readonly=True)
 class DecidingPropNotFound:
 	msg: str
 
 
-def getDecidingPropValue(decidingProp: tuple[int, str], parent: JsonObject) -> JsonTypes | DecidingPropNotFound:
-	lookback, decidingPropName = decidingProp
+def getDecidingPropValue(decidingProp: DecidingPropRef, parent: JsonObject) -> JsonValue | DecidingPropNotFound:
 	decidingPropParent = parent
-	for _ in range(lookback):
+	for _ in range(decidingProp.lookback):
 		decidingPropParent = decidingPropParent.parent
 		if decidingPropParent is None:
-			msg = f"encountered missing parent while resolving decidingProp with lookback={lookback}."
+			msg = f"encountered missing parent while resolving decidingProp with lookback={decidingProp.lookback}."
 			logWarning(msg)
 			return DecidingPropNotFound(msg)
 	if not isinstance(decidingPropParent, JsonObject):
@@ -416,7 +399,7 @@ def getDecidingPropValue(decidingProp: tuple[int, str], parent: JsonObject) -> J
 		logWarning(msg)
 		return DecidingPropNotFound(msg)
 
-	dp = decidingPropParent.data.get(decidingPropName)
+	dp = decidingPropParent.data.get(decidingProp.name)
 	if dp is not None:
 		dVal = getattr(dp.value, 'data')
 	else:
@@ -424,7 +407,7 @@ def getDecidingPropValue(decidingProp: tuple[int, str], parent: JsonObject) -> J
 	return dVal
 
 
-class SwitchingPropertySchema(JsonSchema[JsonProperty]):
+class PropertySchema(JsonSchema[JsonProperty]):
 	DATA_TYPE: ClassVar[Type[JsonNode]] = JsonProperty
 	typeName: ClassVar[str] = 'property'
 	_fields: ClassVar[dict[str, Any]] = dict(
@@ -445,19 +428,19 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 			description: MDStr = '',
 			value: Optional[JsonSchema[_TT2]],
 			optional: bool = False,
-			default: JsonTypes = None,
-			decidingProp: Optional[tuple[int, str]] = None,
+			default: JsonValue = None,
+			decidingProp: Optional[DecidingPropRef] = None,
 			values: dict[Union[tuple[Union[str, int, bool], ...], Union[str, int, bool]], JsonSchema[_TT2]] = None,
 			requires: Optional[tuple[str, ...]] = None,
 			hates: tuple[str, ...] = (),
 			deprecated: bool = False,
 			allowMultilineStr: Optional[bool]):
-		super(SwitchingPropertySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
+		super(PropertySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.name: Union[str, Anything] = name
 		self.optional: bool = optional
 		self.default: Optional[_TT2] = default
 		self.value: Optional[JsonSchema[_TT2]] = value
-		self.decidingProp: Optional[tuple[int, str]] = decidingProp
+		self.decidingProp: Optional[DecidingPropRef] = decidingProp
 		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = {}
 		if requires is None:
 			requires = ()
@@ -477,10 +460,7 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 	def mandatory(self) -> bool:
 		return not self.optional
 
-	def valueForParent(self, parent: JsonObject) -> Optional[JsonSchema[_TT2]]:
-		# TODO find better name for .valueForParent(...)
-		# if self.value is not None:
-		# 	return self.value
+	def getValueSchemaForParent(self, parent: JsonObject) -> Optional[JsonSchema[_TT2]]:
 		decidingProp = self.decidingProp
 		if decidingProp is not None:
 			dVal = getDecidingPropValue(decidingProp, parent)
@@ -502,9 +482,6 @@ class SwitchingPropertySchema(JsonSchema[JsonProperty]):
 		assert type_ == self.typeName
 
 
-PropertySchema = SwitchingPropertySchema
-
-
 class JsonObjectSchema(JsonSchema[Object]):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonObject
 	typeName: ClassVar[str] = 'object'
@@ -513,21 +490,19 @@ class JsonObjectSchema(JsonSchema[Object]):
 		properties=Nothing
 	)
 
-	def __init__(self, *, description: MDStr = '', properties: list[SwitchingPropertySchema], inherits: list[Inheritance] = (), deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = '', properties: list[PropertySchema], inherits: list[Inheritance] = (), deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		super(JsonObjectSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.inherits: tuple[Inheritance, ...] = tuple(inherits)
-		self.properties: tuple[SwitchingPropertySchema, ...] = tuple(properties)
-		# self.conditionalProperties: tuple[SwitchingPropertySchema, ...] = tuple(properties)
-		# self.mandatoryProperties: list[tuple[str, ...]] = [s if isinstance(s, tuple) else (s,) for s in mandatoryProperties]
-		self.propertiesDict: Mapping[str, SwitchingPropertySchema] = {}
-		self.anythingProp: Optional[SwitchingPropertySchema] = None
+		self.properties: tuple[PropertySchema, ...] = tuple(properties)
+		self.propertiesDict: Mapping[str, PropertySchema] = {}
+		self.anythingProp: Optional[PropertySchema] = None
 		self.buildPropertiesDict()
 
 	def buildPropertiesDict(self) -> None:
 		self.propertiesDict, self.anythingProp = self._buildPropertiesDict()
 
-	def _buildPropertiesDict(self) -> tuple[Mapping[str, SwitchingPropertySchema], Optional[SwitchingPropertySchema]]:
-		propsDict: dict[str, SwitchingPropertySchema] = dict()
+	def _buildPropertiesDict(self) -> tuple[Mapping[str, PropertySchema], Optional[PropertySchema]]:
+		propsDict: dict[str, PropertySchema] = dict()
 		anythingProp = None
 
 		for inherit in self.inherits:
@@ -557,7 +532,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 			anythingProp = self._addProp(anythingProp, prop, propsDict)
 		return propsDict, anythingProp
 
-	def _addProp(self, anythingProp: Optional[SwitchingPropertySchema], prop: SwitchingPropertySchema, propsDict: dict[str, SwitchingPropertySchema]) -> Optional[SwitchingPropertySchema]:
+	def _addProp(self, anythingProp: Optional[PropertySchema], prop: PropertySchema, propsDict: dict[str, PropertySchema]) -> Optional[PropertySchema]:
 		if prop.name is Anything:
 			# quietly overwrite:
 			# if anythingProp is not None:
@@ -574,10 +549,9 @@ class JsonObjectSchema(JsonSchema[Object]):
 		return anythingProp
 
 	@staticmethod
-	def _joinProps(prop1: SwitchingPropertySchema, prop2: SwitchingPropertySchema) -> SwitchingPropertySchema:
+	def _joinProps(prop1: PropertySchema, prop2: PropertySchema) -> PropertySchema:
 		if prop1.decidingProp != prop2.decidingProp:
-			# TODO: do better logging when deciding props don't match:
-			logWarning(f"Cannot join properties with differing deciding props {[prop1.decidingProp, prop2.decidingProp]!r}. prop.name = {prop1.name!r}, locations = [({prop1.filePath!r}, {prop1.span}), ({prop2.filePath!r}, {prop2.span}]")
+			logWarning(f"Cannot join properties with differing deciding props [{prop1.decidingProp}, {prop2.decidingProp}]. prop.name = {prop1.name!r}, locations = [({prop1.filePath!r}, {prop1.span}), ({prop2.filePath!r}, {prop2.span})]")
 			return prop2
 		if prop1.decidingProp is not None:
 			values = prop1.values.copy()
@@ -608,12 +582,18 @@ class JsonObjectSchema(JsonSchema[Object]):
 			newProp.setSpan(prop1.span, prop1.filePath)
 		return newProp
 
+	def getSchemaForProp(self, name: str) -> Optional[PropertySchema]:
+		return self.propertiesDict.get(name, self.anythingProp)
+
+	def getSchemaForPropAndVal(self, name: str, parent: JsonObject) -> tuple[Optional[PropertySchema], Optional[JsonSchema]]:
+		propSchema = self.propertiesDict.get(name, self.anythingProp)
+		valueSchema = propSchema.getValueSchemaForParent(parent) if propSchema is not None else None
+		return propSchema, valueSchema
+
 	def postProcessJsonStructure(self, structure: dict[str, Any]) -> None:
 		properties = structure['properties']
 		properties2 = {}
 		for prop in properties:
-			# if prop is None:
-			# 	continue
 			propName = prop.pop('name')
 			if propName is Anything:
 				if 'default-property' in structure:
@@ -629,7 +609,7 @@ class JsonObjectSchema(JsonSchema[Object]):
 @dataclass
 class Inheritance:
 	schema: JsonObjectSchema
-	decidingProp: Optional[tuple[int, str]] = None
+	decidingProp: Optional[DecidingPropRef] = None
 	decidingValues: tuple[str, ...] = ()
 
 
@@ -696,7 +676,16 @@ class JsonAnySchema(JsonSchema[JsonData]):
 		super(JsonAnySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 
 
+class JsonIllegalSchema(JsonSchema[JsonData]):
+	typeName: ClassVar[str] = 'illegal'
+	_fields: ClassVar[dict[str, Any]] = dict()
+
+	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
+		super(JsonIllegalSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
+
+
 JSON_ANY_SCHEMA = JsonAnySchema(allowMultilineStr=None)
+JSON_ILLEGAL_SCHEMA = JsonIllegalSchema(allowMultilineStr=None)
 
 
 def resolvePath(data: JsonData, path: tuple[str | int, ...]) -> Optional[JsonData]:
@@ -760,7 +749,10 @@ __all__ = [
 
 	'Array',
 	'Object',
-	'JsonTypes',
+	'JsonValue',
+	'PyJsonArray',
+	'PyJsonObject',
+	'PyJsonValue',
 
 	'JsonNode',
 	'JsonData',
@@ -774,7 +766,6 @@ __all__ = [
 	'JsonProperty',
 
 	'JsonSchema',
-	# 'JsonSchemaRoot',
 	'JsonNullSchema',
 	'JsonBoolSchema',
 	'JsonNumberSchema',
@@ -785,14 +776,16 @@ __all__ = [
 	'JsonArraySchema',
 	'JsonKeySchema',
 	'JSON_KEY_SCHEMA',
+	'DecidingPropRef',
 	'PropertySchema',
-	'SwitchingPropertySchema',
 	'JsonObjectSchema',
 	'Inheritance',
 	'JsonUnionSchema',
 	'JsonCalculatedValueSchema',
 	'JsonAnySchema',
+	'JsonIllegalSchema',
 	'JSON_ANY_SCHEMA',
+	'JSON_ILLEGAL_SCHEMA',
 
 	'resolvePath',
 

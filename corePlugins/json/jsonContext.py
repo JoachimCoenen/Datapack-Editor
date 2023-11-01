@@ -103,7 +103,7 @@ def _getPropsForObject(container: JsonObject, schema: JsonObjectSchema | JsonUni
 	if isinstance(schema, JsonUnionSchema):
 		return [n for opt in schema.allOptions for n in _getPropsForObject(container, opt, prefix, suffix)]
 	elif isinstance(schema, JsonObjectSchema):
-		return [f'{prefix}{p.name}{suffix}' for p in schema.propertiesDict.values() if p.name not in container.data and p.valueForParent(container) is not None]
+		return [f'{prefix}{p.name}{suffix}' for p in schema.propertiesDict.values() if p.name not in container.data and p.getValueSchemaForParent(container) is not None]
 	else:
 		return []
 
@@ -155,11 +155,6 @@ class JsonCtxProvider(ContextProvider[JsonNode]):
 			return getJsonStringContext(schema.type)
 		return JSON_DEFAULT_CONTEXT
 
-	# def validateTree(self, errorsIO: list[GeneralError]) -> None:
-	# 	from model.json.validator import validateJson
-	# 	errorsIO += validateJson(self.tree)
-	# 	pass  # TODO: validateTree for json
-
 	def _getSuggestionsForBefore(self, pos: Position, before: JsonNode, contained: list[JsonNode], replaceCtx: str) -> Suggestions:
 		if isinstance(before.schema, JsonKeySchema):
 			needsColon = b':' not in self.text[before.span.end.index:pos.index]
@@ -168,7 +163,7 @@ class JsonCtxProvider(ContextProvider[JsonNode]):
 				if isinstance(prop, JsonProperty) and prop.schema is not None and contained:
 					parent = contained[-2]
 					if isinstance(parent, JsonObject):
-						valueSchema = prop.schema.valueForParent(parent)
+						valueSchema = prop.schema.getValueSchemaForParent(parent)
 						if valueSchema is not None:
 							data = self.text[prop.value.span.slice]
 							suggestions = getSuggestionsForSchema(valueSchema, contained, data)
@@ -460,7 +455,7 @@ class FloatJsonStrContext(JsonStringContext):
 
 
 @jsonStringContext(DPE_JSON_ARG_TYPE.name)
-class JsonStrCtxJsonStrContext(JsonStringContext):
+class JsonArgTypeJsonStrContext(JsonStringContext):
 
 	def prepare(self, node: JsonString, info: CtxInfo[JsonString], errorsIO: list[GeneralError]) -> None:
 		pass
@@ -482,7 +477,7 @@ class JsonStrCtxJsonStrContext(JsonStringContext):
 			description = MDStr('')
 
 		docs = [
-			super(JsonStrCtxJsonStrContext, self).getDocumentation(node, pos),
+			super(JsonArgTypeJsonStrContext, self).getDocumentation(node, pos),
 			description
 		] if node.parsedValue is not None else []
 		return MDStr('\n\n'.join(docs))
@@ -571,6 +566,9 @@ class TmplRefJsonStrContext(JsonStringContext):
 			pass
 		if node.parsedValue is None or node.parsedValue[0] is None:
 			errorsIO.append(JsonSemanticsError(UNKNOWN_MSG.format(self.unknownMsg, node.data), node.span))
+		else:
+			pass
+
 
 	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
 		if node.parsedValue is None:
