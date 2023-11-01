@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
+from base.model.utils import WrappedError
 from cat.utils.logging_ import logWarning, logInfo
 from base.model.pathUtils import FilePathStr
 from .core import JsonSchema
@@ -85,7 +86,10 @@ class JsonSchemaLoader:
 			if errors:
 				logWarning(path)
 				for error in errors:
-					logWarning(str(error), indentLvl=1)
+					if isinstance(error, WrappedError):
+						logWarning(error.wrappedEx, indentLvl=1)
+					else:
+						logWarning(str(error), indentLvl=1)
 
 	def clearErrors(self):
 		self.orchestrator.errors.clear()

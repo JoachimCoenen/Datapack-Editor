@@ -7,7 +7,7 @@ from recordclass import as_dataclass
 
 import markdown
 
-from cat.utils import escapeForXmlTextContent, GlobalGeneratingCache, strings
+from cat.utils import escapeForXmlTextContent, GlobalGeneratingCache, strings, Deprecated
 
 LanguageId = NewType('LanguageId', str)
 
@@ -49,12 +49,11 @@ class MessageAdapter:
 
 
 @final
-#@dataclass(order=True, unsafe_hash=False, slots=True)
 @as_dataclass(fast_new=True, hashable=True)
-class Position:  # (dataobject, fast_new=True):  # (NamedTuple):
-	line: int  # = -1
-	column: int  # = -1
-	index: int  # = field(default=-1, hash=False, compare=False)
+class Position:
+	line: int
+	column: int
+	index: int
 
 	def __iter__(self):
 		yield self.line
@@ -62,6 +61,12 @@ class Position:  # (dataobject, fast_new=True):  # (NamedTuple):
 
 	def __len__(self):
 		return 2
+
+	def __str__(self):
+		return f"{self.line + 1}:{self.column}"
+
+	def __repr__(self):
+		return f"Position(line={self.line!r}, column={self.column!r}, index={self.index!r})"
 
 	def __add__(self, other: int) -> Position:
 		return Position(self.line, column=self.column + other, index=self.index + other)
@@ -71,41 +76,33 @@ class Position:  # (dataobject, fast_new=True):  # (NamedTuple):
 
 	def __lt__(self, other):
 		return self.index < other.index
-		return (self.line, self.column) < (other.line, other.column)
 
 	def __gt__(self, other):
 		return self.index > other.index
-		return (self.line, self.column) > (other.line, other.column)
 
 	def __le__(self, other):
 		return self.index <= other.index
-		return (self.line, self.column) <= (other.line, other.column)
 
 	def __ge__(self, other):
 		return self.index >= other.index
-		return (self.line, self.column) >= (other.line, other.column)
 
 	def __eq__(self, other):
 		if type(other) is not Position:
 			return False
 		return self.index == other.index
-		return self.line == other.line and self.column == other.column
 
 	def __ne__(self, other):
 		if type(other) is not Position:
 			return True
 		return self.index != other.index
-		return self.line != other.line or self.column != other.column
 
 	def __hash__(self):
 		return hash(self.index) + 31
-		return (hash(self.line) + 31 * hash(self.column)) // 32
 
 
 @final
-# @dataclass(init=False, unsafe_hash=True, slots=True)
 @as_dataclass(hashable=True, fast_new=True)
-class Span:  # (dataobject, fast_new=True):
+class Span:
 	start: Position
 	end: Position
 
@@ -140,8 +137,11 @@ class Span:  # (dataobject, fast_new=True):
 	def __contains__(self, item: Position):
 		return self.start.index <= item.index <= self.end.index
 
+	def __str__(self):
+		return f'{self.start}-{self.end}'
+
 	def __repr__(self):
-		return f' Span({self.start!r}, {self.end!r})'
+		return f'Span({self.start!r}, {self.end!r})'
 
 	@staticmethod
 	def between(start: Span, end: Span) -> Span:
@@ -223,10 +223,15 @@ class GeneralError:  # TODO: find better & more descriptive name
 		self.style: str = style
 
 	def __str__(self):
-		return f"{self.message} at pos {self.span.start.column}, line {self.span.start.line + 1}"
+		return f"{self.message} at {self.span.start}"
 
 	@property
+	@Deprecated(msg="use property 'Span.start' instead")
 	def position(self) -> Position:
+		return self.span.start
+
+	@property
+	def start(self) -> Position:
 		return self.span.start
 
 	@property
