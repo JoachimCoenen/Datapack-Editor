@@ -130,7 +130,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 	def styleArgument(self, argument: CommandPart) -> slice:
 		if isinstance(argument, ParsedCommand):
 			style = StyleIds.Command
-			span = slice(argument.start.index, argument.start.index + len(argument.name))
+			span = slice(argument.nameSpan.start.index, argument.nameSpan.end.index)
 		else:
 			argument: ParsedArgument
 			span = argument.span.slice

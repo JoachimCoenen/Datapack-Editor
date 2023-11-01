@@ -4,10 +4,11 @@ import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from math import inf
-from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable, NamedTuple
+from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable
 from weakref import ref, ReferenceType
 
-from cat.utils import CachedProperty, Anything, Nothing
+from recordclass import as_dataclass
+
 from cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
 from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import IndexMapper
@@ -68,7 +69,8 @@ VALUE_TOKENS = {
 }
 
 
-class Token(NamedTuple):
+@as_dataclass()
+class Token:
 	"""Represents a Token extracted by the parser"""
 	value: bytes
 	type: TokenType

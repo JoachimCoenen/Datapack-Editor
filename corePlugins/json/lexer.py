@@ -3,10 +3,12 @@ from dataclasses import dataclass, field
 from typing import Optional, Callable
 
 from cat.utils import CachedProperty
-from base.model.parsing.bytesUtils import CR_LF, DIGITS_RANGE, WHITESPACE, ASCII_LOWERCASE_RANGE, ASCII_UPPERCASE_RANGE, bytesToStr, ASCII_LETTERS, WHITESPACE_NO_LF
+from base.model.parsing.bytesUtils import CR_LF, DIGITS_RANGE, WHITESPACE, ASCII_LOWERCASE_RANGE, ASCII_UPPERCASE_RANGE, bytesToStr, ASCII_LETTERS, WHITESPACE_NO_LF, ORD_LF, \
+	ORD_SLASH, ORD_SINGLE_QUOTE, ORD_BACKSLASH, ORD_DOUBLE_QUOTE
 from .core import TokenType, Token
 from base.model.parsing.parser import TokenizerBase
 from base.model.utils import Span, Position, Message
+
 
 INCOMPLETE_ESCAPE_MSG = Message("Incomplete escape at end of string", 0)
 SINGLE_QUOTED_STRING_MSG = Message("JSON standard does not allow single quoted strings", 0)
@@ -81,10 +83,19 @@ class JsonTokenizer(TokenizerBase[Token]):
 		while cursor < length:
 			if source[cursor] in WHITESPACE_NO_LF:
 				cursor += 1
-			elif source[cursor] == ord('\n'):
+			elif source[cursor] == ORD_LF:
 				cursor += 1
 				self.lineStart = cursor
 				self.line += 1
+			elif source[cursor] == ORD_SLASH and cursor + 1 < length and source[cursor + 1] == ORD_SLASH:
+				# we have a comment!
+				nlPos = source.find(b'\n', cursor + 2)
+				if nlPos < 0:
+					cursor = length
+				else:
+					cursor = nlPos + 1
+					self.lineStart = cursor
+					self.line += 1
 			else:
 				break
 		self.cursor = cursor
@@ -93,7 +104,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 		"""Extracts a single string token from JSON string"""
 		start = self.currentPos
 		quote = self.text[self.cursor]
-		if quote == ord("'"):
+		if quote == ORD_SINGLE_QUOTE:
 			self.errorNextToken(SINGLE_QUOTED_STRING_MSG)
 		self.cursor += 1  # opening "
 
@@ -101,7 +112,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 			char = self.text[self.cursor]
 			self.cursor += 1
 
-			if char == ord('\\'):
+			if char == ORD_BACKSLASH:
 				if self.cursor == self.length or self.text[self.cursor] in CR_LF:
 					self.errorNextToken(INCOMPLETE_ESCAPE_MSG)
 					return self.addToken(start, TokenType.string)
@@ -112,7 +123,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 			elif char == quote:
 				return self.addToken(start, TokenType.string)
 
-			elif char == ord('\n'):
+			elif char == ORD_LF:
 				if self.allowMultilineStr:
 					self.advanceLine()
 				else:
@@ -186,7 +197,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 		word = self.text[start.index - self.cursorOffset:self.cursor]
 		tkType = _TOKEN_TYPE_FOR_SPECIAL.get(word, TokenType.invalid)
 		if tkType is TokenType.invalid:
-			if self.cursor < self.length and self.text[self.cursor] == ord(b'"'):
+			if self.cursor < self.length and self.text[self.cursor] == ORD_DOUBLE_QUOTE:
 				self.cursor += 1
 				word += self.text[self.cursor:self.cursor + 1]
 		token = self.addToken2(start, word, tkType)
@@ -233,7 +244,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 			return self.addToken2(self.currentPos, b'', TokenType.eof)
 
 		char = self.text[self.cursor]
-		if char == ord('"'):
+		if char == ORD_DOUBLE_QUOTE:
 			return self.extract_string()
 		elif char in b'[]{},:':
 			return self.extract_operator()

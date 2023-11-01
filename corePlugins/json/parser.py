@@ -11,8 +11,8 @@ from .core import *
 from .lexer import JsonTokenizer
 from .schema import enrichWithSchema, pathify
 from base.model.messages import *
-from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.parser import ParserBase, IndexMapBuilder
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes, ORD_BACKSLASH, ORD_u, ORD_DOUBLE_QUOTE, ORD_SINGLE_QUOTE, ORD_MINUS
+from base.model.parsing.parser import ParserBase, IndexMapBuilder, IndexMapper
 from base.model.utils import Span, MDStr, Message, NULL_SPAN
 
 ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG = Message("JSON standard allows only double quoted string as property key", 0)
@@ -45,6 +45,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	_last: Optional[Token] = field(init=False, default=None)
 
 	def __post_init__(self):
+		super().__post_init__()
 		allowMultilineStr = True or self.schema is not None and self.schema.allowMultilineStr
 		self._tokenizer = JsonTokenizer(
 			self.text,
@@ -56,9 +57,18 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			self.maxEncIndex,
 			allowMultilineStr
 		)
+		self._tokens = tokens = self.tokenize()
+		self._tokensIter = iter(tokens)
 		self.errors = self._tokenizer.errors  # sync errors
-		self._current = self._tokenizer.nextToken()
+		self._current = None
 		self._last = None
+		self._next()
+
+	def tokenize(self):
+		tokens = []
+		while (tkn := self._tokenizer.nextToken()).type is not TokenType.eof:
+			tokens.append(tkn)
+		return tokens
 
 	@property
 	def allowMultilineStr(self) -> bool:
@@ -74,7 +84,8 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 
 	def _next(self) -> None:
 		self._last = self._current
-		self._current = self._tokenizer.nextToken()
+		# self._current = self._tokenizer.nextToken()
+		self._current = next(self._tokensIter, None)
 
 	def tryAccept(self, tokenType: TokenType) -> Optional[Token]:
 		if self._current is None or self._current.type is not tokenType:
@@ -364,11 +375,11 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		# TODO: usage of IndexMapBuilder needs a thorough testing. It is completely untested. [23-7-2023]
 		token = self._last
 		string = token.value
+		hasEscapeSequence = b'\\' in string
 
-		idxMap = IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(token.span.start.index) + 1 - self.cursorOffset)  # + 1 because of opening quotation marks?
-		# idxMap = IndexMapBuilder(self.indexMapper, self.cursor + self.cursorOffset) TODO: decide: IndexMapBuilder(self.indexMapper, self.cursor) OR IndexMapBuilder(self.indexMapper, self.cursor + self.cursorOffset)
+		if hasEscapeSequence:
+			idxMapBldr = self.makeIndexMapBuilderForStr(token)
 
-		if b'\\' in string:
 			chars: bytes = b''  # list[str] = []
 			index = 1
 			strStreakStart = index
@@ -376,7 +387,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			while index < end:
 				char = string[index]
 
-				if char != ord(b'\\'):
+				if char != ORD_BACKSLASH:
 					# chars.append(char)
 					index += 1
 					continue
@@ -384,7 +395,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 				chars += (string[strStreakStart:index])
 				decIdx = len(chars)
 				next_char = string[index + 1]
-				if next_char == ord(b'u'):  # 'růže' -> "r\u016f\u017ee"
+				if next_char == ORD_u:  # 'růže' -> "r\u016f\u017ee"
 					hex_string = string[index + 2:index + 6]
 					try:
 						unicode_char = literal_eval(f'"\\u{bytesToStr(hex_string)}"')
@@ -393,8 +404,8 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 						unicode_char = b'\\u' + hex_string
 					else:
 						unicode_char = strToBytes(unicode_char)
-						idxMap.addMarker(index - 1,     decIdx)  # just before (=start of) escape sequence
-						idxMap.addMarker(index - 1 + 6, decIdx + 1)  # just after (=end of) escape sequence
+						idxMapBldr.addMarker(index - 1,     decIdx)  # just before (=start of) escape sequence
+						idxMapBldr.addMarker(index - 1 + 6, decIdx + 1)  # just after (=end of) escape sequence
 
 					chars += unicode_char
 					index += 6
@@ -404,8 +415,8 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 					next_char_str = _ESCAPE_CHAR_MAP.get(next_char)
 					if next_char_str is not None:
 						chars += next_char_str
-						idxMap.addMarker(index - 1,     decIdx)  # just before (=start of) escape sequence
-						idxMap.addMarker(index - 1 + 2, decIdx + 1)  # just after (=end of) escape sequence
+						idxMapBldr.addMarker(index - 1,     decIdx)  # just before (=start of) escape sequence
+						idxMapBldr.addMarker(index - 1 + 2, decIdx + 1)  # just after (=end of) escape sequence
 					else:
 						self.error(MDStr(f"Unknown escape sequence: `{bytesToStr(string)}`"), span=token.span)
 						chars += string[index:index+2]
@@ -417,26 +428,36 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			value = bytesToStr(chars)
 			decPosLastChar = len(chars)  # = index
 			encPosLastChar = len(string) - 2  # we have to account for the quotation marks at start and end of string
-		elif string:
-			if string[0] == ord('"'):
-				string = string[1:].removesuffix(b'"')  # todo probably to be removed. INVESTIGATE
-			elif string[0] == ord("'"):
-				string = string[1:].removesuffix(b"'")  # todo probably to be removed. INVESTIGATE
-			value = bytesToStr(string)
-			decPosLastChar = len(string)
-			encPosLastChar = decPosLastChar
+			idxMap = idxMapBldr.completeIndexMapper(encPosLastChar, decPosLastChar)
 		else:
-			value = ''
-			decPosLastChar = len(string)
-			encPosLastChar = decPosLastChar
-		return JsonString(token.span, None, value, idxMap.completeIndexMapper(encPosLastChar, decPosLastChar))
+			if string:
+				if string[0] == ORD_DOUBLE_QUOTE:
+					string = string[1:].removesuffix(b'"')  # todo probably to be removed. INVESTIGATE
+				elif string[0] == ORD_SINGLE_QUOTE:
+					string = string[1:].removesuffix(b"'")  # todo probably to be removed. INVESTIGATE
+				value = bytesToStr(string)
+			else:
+				value = ''
+
+			if not self._idxMprIsIdentity:
+				idxMapBldr = self.makeIndexMapBuilderForStr(token)
+				decPosLastChar = len(string)
+				encPosLastChar = decPosLastChar
+				idxMap = idxMapBldr.completeIndexMapper(encPosLastChar, decPosLastChar)
+			else:
+				idxMap = IndexMapper.IDENTITY_MAPPER
+
+		return JsonString(token.span, None, value, idxMap)
+
+	def makeIndexMapBuilderForStr(self, token: Token) -> IndexMapBuilder:
+		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(token.span.start.index) + 1)  # - self.cursorOffset)  # + 1 because of opening quotation marks?
 
 	def parse_number(self) -> JsonNumber:
 		"""Parses a number out of a JSON token"""
 		token = self._last
 		try:
 
-			if token.value and token.value[0] == ord('-'):
+			if token.value and token.value[0] == ORD_MINUS:
 				valToCHeck = token.value[1:]
 			else:
 				valToCHeck = token.value

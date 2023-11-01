@@ -38,9 +38,9 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 			language=language,
 			schema=schema,
 			line=node.span.start.line,
-			lineStart=node.span.start.index - node.span.start.column,
+			lineStart=node.span.start.index - node.span.start.column,  # not quite sure, yet...
 			cursor=0,
-			cursorOffset=node.span.start.index + 1,
+			cursorOffset=node.indexMapper.toDecoded(node.span.start.index) + 1,  # + 1 in order to skip the quotation marks
 			indexMapper=node.indexMapper,
 			**self.getParserKwArgs(node)
 		)

@@ -1,74 +1,53 @@
 from dataclasses import dataclass, field
 from typing import Optional, Sequence, Union
 
-from cat.utils import escapeForXml
 from cat.utils.collections_ import Stack
 from .command import *
-from .utils import CommandSyntaxError, EXPECTED_ARGUMENT_SEPARATOR_MSG
+from .utils import CommandSyntaxError
 from .stringReader import StringReader
-from base.model.utils import Span, Position, Message
+from base.model.utils import Span, Message, wrapInMarkdownCode
 
 from .commandContext import makeCommandSyntaxError, makeParsedArgument, getArgumentContext, missingArgumentContext
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.parser import ParserBase
 
 
-UNKNOWN_COMMAND_MSG = Message("Unknown Command '`{0}`'", 1)
-
-
-# @ProfiledFunction(enabled=False, colourNodesBySelftime=False)
-# def parseMCFunction(commands: dict[str, CommandSchema], source: str) -> tuple[Optional[MCFunction], list[CommandSyntaxError]]:
-# 	parser = MCFunctionParser(commands, source)
-# 	mcFunction = parser.parseMCFunction()
-# 	return mcFunction, parser.errors
+UNKNOWN_COMMAND_MSG = Message("Unknown Command '{0}'", 1)
+EXPECTED_ARGUMENT_SEPARATOR_MSG: Message = Message("Expected whitespace to end one argument, but found trailing data: {0}", 1)
 
 
 @dataclass
 class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
-	# def __init__(self, commands: dict[str, CommandSchema], source: str):
-	# 	self._commands: dict[str, CommandSchema] = commands
-	# 	self._lines: list[str] = source.splitlines()
-	# 	self._source: str = '\n'.join(self._lines)
-	# 	self.errors: list[CommandSyntaxError] = []
 
 	_lines: list[bytes] = field(init=False)
 
 	def __post_init__(self):
+		super().__post_init__()
 		self._lines = self.text.splitlines()
 
 	def parseMCFunction(self) -> Optional[MCFunction]:
 		children = []
 
-		lineStart: int = self.lineStart
-		cursorOffset = self.cursorOffset - self.lineStart
+		p1 = self.currentPos
+		cursorOffset = self.cursorOffset
+		cursor = self.cursor
 		for lineNo, line in enumerate(self._lines, self.line):
-			sr = StringReader(line, lineStart, lineNo, cursorOffset, self.text)
+			sr = StringReader(line, self.line, self.lineStart, cursor, cursorOffset, self.indexMapper, -1, self.text)
 			if (node := self.parseLine(sr)) is not None:
 				children.append(node)
-			lineStart += len(line)
-			if self.text[lineStart:lineStart+2] == b'\r\n':
-				lineStart += 2
+			self.cursor += len(line)
+			if self.text[self.cursor:self.cursor+2] == b'\r\n':
+				self.cursor += 2
 			else:
-				lineStart += 1
-			cursorOffset = 0
+				self.cursor += 1
+			self.advanceLine()
 
-		actualCursor = self.cursor + self.cursorOffset
-		self.line += max(0, len(self._lines) - 1)
+			cursorOffset = self.cursorOffset + self.cursor
+			cursor = 0
+
+		p2 = self.currentPos
 		result: MCFunction = MCFunction(
-			Span(
-				Position(self.line, actualCursor - self.lineStart, actualCursor),
-				Position(
-					len(self._lines)-1 + self.line,
-					len(self._lines[-1])-1 if self._lines else self.cursorOffset,
-					len(self.text) + self.cursorOffset
-				)
-				if len(self._lines) != 1 else
-				Position(
-					len(self._lines)-1 + self.line,
-					len(self._lines[-1]) + (self.cursorOffset - self.lineStart),
-					len(self.text) + self.cursorOffset
-				)
-			),
+			Span(p1, p2),
 			self.schema,
 			self.text,
 			self.text,
@@ -101,7 +80,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		commandName: Optional[bytes] = sr.tryReadLiteral()
 		if commandName is None:
 			return None
-		commandSpan = sr.currentSpan
+		nameSpan = sr.currentSpan
 		if self.schema is not None:
 			commandSchema = self.schema.commands.get(commandName)
 		else:
@@ -109,7 +88,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		if commandSchema is None:
 			if sr.tryReadRemaining():  # move cursor to end
 				sr.mergeLastSave()
-			self.errors.append(CommandSyntaxError(UNKNOWN_COMMAND_MSG.format(escapeForXml(bytesToStr(commandName))), sr.currentSpan))
+			self.errors.append(CommandSyntaxError(UNKNOWN_COMMAND_MSG.format(wrapInMarkdownCode(bytesToStr(commandName))), sr.currentSpan))
 			return None
 
 		argument: Optional[ParsedArgument] = None
@@ -117,16 +96,16 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			argument = self.parseArguments(sr, commandSchema)
 		else:
 			if not sr.hasReachedEnd:
-				trailingData: str = escapeForXml(bytesToStr(sr.readUntilEndOrWhitespace()))
+				trailingData: str = wrapInMarkdownCode(bytesToStr(sr.readUntilEndOrWhitespace()))
 				errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
 				self.errors.append(makeCommandSyntaxError(sr, errorMsg))
 
 		sr.tryReadRemaining()
-		commandSpan = Span(commandSpan.start, sr.currentPos)
+		commandSpan = Span(nameSpan.start, sr.currentPos)
 		endCursor = sr.cursor
-		content = sr.source[startCursor:endCursor]
+		content = sr.text[startCursor:endCursor]
 
-		command = ParsedCommand(name=commandName, schema=commandSchema, span=commandSpan, source=self.text, content=content)
+		command = ParsedCommand(name=commandName, schema=commandSchema, span=commandSpan, nameSpan=nameSpan, source=self.text, content=content)
 		command.next = argument
 
 		return command

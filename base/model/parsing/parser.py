@@ -1,7 +1,8 @@
+from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional
+from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar
 
 from cat.utils.collections_ import AddToDictDecorator
 from base.model.parsing.tree import Node, Schema, TokenLike
@@ -12,30 +13,47 @@ _TToken = TypeVar('_TToken', bound=TokenLike)
 _TNode = TypeVar('_TNode', bound=Node)
 _TSchema = TypeVar('_TSchema', bound=Schema)
 
+MarkerList = list[tuple[int, int]]
+"""
+A List of (encPos, decPos) pairs, where:
+	- enc: encoded = the string (& indices) edited by the user
+	- dec: decoded = the string (& indices) used by the parser
+"""
 
-def mapRange(x: int, rf: tuple[int, int], rt: tuple[int, int]) -> int:
+
+def mapRange(x: int, fs: int, fe: int, ts: int, te: int) -> int:
 	"""
-	:param x:
-	:param rf: rangeFrom
-	:param rt: rangeTo
-	:return:
+	Maps x from range (fs, fe) to range (ts, te).
+	:param x: the value to map
+	:param fs: from start (= start of fromRange)
+	:param fe: from end (= end of fromRange)
+	:param ts: to start (= start of toRange)
+	:param te: to end (= end of toRange)
+	:return: the mapped value of x
 	"""
-	if rf[1] == rf[0]:
-		return rt[1]
+	if fe == fs:
+		return te
 	else:
-		return (x - rf[0]) * (rt[1] - rt[0]) // (rf[1] - rf[0]) + rt[0]
+		return (x - fs) * (te - ts) // (fe - fs) + ts
 
 
 @dataclass
 class IndexMapper:
 	"""
-	dec: decoded = the string (& indices) used by the parser
 	enc: encoded = the string (& indices) edited by the user
+	dec: decoded = the string (& indices) used by the parser
 	(encPos, decPos)
 	"""
-	_markers: list[tuple[int, int]] = field(default_factory=lambda: [(0, 0)], kw_only=True)
+	_markers: MarkerList = field(default_factory=lambda: [(0, 0)], kw_only=True)
+	"""
+	list of (encPos, decPos) pairs, where:
+		- enc: encoded = the string (& indices) edited by the user
+		- dec: decoded = the string (& indices) used by the parser
+	"""
 	_isIdentity: bool = field(default=True, kw_only=True)
 	""" list of (encPos, decPos) pairs"""
+
+	IDENTITY_MAPPER: ClassVar[IndexMapper] = ...
 
 	@property
 	def isIdentity(self) -> bool:
@@ -75,12 +93,16 @@ class IndexMapper:
 		# 	return -1
 		return lo
 
-	def findDecodingMap(self, encPos: int) -> int:
+	def findMarkerIdxByEncPos(self, encPos: int) -> int:
 		""" find the corresponding largest index i such that indices[i][0] <= encPos """
+		if self._isIdentity:
+			return -1
 		return self._findMarker(encPos, toEnc=False)
 
-	def findEncodingMap(self, decPos: int) -> int:
+	def findMarkerIdxByDecPos(self, decPos: int) -> int:
 		""" find the corresponding largest index i such that indices[i][1] <= decPos """
+		if self._isIdentity:
+			return -1
 		return self._findMarker(decPos, toEnc=True)
 
 	def _mapPos(self, pos: int, toEnc: bool) -> int:
@@ -92,9 +114,9 @@ class IndexMapper:
 			# we're at the very end
 			result = pos - le[D] + le[E]
 		else:
-			# we're between two markers and have to interpolate:
+			# we are between two markers and have to interpolate:
 			gt = self._markers[i + 1]
-			result = mapRange(pos, (le[D], gt[D]), (le[E], gt[E]))
+			result = mapRange(pos, le[D], gt[D], le[E], gt[E])
 			# result = ((pos - le[D]) * (gt[E] - le[E])) // (gt[D] - le[D]) + le[E]
 		return result
 
@@ -108,26 +130,26 @@ class IndexMapper:
 			return decPos
 		return self._mapPos(decPos, toEnc=True)
 
-	def addMarker(self, encPos: int, decPos: int):
-		if encPos != decPos:
-			self._isIdentity = False
-		marker = (encPos, decPos)
-		if not self._markers or self._markers[-1] != marker:
-			self._markers.append(marker)
+
+IndexMapper.IDENTITY_MAPPER = IndexMapper(_markers=[])
 
 
 @dataclass
 class IndexMapBuilder:
 	baseMap: IndexMapper
 	offset: int
-	_markers: list[tuple[int, int]] = field(default_factory=list, init=False)
+	_markers: MarkerList = field(default_factory=list, init=False)
+	"""
+	list of (encPos, decPos) pairs, where:
+		- enc: encoded = the string (& indices) edited by the user
+		- dec: decoded = the string (& indices) used by the parser
+	"""
 	_lastEncPos: int = field(init=False)
-	""" list of (encPos, decPos) pairs"""
 	_lastBaseMapIdx: int = field(default=-1, init=False)
 	_isIdentity: bool = field(default=True, init=False)
 
 	def __post_init__(self):
-		self._lastBaseMapIdx = self.baseMap.findEncodingMap(self.offset)
+		self._lastBaseMapIdx = self.baseMap.findMarkerIdxByDecPos(self.offset)  # our offset is a decPos as seen by our baseMap. (bud for us it's still a encPos)
 		self._lastEncPos = self.offset
 		self.addMarker(0, 0)
 
@@ -139,22 +161,27 @@ class IndexMapBuilder:
 
 	def _addBaseMarkers(self, encPos: int, decPos: int):
 		""" adds the markers from the _baseMap that are come before the given marker (encPos, decPos)"""
-		baseIdx = self.baseMap.findEncodingMap(encPos)
-		if baseIdx <= self._lastBaseMapIdx:
-			return
+		# find the index, of the marker closest to us, which still has a lo to the left of us:
+		baseIdx = self.baseMap.findMarkerIdxByDecPos(encPos)  # our encPos is a decPos as seen by our baseMap.
+		if baseIdx <= self._lastBaseMapIdx:  # I think a simple == would be sufficient, but just to be safe I used a <=.
+			return  # there are no new base markers to take care of.
+
 		lastMarker = self._markers[-1]
 		lastEncPos = self._lastEncPos
 		for idx in range(self._lastBaseMapIdx + 1, baseIdx + 1):
 			baseMarker = self.baseMap._markers[idx]
-			actualBaseDec = mapRange(baseMarker[1], (lastEncPos, encPos), (lastMarker[1], decPos))
+			actualBaseDec = mapRange(baseMarker[1], lastEncPos, encPos, lastMarker[1], decPos)
 			self._addActualMarker((baseMarker[0], actualBaseDec))
 		self._lastBaseMapIdx = baseIdx
 
 	def addMarker(self, encPos: int, decPos: int):
 		encPos += self.offset
 		decPos += self.offset
-		actualEncPos = self.baseMap.toEncoded(encPos)
-		self._addBaseMarkers(encPos, decPos)
+		if not self.baseMap.isIdentity:
+			self._addBaseMarkers(encPos, decPos)
+			actualEncPos = self.baseMap.toEncoded(encPos)
+		else:
+			actualEncPos = encPos
 		self._addActualMarker((actualEncPos, decPos))
 		self._lastEncPos = encPos
 
@@ -183,7 +210,9 @@ class _Base(ABC):
 
 	@property
 	def currentPos(self) -> Position:
-		actualCursor = self.cursor + self.cursorOffset if self._idxMprIsIdentity else self.indexMapper.toEncoded(self.cursor + self.cursorOffset)
+		actualCursor = self.cursor + self.cursorOffset
+		if not self._idxMprIsIdentity:
+			actualCursor = self.indexMapper.toEncoded(actualCursor)
 		return Position(self.line, actualCursor - self.lineStart, actualCursor)
 
 	# @property
@@ -192,19 +221,22 @@ class _Base(ABC):
 	# 	return Position(self.line, actualCursor - self.lineStart, actualCursor)
 
 	def advanceLine(self) -> None:
-		self.lineStart = self.cursor + self.cursorOffset if self._idxMprIsIdentity else self.indexMapper.toEncoded(self.cursor + self.cursorOffset)
+		lineStart = self.cursor + self.cursorOffset
+		self.lineStart = lineStart if self._idxMprIsIdentity else self.indexMapper.toEncoded(lineStart)
 		self.line += 1
 
 	def advanceLineCounter(self, newPos: int) -> None:
 		start_of_line = self.text.rfind(b'\n', self.cursor, newPos)
 		if start_of_line != -1:
-			self.lineStart = start_of_line + self.cursorOffset + 1
+			lineStart = start_of_line + self.cursorOffset + 1
+			self.lineStart = lineStart if self._idxMprIsIdentity else self.indexMapper.toEncoded(lineStart)
 			self.line += self.text.count(b'\n', self.cursor, start_of_line) + 1
 
 	def advanceLineCounterAndUpdatePos(self, newPos: int) -> None:
 		start_of_line = self.text.rfind(b'\n', self.cursor, newPos)
 		if start_of_line != -1:
-			self.lineStart = start_of_line + self.cursorOffset + 1
+			lineStart = start_of_line + self.cursorOffset + 1
+			self.lineStart = lineStart if self._idxMprIsIdentity else self.indexMapper.toEncoded(lineStart)
 			self.line += self.text.count(b'\n', self.cursor, start_of_line) + 1
 		self.cursor = newPos
 

@@ -260,7 +260,7 @@ def missingArgumentParser(sr: StringReader, ai: ArgumentSchema, *, errorsIO: lis
 
 
 def makeParsedArgument(sr: StringReader, schema: Optional[CommandPartSchema], value: Any) -> ParsedArgument:
-	content = sr.source[sr.lastCursors.peek():sr.cursor]
+	content = sr.text[sr.lastCursors.peek():sr.cursor]
 	return ParsedArgument(
 		sr.currentSpan,
 		schema,

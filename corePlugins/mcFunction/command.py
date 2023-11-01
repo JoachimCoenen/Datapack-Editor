@@ -201,10 +201,7 @@ class ParsedComment(CommandPart[CommentSchema]):
 @dataclass
 class ParsedCommand(CommandPart[CommandSchema]):
 	name: bytes
-
-	@property
-	def nameSpan(self) -> Span:
-		return Span(self.start, self.start + len(self.name))
+	nameSpan: Span = field(hash=False, compare=False)
 
 	@property
 	def children(self) -> Collection[CommandPart]:

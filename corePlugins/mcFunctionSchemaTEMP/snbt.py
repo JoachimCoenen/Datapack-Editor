@@ -15,20 +15,20 @@ from base.model.utils import Span, GeneralError, LanguageId, wrapInMarkdownCode
 def parseNBTTag(sr: StringReader, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
 	# parse_nbt('{foo: [hello, world], bar: [I; 1, 2, 3]}')
 	sr.save()
-	literal = sr.source[sr.cursor:]
+	literal = sr.text[sr.cursor:]
 	if not literal:
 		sr.rollback()
 		return None
 
 	tag, errors = parseNPrepare(
-		sr.source[sr.cursor:],
+		sr.text[sr.cursor:],
 		filePath=filePath,
 		language=LanguageId('SNBT'),
 		schema=NBTTagSchema(''),
-		line=sr._lineNo,
-		lineStart=sr._lineStart,
+		line=sr.line,
+		lineStart=sr.lineStart,
 		cursor=0,
-		cursorOffset=sr.cursor + sr._lineStart,
+		cursorOffset=sr.cursor + sr.lineStart,
 		ignoreTrailingChars=True
 	)
 
@@ -47,8 +47,8 @@ def parseNBTTag(sr: StringReader, filePath: FilePath, *, errorsIO: list[GeneralE
 
 	if tag is not None:
 		sr.cursor += tag.span.length
-		sr._lineNo = tag.span.end.line
-		sr._lineStart = tag.span.end.index - tag.span.end.column
+		sr.line = tag.span.end.line
+		sr.lineStart = tag.span.end.index - tag.span.end.column
 	else:
 		sr.rollback()
 	return tag
@@ -112,7 +112,7 @@ def parse_accessors(parser: Parser, literal: str):
 def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
 	sr.save()
 
-	literal = sr.source[sr.cursor:]
+	literal = sr.text[sr.cursor:]
 	literal = bytesToStr(literal)  # TODO utf-8-ify _parseNBTPathBare(...)!
 	parser = None
 	try:

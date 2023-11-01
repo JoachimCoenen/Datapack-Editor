@@ -1,5 +1,10 @@
 ## Next Version
+### Improvements
+ * Improved performance of Json parser by > 30%.
+ * Slightly improved performance of MCFunction parser.
+
 ### Fixes
+ * Fixed syntax highlighting issues with escape sequences in
  * Fixed the description property in pack.mcmeta to be a [raw Json Text](https://minecraft.wiki/w/Raw_JSON_text_format) instead of a plain string
 
 
