@@ -156,6 +156,10 @@ def getAllStylers() -> Mapping[LanguageId, Type[CatStyler]]:
 class StylerCtx(ABC):
 	defaultStyle: StyleId
 	defaultStyles: list[StyleId] = field(init=False, default_factory=list)
+	start: int
+	"start index of the range to be styled."
+	end: int
+	"end index of the range to be styled."
 
 	@abstractmethod
 	def setStylingUtf8(self, span: slice, style: StyleId) -> None:

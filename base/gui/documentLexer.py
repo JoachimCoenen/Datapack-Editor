@@ -1,4 +1,4 @@
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from typing import Optional, cast, Sequence
 
 from PyQt5.Qsci import QsciLexerCustom, QsciLexer, QsciScintilla
@@ -117,7 +117,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		if styles is None:
 			return styleMap
 
-		styler = getStyler(languageId, StylerCtxQScintilla(DEFAULT_STYLE_ID, 0, self))
+		styler = getStyler(languageId, StylerCtxQScintilla(DEFAULT_STYLE_ID, 0, 0, self))
 		if styler is None:
 			return styleMap
 
@@ -188,7 +188,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		)
 		# handle default first:
 		if overwriteDefaultStyle:
-			defStyle = styles[StyleId(_SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE)]
+			defStyle = styles[cast(StyleId, _SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE)]
 			defaultStyle = defaultStyle | defStyle
 			defaultQFont = QFontFromStyleFont(defaultStyle.font)
 			# defaultQFont.setPointSize(self.defaultFont().pointSize())
@@ -252,20 +252,22 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
 	# @ProfiledFunction()
 	def styleText(self, start: int, end: int):
-		start = 0
 		text: bytes = self.getText()
+		start = 0
+		end = len(text)
+
 		tree = self.getTree()
 		if tree is None or text is None:
 			return
 
-		stylerCtx = StylerCtxQScintilla(DEFAULT_STYLE_ID, start, self)
+		stylerCtx = StylerCtxQScintilla(DEFAULT_STYLE_ID, start, end, self)
 		styler = getStyler(tree.language, stylerCtx)
 		if styler is not None:
 			self.startStyling(start)
 			styler.styleNode(tree)
 
 		folder = Folder(self.editor())
-		folder.add_folding(start, len(text) - start)
+		folder.add_folding(start, end - start)
 
 	def wordCharacters(self) -> str:
 		return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
@@ -276,24 +278,28 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 
 @dataclass
 class StylerCtxQScintilla(StylerCtx):
-	_lastStylePos: int
+	_lastStylePos: int = field(init=False)
 	lexer: QsciLexerCustom
 
-	def setStylingUtf8(self, span: slice, style: StyleId) -> None:
-		lastStylePos = self._lastStylePos
-		index = span.start
-		if index > self._lastStylePos:
-			interStrLength = index - lastStylePos
-			assert interStrLength >= 0, (interStrLength, style)
-			self.lexer.setStyling(interStrLength, _SCI_STYLE_FIRST_USER_STYLE + self.defaultStyle)
-			lastStylePos += interStrLength
+	def __post_init__(self):
+		self._lastStylePos = self.start
 
-		if span.stop > lastStylePos:
-			length = span.stop - lastStylePos
+	def setStylingUtf8(self, span: slice, style: StyleId) -> None:
+		index = span.start
+		if index > self.end:
+			return
+		if index > self._lastStylePos:
+			interStrLength = index - self._lastStylePos
+			assert interStrLength >= 0, interStrLength
+			self.lexer.setStyling(interStrLength, _SCI_STYLE_FIRST_USER_STYLE + self.defaultStyle)  # styler.offset)
+			self._lastStylePos = index
+		else:
+			index = self._lastStylePos
+		if span.stop > self._lastStylePos:
+			length = span.stop - index
 			assert length >= 0, (length, style)
 			self.lexer.setStyling(length, _SCI_STYLE_FIRST_USER_STYLE + style)
-			lastStylePos += length
-		self._lastStylePos = lastStylePos
+			self._lastStylePos = span.stop
 
 
 @dataclass
