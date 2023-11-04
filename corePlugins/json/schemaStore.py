@@ -101,18 +101,6 @@ class JsonSchemaLoader:
 
 JSON_SCHEMA_LOADER: JsonSchemaLoader = JsonSchemaLoader()
 
-# GLOBAL_SCHEMA_STORE.registerSchemaLibrary('tags.json')
-# # TAGS_BLOCKS = tagsLib.definitions['block_type']
-# # TAGS_ENTITY_TYPES = tagsLib.definitions['entity_type']
-# # TAGS_FLUIDS = tagsLib.definitions['fluid_type']
-# # TAGS_FUNCTIONS = tagsLib.definitions['function']
-# # TAGS_GAME_EVENTS = tagsLib.definitions['game_event']
-# # TAGS_ITEMS = tagsLib.definitions['item_type']
-#
-# RAW_JSON_TEXT_SCHEMA = orchestrator.parseJsonSchema('rawJsonText.json')
-# PREDICATE_SCHEMA = orchestrator.parseJsonSchema('predicate.json')
-# JSON_SCHEMA_SCHEMA = orchestrator.parseJsonSchema('jsonSchema.json')
-
 
 __all__ = [
 	'JsonSchemaLoader',

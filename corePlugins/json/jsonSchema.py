@@ -634,11 +634,27 @@ class SchemaBuilderOrchestrator:
 				library = SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
 				yield library
 				yield library
-			else:
-				yield library
+				return
+
+			yield library
+
+			try:  # oof. how can we do this nicer?
 				next(partialLibrary)
+			except Exception as ex:
+				self.errors[fullPath].extend(builder.errors)
+				self.errors[fullPath].append(WrappedError(ex))
 				yield library
+				return
+
+			yield library
+
+			try:
 				completePartialParse(partialLibrary)
+			except Exception as ex:
+				self.errors[fullPath].extend(builder.errors)
+				self.errors[fullPath].append(WrappedError(ex))
+			else:
+				self.errors[fullPath].extend(builder.errors)
 
 
 def decodeDecidingProp(decidingProp: Optional[str]) -> Optional[DecidingPropRef]:

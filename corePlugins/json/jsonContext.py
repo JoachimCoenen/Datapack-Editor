@@ -562,8 +562,6 @@ class TmplRefJsonStrContext(JsonStringContext):
 		node.parsedValue = definition, tree, libraryFilePath, dirPath
 
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
-		if isinstance(node.schema, JsonStringSchema):
-			pass
 		if node.parsedValue is None or node.parsedValue[0] is None:
 			errorsIO.append(JsonSemanticsError(UNKNOWN_MSG.format(self.unknownMsg, node.data), node.span))
 		else:

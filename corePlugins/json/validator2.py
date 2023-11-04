@@ -91,7 +91,7 @@ def validateJsonString(data: JsonData, schema: JsonStringSchema, *, errorsIO: li
 		errorsIO.append(wrongTypeError(schema, data))
 		return
 	if schema.type is not None:  # specialized StringHandlers validate string on their own.
-		# if we end up here, no sppecialized string handler hs been found.
+		# if we end up here, no specialized string handler hs been found.
 		errorsIO.append(JsonSemanticsError(INTERNAL_ERROR_MSG.format(MISSING_JSON_STRING_HANDLER_MSG, schema.type), data.span, style='info'))
 
 
