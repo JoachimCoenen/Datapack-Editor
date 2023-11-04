@@ -4,6 +4,7 @@ from typing import Optional
 
 from PyQt5.QtGui import QIcon
 
+from base.model.searchUtils import filterComputedChoices
 from cat.GUI import propertyDecorators as pd
 from cat.GUI.propertyDecorators import ValidatorResult
 from cat.GUI.components.treeBuilders import DataListBuilder, StringHeaderBuilder
@@ -12,7 +13,7 @@ from cat.Serializable.serializableDataclasses import catMeta, SerializableDatacl
 from base.model.applicationSettings import SettingsAspect
 from base.model.aspect import AspectType
 from corePlugins.minecraft_data.fullData import getAllFullMcDatas
-from gui.datapackEditorGUI import EditableSerializableDataclassList, filterComputedChoices, DatapackEditorGUI
+from gui.datapackEditorGUI import EditableSerializableDataclassList, DatapackEditorGUI
 
 MINECRAFT_ASPECT_TYPE = AspectType('dpe:minecraft')
 

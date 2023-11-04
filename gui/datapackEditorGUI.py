@@ -2,18 +2,23 @@ from __future__ import annotations
 
 import codecs
 import copy
-import functools as ft
 import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Optional, Iterable, overload, TypeVar, Callable, Any, Iterator, Collection, Mapping, Generic, \
+from typing import Optional, Iterable, TypeVar, Callable, Iterator, Collection, Generic, \
 	Sequence, Type
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
 from PyQt5.QtWidgets import QApplication, QSizePolicy, QTreeView
 
+from base.model.applicationSettings import getApplicationSettings
+from base.model.documents import ErrorCounts
+from base.model.parsing.bytesUtils import strToBytes
+from base.model.pathUtils import FilePath, unitePath
+from base.model.searchUtils import autocompleteFromList, FilterStr, filterStrChoices
+from base.model.utils import GeneralError
 from cat.GUI import Style, RoundedCorners, Overlap, CORNERS, TreeBuilderABC
 from cat.GUI.autoGUI import AutoGUI
 from cat.GUI.components.Widgets import CatTextField, HTMLDelegate
@@ -24,12 +29,8 @@ from cat.GUI.enums import ResizeMode, SizePolicy
 from cat.GUI.pythonGUI import MenuItemData
 from cat.Serializable.serializableDataclasses import SerializableDataclass
 from cat.Serializable.utils import PropertyDecorator, get_args
-from gui.icons import icons
 from cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
-from base.model.applicationSettings import getApplicationSettings
-from base.model.documents import ErrorCounts
-from base.model.pathUtils import FilePath, unitePath
-from base.model.utils import GeneralError
+from gui.icons import icons
 
 inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})
 resultBoxStyle = Style({'CatBox': Style({'background': '#DAE8FC'})})
@@ -85,7 +86,7 @@ def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str],
 			yield from (IndexSpan(m.start(), m.end()) for m in exprC.finditer(text))
 	else:
 		if searchOptions.searchMode == SearchMode.UnicodeEscaped:
-			expr = codecs.getdecoder("unicode_escape")(expr)[0]
+			expr = codecs.getdecoder("unicode_escape")(strToBytes(expr))[0]
 		if not searchOptions.isCaseSensitive:
 			expr = expr.lower()
 		exprLen = len(expr)
@@ -97,108 +98,10 @@ def makeTextSearcher(expr: str, searchOptions: SearchOptions) -> Callable[[str],
 	return searcher
 
 
-@overload
-def autocompleteFromList(text: str, allChoices: Iterable[str]) -> str:
-	pass
-
-
-@overload
-def autocompleteFromList(text: str, allChoices: Iterable[_TT], getStr: Callable[[_TT], str]) -> str:
-	pass
-
-
-def autocompleteFromList(text: str, allChoices: Iterable[Any], getStr: Callable[[Any], str] = None) -> str:
-	searchStr = text.lower()
-	if getStr is not None:
-		lowerChoices = [(getStr(c).lower(), c) for c in allChoices]
-	else:
-		lowerChoices = [(c.lower(), c) for c in allChoices]
-
-	searchStrIndices = [cl.find(searchStr) for cl, c in lowerChoices]
-	filteredChoices = [(i, cl[i:], c) for i, (cl, c) in zip(searchStrIndices, lowerChoices) if i >= 0]
-	loweredFilteredChoices = [cl for i, cl, c in filteredChoices]
-
-	prefix = os.path.commonprefix(loweredFilteredChoices)
-	if prefix:
-		firstFilteredChoice = next(iter(filteredChoices))
-		start = firstFilteredChoice[0]
-		end = start + len(prefix)
-		prefix = firstFilteredChoice[2][start:end]
-		text = prefix
-	return text
-
-
-@ft.total_ordering
-class FilterStr:
-	def __init__(self, string: str):
-		self.__string: str = string
-		self.__filters: tuple[str, ...] = tuple(filter(None, map(str.strip, string.lower().split('|'))))
-		self.__iter__ = self.__filters.__iter__  # speedup of call to iter(filterStr)
-
-	@property
-	def string(self) -> str:
-		return self.__string
-
-	@property
-	def filters(self) -> tuple[str, ...]:
-		return self.__filters
-
-	def __str__(self) -> str:
-		return self.__string
-
-	def __repr__(self) -> str:
-		return f"{type(self).__name__}({self.__string!r})"
-
-	def __eq__(self, other: Any) -> bool:
-		if isinstance(other, FilterStr):
-			return self.__filters == other.__filters
-		else:
-			return False
-
-	def __lt__(self, other: FilterStr) -> bool:
-		if isinstance(other, FilterStr):
-			return self.__filters < other.__filters
-		else:
-			return NotImplemented
-
-	def __iter__(self) -> Iterator[str]:
-		return self.__filters.__iter__()
-
-	def __bool__(self) -> bool:
-		return any(self.__filters)
-
-
-def filterStrChoices(filterStr: FilterStr, allChoices: Collection[str]) -> tuple[int, int, Collection[str]]:
-	if not filterStr:
-		result = allChoices
-	else:
-		result = [choice[1] for choice in ((choice.lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
-	return len(allChoices), len(result), result
-	# [choice for choice in allChoices if filterStr in choice.lower()]
-
-
-def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> tuple[int, int, list[_TT]]:
-	if not filterStr:
-		result = list(allChoices.values())
-	else:
-		result = [choice[1] for choice in ((  name.lower(),   item) for name, item in allChoices.items()) if any(f in choice[0] for f in filterStr)]
-	return len(allChoices), len(result), result
-
-
-def filterComputedChoices(getStr: Callable[[_TT], str]):
-	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[_TT], getStr=getStr) -> tuple[int, int, Collection[_TT]]:
-		if not filterStr:
-			result = allChoices
-		else:
-			result = [choice[1] for choice in ((getStr(choice).lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
-		return len(allChoices), len(result), result
-	return innerFilterComputedChoices
-
-
 @dataclass
 class SearchableListContext(Generic[_TR]):
 	selectedValue: Optional[_TR] = None
-	filterStr: FilterStr = field(default_factory=lambda: FilterStr(''))
+	filterStr: FilterStr = field(default_factory=lambda: FilterStr('', False))
 	filteredChoices: list[_TR] = field(default_factory=list)
 	focusEndOfText: bool = False
 	treeView: Optional[QTreeView] = None
@@ -386,7 +289,7 @@ class DatapackEditorGUI(AutoGUI):
 				filterStr.string if filterStr is not None else None,
 				strChoicesIter(),
 				**kwargs
-			))
+			), isRegex=False)
 			allCount, filteredCount, filteredChoices = filterFunc(filterStr, allChoices)
 			self.toolButton(f'{filteredCount:,} of {allCount:,}')
 		return filterStr, filteredChoices
@@ -397,7 +300,7 @@ class DatapackEditorGUI(AutoGUI):
 			context: Optional[SearchableListContext[_TR]],
 			*,
 			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
-			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			filterFunc: Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
 			isRegex: bool = False,
 	) -> SearchableListContext[_TR]:
 		# TODO: find more descriptive name for advancedFilterTextField2(...)
@@ -412,7 +315,7 @@ class DatapackEditorGUI(AutoGUI):
 			elif key == Qt.Key_Tab:
 				# do Tab Completion:
 				oldFilterVal = context.filterStr
-				context.filterStr = FilterStr(autocompleteFromList(oldFilterVal.string, getStrChoices(allChoices)))  # , isRegex=isRegex)
+				context.filterStr = FilterStr(autocompleteFromList(oldFilterVal.string, getStrChoices(allChoices)), isRegex=isRegex)
 				context.focusEndOfText = True
 				self.OnInputModified(context.treeView)
 				return True
@@ -431,7 +334,7 @@ class DatapackEditorGUI(AutoGUI):
 				focusEndOfText=context.focusEndOfText,
 				placeholderText='filter... [Ctrl+F]',
 				shortcut=QKeySequence.Find
-			))  # , isRegex=isRegex)
+			), isRegex=isRegex)
 			context.focusEndOfText = False
 			allCount, filteredCount, context.filteredChoices = filterFunc(context.filterStr, allChoices)
 			self.toolButton(f'{filteredCount} of {allCount}')
@@ -485,7 +388,7 @@ class DatapackEditorGUI(AutoGUI):
 			*,
 			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
 			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
-			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			filterFunc: Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
 			isRegex: bool = False,
 			headerVisible: bool | Ellipsis = ...,
 			loadDeferred: bool = True,
@@ -635,7 +538,7 @@ class DatapackEditorGUI(AutoGUI):
 	def _htmlDelegate(self) -> HTMLDelegate:
 		return HTMLDelegate()
 
-	def errorsList(self: DatapackEditorGUI, errors: Collection[GeneralError], onDoubleClicked: Callable[[GeneralError], None], **kwargs):
+	def errorsList(self: DatapackEditorGUI, errors: Sequence[GeneralError], onDoubleClicked: Callable[[GeneralError], None], **kwargs):
 
 		def getLabel(error: GeneralError, i: int) -> str:
 			if error.position is not None:
@@ -727,7 +630,7 @@ class EditableSerializableDataclassList(PropertyDecorator):
 			*,
 			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
 			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
-			filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
+			filterFunc: Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
 			dialogWidth: Optional[int] = None, dialogHeight: Optional[int] = None,
 	):
 		super().__init__()
@@ -735,7 +638,7 @@ class EditableSerializableDataclassList(PropertyDecorator):
 		self.treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]] = treeBuilderBuilder
 		self.headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = headerBuilderBuilder
 		self.getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = getStrChoices
-		self.filterFunc: Callable[[FilterStr, Iterable[_TT]], tuple[int, int, Collection[_TR]]] = filterFunc
+		self.filterFunc: Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TR]]] = filterFunc
 		self.dialogWidth: Optional[int] = dialogWidth
 		self.dialogHeight: Optional[int] = dialogHeight
 

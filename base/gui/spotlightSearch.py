@@ -1,71 +1,31 @@
-from dataclasses import dataclass
+from operator import attrgetter
 from typing import Optional
 
 from PyQt5.QtCore import QPoint, Qt, QSize
 from PyQt5.QtGui import QFocusEvent, QFont, QKeyEvent, QMoveEvent, QResizeEvent
 from PyQt5.QtWidgets import QWidget, QLayout
-from recordclass import as_dataclass
 
+from base.model.applicationSettings import getApplicationSettings
+from base.model.project.project import Root, FileEntry
+from base.model.searchUtils import FuzzyMatch, getSearchTerms, SearchResults, SearchResult, getFuzzyMatch,\
+	performFuzzySearch, autocompleteFromList
+from base.model.session import getSession
+from basePlugins.projectFiles import FilesIndex
+from cat import utils
 from cat.GUI import SizePolicy
-from cat.GUI.components.catWidgetMixins import CORNERS, NO_MARGINS, NO_OVERLAP, Overlap, RoundedCorners
 from cat.GUI.components.Widgets import CatTextField
+from cat.GUI.components.catWidgetMixins import CORNERS, NO_MARGINS, NO_OVERLAP, Overlap, RoundedCorners
 from cat.GUI.pythonGUI import PythonGUIDialog, PythonGUI
 from cat.GUI.utilities import connect, CrashReportWrapped
 from cat.utils.profiling import ProfiledFunction, TimedMethod
-from cat import utils
-from base.model.utils import FuzzyMatch, SearchTerms, getSearchTerms, getFuzzyMatch2
-from basePlugins.projectFiles import FilesIndex
-from gui.datapackEditorGUI import autocompleteFromList, ContextMenuEntries
-from base.model.project.project import Root, FileEntry
-from base.model.session import getSession
-
-from base.model.applicationSettings import getApplicationSettings
-
-
-@as_dataclass(fast_new=True)
-class SearchResult:
-	fe: FileEntry
-	match_: FuzzyMatch  # = field(compare=False)
-
-	def __eq__(self, other):
-		if type(other) is not SearchResult:
-			return False
-		return self.fe == other.fe
-
-	def __ne__(self, other):
-		if type(other) is not SearchResult:
-			return True
-		return self.fe != other.fe
-
-
-@dataclass
-class SearchResults:
-	searchTerm: str
-	results: list[SearchResult]
-
-
-def getFuzzyMatch(searchTerms: SearchTerms, string: str, *, strict: bool) -> Optional[FuzzyMatch]:
-	lastIndex: int = 0
-	indices = []
-	lowerString = string.lower()
-
-	for i, st in enumerate(searchTerms.lowerSubTerms):
-		index = lowerString.find(st, lastIndex)
-		if index < 0:
-			if strict:
-				return None
-		else:
-			lastIndex = index + len(st)
-			indices.append((i, slice(index, lastIndex)))
-
-	return FuzzyMatch(indices, (.5, .5))
+from gui.datapackEditorGUI import ContextMenuEntries
 
 
 class SpotlightSearchGui(CatTextField):
 	def __init__(self):
 		super().__init__()
 
-		self._searchResults: SearchResults = SearchResults('', [])
+		self._searchResults: SearchResults[FileEntry] = SearchResults('', [])
 		self._resultsPopup: FileSearchPopup = FileSearchPopup(self)
 		self.focusEndOfText: bool = False
 
@@ -133,16 +93,7 @@ class SpotlightSearchGui(CatTextField):
 
 	def performSearch(self, searchTerm: str):
 		if searchTerm != self._searchResults.searchTerm:
-			# update search results:
-			searchTerms = getSearchTerms(searchTerm)
-
-			searchResults = [
-				sr
-				for sr in (SearchResult(fe, getFuzzyMatch2(searchTerms, fe.splitNameForSearch, strict=True)) for fe in self.allChoices)
-				if sr.match_ is not None
-			]
-			searchResults.sort(key=lambda x: x.match_.matchQuality, reverse=True)
-			self._searchResults = SearchResults(searchTerm, searchResults)
+			self._searchResults = performFuzzySearch(self.allChoices, searchTerm, attrgetter('splitNameForSearch'))
 
 	# @ProfiledFunction()
 	def updateAllChoices(self) -> None:
@@ -212,13 +163,13 @@ class FileSearchPopup(PythonGUIDialog):
 		# self.setAttribute(Qt.WA_MacNoShadow)
 
 		self._textField: Optional[CatTextField] = None
-		self._searchResults: SearchResults = SearchResults('', [])
-		self._shownResults: list[SearchResult] = []
-		self.selectedItem: Optional[SearchResult] = None
+		self._searchResults: SearchResults[FileEntry] = SearchResults('', [])
+		self._shownResults: list[SearchResult[FileEntry]] = []
+		self.selectedItem: Optional[SearchResult[FileEntry]] = None
 
 		self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
-	def setSearchResults(self, searchResults: SearchResults):
+	def setSearchResults(self, searchResults: SearchResults[FileEntry]):
 		self._searchResults = searchResults
 		self._shownResults = self._searchResults.results[:10]
 		if self.selectedItem not in self._shownResults:
@@ -253,7 +204,7 @@ class FileSearchPopup(PythonGUIDialog):
 						self.listElementGUI(gui, self._shownResults[-1], overlap=(0, 1), roundedCorners=CORNERS.NONE)
 						self.remainingElementsGUI(gui, remainingElementsCount, overlap=(0, 1), roundedCorners=(False, False, True, True))
 
-	def listElementGUI(self, gui: PythonGUI, sr: SearchResult, overlap: Overlap, roundedCorners: RoundedCorners):
+	def listElementGUI(self, gui: PythonGUI, sr: SearchResult[FileEntry], overlap: Overlap, roundedCorners: RoundedCorners):
 
 		def labelMaker(formattedStr: str, style: str) -> str:
 			return f'<font style="{style}">{formattedStr}</font>'
@@ -304,7 +255,7 @@ class FileSearchPopup(PythonGUIDialog):
 			vSizePolicy=SizePolicy.Fixed.value
 		):
 			with gui.hLayout():
-				if gui.doubleClickLabel(labelMaker1(fe.fileName, sr.match_, fileNameStyle), font=font):
+				if gui.doubleClickLabel(labelMaker1(fe.fileName, sr.aMatch, fileNameStyle), font=font):
 					self.selectedItem = sr
 					self.accept()
 				if gui.doubleClickLabel(labelMaker2(fe.projectName, pathStyle), alignment=Qt.AlignRight, font=font):

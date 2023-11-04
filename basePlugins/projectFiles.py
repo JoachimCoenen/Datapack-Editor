@@ -10,6 +10,7 @@ from PyQt5.QtGui import QIcon
 from recordclass import as_dataclass
 from watchdog.events import FileSystemEventHandler, FileClosedEvent, FileModifiedEvent, FileDeletedEvent, FileCreatedEvent, FileMovedEvent
 
+from base.model.searchUtils import FilterStr, filterComputedChoices
 from cat.GUI.pythonGUI import TabOptions, EditorBase, MenuItemData, SizePolicy
 from cat.GUI.components.treeBuilders import DataTreeBuilder
 from cat.Serializable.serializableDataclasses import catMeta
@@ -23,7 +24,7 @@ from base.model.project.index import Index
 from base.model.project.project import Project, ProjectRoot, ProjectAspect, Root, IndexBundleAspect, AspectFeatures, FileEntry, makeFileEntry
 from base.model.session import getSession
 from base.model.utils import Span, formatMarkdown
-from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, SearchableListContext, FilterStr, filterComputedChoices
+from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, SearchableListContext
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
 
 

@@ -3,6 +3,7 @@
  * Improved performance of Json parser by > 30%.
  * Slightly improved performance of MCFunction parser.
  * Improved error messages for validation of Json objects with union schemas.
+ * Added fuzzy matching for auto-completion in source code
 
 ### Fixes
  * Fixed syntax highlighting issues with escape sequences in

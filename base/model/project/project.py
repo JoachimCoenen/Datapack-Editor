@@ -7,13 +7,14 @@ from typing import Optional, ClassVar, final
 
 from recordclass import as_dataclass
 
+from base.model.searchUtils import SplitStrs, splitStringForSearch
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
 from base.model.pathUtils import FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
 from base.model.aspect import AspectDict, Aspect, SerializableDataclassWithAspects
-from base.model.utils import Span, GeneralError, MDStr, SemanticsError, splitStringForSearch, NULL_SPAN
+from base.model.utils import Span, GeneralError, MDStr, SemanticsError, NULL_SPAN
 
 
 def _fillProjectAspects(aspectsDict: AspectDict):
@@ -343,7 +344,7 @@ class ProjectRoot(Root):
 class FileEntry:
 	fullPath: FilePathTpl
 	virtualPath: str  # = dataclasses.field(compare=False)
-	splitNameForSearch: list[tuple[int, str]]
+	splitNameForSearch: SplitStrs
 	isFile: bool
 
 	@property

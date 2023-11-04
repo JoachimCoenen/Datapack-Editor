@@ -16,7 +16,7 @@ from base.model.parsing.contextProvider import ContextProvider, getContextProvid
 from base.model.parsing.tree import Node
 from base.model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position, NULL_POSITION
 from base.model.documents import TextDocument
-
+from base.model.searchUtils import performFuzzyStrSearch
 
 _SCI_STYLE_DEFAULT = StyleId(32)  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
 _SCI_STYLE_LINENUMBER = StyleId(33)  # This style sets the attributes of the text used to display line numbers in a line number margin. The background colour set for this style also sets the background colour for all margins that do not have any folding mask bits set. That is, any margin for which mask & SC_MASK_FOLDERS is 0. See SCI_SETMARGINMASKN for more about masks.
@@ -441,10 +441,12 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		"""
 		self.updateDocumentTree()
 		if (ctxProvider := self.contextProvider) is not None:
-			replaceCtx = context[0] if context else ''
+			replaceCtx = context[-1] if context else ''
 			position = self.currentCursorPos
 			suggestions = ctxProvider.getSuggestions(position, replaceCtx)
-			return suggestions or []
+			suggestions2 = performFuzzyStrSearch(suggestions, replaceCtx)
+			return [sr.fe for sr in suggestions2.results]
+
 		return super().updateAutoCompletionList(context, aList)
 
 	@override

@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 from recordclass import as_dataclass
 
+from base.model.searchUtils import filterComputedChoices
 from cat.GUI import SizePolicy, NO_MARGINS, MessageBoxStyle, propertyDecorators as pd
 from cat.GUI.components.treeBuilders import DataTreeBuilder
 from cat.GUI.pythonGUI import TabOptions
@@ -16,7 +17,7 @@ from cat.utils.logging_ import logError
 from base.model.aspect import getAspectsForClass
 from base.model.project.project import Project, ProjectRoot, Root, DependencyDescr, ProjectAspect
 from base.model.session import getSession
-from gui.datapackEditorGUI import DatapackEditorGUI, filterComputedChoices, SearchableListContext
+from gui.datapackEditorGUI import DatapackEditorGUI, SearchableListContext
 from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
 
 

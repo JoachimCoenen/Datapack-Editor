@@ -1,3 +1,4 @@
+from typing import Optional
 
 
 def bytesToStr(raw: bytes) -> str:
@@ -6,6 +7,14 @@ def bytesToStr(raw: bytes) -> str:
 
 def strToBytes(raw: str) -> bytes:
 	return bytes(raw, encoding='utf-8', errors='replace')
+
+
+def bytesOptToStr(raw: Optional[bytes]) -> Optional[str]:
+	return str(raw, encoding='utf-8', errors='replace') if raw is not None else None
+
+
+def strOptToBytes(raw: Optional[str]) -> Optional[bytes]:
+	return bytes(raw, encoding='utf-8', errors='replace') if raw is not None else None
 
 
 WHITESPACE = b' \t\n\r\v\f'
