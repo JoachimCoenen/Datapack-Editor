@@ -81,6 +81,14 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/instrument'),
 		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.TAGS.INSTRUMENT)
 	),
+	EntryHandlerInfo(
+		folder=f'data/{NAME_SPACE_VAR}/tags/damage_type/',
+		extension='.json',
+		isTag=True,
+		includeSubdirs=True,
+		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/damage_type'),
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.TAGS.DAMAGE_TYPE)
+	),
 	*[
 		EntryHandlerInfo(
 			folder=f'data/{NAME_SPACE_VAR}/{folder}/',
