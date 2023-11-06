@@ -46,7 +46,7 @@
         },
         
         "random_sequence": {
-          "value": { "$type": "string", "type": "minecraft:resource_location"}, 
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "any" } }, 
           "optional": true,
           "description": "A resource location specifying the name of the random sequence that will be used to generate loot from this loot table. If only one loot table uses a specific random sequence, the order of the randomized sets of items generated is the same for every world using the same world seed. If multiple loot tables use the same random sequence, the loot generated from any one of them changes depending on how many times and in what order any of the other loot tables were invoked."
         }
@@ -164,7 +164,7 @@
             "item": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
             "tag": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item", "onlyTags": true } },
             "loot_table": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "loot_table" } },
-            "dynamic": { "$type": "enum", "options": { "contents": "to drop block entity contents.", "minecraft:contents": "to drop block entity contents." } }
+            "dynamic": { "$type": "enum", "options": { "contents": "to drop block entity contents.", "sherds": "to drop the sherds of a decorated pot." }, "optionalPrefixes": ["minecraft:"] }
           },
           "optionalPrefixes": ["minecraft:"],
           "decidingProp": "type",
