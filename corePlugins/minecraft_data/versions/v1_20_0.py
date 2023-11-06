@@ -20,7 +20,8 @@ _VERSION_1_20_0 = replace(
 	# compiled from the Minecraft wiki:
 	predicateConditions=_VERSION_1_18_X.predicateConditions
 						- {ResourceLocation.fromString('alternative')}
-						| {ResourceLocation.fromString('any_of')},
+						| {ResourceLocation.fromString('any_of')}
+						| {ResourceLocation.fromString('all_of')},
 	# compiled from the 1.20.2.jar using this command "javap -constants -c  djt.class":
 	gameEvents=frozenset({
 		ResourceLocation.fromString("block_activate"),

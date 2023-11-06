@@ -24,17 +24,16 @@
       "properties": {
         "condition": {
           "optional": false,
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "condition" }
-          },
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "condition" } },
           "description": "The resource location of the condition type to check."
         },
         "terms": {
           "optional": false,
           "decidingProp": "condition",
-          "values": { "alternative": { "$defRef": "predicate-body" } },
+          "values": {
+            "any_of": { "$defRef": "predicate-body" },
+            "all_of": { "$defRef": "predicate-body" }
+          },
           "optionalPrefixes": ["minecraft:"],
           "description": "Evaluates a list of conditions and passes if any one of them passes. Invokable from any context."
         },
