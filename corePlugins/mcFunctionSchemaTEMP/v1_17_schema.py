@@ -1837,7 +1837,7 @@ def buildMCFunctionSchemaFor_v1_17(version: FullMCData) -> MCFunctionSchema:
 					type=ALL_NAMED_ARGUMENT_TYPES[gr.type],
 				),
 			]
-		) for gr in version.gamerules
+		) for gr in version.gamerules.values()
 	]
 
 	BASIC_COMMAND_INFO[b'give'].next = [

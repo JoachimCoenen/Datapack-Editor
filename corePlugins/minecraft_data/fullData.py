@@ -1,7 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import AbstractSet, Mapping, Optional, ClassVar, Sequence
+from typing import Mapping, Optional, ClassVar
 
+from cat.utils.collections_ import FrozenDict
 from .customData import CustomMCData, Gamerule
 from .mcdAdapter import MCData, BlockStateType
 from .resourceLocation import ResourceLocation
@@ -12,25 +13,26 @@ class FullMCData:
 	name: str
 
 	datapackVersion: str
-	blocks: AbstractSet[ResourceLocation]
-	fluids: AbstractSet[ResourceLocation]
-	items: AbstractSet[ResourceLocation]
+	blocks: frozenset[ResourceLocation]
+	fluids: frozenset[ResourceLocation]
+	items: frozenset[ResourceLocation]
 
-	entities: AbstractSet[ResourceLocation]
-	potions: AbstractSet[ResourceLocation]
-	effects: AbstractSet[ResourceLocation]
-	enchantments: AbstractSet[ResourceLocation]
-	biomes: AbstractSet[ResourceLocation]
-	particles: AbstractSet[ResourceLocation]
-	dimensions: AbstractSet[ResourceLocation]
-	predicateConditions: AbstractSet[ResourceLocation]
-	gameEvents: AbstractSet[ResourceLocation]  # introduced in version 1.19
-	instruments: AbstractSet[ResourceLocation]
-	structures: AbstractSet[ResourceLocation]
+	entities: frozenset[ResourceLocation]
+	potions: frozenset[ResourceLocation]
+	effects: frozenset[ResourceLocation]
+	enchantments: frozenset[ResourceLocation]
+	biomes: frozenset[ResourceLocation]
+	particles: frozenset[ResourceLocation]
+	dimensions: frozenset[ResourceLocation]
+	predicateConditions: frozenset[ResourceLocation]
+	gameEvents: frozenset[ResourceLocation]  # introduced in version 1.19
+	instruments: frozenset[ResourceLocation]
+	structures: frozenset[ResourceLocation]
+	pointOfInterestTypes: frozenset[ResourceLocation]
 
-	slots: Mapping[bytes, Optional[int]]
-	blockStates: Mapping[ResourceLocation, list[BlockStateType]]
-	gamerules: Sequence[Gamerule]
+	slots: FrozenDict[bytes, Optional[int]]
+	blockStates: FrozenDict[ResourceLocation, list[BlockStateType]]
+	gamerules: FrozenDict[bytes, Gamerule]
 
 	def getBlockStates(self, blockID: ResourceLocation) -> list[BlockStateType]:
 		arguments = self.blockStates.get(blockID)
@@ -71,6 +73,7 @@ def buildFullMCData(name: str, mcData: Optional[MCData], cuData: Optional[Custom
 		gameEvents=cuData.gameEvents,
 		instruments=mcData.instruments,
 		structures=cuData.structures,
+		pointOfInterestTypes=cuData.pointOfInterestTypes,
 		slots=cuData.slots,
 		blockStates=mcData.blockStates,
 		gamerules=cuData.gamerules,
@@ -81,6 +84,8 @@ FullMCData.EMPTY = buildFullMCData('EMPTY', MCData.EMPTY, CustomMCData.EMPTY)
 
 
 def loadAllVersionsFullMcData() -> list[FullMCData]:
+	from .customData import loadAllVersions as loadAllCustomDataVersions
+	loadAllCustomDataVersions()
 	from .customData import ALL_SUPPORTED_VERSIONS as CUSTOM_DATA_VERSIONS
 	from .mcdAdapter import getMCDataForVersion
 	allVersionNames = sorted(CUSTOM_DATA_VERSIONS.keys())

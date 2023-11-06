@@ -2,8 +2,9 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from types import ModuleType
-from typing import Mapping, ClassVar, Sequence, Optional
+from typing import ClassVar, Optional
 
+from base.model.parsing.bytesUtils import strToBytes
 from cat.utils.collections_ import FrozenDict
 from base.modules import loadAllModules, FolderAndFileFilter
 from .resourceLocation import ResourceLocation
@@ -17,20 +18,25 @@ class Gamerule:
 	defaultValue: str
 
 
+def buildGamerulesDict(gamerules: list[Gamerule]) -> FrozenDict[bytes, Gamerule]:
+	return FrozenDict({strToBytes(gr.name): gr for gr in gamerules})
+
+
 @dataclass
 class CustomMCData:
 	name: str
 
 	datapackVersion: str
-	fluids: AbstractSet[ResourceLocation]
-	potions: AbstractSet[ResourceLocation]
-	dimensions: AbstractSet[ResourceLocation]
-	predicateConditions: AbstractSet[ResourceLocation]
-	gameEvents: AbstractSet[ResourceLocation]  # introduced in version 1.19
-	structures: AbstractSet[ResourceLocation]
+	fluids: frozenset[ResourceLocation]
+	potions: frozenset[ResourceLocation]
+	dimensions: frozenset[ResourceLocation]
+	predicateConditions: frozenset[ResourceLocation]
+	gameEvents: frozenset[ResourceLocation]  # introduced in version 1.19
+	structures: frozenset[ResourceLocation]
+	pointOfInterestTypes: frozenset[ResourceLocation]
 
-	slots: Mapping[bytes, Optional[int]]
-	gamerules: Sequence[Gamerule]
+	slots: FrozenDict[bytes, Optional[int]]
+	gamerules: FrozenDict[bytes, Gamerule]
 
 	EMPTY: ClassVar[CustomMCData]
 
@@ -44,12 +50,13 @@ CustomMCData.EMPTY = CustomMCData(
 	predicateConditions=frozenset(),
 	gameEvents=frozenset(),
 	structures=frozenset(),
+	pointOfInterestTypes=frozenset(),
 	slots=FrozenDict(),
-	gamerules=(),
+	gamerules=FrozenDict(),
 )
 
 
-def _loadAllVersions() -> dict[str, ModuleType]:
+def _loadAllVersionModules() -> dict[str, ModuleType]:
 	versionsDir = os.path.join(
 		os.path.dirname(__file__), "versions/"
 	)
@@ -66,37 +73,12 @@ def _loadAllVersions() -> dict[str, ModuleType]:
 	return modules
 
 
-def createCustomDatas(module: ModuleType) -> list[CustomMCData]:
-	try:
-		names = module.NAMES
-	except AttributeError:
-		names = module.NAME
+def loadAllVersions() -> None:
+	global ALL_SUPPORTED_VERSIONS
+	versionModules = _loadAllVersionModules()
 
-	if isinstance(names, str):
-		names = [names]
-
-	return [
-		CustomMCData(
-			name=name,
-			datapackVersion=module.DATAPACK_VERSION,
-			fluids=module.FLUIDS,
-			potions=module.POTIONS,
-			dimensions=module.DIMENSIONS,
-			predicateConditions=module.PREDICATE_CONDITIONS,
-			gameEvents=module.GAME_EVENTS,
-			structures=module.STRUCTURES,
-			slots=module.SLOTS,
-			gamerules=module.GAMERULES,
-		)
-		for name in names
-	]
+	versionsList = [customData for module in versionModules.values() for customData in module.ALL_VERSIONS]
+	ALL_SUPPORTED_VERSIONS = {data.name: data for data in versionsList}
 
 
-def loadAllVersions() -> dict[str, CustomMCData]:
-	versionModules = _loadAllVersions()
-	versionsList = [customData for module in versionModules.values() for customData in createCustomDatas(module)]
-	versionsDict = {data.name: data for data in versionsList}
-	return versionsDict
-
-
-ALL_SUPPORTED_VERSIONS = loadAllVersions()
+ALL_SUPPORTED_VERSIONS: dict[str, CustomMCData] = {}

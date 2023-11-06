@@ -3,7 +3,7 @@ import json
 import os
 import re
 from dataclasses import dataclass, replace
-from typing import AbstractSet, Mapping, ClassVar, Optional, Any
+from typing import ClassVar, Optional, Any
 
 from base.model.pathUtils import normalizeDirSeparatorsStr
 from cat.utils.logging_ import logWarning, logError, loggingIndentInfo
@@ -31,16 +31,16 @@ class BlockStateType:
 class MCData:
 	name: str
 
-	blocks: AbstractSet[ResourceLocation]
-	items: AbstractSet[ResourceLocation]
-	entities: AbstractSet[ResourceLocation]
-	effects: AbstractSet[ResourceLocation]
-	enchantments: AbstractSet[ResourceLocation]
-	biomes: AbstractSet[ResourceLocation]
-	particles: AbstractSet[ResourceLocation]
-	instruments: AbstractSet[ResourceLocation]
+	blocks: frozenset[ResourceLocation]
+	items: frozenset[ResourceLocation]
+	entities: frozenset[ResourceLocation]
+	effects: frozenset[ResourceLocation]
+	enchantments: frozenset[ResourceLocation]
+	biomes: frozenset[ResourceLocation]
+	particles: frozenset[ResourceLocation]
+	instruments: frozenset[ResourceLocation]
 
-	blockStates: Mapping[ResourceLocation, list[BlockStateType]]
+	blockStates: FrozenDict[ResourceLocation, list[BlockStateType]]
 
 	EMPTY: ClassVar[MCData]
 
@@ -82,22 +82,22 @@ def _getMinecraftDataFromRaw(version: str, mcd: dict[str, Any]) -> MCData:
 	return data
 
 
-def rlsFromData(*mcdLists: list[dict]) -> set[ResourceLocation]:
+def rlsFromData(*mcdLists: list[dict]) -> frozenset[ResourceLocation]:
 	# return {ResourceLocation.fromString(f"minecraft:{d['name']}") for mcdList in mcdLists for d in mcdList}
-	return {
+	return frozenset({
 		ResourceLocation.fromString(d['name'])
 		for mcdList in mcdLists
 		for d in mcdList
-	}
+	})
 
 
-def rlsBlockStatesFromData(*mcdLists: list[dict]) -> dict[ResourceLocation, list[BlockStateType]]:
+def rlsBlockStatesFromData(*mcdLists: list[dict]) -> FrozenDict[ResourceLocation, list[BlockStateType]]:
 	EMPTY_LIST = []
-	return {
+	return FrozenDict({
 		ResourceLocation.fromString(block['name']): buildBlockStates(block.get('states', EMPTY_LIST))
 		for mcdList in mcdLists
 		for block in mcdList
-	}
+	})
 
 
 def fixCapitalization(origResLoc: ResourceLocation) -> ResourceLocation:
@@ -105,8 +105,8 @@ def fixCapitalization(origResLoc: ResourceLocation) -> ResourceLocation:
 	return replace(origResLoc, path=fixedPath)
 
 
-def fixCapitalizations(origResLocs: set[ResourceLocation]) -> set[ResourceLocation]:
-	return {fixCapitalization(rl) for rl in origResLocs}
+def fixCapitalizations(origResLocs: frozenset[ResourceLocation]) -> frozenset[ResourceLocation]:
+	return frozenset({fixCapitalization(rl) for rl in origResLocs})
 
 
 def buildBlockStates(states: list[dict]) -> list[BlockStateType]:

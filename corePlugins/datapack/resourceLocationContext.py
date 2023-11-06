@@ -184,7 +184,7 @@ class VillagerTypeResourceLocationContext(SimpleResourceLocationContext1):
 @resourceLocationContext('point_of_interest_type', _indexPath=None, _tagsIndexPath=TAGS.POINT_OF_INTEREST_TYPE)
 class PointOfInterestTypeResourceLocationContext(SimpleResourceLocationContext1):
 	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
-		return ()
+		return mc.pointOfInterestTypes
 
 
 # Loot table serializer registries:
