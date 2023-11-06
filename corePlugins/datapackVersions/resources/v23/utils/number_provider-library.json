@@ -86,10 +86,8 @@
               "optional": true,
               "default": 1.0,
               "decidingProp": "type",
-              "values": {
-                "score": { "$type": "float" },
-                "minecraft:score": { "$type": "float" }
-              },
+              "values": { "score": { "$type": "float" } },
+              "optionalPrefixes": ["minecraft:"],
               "description": "The scoreboard objective to query on the selected player name or UUID."
             }
           }

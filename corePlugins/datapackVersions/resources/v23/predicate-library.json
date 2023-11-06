@@ -90,38 +90,30 @@
         "inverse": {
           "optional": true,
           "decidingProp": "condition",
-          "values": {
-            "killed_by_player": { "$type": "boolean" },
-            "minecraft:killed_by_player": { "$type": "boolean" }
-          },
+          "values": { "killed_by_player": { "$type": "boolean" } },
+          "optionalPrefixes": ["minecraft:"],
           "default": false,
           "description": "If true, the condition passes if killer_player is not available."
         },
         "offsetX": {
           "optional": true,
           "decidingProp": "condition",
-          "values": {
-            "location_check": { "$type": "integer" },
-            "minecraft:location_check": { "$type": "integer" }
-          },
+          "values": { "location_check": { "$type": "integer" }},
+          "optionalPrefixes": ["minecraft:"],
           "description": "optional offsets to location"
         },
         "offsetY": {
           "optional": true,
           "decidingProp": "condition",
-          "values": {
-            "location_check": { "$type": "integer" },
-            "minecraft:location_check": { "$type": "integer" }
-          },
+          "values": { "location_check": { "$type": "integer" }},
+          "optionalPrefixes": ["minecraft:"],
           "description": "optional offsets to location"
         },
         "offsetZ": {
           "optional": true,
           "decidingProp": "condition",
-          "values": {
-            "location_check": { "$type": "integer" },
-            "minecraft:location_check": { "$type": "integer" }
-          },
+          "values": { "location_check": { "$type": "integer" }},
+          "optionalPrefixes": ["minecraft:"],
           "description": "optional offsets to location"
         },
         "chance": {
@@ -174,10 +166,8 @@
         "period": {
           "optional": true,
           "decidingProp": "condition",
-          "values": {
-            "time_check": { "$type": "integer" },
-            "minecraft:time_check": { "$type": "integer" }
-          },
+          "values": { "time_check": { "$type": "integer" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "If present, the game time is first reduced modulo the given number before being checked against value. For example, setting this to 24000 causes the checked time to be equal to the current daytime."
         },
         "range": {
@@ -190,19 +180,15 @@
         "raining": {
           "optional": true,
           "decidingProp": "condition",
-          "values": {
-            "weather_check": { "$type": "boolean" },
-            "minecraft:weather_check": { "$type": "boolean" }
-          },
+          "values": { "weather_check": { "$type": "boolean" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "If true, the condition passes only if it is raining or thundering."
         },
         "thundering": {
           "optional": true,
           "decidingProp": "condition",
-          "values": {
-            "weather_check": { "$type": "boolean" },
-            "minecraft:weather_check": { "$type": "boolean" }
-          },
+          "values": { "weather_check": { "$type": "boolean" } },
+          "optionalPrefixes": ["minecraft:"],
           "description": "If true, the condition passes only if it is thundering."
         }
       },

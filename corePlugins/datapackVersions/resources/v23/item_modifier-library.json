@@ -357,10 +357,8 @@
             "source": {
               "description": "Included only if <code>type</code> is set to <code>storage</code>. A [ [resource location] ] specifying the storage ID to copy NBT from. ",
               "decidingProp": "type",
-              "values": { 
-                "storage": { "$type": "string", "type": "minecraft:resource_location" },
-                "minecraft:storage": { "$type": "string", "type": "minecraft:resource_location" }
-              },
+              "values": { "storage": { "$type": "string", "type": "minecraft:resource_location" }},
+              "optionalPrefixes": ["minecraft:"],
               "optional": true
             }
           }
