@@ -244,7 +244,7 @@ def choicesFromResourceLocations(text: str, locations: Iterable[ResourceLocation
 
 
 def autoCompletionTreeForResourceLocations(locations: Iterable[ResourceLocation]) -> AutoCompletionTree:
-	locationStrs = [l.asString for l in locations]
+	locationStrs = [l.asQualifiedString for l in locations]
 	mcLocationStrs = [l.asCompactString for l in locations if l.isMCNamespace]
 	tree = buildSimpleAutoCompletionTree(chain(locationStrs, mcLocationStrs), (':', '/'))
 	return tree

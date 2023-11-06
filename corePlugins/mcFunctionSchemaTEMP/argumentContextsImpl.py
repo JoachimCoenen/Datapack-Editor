@@ -159,9 +159,11 @@ class BlockStateHandler(ArgumentContext):
 
 		blockID = blockState.blockId
 		argsStart = blockID.span.end
-		if pos.index >= argsStart.index:
-			blockStatesDict = self._getBlockStatesDict(blockID)
-			suggestions += suggestionsForFilterArgs(blockState.states, node.source[argsStart.index:node.end.index], pos.index - argsStart.index, pos, replaceCtx, blockStatesDict)
+
+		if pos.index >= argsStart.index and (blockStatesDict := self._getBlockStatesDict(blockID)):
+			contextStr = node.source[argsStart.index:node.end.index]
+			relCursorPos = pos.index - argsStart.index
+			suggestions += suggestionsForFilterArgs(blockState.states, contextStr, relCursorPos, pos, replaceCtx, blockStatesDict)
 
 		if blockID.span.__contains__(pos):
 			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
