@@ -531,6 +531,12 @@ class InstrumentContext(SimpleResourceLocationContext1):
 		return mc.instruments
 
 
+@resourceLocationContext('damage_type', _indexPath=None, _tagsIndexPath=TAGS.DAMAGE_TYPE)
+class DamageTypeContext(SimpleResourceLocationContext1):
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
+		return mc.damageTypes
+
+
 @resourceLocationContext('any', name='resource_location')
 class AnyContext(ResourceLocationContext):
 

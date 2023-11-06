@@ -34,6 +34,7 @@ class CustomMCData:
 	gameEvents: frozenset[ResourceLocation]  # introduced in version 1.19
 	structures: frozenset[ResourceLocation]
 	pointOfInterestTypes: frozenset[ResourceLocation]
+	damageTypes: frozenset[ResourceLocation]
 
 	slots: FrozenDict[bytes, Optional[int]]
 	gamerules: FrozenDict[bytes, Gamerule]
@@ -51,6 +52,7 @@ CustomMCData.EMPTY = CustomMCData(
 	gameEvents=frozenset(),
 	structures=frozenset(),
 	pointOfInterestTypes=frozenset(),
+	damageTypes=frozenset(),
 	slots=FrozenDict(),
 	gamerules=FrozenDict(),
 )
