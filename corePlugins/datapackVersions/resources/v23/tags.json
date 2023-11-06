@@ -1,0 +1,159 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$templates": {
+    "resourceLocationString": {
+      "$params": {
+        "schema": { "type": "string" }
+      },
+      "$body": {
+        "$type": "string",
+        "type": "minecraft:resource_location",
+        "args": { "schema": { "$ref": "#schema" } },
+        "description": "An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`."
+      }
+    },
+    
+    "tags": {
+      "$params": {
+        "schema": { "type": "string" }
+      },
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "description": {
+            "optional": true,
+            "value": { "$type": "string" },
+            "description": "A textual description of the contents of this file. Will be ignored by Minecraft."
+          },
+          "replace": {
+            "optional": true,
+            "default": false,
+            "value": { "$type": "boolean" },
+            "description": "Whether or not contents of this tag should completely replace tag contents from different lower priority data packs with the same resource location. When `false` the tag's content is appended to the contents of the higher priority data packs, instead."
+          },
+          "values": {
+            "optional": false,
+            "value": {
+              "$type": "array",
+              "element": {
+                "$type": "union",
+                "options": [
+                  {"$ref": "resourceLocationString", "schema": { "$ref": "#schema" }},
+                  {
+                    "$type": "object",
+                    "properties": {
+                      "id": {
+                        "optional": false,
+                        "value": {"$ref": "resourceLocationString", "schema": { "$ref": "#schema" }},
+                        "description": "A string in one of the string formats above."
+                      },
+                      "required": {
+                        "optional": true,
+                        "default": true,
+                        "value": { "$type": "boolean" },
+                        "description": "Whether or not loading this tag should fail if this entry is not found, `true` by default (also for the string entries). A tag that fails to load can still be referenced in any data pack and be (re)defined in other data packs. In other words, only the entries in this JSON file is ignored if this entry cannot be found."
+                      }
+                    },
+                    "description": "An entry with additional options. (1.16.2+) "
+                  }
+                ]
+              }
+            },
+            "description": "A list of mix and match of object names and tag names. For tags, recursive reference is possible, but a circular reference causes a loading failure. "
+          }
+        },
+        "description": "Allow grouping of items, blocks, fluids, entity types, or functions together using JSON files."
+      }
+    }
+  },
+  
+  "$definitions": {
+    // from minecraft registry:
+    "attribute": { "$ref": "tags", "schema": "attribute" }, // Attribute
+    "block": { "$ref": "tags", "schema": "block" }, // Block
+    "block_entity_type": { "$ref": "tags", "schema": "block_entity_type" }, // Block entity type
+    "chunk_status": { "$ref": "tags", "schema": "chunk_status" }, // Chunk status
+    "command_argument_type": { "$ref": "tags", "schema": "command_argument_type" }, // Command argument type
+    "dimension": { "$ref": "tags", "schema": "dimension" }, // Dimension and Level stem
+    "dimension_type": { "$ref": "tags", "schema": "dimension_type" }, // Dimension type
+    "enchantment": { "$ref": "tags", "schema": "enchantment" }, // Enchantment
+    "entity_type": { "$ref": "tags", "schema": "entity_type" }, // Entity type
+    "fluid": { "$ref": "tags", "schema": "fluid" }, // Fluid
+    "game_event": { "$ref": "tags", "schema": "game_event" }, // Game event
+    "position_source_type": { "$ref": "tags", "schema": "position_source_type" }, // Position source type (used by game events)
+    "item": { "$ref": "tags", "schema": "item" }, // Item
+    "menu": { "$ref": "tags", "schema": "menu" }, // Menu type
+    "mob_effect": { "$ref": "tags", "schema": "mob_effect" }, // Mob effect
+    "particle_type": { "$ref": "tags", "schema": "particle_type" }, // Particle type
+    "potion": { "$ref": "tags", "schema": "potion" }, // Potion
+    "recipe_serializer": { "$ref": "tags", "schema": "recipe_serializer" }, // Recipe serializer
+    "recipe_type": { "$ref": "tags", "schema": "recipe_type" }, // Recipe type
+    "sound_event": { "$ref": "tags", "schema": "sound_event" }, // Sound event
+    "stat_type": { "$ref": "tags", "schema": "stat_type" }, // Statistics type
+    "custom_stat": { "$ref": "tags", "schema": "custom_stat" }, // Custom Statistics
+    // Entity data registries
+    "activity": { "$ref": "tags", "schema": "activity" }, // Entity schedule activity
+    "memory_module_type": { "$ref": "tags", "schema": "memory_module_type" }, // Entity memory module type
+    "schedule": { "$ref": "tags", "schema": "schedule" }, // Entity schedule
+    "sensor_type": { "$ref": "tags", "schema": "sensor_type" }, // Entity AI sensor type
+    "motive": { "$ref": "tags", "schema": "motive" }, // Painting motive
+    "villager_profession": { "$ref": "tags", "schema": "villager_profession" }, // Villager profession
+    "villager_type": { "$ref": "tags", "schema": "villager_type" }, // Villager type
+    "point_of_interest_type": { "$ref": "tags", "schema": "point_of_interest_type" }, // Poi type
+    // Loot table serializer registries:
+    "loot_condition_type": { "$ref": "tags", "schema": "loot_condition_type" }, // Loot condition type
+    "loot_function_type": { "$ref": "tags", "schema": "loot_function_type" }, // Loot function type
+    "loot_nbt_provider_type": { "$ref": "tags", "schema": "loot_nbt_provider_type" }, // Loot nbt provider type
+    "loot_number_provider_type": { "$ref": "tags", "schema": "loot_number_provider_type" }, // Loot number provider type
+    "loot_pool_entry_type": { "$ref": "tags", "schema": "loot_pool_entry_type" }, // Loot pool entry type
+    "loot_score_provider_type": { "$ref": "tags", "schema": "loot_score_provider_type" }, // Loot score provider type
+    // Json file value provider registries:
+    "float_provider_type": { "$ref": "tags", "schema": "float_provider_type" }, // Float provider type
+    "int_provider_type": { "$ref": "tags", "schema": "int_provider_type" }, // Int provider type
+    "height_provider_type": { "$ref": "tags", "schema": "height_provider_type" }, // Height provider type
+    // World generator registries:
+    "block_predicate_type": { "$ref": "tags", "schema": "block_predicate_type" }, // Block predicate type
+    "rule_test": { "$ref": "tags", "schema": "rule_test" }, // Structure featrue rule test type
+    "pos_rule_test": { "$ref": "tags", "schema": "pos_rule_test" }, // Structure featrue position rule test type
+    "worldgen/carver": { "$ref": "tags", "schema": "worldgen/carver" }, // World carver
+    "worldgen/configured_carver": { "$ref": "tags", "schema": "worldgen/configured_carver" }, // Configured world carver
+    "worldgen/feature": { "$ref": "tags", "schema": "worldgen/feature" }, // Feature
+    "worldgen/configured_feature": { "$ref": "tags", "schema": "worldgen/configured_feature" }, // Configured feature
+    "worldgen/structure_set": { "$ref": "tags", "schema": "worldgen/structure_set" }, // Structure set
+    "worldgen/structure_processor": { "$ref": "tags", "schema": "worldgen/structure_processor" }, // Structure processor type
+    "worldgen/processor_list": { "$ref": "tags", "schema": "worldgen/processor_list" }, // Structure processor list
+    "worldgen/structure_pool_element": { "$ref": "tags", "schema": "worldgen/structure_pool_element" }, // Structure pool element type
+    "worldgen/template_pool": { "$ref": "tags", "schema": "worldgen/template_pool" }, // Structure template pool
+    "worldgen/structure_piece": { "$ref": "tags", "schema": "worldgen/structure_piece" }, // Structure piece type
+    "worldgen/structure_type": { "$ref": "tags", "schema": "worldgen/structure_type" }, // Structure feature
+    "worldgen/structure": { "$ref": "tags", "schema": "worldgen/structure" }, // Configured structure feature
+    "worldgen/structure_placement": { "$ref": "tags", "schema": "worldgen/structure_placement" }, // Structure placement type
+    "worldgen/placement_modifier_type": { "$ref": "tags", "schema": "worldgen/placement_modifier_type" }, // Placement modifier type
+    "worldgen/placed_feature": { "$ref": "tags", "schema": "worldgen/placed_feature" }, // Placed feature
+    "worldgen/biome": { "$ref": "tags", "schema": "worldgen/biome" }, // Biome
+    "worldgen/biome_source": { "$ref": "tags", "schema": "worldgen/biome_source" }, // Biome source
+    "worldgen/noise": { "$ref": "tags", "schema": "worldgen/noise" }, // Normal noise
+    "worldgen/noise_settings": { "$ref": "tags", "schema": "worldgen/noise_settings" }, // Noise generator settings
+    "worldgen/density_function": { "$ref": "tags", "schema": "worldgen/density_function" }, // Density function
+    "worldgen/density_function_type": { "$ref": "tags", "schema": "worldgen/density_function_type" }, // Density function type
+    "worldgen/world_preset": { "$ref": "tags", "schema": "worldgen/world_preset" }, // World preset
+    "worldgen/flat_level_generator_preset": { "$ref": "tags", "schema": "worldgen/flat_level_generator_preset" }, // Flat world generator preset
+    "worldgen/chunk_generator": { "$ref": "tags", "schema": "worldgen/chunk_generator" }, // Chunk generator
+    "worldgen/material_condition": { "$ref": "tags", "schema": "worldgen/material_condition" }, // Surface condition source
+    "worldgen/material_rule": { "$ref": "tags", "schema": "worldgen/material_rule" }, // Surface rule source
+    "worldgen/block_state_provider_type": { "$ref": "tags", "schema": "worldgen/block_state_provider_type" }, // Block state provider type
+    "worldgen/foliage_placer_type": { "$ref": "tags", "schema": "worldgen/foliage_placer_type" }, // Foliage placer type
+    "worldgen/trunk_placer_type": { "$ref": "tags", "schema": "worldgen/trunk_placer_type" }, // Trunk placer type
+    "worldgen/tree_decorator_type": { "$ref": "tags", "schema": "worldgen/tree_decorator_type" }, // Tree decorator type
+    "worldgen/feature_size_type": { "$ref": "tags", "schema": "worldgen/feature_size_type" }, // Feature size type
+    
+    // additional tags:
+    "block_type": { "$defRef": "block"}, // alias
+    "fluid_type": { "$defRef": "fluid"}, // alias
+    "function": { "$ref": "tags", "schema": "function_type" },
+    "item_type": { "$defRef": "item"}, // alias
+    "chat_type": { "$ref": "tags", "schema": "chat_type" },
+    "damage_type": { "$ref": "tags", "schema": "damage_type" },
+    "instrument": { "$ref": "tags", "schema": "instrument" }
+  }
+}
