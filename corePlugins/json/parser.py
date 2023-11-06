@@ -42,6 +42,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	# tokens: deque[Token] = field(init=False)
 	_tokenizer: JsonTokenizer = field(init=False)
 	_current: Optional[Token] = field(init=False)
+	_eofToken: Optional[Token] = field(init=False)
 	_last: Optional[Token] = field(init=False, default=None)
 
 	def __post_init__(self):
@@ -57,8 +58,8 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			self.maxEncIndex,
 			allowMultilineStr
 		)
-		self._tokens = tokens = self.tokenize()
-		self._tokensIter = iter(tokens)
+		self._tokens, self._eofToken = self.tokenize()
+		self._tokensIter = iter(self._tokens)
 		self.errors = self._tokenizer.errors  # sync errors
 		self._current = None
 		self._last = None
@@ -68,7 +69,8 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		tokens = []
 		while (tkn := self._tokenizer.nextToken()).type is not TokenType.eof:
 			tokens.append(tkn)
-		return tokens
+		eofToken = tkn
+		return tokens, eofToken
 
 	@property
 	def allowMultilineStr(self) -> bool:
@@ -80,12 +82,12 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 
 	@property
 	def hasTokens(self) -> bool:
-		return self._current is not None
+		return self._current.type is not TokenType.eof
 
 	def _next(self) -> None:
 		self._last = self._current
 		# self._current = self._tokenizer.nextToken()
-		self._current = next(self._tokensIter, None)
+		self._current = next(self._tokensIter, self._eofToken)
 
 	def tryAccept(self, tokenType: TokenType) -> Optional[Token]:
 		if self._current is None or self._current.type is not tokenType:
