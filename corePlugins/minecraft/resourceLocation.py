@@ -3,13 +3,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, replace
 from itertools import chain
-from typing import Optional, Collection, Iterable, final, Mapping, ClassVar
+from typing import Optional, Collection, Iterable, Mapping, ClassVar
 
 from base.model.parsing.parser import ParserBase
 from cat.GUI.components.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from cat.utils import Deprecated, Decorator
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.contextProvider import ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
+from base.model.parsing.contextProvider import AddContextFunc, ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath, FilePathTpl
 from base.model.project.project import Root
@@ -26,6 +26,8 @@ RESOURCE_LOCATION_ID = LanguageId('minecraft:resource_location')
 class ResourceLocationSchema(Schema):
 	language: ClassVar[LanguageId] = RESOURCE_LOCATION_ID
 	name: str
+	allowTags: bool = field(kw_only=True)
+	onlyTags: bool = field(default=False, kw_only=True)
 
 	def asString(self) -> str:
 		return self.name
@@ -116,25 +118,9 @@ class ResourceLocationCtxProvider(ContextProvider[ResourceLocationNode]):
 		return ()
 
 
+@dataclass
 class ResourceLocationContext(Context[ResourceLocationNode], ABC):
-	def __init__(self, allowTags: bool, onlyTags: bool = False):
-		self._allowTags: bool = allowTags
-		self._onlyTags: bool = onlyTags
-
-	@property
-	@abstractmethod
-	def name(self) -> str:
-		pass
-
-	@property
-	@final
-	def allowTags(self) -> bool:
-		return self._allowTags
-
-	@property
-	@final
-	def onlyTags(self) -> bool:
-		return self._onlyTags
+	name: str
 
 	@abstractmethod
 	def tagsFromDP(self, dp: Root) -> tuple[Mapping[ResourceLocation, MetaInfo], ...]:
@@ -159,7 +145,7 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 	def validate(self, node: ResourceLocationNode, errorsIO: list[GeneralError]) -> None:
 		if not self.checkCorrectNodeType(node, ResourceLocationNode):
 			return
-		if self.onlyTags:
+		if node.schema.onlyTags:
 			node = replace(node, isTag=True)
 		if node.isTag:
 			isValid = pointsToFile = any(containsResourceLocation(node, tags) for dp in getSession().project.allRoots for tags in self.tagsFromDP(dp))
@@ -181,23 +167,23 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 			return []
 		locations: list[ResourceLocation] = []
 
-		if self.allowTags:
+		if node.schema.allowTags:
 			for dp in getSession().project.allRoots:
 				for tags in self.tagsFromDP(dp):
 					locations.extend(tags)
 
-		if not self.onlyTags:
+		if not node.schema.onlyTags:
 			for dp in getSession().project.allRoots:
 				for values in self.valuesFromDP(dp):
 					locations.extend(values)
 			if mcValues := self.valuesFromMC(getCurrentFullMcData()):
 				locations.extend(mcValues)
 
-		if self.onlyTags:
+		if node.schema.onlyTags:
 			node = replace(node, isTag=True)
 
 		result = choicesFromResourceLocations(node.asString, locations)
-		if self.onlyTags:
+		if node.schema.onlyTags:
 			result = [s.removeprefix('#') for s in result]
 		return result
 
@@ -205,7 +191,7 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 		if not self.checkCorrectNodeType(node, ResourceLocationNode):
 			return MDStr('')
 		for dp in getSession().project.allRoots:
-			if self.onlyTags:
+			if node.schema.onlyTags:
 				node = replace(node, isTag=True)
 			if node.isTag:
 				for tags in self.tagsFromDP(dp):
@@ -225,7 +211,7 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 	def onIndicatorClicked(self, node: ResourceLocationNode, pos: Position) -> None:
 		if not self.checkCorrectNodeType(node, ResourceLocationNode):
 			return None
-		if self.onlyTags:
+		if node.schema.onlyTags:
 			node = replace(node, isTag=True)
 		for dp in getSession().project.allRoots:
 			for tags in self.tagsFromDP(dp):
@@ -240,7 +226,12 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 
 
 __resourceLocationContexts: dict[str, ResourceLocationContext] = {}
-resourceLocationContext = Decorator(AddContextToDictDecorator[ResourceLocationContext](__resourceLocationContexts))
+_addResourceLocationContext = AddContextToDictDecorator[ResourceLocationContext](__resourceLocationContexts)
+
+
+def resourceLocationContext(key: str, *, forceOverride: bool = False, **kwargs) -> AddContextFunc[ResourceLocationContext]:
+	kwargs.setdefault('name', key)
+	return _addResourceLocationContext(key, forceOverride=forceOverride, **kwargs)
 
 
 def getResourceLocationContext(aType: str) -> Optional[ResourceLocationContext]:

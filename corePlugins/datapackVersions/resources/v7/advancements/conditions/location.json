@@ -12,7 +12,7 @@
           "value": {
             "$type": "string",
             "type": "minecraft:resource_location",
-            "args": { "schema": "biome" }
+            "args": { "schema": "worldgen/biome" }
           },
           "description": "The biome the entity is currently in. This tag is a [ [resource location] ] for a biome (see [ [Biome#Biome IDs] ] for the ones used in vanilla)."
         },
@@ -35,7 +35,7 @@
               },
               "tag": {
                 "optional": true,
-                "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "block_tag" } },
+                "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "block", "onlyTags": true } },
                 "description": "The block [ [tag] ]."
               },
               "nbt": {
@@ -89,7 +89,7 @@
           "value": {
             "$type": "string",
             "type": "minecraft:resource_location",
-            "args": { "schema": "structure" }
+            "args": { "schema": "worldgen/structure" }
           },
           "description": "{{until|java 1.19}}: The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
         },
@@ -191,7 +191,7 @@
           "value": {
             "$type": "string",
             "type": "minecraft:resource_location",
-            "args": { "schema": "structure" }
+            "args": { "schema": "worldgen/structure" }
           },
           "description": "{{upcoming|java 1.19}}: The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
         }

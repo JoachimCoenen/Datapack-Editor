@@ -324,7 +324,7 @@
           "value": {
             "$type": "string",
             "type": "minecraft:resource_location",
-            "args": { "schema": "entity" }
+            "args": { "schema": "entity_type", "allowTags": true }
           },
           "description": "Test this entity's type. Accepts an [ [Data values/Entity IDs|entity ID] ]."
         },

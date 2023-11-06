@@ -1,80 +1,98 @@
-# Don't forget to add new tags to the TagInfos IndexBundle!
 REGISTRY_TAGS = {
-	'attribute':                            'attribute',  # Attribute
-	'block':                                'blocks',  # Block
-	'block_entity_type':                    'block_entity_type',  # Block entity type
-	'chunk_status':                         'chunk_status',  # Chunk status
-	'command_argument_type':                'command_argument_type',  # Command argument type
-	'dimension':                            'dimension',  # Dimension and Level stem
-	'dimension_type':                       'dimension_type',  # Dimension type
-	'enchantment':                          'enchantment',  # Enchantment
-	'entity_type':                          'entity_types',  # Entity type
-	'fluid':                                'fluids',  # Fluid
-	'game_event':                           'game_events',  # Game event
-	'position_source_type':                 'position_source_type',  # Position source type (used by game events)
-	'item':                                 'items',  # Item
-	'menu':                                 'menu',  # Menu type
-	'mob_effect':                           'mob_effect',  # Mob effect
-	'particle_type':                        'particle_type',  # Particle type
-	'potion':                               'potion',  # Potion
-	'recipe_serializer':                    'recipe_serializer',  # Recipe serializer
-	'recipe_type':                          'recipe_type',  # Recipe type
-	'sound_event':                          'sound_event',  # Sound event
-	'stat_type':                            'stat_type',  # Statistics type
-	'custom_stat':                          'custom_stat',  # Custom Statistics
+	'tags/attribute':                            'tags/attribute',  # Attribute
+	'tags/block':                                'tags/blocks',  # Block
+	'tags/block_entity_type':                    'tags/block_entity_type',  # Block entity type
+	'tags/chunk_status':                         'tags/chunk_status',  # Chunk status
+	'tags/command_argument_type':                'tags/command_argument_type',  # Command argument type
+	'tags/dimension':                            'tags/dimension',  # Dimension and Level stem
+	'tags/dimension_type':                       'tags/dimension_type',  # Dimension type
+	'tags/enchantment':                          'tags/enchantment',  # Enchantment
+	'tags/entity_type':                          'tags/entity_types',  # Entity type
+	'tags/fluid':                                'tags/fluids',  # Fluid
+	'tags/game_event':                           'tags/game_events',  # Game event
+	'tags/position_source_type':                 'tags/position_source_type',  # Position source type (used by game events)
+	'tags/item':                                 'tags/items',  # Item
+	'tags/menu':                                 'tags/menu',  # Menu type
+	'tags/mob_effect':                           'tags/mob_effect',  # Mob effect
+	'tags/particle_type':                        'tags/particle_type',  # Particle type
+	'tags/potion':                               'tags/potion',  # Potion
+	'tags/recipe_serializer':                    'tags/recipe_serializer',  # Recipe serializer
+	'tags/recipe_type':                          'tags/recipe_type',  # Recipe type
+	'tags/sound_event':                          'tags/sound_event',  # Sound event
+	'tags/stat_type':                            'tags/stat_type',  # Statistics type
+	'tags/custom_stat':                          'tags/custom_stat',  # Custom Statistics
 	# Entity data registries
-	'activity':                             'activity',  # Entity schedule activity
-	'memory_module_type':                   'memory_module_type',  # Entity memory module type
-	'schedule':                             'schedule',  # Entity schedule
-	'sensor_type':                          'sensor_type',  # Entity AI sensor type
-	'motive':                               'motive',  # Painting motive
-	'villager_profession':                  'villager_profession',  # Villager profession
-	'villager_type':                        'villager_type',  # Villager type
-	'point_of_interest_type':               'point_of_interest_type',  # Poi type
+	'tags/activity':                             'tags/activity',  # Entity schedule activity
+	'tags/memory_module_type':                   'tags/memory_module_type',  # Entity memory module type
+	'tags/schedule':                             'tags/schedule',  # Entity schedule
+	'tags/sensor_type':                          'tags/sensor_type',  # Entity AI sensor type
+	'tags/motive':                               'tags/motive',  # Painting motive
+	'tags/villager_profession':                  'tags/villager_profession',  # Villager profession
+	'tags/villager_type':                        'tags/villager_type',  # Villager type
+	'tags/point_of_interest_type':               'tags/point_of_interest_type',  # Poi type
 	# Loot table serializer registries:
-	'loot_condition_type':                  'loot_condition_type',  # Loot condition type
-	'loot_function_type':                   'loot_function_type',  # Loot function type
-	'loot_nbt_provider_type':               'loot_nbt_provider_type',  # Loot nbt provider type
-	'loot_number_provider_type':            'loot_number_provider_type',  # Loot number provider type
-	'loot_pool_entry_type':                 'loot_pool_entry_type',  # Loot pool entry type
-	'loot_score_provider_type':             'loot_score_provider_type',  # Loot score provider type
+	'tags/loot_condition_type':                  'tags/loot_condition_type',  # Loot condition type
+	'tags/loot_function_type':                   'tags/loot_function_type',  # Loot function type
+	'tags/loot_nbt_provider_type':               'tags/loot_nbt_provider_type',  # Loot nbt provider type
+	'tags/loot_number_provider_type':            'tags/loot_number_provider_type',  # Loot number provider type
+	'tags/loot_pool_entry_type':                 'tags/loot_pool_entry_type',  # Loot pool entry type
+	'tags/loot_score_provider_type':             'tags/loot_score_provider_type',  # Loot score provider type
 	# Json file value provider registries:
-	'float_provider_type':                  'float_provider_type',  # Float provider type
-	'int_provider_type':                    'int_provider_type',  # Int provider type
-	'height_provider_type':                 'height_provider_type',  # Height provider type
+	'tags/float_provider_type':                  'tags/float_provider_type',  # Float provider type
+	'tags/int_provider_type':                    'tags/int_provider_type',  # Int provider type
+	'tags/height_provider_type':                 'tags/height_provider_type',  # Height provider type
 	# World generator registries:
-	'block_predicate_type':                 'block_predicate_type',  # Block predicate type
-	'rule_test':                            'rule_test',  # Structure featrue rule test type
-	'pos_rule_test':                        'pos_rule_test',  # Structure featrue position rule test type
-	'worldgen/carver':                      'worldgen/carver',  # World carver
-	'worldgen/configured_carver':           'worldgen/configured_carver',  # Configured world carver
-	'worldgen/feature':                     'worldgen/feature',  # Feature
-	'worldgen/configured_feature':          'worldgen/configured_feature',  # Configured feature
-	'worldgen/structure_set':               'worldgen/structure_set',  # Structure set
-	'worldgen/structure_processor':         'worldgen/structure_processor',  # Structure processor type
-	'worldgen/processor_list':              'worldgen/processor_list',  # Structure processor list
-	'worldgen/structure_pool_element':      'worldgen/structure_pool_element',  # Structure pool element type
-	'worldgen/template_pool':               'worldgen/template_pool',  # Structure template pool
-	'worldgen/structure_piece':             'worldgen/structure_piece',  # Structure piece type
-	'worldgen/structure_type':              'worldgen/structure_type',  # Structure feature
-	'worldgen/structure':                   'worldgen/structure',  # Configured structure feature
-	'worldgen/structure_placement':         'worldgen/structure_placement',  # Structure placement type
-	'worldgen/placement_modifier_type':     'worldgen/placement_modifier_type',  # Placement modifier type
-	'worldgen/placed_feature':              'worldgen/placed_feature',  # Placed feature
-	'worldgen/biome':                       'worldgen/biome',  # Biome
-	'worldgen/biome_source':                'worldgen/biome_source',  # Biome source
-	'worldgen/noise':                       'worldgen/noise',  # Normal noise
-	'worldgen/noise_settings':              'worldgen/noise_settings',  # Noise generator settings
-	'worldgen/density_function':            'worldgen/density_function',  # Density function
-	'worldgen/density_function_type':       'worldgen/density_function_type',  # Density function type
-	'worldgen/world_preset':                'worldgen/world_preset',  # World preset
-	'worldgen/flat_level_generator_preset': 'worldgen/flat_level_generator_preset',  # Flat world generator preset
-	'worldgen/chunk_generator':             'worldgen/chunk_generator',  # Chunk generator
-	'worldgen/material_condition':          'worldgen/material_condition',  # Surface condition source
-	'worldgen/material_rule':               'worldgen/material_rule',  # Surface rule source
-	'worldgen/block_state_provider_type':   'worldgen/block_state_provider_type',  # Block state provider type
-	'worldgen/foliage_placer_type':         'worldgen/foliage_placer_type',  # Foliage placer type
-	'worldgen/trunk_placer_type':           'worldgen/trunk_placer_type',  # Trunk placer type
-	'worldgen/tree_decorator_type':         'worldgen/tree_decorator_type',  # Tree decorator type
-	'worldgen/feature_size_type':           'worldgen/feature_size_type',  # Feature size type
+	'tags/block_predicate_type':                 'tags/block_predicate_type',  # Block predicate type
+	'tags/rule_test':                            'tags/rule_test',  # Structure featrue rule test type
+	'tags/pos_rule_test':                        'tags/pos_rule_test',  # Structure featrue position rule test type
+	'tags/worldgen/carver':                      'tags/worldgen/carver',  # World carver
+	'tags/worldgen/configured_carver':           'tags/worldgen/configured_carver',  # Configured world carver
+	'tags/worldgen/feature':                     'tags/worldgen/feature',  # Feature
+	'tags/worldgen/configured_feature':          'tags/worldgen/configured_feature',  # Configured feature
+	'tags/worldgen/structure_set':               'tags/worldgen/structure_set',  # Structure set
+	'tags/worldgen/structure_processor':         'tags/worldgen/structure_processor',  # Structure processor type
+	'tags/worldgen/processor_list':              'tags/worldgen/processor_list',  # Structure processor list
+	'tags/worldgen/structure_pool_element':      'tags/worldgen/structure_pool_element',  # Structure pool element type
+	'tags/worldgen/template_pool':               'tags/worldgen/template_pool',  # Structure template pool
+	'tags/worldgen/structure_piece':             'tags/worldgen/structure_piece',  # Structure piece type
+	'tags/worldgen/structure_type':              'tags/worldgen/structure_type',  # Structure feature
+	'tags/worldgen/structure':                   'tags/worldgen/structure',  # Configured structure feature
+	'tags/worldgen/structure_placement':         'tags/worldgen/structure_placement',  # Structure placement type
+	'tags/worldgen/placement_modifier_type':     'tags/worldgen/placement_modifier_type',  # Placement modifier type
+	'tags/worldgen/placed_feature':              'tags/worldgen/placed_feature',  # Placed feature
+	'tags/worldgen/biome':                       'tags/worldgen/biome',  # Biome
+	'tags/worldgen/biome_source':                'tags/worldgen/biome_source',  # Biome source
+	'tags/worldgen/noise':                       'tags/worldgen/noise',  # Normal noise
+	'tags/worldgen/noise_settings':              'tags/worldgen/noise_settings',  # Noise generator settings
+	'tags/worldgen/density_function':            'tags/worldgen/density_function',  # Density function
+	'tags/worldgen/density_function_type':       'tags/worldgen/density_function_type',  # Density function type
+	'tags/worldgen/world_preset':                'tags/worldgen/world_preset',  # World preset
+	'tags/worldgen/flat_level_generator_preset': 'tags/worldgen/flat_level_generator_preset',  # Flat world generator preset
+	'tags/worldgen/chunk_generator':             'tags/worldgen/chunk_generator',  # Chunk generator
+	'tags/worldgen/material_condition':          'tags/worldgen/material_condition',  # Surface condition source
+	'tags/worldgen/material_rule':               'tags/worldgen/material_rule',  # Surface rule source
+	'tags/worldgen/block_state_provider_type':   'tags/worldgen/block_state_provider_type',  # Block state provider type
+	'tags/worldgen/foliage_placer_type':         'tags/worldgen/foliage_placer_type',  # Foliage placer type
+	'tags/worldgen/trunk_placer_type':           'tags/worldgen/trunk_placer_type',  # Trunk placer type
+	'tags/worldgen/tree_decorator_type':         'tags/worldgen/tree_decorator_type',  # Tree decorator type
+	'tags/worldgen/feature_size_type':           'tags/worldgen/feature_size_type',  # Feature size type
+}
+
+
+WORLDGEN = {
+	'worldgen/biome':                        'worldgen/biome',
+	'worldgen/configured_carver':            'worldgen/configured_carver',
+	'worldgen/configured_feature':           'worldgen/configured_feature',
+	'worldgen/configured_structure_feature': 'worldgen/configured_structure_feature',
+	'worldgen/configured_surface_builder':   'worldgen/configured_surface_builder',
+	'worldgen/density_function':             'worldgen/density_function',
+	'worldgen/flat_level_generator_preset':  'worldgen/flat_level_generator_preset',
+	'worldgen/noise':                        'worldgen/noise',
+	'worldgen/noise_settings':               'worldgen/noise_settings',
+	'worldgen/placed_feature':               'worldgen/placed_feature',
+	'worldgen/processor_list':               'worldgen/processor_list',
+	'worldgen/structure':                    'worldgen/structure',
+	'worldgen/structure_set':                'worldgen/structure_set',
+	'worldgen/template_pool':                'worldgen/template_pool',
+	'worldgen/world_preset':                 'worldgen/world_preset',
 }

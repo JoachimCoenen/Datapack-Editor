@@ -100,7 +100,7 @@
         },
         "tag": {
           "optional": true,
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item_tag" } },
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item", "onlyTags": true } },
           "description": "An item data pack tag."
         }
       }

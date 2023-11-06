@@ -1,9 +1,9 @@
 import os
 
-from corePlugins.datapack.datapackContents import buildJsonMeta, EntryHandlerInfo, NAME_SPACE_VAR, DatapackContents, GenerationInfo, DefaultFileInfo, buildFunctionMeta, buildNbtMeta, \
-	buildEntryHandlers
+from corePlugins.datapack.datapackContents import RESOURCES, buildJsonMeta, EntryHandlerInfo, NAME_SPACE_VAR, DatapackContents, GenerationInfo, DefaultFileInfo, \
+	buildFunctionMeta, buildNbtMeta, buildEntryHandlers
 from corePlugins.datapack.dpVersions import DPVersion, registerDPVersion
-from corePlugins.datapackVersions.resources.allVersions import REGISTRY_TAGS
+from corePlugins.datapackVersions.allVersions import REGISTRY_TAGS, WORLDGEN
 from corePlugins.json.core import JsonSchema
 from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
 from corePlugins.mcFunction.command import MCFunctionSchema
@@ -12,7 +12,7 @@ from corePlugins.minecraft_data.fullData import getFullMcData
 
 
 def initVersion() -> None:
-	registerDPVersion(version20)
+	registerDPVersion(version23)
 
 
 LOAD_JSON_CONTENTS = f"""{{
@@ -57,7 +57,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=True,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/function'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).tags.functions,
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.TAGS.FUNCTION),
 		generation=GenerationInfo(
 			initialFiles=[
 				DefaultFileInfo(
@@ -79,85 +79,32 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=True,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:tags/instrument'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).tags.instruments
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.TAGS.INSTRUMENT)
 	),
 	*[
 		EntryHandlerInfo(
-			folder=f'data/{NAME_SPACE_VAR}/tags/{folder}/',
+			folder=f'data/{NAME_SPACE_VAR}/{folder}/',
 			extension='.json',
 			isTag=True,
 			includeSubdirs=True,
-			buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId=f'minecraft:tags/{tag}'),
-			getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).tags.allOther
+			buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId=f'minecraft:{indexPath}'),
+			getIndex=lambda p, indexPath=indexPath: p.indexBundles.setdefault(DatapackContents).resources.getIndex(indexPath)
 		)
-		for tag, folder in REGISTRY_TAGS.items()
+		for indexPath, folder in REGISTRY_TAGS.items()
 	],
 
 	# WorldGenInfos:
-	EntryHandlerInfo(
-		folder=f'data/{NAME_SPACE_VAR}/worldgen/biome/',
-		extension='.json',
-		isTag=False,
-		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/biome'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).worldGen.biome
-	),
-	EntryHandlerInfo(
-		folder=f'data/{NAME_SPACE_VAR}/worldgen/configured_carver/',
-		extension='.json',
-		isTag=False,
-		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/configured_carver'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).worldGen.configured_carver
-	),
-	EntryHandlerInfo(
-		folder=f'data/{NAME_SPACE_VAR}/worldgen/configured_feature/',
-		extension='.json',
-		isTag=False,
-		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/configured_feature'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).worldGen.configured_feature
-	),
-	EntryHandlerInfo(
-		folder=f'data/{NAME_SPACE_VAR}/worldgen/configured_structure_feature/',
-		extension='.json',
-		isTag=False,
-		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/configured_structure_feature'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).worldGen.configured_structure_feature
-	),
-	EntryHandlerInfo(
-		folder=f'data/{NAME_SPACE_VAR}/worldgen/configured_surface_builder/',
-		extension='.json',
-		isTag=False,
-		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/configured_surface_builder'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).worldGen.configured_surface_builder
-	),
-	EntryHandlerInfo(
-		folder=f'data/{NAME_SPACE_VAR}/worldgen/noise_settings/',
-		extension='.json',
-		isTag=False,
-		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/noise_settings'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).worldGen.noise_settings
-	),
-	EntryHandlerInfo(
-		folder=f'data/{NAME_SPACE_VAR}/worldgen/processor_list/',
-		extension='.json',
-		isTag=False,
-		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/processor_list'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).worldGen.processor_list
-	),
-	EntryHandlerInfo(
-		folder=f'data/{NAME_SPACE_VAR}/worldgen/template_pool/',
-		extension='.json',
-		isTag=False,
-		includeSubdirs=True,
-		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:worldgen/template_pool'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).worldGen.template_pool
-	),
+	*[
+		EntryHandlerInfo(
+			folder=f'data/{NAME_SPACE_VAR}/{folder}/',
+			extension='.json',
+			isTag=False,
+			includeSubdirs=True,
+			buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId=f'minecraft:{indexPath}'),
+			getIndex=lambda p, indexPath=indexPath: p.indexBundles.setdefault(DatapackContents).resources.getIndex(indexPath)
+		)
+		for indexPath, folder in WORLDGEN.items()
+	],
 
 	# DatapackContents:
 	EntryHandlerInfo(
@@ -166,7 +113,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:advancement'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).advancements
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.ADVANCEMENTS)
 	),
 	EntryHandlerInfo(
 		folder=f'data/{NAME_SPACE_VAR}/functions/',
@@ -174,7 +121,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildFunctionMeta(fp),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).functions,
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.FUNCTIONS),
 		generation=GenerationInfo(
 			initialFiles=[
 				DefaultFileInfo(
@@ -196,7 +143,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:item_modifiers'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).item_modifiers
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.ITEM_MODIFIERS)
 	),
 	EntryHandlerInfo(
 		folder=f'data/{NAME_SPACE_VAR}/loot_tables/',
@@ -204,7 +151,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:loot_tables'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).loot_tables
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.LOOT_TABLES)
 	),
 	EntryHandlerInfo(
 		folder=f'data/{NAME_SPACE_VAR}/predicates/',
@@ -212,7 +159,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:predicate'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).predicates
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.PREDICATES)
 	),
 	EntryHandlerInfo(
 		folder=f'data/{NAME_SPACE_VAR}/recipes/',
@@ -220,7 +167,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:recipe'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).recipes
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.RECIPES)
 	),
 	EntryHandlerInfo(
 		folder=f'data/{NAME_SPACE_VAR}/structures/',
@@ -228,7 +175,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildNbtMeta(fp),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).structures
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.STRUCTURES)
 	),
 	EntryHandlerInfo(
 		folder=f'data/{NAME_SPACE_VAR}/dimension/',
@@ -236,7 +183,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:dimension'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).dimension
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.DIMENSION)
 	),
 	EntryHandlerInfo(
 		folder=f'data/{NAME_SPACE_VAR}/dimension_type/',
@@ -244,7 +191,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 		isTag=False,
 		includeSubdirs=True,
 		buildMetaInfo=lambda fp: buildJsonMeta(fp, schemaId='minecraft:dimension_type'),
-		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).dimension_type
+		getIndex=lambda p: p.indexBundles.setdefault(DatapackContents).resources.getIndex(RESOURCES.DIMENSION_TYPE)
 	),
 ]
 

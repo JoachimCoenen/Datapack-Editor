@@ -8,7 +8,7 @@ from PyQt5.QtGui import QIcon
 from cat.GUI.components.treeBuilders import DataTreeBuilder
 from cat.GUI.pythonGUI import TabOptions
 from gui.icons import icons
-from base.model.project.index import Index, IndexBundle
+from base.model.project.index import DeepIndex, Index, IndexBundle
 from base.model.project.project import Root
 from base.model.session import getSession
 from gui.datapackEditorGUI import DatapackEditorGUI
@@ -105,6 +105,8 @@ def _childrenMaker(data: Root) -> list[TreeItem]:
 		return [TreeItem(type(bundle).__name__, bundle) for bundle in data.indexBundles]
 	elif isinstance(data, IndexBundle):
 		return [TreeItem(name, index) for name, index in data.subIndicesByName.items()]
+	elif isinstance(data, DeepIndex):
+		return [TreeItem(name, index) for name, index in data.indices.items()]
 	elif isinstance(data, Index):
 		return [TreeItem(str(key), str(value)) for key, value in data.items()]
 	else:

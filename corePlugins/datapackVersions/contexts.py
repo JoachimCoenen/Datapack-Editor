@@ -80,18 +80,21 @@ class ResourceLocationHandler(ParsingJsonCtx):
 	def getSchema(self, node: JsonString) -> ResourceLocationSchema:
 		schema = node.schema
 		if isinstance(schema, JsonStringSchema):
-			schema = (schema.args or {}).get('schema')
+			args = (schema.args or {})
+			schema = args.get('schema')
+			allowTags = args.get('allowTags', False) is True
+			onlyTags = args.get('onlyTags', False) is True
 		else:
-			schema = None
-
-		if schema is None:
-			schema = ResourceLocationSchema('', 'any')
+			schema = 'any'
+			allowTags = False
+			onlyTags = False
 
 		if isinstance(schema, str):
-			schema = ResourceLocationSchema('', schema)
-		if not isinstance(schema, ResourceLocationSchema):
-			logError(f"invalid 'schema' argument for JsonArgType '{MINECRAFT_RESOURCE_LOCATION.name}' in JsonStringSchema: {schema}. Expected an instance of ResourceLocationContext.")
-			schema = ResourceLocationSchema('', 'any')
+			schema = ResourceLocationSchema('', schema, allowTags=allowTags, onlyTags=onlyTags)
+		elif not isinstance(schema, ResourceLocationSchema):
+			schemaPos = f"{node.schema.filePath!r} {node.schema.span.start}"
+			logError(f"invalid 'schema' argument for JsonArgType '{MINECRAFT_RESOURCE_LOCATION.name}': '{schema}' here: {schemaPos}.")
+			schema = ResourceLocationSchema('', 'any', allowTags=False, onlyTags=False)
 		return schema
 
 	def getLanguage(self, node: JsonString) -> LanguageId:

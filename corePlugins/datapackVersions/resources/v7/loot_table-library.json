@@ -194,12 +194,12 @@
         "name": {
           "values": {
             "item": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
-            "tag": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item_tag" } },
+            "tag": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item", "onlyTags": true } },
             "loot_table": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "loot_table" } },
             "dynamic": { "$type": "enum", "options": { "contents": "to drop block entity contents.", "minecraft:contents": "to drop block entity contents." } },
             
             "minecraft:item": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
-            "minecraft:tag": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item_tag" } },
+            "minecraft:tag": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item", "onlyTags": true } },
             "minecraft:loot_table": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "loot_table" } },
             "minecraft:dynamic": { "$type": "enum", "options": { "contents": "to drop block entity contents.", "minecraft:contents": "to drop block entity contents." } }
           },

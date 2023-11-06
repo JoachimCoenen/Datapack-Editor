@@ -33,19 +33,19 @@ def initPlugin() -> None:
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
 
 
-@argumentContext(MINECRAFT_DIMENSION.name, rlcSchema=ResourceLocationSchema('', 'dimension'))
-@argumentContext(MINECRAFT_ENTITY_SUMMON.name, rlcSchema=ResourceLocationSchema('', 'entity_summon'))
-@argumentContext(MINECRAFT_ENTITY_TYPE.name, rlcSchema=ResourceLocationSchema('', 'entity_type'))
-@argumentContext(MINECRAFT_FUNCTION.name, rlcSchema=ResourceLocationSchema('', 'function_type'))
-@argumentContext(MINECRAFT_ITEM_ENCHANTMENT.name, rlcSchema=ResourceLocationSchema('', 'enchantment'))
-@argumentContext(MINECRAFT_MOB_EFFECT.name, rlcSchema=ResourceLocationSchema('', 'mob_effect'))
-@argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle'))
-@argumentContext(MINECRAFT_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'predicate'))
-@argumentContext(MINECRAFT_LOOT_TABLE.name, rlcSchema=ResourceLocationSchema('', 'loot_table'))
-@argumentContext(MINECRAFT_RESOURCE_LOCATION.name, rlcSchema=ResourceLocationSchema('', 'any_no_tag'))
-@argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name, rlcSchema=ResourceLocationSchema('', 'any_no_tag'))  # TODO: add validation for objective_criteria
-@argumentContext(DPE_ADVANCEMENT.name, rlcSchema=ResourceLocationSchema('', 'advancement'))
-@argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome'))
+@argumentContext(MINECRAFT_DIMENSION.name, rlcSchema=ResourceLocationSchema('', 'dimension', allowTags=False))
+@argumentContext(MINECRAFT_ENTITY_SUMMON.name, rlcSchema=ResourceLocationSchema('', 'entity_type', allowTags=False))
+@argumentContext(MINECRAFT_ENTITY_TYPE.name, rlcSchema=ResourceLocationSchema('', 'entity_type', allowTags=True))
+@argumentContext(MINECRAFT_FUNCTION.name, rlcSchema=ResourceLocationSchema('', 'function', allowTags=True))
+@argumentContext(MINECRAFT_ITEM_ENCHANTMENT.name, rlcSchema=ResourceLocationSchema('', 'enchantment', allowTags=False))
+@argumentContext(MINECRAFT_MOB_EFFECT.name, rlcSchema=ResourceLocationSchema('', 'mob_effect', allowTags=False))
+@argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle', allowTags=False))
+@argumentContext(MINECRAFT_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'predicate', allowTags=False))
+@argumentContext(MINECRAFT_LOOT_TABLE.name, rlcSchema=ResourceLocationSchema('', 'loot_table', allowTags=False))
+@argumentContext(MINECRAFT_RESOURCE_LOCATION.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))
+@argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))  # TODO: add validation for objective_criteria
+@argumentContext(DPE_ADVANCEMENT.name, rlcSchema=ResourceLocationSchema('', 'advancement', allowTags=False))
+@argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome', allowTags=False))
 class ResourceLocationLikeHandler(ParsingHandler):
 	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()
@@ -88,8 +88,8 @@ class BlockPosHandler(ArgumentContext):
 		return _get3dPosSuggestions(ai, node, pos, replaceCtx, useFloat=self.useFloat(ai))
 
 
-@argumentContext(MINECRAFT_BLOCK_STATE.name, rlcSchema=ResourceLocationSchema('', 'block'))
-@argumentContext(MINECRAFT_BLOCK_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'block_type'))
+@argumentContext(MINECRAFT_BLOCK_STATE.name, rlcSchema=ResourceLocationSchema('', 'block', allowTags=False))
+@argumentContext(MINECRAFT_BLOCK_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'block', allowTags=True))
 class BlockStateHandler(ArgumentContext):
 	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()
@@ -323,8 +323,8 @@ class ItemSlotHandler(ArgumentContext):
 		return [bytesToStr(slot) for slot in getCurrentFullMcData().slots.keys()]
 
 
-@argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item'))
-@argumentContext(MINECRAFT_ITEM_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'item_type'))
+@argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=False))
+@argumentContext(MINECRAFT_ITEM_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=True))
 class ItemStackHandler(ArgumentContext):
 	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()

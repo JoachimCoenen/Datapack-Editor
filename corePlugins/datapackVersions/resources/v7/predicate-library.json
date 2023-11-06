@@ -237,7 +237,7 @@
     "%%2!": {
       "$type": "string",
       "type": "minecraft:resource_location",
-      "args": { "schema": "block_type" }
+      "args": { "schema": "block", "allowTags": true }
     },
     "%%3!": {
       "$type": "calculated",

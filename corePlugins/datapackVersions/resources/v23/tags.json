@@ -8,7 +8,7 @@
       "$body": {
         "$type": "string",
         "type": "minecraft:resource_location",
-        "args": { "schema": { "$ref": "#schema" } },
+        "args": { "schema": { "$ref": "#schema" }, "allowTags": true },
         "description": "An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`."
       }
     },
@@ -71,9 +71,9 @@
     // from minecraft registry:
     "attribute": { "$ref": "tags", "schema": "attribute" }, // Attribute
     "block": { "$ref": "tags", "schema": "block" }, // Block
-    "block_entity_type": { "$ref": "tags", "schema": "block_entity_type" }, // Block entity type
+    "block_entity_type": { "$ref": "tags", "schema": "block_entity" }, // Block entity type
     "chunk_status": { "$ref": "tags", "schema": "chunk_status" }, // Chunk status
-    "command_argument_type": { "$ref": "tags", "schema": "command_argument_type" }, // Command argument type
+    "command_argument_type": { "$ref": "tags", "schema": "command_argument" }, // Command argument type
     "dimension": { "$ref": "tags", "schema": "dimension" }, // Dimension and Level stem
     "dimension_type": { "$ref": "tags", "schema": "dimension_type" }, // Dimension type
     "enchantment": { "$ref": "tags", "schema": "enchantment" }, // Enchantment
@@ -150,7 +150,7 @@
     // additional tags:
     "block_type": { "$defRef": "block"}, // alias
     "fluid_type": { "$defRef": "fluid"}, // alias
-    "function": { "$ref": "tags", "schema": "function_type" },
+    "function": { "$ref": "tags", "schema": "function" },
     "item_type": { "$defRef": "item"}, // alias
     "chat_type": { "$ref": "tags", "schema": "chat_type" },
     "damage_type": { "$ref": "tags", "schema": "damage_type" },

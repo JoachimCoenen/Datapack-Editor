@@ -21,70 +21,45 @@ class DatapackVersionsPlugin(PluginBase):
 		return {'DatapackPlugin', 'JsonPlugin', 'NbtPlugin', 'DatapackPlugin', 'MinecraftPlugin'}
 
 	def schemaMappings(self) -> dict[LanguageId, list[SchemaMapping]]:
+		from corePlugins.datapackVersions.allVersions import REGISTRY_TAGS, WORLDGEN
 		mappings = [
 			SchemaMapping(
 				schemaId='minecraft:pack',
 				pathFilter='/pack.mcmeta',
 			),
 			# TagInfos:
-			SchemaMapping(
-				schemaId='minecraft:tags/block_type',
-				pathFilter='data/*/tags/blocks/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:tags/entity_type',
-				pathFilter='data/*/tags/entity_types/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:tags/fluid_type',
-				pathFilter='data/*/tags/fluids/**.json',
-			),
+			*[
+				SchemaMapping(
+					schemaId=f'minecraft:{indexPath}',
+					pathFilter=f'data/*/{folder}/**.json',
+				)
+				for indexPath, folder in REGISTRY_TAGS.items()
+			],
 			SchemaMapping(
 				schemaId='minecraft:tags/function',
 				pathFilter='data/*/tags/functions/**.json',
 			),
 			SchemaMapping(
-				schemaId='minecraft:tags/game_event',
-				pathFilter='data/*/tags/game_events/**.json',
+				schemaId='minecraft:tags/chat_type',
+				pathFilter='data/*/tags/chat_type/**.json',
 			),
 			SchemaMapping(
-				schemaId='minecraft:tags/item_type',
-				pathFilter='data/*/tags/items/**.json',
+				schemaId='minecraft:tags/damage_type',
+				pathFilter='data/*/tags/damage_type/**.json',
+			),
+			SchemaMapping(
+				schemaId='minecraft:tags/instrument',
+				pathFilter='data/*/tags/instrument/**.json',
 			),
 
 			# WorldGenInfos:
-			SchemaMapping(
-				schemaId='minecraft:worldgen/biome',
-				pathFilter='data/*/worldgen/biome/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:worldgen/configured_carver',
-				pathFilter='data/*/worldgen/configured_carver/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:worldgen/configured_feature',
-				pathFilter='data/*/worldgen/configured_feature/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:worldgen/configured_structure_feature',
-				pathFilter='data/*/worldgen/configured_structure_feature/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:worldgen/configured_surface_builder',
-				pathFilter='data/*/worldgen/configured_surface_builder/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:worldgen/noise_settings',
-				pathFilter='data/*/worldgen/noise_settings/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:worldgen/processor_list',
-				pathFilter='data/*/worldgen/processor_list/**.json',
-			),
-			SchemaMapping(
-				schemaId='minecraft:worldgen/template_pool',
-				pathFilter='data/*/worldgen/template_pool/**.json',
-			),
+			*[
+				SchemaMapping(
+					schemaId=f'minecraft:{indexPath}',
+					pathFilter=f'data/*/{folder}/**.json',
+				)
+				for indexPath, folder in WORLDGEN.items()
+			],
 
 			# DatapackContents:
 			SchemaMapping(
