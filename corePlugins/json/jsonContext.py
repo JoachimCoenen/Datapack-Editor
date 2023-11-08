@@ -10,7 +10,6 @@ from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import joinFilePath, dirFromFilePath
 from base.model.session import getSession
-from . import validator2
 from .core import *
 from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, parseNPrepare, prepareTree, validateTree, \
 	getSuggestions, getDocumentation, getClickableRanges, onIndicatorClicked
@@ -175,9 +174,13 @@ class JsonCtxProvider(ContextProvider[JsonNode]):
 
 	def getContext(self, node: JsonNode) -> Optional[JsonContext]:
 		schema = node.schema
-		if schema is not None and schema.typeName in {'string', 'key'} and schema.type is not None:
+		if schema is not None and isinstance(schema, JsonStringSchema) and schema.type is not None:
 			return getJsonStringContext(schema.type)
 		return JSON_DEFAULT_CONTEXT
+
+	def validateTree(self, errorsIO: list[GeneralError]) -> None:
+		from . import validator2
+		validator2.validateJson(self.tree, errorsIO)
 
 	def _getSuggestionsForBefore(self, pos: Position, before: JsonNode, contained: list[JsonNode], replaceCtx: str) -> Suggestions:
 		if isinstance(before.schema, JsonKeySchema):
@@ -316,7 +319,7 @@ class JsonContext(Context[JsonNode]):
 		pass
 
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
-		validator2.validateJson(node, errorsIO)
+		raise ValueError("JsonContext.validate() should never be called. use validator2.validateJson(...) instead!")
 
 	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
 		return []

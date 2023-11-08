@@ -4,6 +4,7 @@ from cat.utils.collections_ import AddToDictDecorator
 from .core import *
 from base.model.messages import *
 from base.model.utils import Message, SemanticsError, Span, GeneralError, Position
+from .jsonContext import getJsonStringContext
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG = Message("Expected whitespace to end one argument, but found trailing data: `{0}`", 1)
 NO_JSON_SCHEMA_MSG = Message("No JSON Schema for {0}", 1)
@@ -27,10 +28,8 @@ def validateJson(data: JsonData, errorsIO: list[GeneralError]) -> None:
 		validator = getSchemaValidator(data.schema.typeName, None)
 		validator(data, data.schema, errorsIO=errorsIO)
 	else:
-		# error has already been logged, because no schema means this node (or one of its parents) was unexpected.
-		# msg = NO_JSON_SCHEMA_MSG.format(data.typeName)
-		# errorsIO.append(JsonSemanticsError(msg, Span(data.span.start)))
-		pass
+		msg = NO_JSON_SCHEMA_MSG.format(data.typeName)
+		errorsIO.append(SemanticsError(msg, Span(data.span.start)))
 
 
 class ValidatorFunc(Protocol):
@@ -90,7 +89,9 @@ def validateJsonString(data: JsonData, schema: JsonStringSchema, *, errorsIO: li
 	if not isinstance(data, JsonString):
 		errorsIO.append(wrongTypeError(schema, data))
 		return
-	if schema.type is not None:  # specialized StringHandlers validate string on their own.
+	if (ctx := getJsonStringContext(schema.type)) is not None:
+		ctx.validate(data, errorsIO)
+	elif schema.type is not None:  # specialized StringHandlers validate string on their own.
 		# if we end up here, no specialized string handler hs been found.
 		errorsIO.append(SemanticsError(INTERNAL_ERROR_MSG.format(MISSING_JSON_STRING_HANDLER_MSG, schema.type), data.span, style='info'))
 
@@ -100,6 +101,8 @@ def validateJsonArray(data: JsonData, schema: JsonArraySchema, *, errorsIO: list
 	if not isinstance(data, JsonArray):
 		errorsIO.append(wrongTypeError(schema, data))
 		return
+	for element in data.data:
+		validateJson(element, errorsIO)
 
 
 @schemaValidator(JsonObjectSchema.typeName)
@@ -136,6 +139,8 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 		if prop_schema.deprecated:
 			msg = DEPRECATED_PROPERTY_MSG.format(prop.key.data)
 			errorsIO.append(SemanticsError(msg, prop.key.span, style='warning'))
+
+		validateJson(prop.value, errorsIO)
 
 	for propSchema in schema.propertiesDict.values():
 		if propSchema.name not in validatedProps:
