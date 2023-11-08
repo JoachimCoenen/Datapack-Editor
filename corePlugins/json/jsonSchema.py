@@ -870,6 +870,7 @@ def stringHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 def enumHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	description, deprecated, allowMultilineStr = readCommonValues(self, node)
 	options = self.reqObject(node, 'options')
+	warningOnly = self.optBoolVal(node, 'warningOnly', False)
 	oCtx = options.ctx
 	options2: dict[str, MDStr] = {self.checkType(self.fromRef2(p.key, oCtx), JsonString).data: self.checkType(self.fromRef2(p.value, oCtx), JsonString).data for p in options.data.values()}
 
@@ -884,6 +885,7 @@ def enumHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 		description=description,
 		options=options2,
 		deprecated=deprecated,
+		warningOnly=warningOnly,
 		allowMultilineStr=allowMultilineStr
 	)
 	yield objectSchema

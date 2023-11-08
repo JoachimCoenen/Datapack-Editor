@@ -320,11 +320,12 @@ class JsonStringOptionsSchema(JsonStringSchema):
 			options: dict[str, MDStr],
 			description: MDStr = '',
 			deprecated: bool = False,
+			warningOnly: bool = False,
 			allowMultilineStr: Optional[bool]
 	):
 		super(JsonStringOptionsSchema, self).__init__(
 			type=OPTIONS_JSON_ARG_TYPE,
-			args=dict(values=options),
+			args=dict(values=options, warningOnly=warningOnly),
 			description=description,
 			deprecated=deprecated,
 			allowMultilineStr=allowMultilineStr,
@@ -333,6 +334,7 @@ class JsonStringOptionsSchema(JsonStringSchema):
 	def postProcessJsonStructure(self, structure: dict[str, Any]) -> None:
 		structure['$type'] = 'enum'
 		structure['options'] = structure.pop('args')['values']
+		structure['warningOnly'] = structure.pop('args')['warningOnly']
 		del structure['type']
 
 

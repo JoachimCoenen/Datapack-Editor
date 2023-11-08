@@ -236,6 +236,14 @@
 					},
 					"description": "If set and array is not empty, each of the prefixes will be added before each option in options in addition to the original value. e.g. {\"optionalPrefixes\": [\"AA\", \"BB\"], \"options\": { \"foo\": ...}} -> foo, AAfoo, BBfoo"
 				},
+				"warningOnly": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"enum": { "$type": "boolean" }
+					},
+					"description": "If set and array is not empty, each of the prefixes will be added before each option in options in addition to the original value. e.g. {\"optionalPrefixes\": [\"AA\", \"BB\"], \"options\": { \"foo\": ...}} -> foo, AAfoo, BBfoo"
+				},
 				"type": {
 					"optional": true,
 					"decidingProp": "$type",

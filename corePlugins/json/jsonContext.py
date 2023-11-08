@@ -418,6 +418,8 @@ class OptionsJsonStrContext(JsonStringContext):
 
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
 		if isinstance(node.schema, JsonStringSchema):
+			warningOnly = node.schema.args.get('warningOnly', False)
+			style = 'warning' if warningOnly else 'error'
 			if node.data not in node.schema.args.get('values', ()):
 				errorsIO.append(SemanticsError(UNKNOWN_MSG.format("Option", node.data), node.span, style=style))
 
