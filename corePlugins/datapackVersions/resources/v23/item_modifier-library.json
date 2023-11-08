@@ -244,8 +244,12 @@
           "optional": true
         },
         "lore": {
+          "description": "List of lines to append or replace on the item's lore. Components requiring [ [Raw_JSON_text_format#Component_resolution|resolution] ] are resolved only if <code>entity</code> successfully targets an entity.",
           "decidingProp": "function",
-          "values": { "set_lore": { "$defRef": "%lore-set_lore" } },
+          "values": { "set_lore": {
+            "$type": "array",
+            "element": { "$defRef": "rawJsonText:rawJsonText" }
+          }},
           "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
@@ -343,8 +347,11 @@
           "properties": {
             "type": {
               "description": "Set to <code>context</code> to use a block entity or an entity as the source, or <code>storage</code> to use a command storage as the source.",
-              "$type": "enum",
-              "options": { "context": "", "storage": "", "minecraft:context": "", "minecraft:storage": "" },
+              "value": {
+                "$type": "enum",
+                "options": { "context": "", "storage": ""},
+                "optionalPrefixes": ["minecraft:"]
+              },
               "optional": true
             },
             "target": {
@@ -451,7 +458,7 @@
       "$type": "string",
       "description": "The icon used to mark the destination on the map. Accepts any of the [ [Map#Map icons|map icon text IDs] ] (case insensitive). If <code>mansion</code> or <code>monument</code> is used, the color of the lines on the item texture changes to match the corresponding explorer map. Defaults to <code>mansion</code>.",
       "type": "minecraft:resource_location",
-      "args": { "schema": "text" }
+      "args": { "schema": "map_marker" }
     },
     "%zoom-exploration_map": {
       "$type": "integer",
@@ -665,14 +672,6 @@
     "%seed-set_loot_table": {
       "$type": "integer",
       "description": "Optional. Specifies the loot table seed. If absent or set to 0, the seed won't be put into the NBT, and a random seed will be used when opening the continer."
-    },
-    "%lore-set_lore": {
-      "$type": "array",
-      "description": "List of lines to append or replace on the item's lore.",
-      "element": {
-        "description": "{{nbt|compound}}{{nbt|string}} A line of item lore, following the [ [Raw JSON text format] ]. Components requiring [ [Raw_JSON_text_format#Component_resolution|resolution] ] are resolved only if <code>entity</code> successfully targets an entity.",
-        "$defRef": "rawJsonText:rawJsonText"
-      }
     },
     "%replace-set_lore": {
       "$type": "boolean",
