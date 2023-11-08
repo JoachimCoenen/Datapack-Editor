@@ -1,5 +1,8 @@
 {
   "$schema": "dpe/json/schema",
+  "$meta": {
+    "last_mc_version_checked": "23w44a"
+  }, 
   "$libraries": {
     "serializers": "recipe/serializers.json"
   },
@@ -19,6 +22,36 @@
             "smoking"
           ],
           "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:crafting_shaped",
+          "decidingProp": "type",
+          "decidingValues": ["crafting_shaped"],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:crafting_shapeless",
+          "decidingProp": "type",
+          "decidingValues": ["crafting_shapeless"],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:smithing_transform",
+          "decidingProp": "type",
+          "decidingValues": ["smithing_transform"],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:smithing_trim",
+          "decidingProp": "type",
+          "decidingValues": ["smithing_trim"],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:stonecutting",
+          "decidingProp": "type",
+          "decidingValues": ["stonecutting"],
+          "optionalPrefixes": ["minecraft:"]
         }
       ],
       "properties": {
@@ -32,7 +65,8 @@
               "crafting_shaped": "",
               "crafting_shapeless": "",
               "smelting": "",
-              "smithing": "",
+              "smithing_transform": "",
+              "smithing_trim": "",
               "smoking": "",
               "stonecutting": "",
               "crafting_special_armordye": "",
@@ -47,10 +81,49 @@
               "crafting_special_shielddecoration": "",
               "crafting_special_shulkerboxcoloring": "",
               "crafting_special_tippedarrow": "",
-              "crafting_special_suspiciousstew": ""
+              "crafting_special_suspiciousstew": "",
+              "crafting_decorated_pot": ""
             },
             "optionalPrefixes": ["minecraft:"]
           }
+        },
+        "category": { 
+          "description": "Crafting book category/tab this recipe will appear in",
+          "decidingProp": "type",
+          "values": {
+            "blasting": {"$defRef": "%smelting_categories"},
+            "campfire_cooking": {"$defRef": "%smelting_categories"},
+            "crafting_shaped": {"$defRef": "%crafting_categories"},
+            "crafting_shapeless": {"$defRef": "%crafting_categories"},
+            "smelting": {"$defRef": "%smelting_categories"},
+            // "smithing_transform": no category property supported,
+            // "smithing_trim": no category property supported,
+            "smoking": {"$defRef": "%smelting_categories"},
+            // "stonecutting": no category property supported,
+            "crafting_special_armordye": {"$defRef": "%crafting_categories"},
+            "crafting_special_bannerduplicate": {"$defRef": "%crafting_categories"},
+            "crafting_special_bookcloning": {"$defRef": "%crafting_categories"},
+            "crafting_special_firework_rocket": {"$defRef": "%crafting_categories"},
+            "crafting_special_firework_star": {"$defRef": "%crafting_categories"},
+            "crafting_special_firework_star_fade": {"$defRef": "%crafting_categories"},
+            "crafting_special_mapcloning": {"$defRef": "%crafting_categories"},
+            "crafting_special_mapextending": {"$defRef": "%crafting_categories"},
+            "crafting_special_repairitem": {"$defRef": "%crafting_categories"},
+            "crafting_special_shielddecoration": {"$defRef": "%crafting_categories"},
+            "crafting_special_shulkerboxcoloring": {"$defRef": "%crafting_categories"},
+            "crafting_special_tippedarrow": {"$defRef": "%crafting_categories"},
+            "crafting_special_suspiciousstew": {"$defRef": "%crafting_categories"},
+            "crafting_decorated_pot": {"$defRef": "%crafting_categories"}
+          },
+          "optionalPrefixes": ["minecraft:"],
+          "default": "misc",
+          "optional": true
+        },
+        "show_notification": { 
+          "description": "Determines if a notification is shown when unlocking this recipe.",
+          "value": {"$type": "boolean"},
+          "optional": true,
+          "default": true
         },
         "group": { 
           "description": "A string identifier. Used to group multiple recipes together in the [ [recipe book] ].",
@@ -61,338 +134,34 @@
             "crafting_shaped": {"$type": "string" },
             "crafting_shapeless": {"$type": "string" },
             "smelting": {"$type": "string" },
-            "smithing": {"$type": "string" },
+            "smithing_transform": {"$type": "string" },
+            "smithing_trim": {"$type": "string" },
             "smoking": {"$type": "string" },
             "stonecutting": {"$type": "string" }
           },
           "optionalPrefixes": ["minecraft:"],
           "optional": true
-        },
-        "pattern": {
-          "decidingProp": "type",
-          "values": { "crafting_shaped": { "$defRef": "%pattern-crafting_shaped" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "key": {
-          "decidingProp": "type",
-          "values": { "crafting_shaped": { "$defRef": "%key-crafting_shaped" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "result": {
-          "decidingProp": "type",
-          "values": {
-            "crafting_shaped": { "$defRef": "%result-crafting_shaped" },
-            "crafting_shapeless": { "$defRef": "%result-crafting_shapeless" },
-            "smithing": { "$defRef": "%result-smithing" },
-            "stonecutting": { "$defRef": "%result-stonecutting" }
-          },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "ingredients": {
-          "decidingProp": "type",
-          "values": { "crafting_shapeless": { "$defRef": "%ingredients-crafting_shapeless" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "base": {
-          "decidingProp": "type",
-          "values": { "smithing": { "$defRef": "%base-smithing" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "addition": {
-          "decidingProp": "type",
-          "values": { "smithing": { "$defRef": "%addition-smithing" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "ingredient": {
-          "decidingProp": "type",
-          "values": { "stonecutting": { "$defRef": "%ingredient-stonecutting" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "count": {
-          "decidingProp": "type",
-          "values": { "stonecutting": { "$defRef": "%count-stonecutting" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
         }
       }
     },
-    "%pattern-crafting_shaped": {
-      "$type": "array",
-      "description": "A list of single-character keys used to describe a pattern for shaped crafting. Each row in the crafting grid is one string in this list containing 3 or less keys. All strings in this list need to have the same amount of keys. A space can be used to indicate an empty spot.",
-      "element": {
-        "$type": "string",
-        "description": "A list of single-character keys used to describe a pattern for shaped crafting. Each row in the crafting grid is one string in this list containing 3 or less keys. All strings in this list need to have the same amount of keys. A space can be used to indicate an empty spot."
+    
+    "%crafting_categories": {
+      "$type": "enum",
+      "options": {
+        "building": "",
+        "redstone": "",
+        "equipment": "",
+        "misc": ""
       }
     },
-    "%key-crafting_shaped": {
-      "$type": "object",
-      "description": "(A key): All keys used for this shaped crafting recipe.",
-      "properties": {},
-      "default-property": {
-        "description": "The ingredient corresponding to this key.",
-        "value": {
-          "$type": "union",
-          "options": [
-            {
-              "$type": "object",
-              "properties": {
-                "item": {
-                  "description": "An [ [Java Edition data values#Items|item ID] ].",
-                  "value": {
-                    "$type": "string",
-                    "type": "minecraft:resource_location",
-                    "args": { "schema": "item" }
-                  },
-                  "optional": true
-                },
-                "tag": {
-                  "description": "An [ [Tag#Item tags|item tag] ].",
-                  "value": { "$type": "string" },
-                  "optional": true
-                }
-              }
-            },
-            {
-              "$type": "array",
-              "element": {
-                "$type": "object",
-                "description": "An accepted ingredient.",
-                "properties": {
-                  "item": {
-                    "description": "An [ [Java Edition data values#Items|item ID] ].",
-                    "value": {
-                      "$type": "string",
-                      "type": "minecraft:resource_location",
-                      "args": { "schema": "item" }
-                    },
-                    "optional": true
-                  },
-                  "tag": {
-                    "description": "An [ [Tag#Item tags|item tag] ].",
-                    "value": { "$type": "string" },
-                    "optional": true
-                  }
-                }
-              }
-            }
-          ]
-        },
-        "optional": true
+    
+    "%smelting_categories": {
+      "$type": "enum",
+      "options": {
+        "food": "",
+        "blocks": "",
+        "misc": ""
       }
-    },
-    "%result-crafting_shaped": {
-      "$type": "object",
-      "description": "The output item of the recipe.",
-      "properties": {
-        "count": {
-          "description": "Optional. The amount of the item. Falls back to 1 if the field is absent.",
-          "value": { "$type": "integer" },
-          "optional": true
-        },
-        "item": {
-          "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "item" }
-          },
-          "optional": true
-        }
-      }
-    },
-    "%result-crafting_shapeless": {
-      "$type": "object",
-      "description": "The output item of the recipe.",
-      "properties": {
-        "count": {
-          "description": "Optional. The amount of the item. Falls back to 1 if the field is absent.",
-          "value": { "$type": "integer" },
-          "optional": true
-        },
-        "item": {
-          "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "item" }
-          },
-          "optional": true
-        }
-      }
-    },
-    "%result-smithing": {
-      "$type": "object",
-      "description": " Item specifying the resulting type of the upgraded item.",
-      "properties": {
-        "item": {
-          "description": "An [ [Java Edition data values#Items|item ID] ]. // developer comment: maybe there are more tags...",
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "item" }
-          },
-          "optional": true
-        }
-      }
-    },
-    "%result-stonecutting": {
-      "$type": "string",
-      "description": "An [ [Java Edition data values#Items|item ID] ]. The output item of the recipe.",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "item" }
-    },
-    "%ingredients-crafting_shapeless": {
-      "$type": "array",
-      "description": "A list of entries for this shapeless crafting recipe. Must have 1 to 9 entries.",
-      "element": {
-        "$type": "union",
-        "options": [
-          {
-            "$type": "object",
-            "description": "An entry made of a single ingredient.",
-            "properties": {
-              "item": {
-                "description": "An [ [Java Edition data values#Items|item ID] ].",
-                "value": {
-                  "$type": "string",
-                  "type": "minecraft:resource_location",
-                  "args": { "schema": "item" }
-                },
-                "optional": true
-              },
-              "tag": {
-                "description": "An [ [Tag#Item Tags|item tag] ].",
-                "value": { "$type": "string" },
-                "optional": true
-              }
-            }
-          },
-          {
-            "$type": "array",
-            "description": "An entry made of a list of acceptable ingredients.",
-            "element": {
-              "$type": "object",
-              "description": "An acceptable ingredient.",
-              "properties": {
-                "item": {
-                  "description": "An [ [Java Edition data values#Items|item ID] ].",
-                  "value": {
-                    "$type": "string",
-                    "type": "minecraft:resource_location",
-                    "args": { "schema": "item" }
-                  },
-                  "optional": true
-                },
-                "tag": {
-                  "description": "An [ [Tag#Item Tags|item tag] ].",
-                  "value": { "$type": "string" },
-                  "optional": true
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    "%base-smithing": {
-      "$type": "object",
-      "description": " Ingredient specifying an item to be upgraded.",
-      "properties": {
-        "item": {
-          "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "item" }
-          },
-          "optional": true
-        },
-        "tag": {
-          "description": "An [ [Tag#Item Tags|item tag] ].",
-          "value": { "$type": "string" },
-          "optional": true
-        }
-      }
-    },
-    "%addition-smithing": {
-      "$type": "object",
-      "description": " ",
-      "properties": {
-        "item": {
-          "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "item" }
-          },
-          "optional": true
-        },
-        "tag": {
-          "description": "An [ [Tag#Item Tags|item tag] ].",
-          "value": { "$type": "string" },
-          "optional": true
-        }
-      }
-    },
-    "%ingredient-stonecutting": {
-      "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "The ingredient for the recipe.",
-          "properties": {
-            "item": {
-              "description": "An [ [Java Edition data values#Items|item ID] ].",
-              "value": {
-                "$type": "string",
-                "type": "minecraft:resource_location",
-                "args": { "schema": "item" }
-              },
-              "optional": true
-            },
-            "tag": {
-              "description": "An [ [Tag#Item Tags|item tag] ].",
-              "value": { "$type": "string" },
-              "optional": true
-            }
-          }
-        },
-        {
-          "$type": "array",
-          "description": "The list of ingredients for the recipe.",
-          "element": {
-            "$type": "object",
-            "description": "An accepted ingredient.",
-            "properties": {
-              "item": {
-                "description": "An [ [Java Edition data values#Items|item ID] ].",
-                "value": {
-                  "$type": "string",
-                  "type": "minecraft:resource_location",
-                  "args": { "schema": "item" }
-                },
-                "optional": true
-              },
-              "tag": {
-                "description": "An [ [Tag#Item Tags|item tag] ].",
-                "value": { "$type": "string" },
-                "optional": true
-              }
-            }
-          }
-        }
-      ]
-    },
-    "%count-stonecutting": {
-      "$type": "integer",
-      "description": "The amount of the output item."
     }
   }
 }

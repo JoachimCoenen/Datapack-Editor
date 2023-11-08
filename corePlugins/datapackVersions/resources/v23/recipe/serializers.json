@@ -1,71 +1,21 @@
 {
   "$schema": "dpe/json/schema/library",
   "$libraries": {},
-  "$body": { "$defRef": "cooking" },
   "$templates": {},
   "$definitions": {
+    
     "cooking": {
       "$type": "object",
       "properties": {
         "ingredient": {
           "description": "The ingredient.",
-          "value": {
-            "$type": "union",
-            "options": [
-              {
-                "$type": "object",
-                "properties": {
-                  "item": {
-                    "description": "An [ [Java Edition data values#Items|item ID] ].",
-                    "value": {
-                      "$type": "string",
-                      "type": "minecraft:resource_location",
-                      "args": { "schema": "item" }
-                    },
-                    "optional": true
-                  },
-                  "tag": {
-                    "description": "An [ [Tag#Item tags|item tag] ].",
-                    "value": { "$type": "string" },
-                    "optional": true
-                  }
-                }
-              },
-              {
-                "$type": "array",
-                "element": {
-                  "$type": "object",
-                  "description": "An acceptable ingredient.",
-                  "properties": {
-                    "item": {
-                      "description": "An [ [Java Edition data values#Items|item ID] ].",
-                      "value": {
-                        "$type": "string",
-                        "type": "minecraft:resource_location",
-                        "args": { "schema": "item" }
-                      },
-                      "optional": true
-                    },
-                    "tag": {
-                      "description": "An [ [Tag#Item tags|item tag] ].",
-                      "value": { "$type": "string" },
-                      "optional": true
-                    }
-                  }
-                }
-              }
-            ]
-          },
+          "value": { "$defRef": "%ingredient_options" },
           "optional": true
         },
         "result": {
           "description": "An [ [Java Edition data values#Items|item ID] ]. The output item of the recipe.",
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "item" }
-          },
-          "optional": true
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "optional": false
         },
         "experience": {
           "description": "The output [ [experience] ] of the recipe.",
@@ -75,6 +25,149 @@
         "cookingtime": {
           "description": "Optional. The cook time of the recipe in ticks. Will fallback to the default time if the field is absent.",
           "value": { "$type": "integer" },
+          "optional": true
+        }
+      }
+    },
+    
+    "crafting_shaped": {
+      "$type": "object",
+      "properties": {
+        "pattern": {
+          "description": "A list of single-character keys used to describe a pattern for shaped crafting. Each row in the crafting grid is one string in this list containing 3 or less keys. All strings in this list need to have the same amount of keys. A space can be used to indicate an empty spot.",
+          "value": { "$type": "array", "element": { "$type": "string" } },
+          "optional": true
+        },
+        "key": {
+          "description": "(A key): All keys used for this shaped crafting recipe.",
+          "value": {
+            "$type": "object",
+            "properties": {},
+            "default-property": {
+              "description": "The ingredient corresponding to this key.",
+              "value": { "$defRef": "%ingredient_options" },
+              "optional": true
+            }
+          },
+          "optional": true
+        },
+        "result": {
+          "value": { "$defRef": "%result-crafting_shaped" },
+          "optional": false
+        }
+      }
+    },
+    
+    "crafting_shapeless": {
+      "$type": "object",
+      "properties": {
+        "ingredients": {
+          "value": { "$type": "array", "element": { "$defRef": "%ingredient_options" } },
+          "optional": true
+        },
+        "result": {
+          "value": { "$defRef": "%result-crafting_shaped" },
+          "optional": false
+        }
+      }
+    },
+    
+    "smithing_trim": {
+      "$type": "object",
+      "inherits": [{ "defRef": "%smithing_base" }],
+      "properties": {}
+    },
+    
+    "smithing_transform": {
+      "$type": "object",
+      "inherits": [{ "defRef": "%smithing_base" }],
+      "properties": {
+        "result": {
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "optional": false,
+          "description": "Item specifying the resulting upgraded item."
+        }
+      }
+    },
+    
+    "%smithing_base": {
+      "$type": "object",
+      "properties": {
+        "base": {
+          "value": { "$defRef": "%ingredient_options" },
+          "optional": false,
+          "description": "Ingredient specifying an item to be upgraded."
+        },
+        "addition": {
+          "value": { "$defRef": "%ingredient_options" },
+          "optional": true,
+          "description": "Ingredient specifying an item to be added."
+        },
+        "template": {
+          "value": { "$defRef": "%ingredient_options" },
+          "optional": true,
+          "description": "Ingredient specifying an item to act as the template."
+        }
+      }
+    },
+    
+    "stonecutting": {
+      "$type": "object",
+      "properties": {
+        "ingredient": {
+          "value": { "$defRef": "%ingredient_options" },
+          "optional": false
+        },
+        "result": {
+          "description": "An [ [Java Edition data values#Items|item ID] ].",
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "optional": false
+        },
+        "count": {
+          "description": "Optional. The amount of the item. Falls back to 1 if the field is absent.",
+          "value": { "$type": "integer" },
+          "optional": false
+        }
+      }
+    },
+    
+    "%result-crafting_shaped": {
+      "$type": "object",
+      "description": "The output item of the recipe.",
+      "properties": {
+        "count": {
+          "description": "Optional. The amount of the item. Falls back to 1 if the field is absent.",
+          "value": { "$type": "integer" },
+          "optional": true,
+          "default": 1
+        },
+        "item": {
+          "description": "An [ [Java Edition data values#Items|item ID] ].",
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "optional": false
+        }
+      }
+    },
+    
+    "%ingredient_options": {
+      "$type": "union",
+      "options": [
+        { "$defRef": "%item_or_tag" },
+        { "$type": "array", "element": { "$defRef": "%item_or_tag" } }
+      ]
+    },
+    
+    "%item_or_tag": {
+      "$type": "object",
+      "properties": {
+        "item": {
+          "description": "An [ [Java Edition data values#Items|item ID] ].",
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "optional": true
+        },
+        "tag": {
+          "description": "An [ [Tag#Item tags|item tag] ].",
+          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item", "onlyTags": true } },
           "optional": true
         }
       }
