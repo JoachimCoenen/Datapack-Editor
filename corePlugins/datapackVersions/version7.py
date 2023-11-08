@@ -287,13 +287,13 @@ def loadJsonSchemas() -> dict[str, JsonSchema]:
 	v7Dir = os.path.join(resourcesDir, "v7/")
 	v7Schemas = {
 		**JSON_SCHEMA_LOADER.loadSchemaLibrary('minecraft:tags', os.path.join(v7Dir, 'tags.json')),
-		'minecraft:raw_json_text': JSON_SCHEMA_LOADER.loadSchema('minecraft:raw_json_text', os.path.join(v7Dir, 'rawJsonText.json')),
-		'minecraft:predicate': JSON_SCHEMA_LOADER.loadSchema('minecraft:predicate', os.path.join(v7Dir, 'predicate.json')),
-		'minecraft:recipe': JSON_SCHEMA_LOADER.loadSchema('minecraft:recipe', os.path.join(v7Dir, 'recipe.json')),
-		'minecraft:pack': JSON_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v7Dir, 'pack.json')),
-		'minecraft:loot_table': JSON_SCHEMA_LOADER.loadSchema('minecraft:loot_table', os.path.join(v7Dir, 'loot_table.json')),
-		'minecraft:item_modifier': JSON_SCHEMA_LOADER.loadSchema('minecraft:item_modifier', os.path.join(v7Dir, 'item_modifier.json')),
-		'minecraft:advancement': JSON_SCHEMA_LOADER.loadSchema('minecraft:advancement', os.path.join(v7Dir, 'advancements/advancement.json')), # advancement.json is for datapack version 20!
+		# 'minecraft:raw_json_text': JSON_SCHEMA_LOADER.loadSchema('minecraft:raw_json_text', os.path.join(v7Dir, 'rawJsonText.json')),
+		# 'minecraft:predicate': JSON_SCHEMA_LOADER.loadSchema('minecraft:predicate', os.path.join(v7Dir, 'predicate.json')),
+		# 'minecraft:recipe': JSON_SCHEMA_LOADER.loadSchema('minecraft:recipe', os.path.join(v7Dir, 'recipe.json')),
+		# 'minecraft:pack': JSON_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v7Dir, 'pack.json')),
+		# 'minecraft:loot_table': JSON_SCHEMA_LOADER.loadSchema('minecraft:loot_table', os.path.join(v7Dir, 'loot_table.json')),
+		# 'minecraft:item_modifier': JSON_SCHEMA_LOADER.loadSchema('minecraft:item_modifier', os.path.join(v7Dir, 'item_modifier.json')),
+		# 'minecraft:advancement': JSON_SCHEMA_LOADER.loadSchema('minecraft:advancement', os.path.join(v7Dir, 'advancements/advancement.json')), # advancement.json is for datapack version 20!
 	}
 	return v7Schemas
 
