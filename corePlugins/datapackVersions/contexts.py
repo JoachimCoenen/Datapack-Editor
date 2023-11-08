@@ -5,7 +5,7 @@ from cat.utils.logging_ import logError
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
 from .argTypes import *
-from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, RESOURCE_LOCATION_ID
+from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, RESOURCE_LOCATION_ID, getAllKnownResourceLocationContexts
 from corePlugins.json.core import *
 from corePlugins.json.jsonContext import jsonStringContext, JsonStringContext
 from corePlugins.nbt.tags import NBTTagSchema
@@ -99,6 +99,32 @@ class ResourceLocationHandler(ParsingJsonCtx):
 
 	def getLanguage(self, node: JsonString) -> LanguageId:
 		return RESOURCE_LOCATION_ID
+
+	def getArgsSchema(self) -> tuple[JsonObjectSchema | JsonUnionSchema | JsonIllegalSchema, bool]:
+		allResLocCtxKeys = getAllKnownResourceLocationContexts().keys()
+		properties: list[PropertySchema] = [
+			PropertySchema(
+				name='schema',
+				value=JsonStringOptionsSchema(options={val: MDStr("") for val in allResLocCtxKeys}, warningOnly=True, allowMultilineStr=False),
+				optional=False,
+				allowMultilineStr=None
+			),
+			PropertySchema(
+				name='allowTags',
+				value=JsonBoolSchema(allowMultilineStr=None),
+				optional=True,
+				default=False,
+				allowMultilineStr=None
+			),
+			PropertySchema(
+				name='onlyTags',
+				value=JsonBoolSchema(allowMultilineStr=None),
+				optional=True,
+				default=False,
+				allowMultilineStr=None
+			),
+		]
+		return JsonObjectSchema(properties=properties, allowMultilineStr=None).finish(), True
 
 
 @jsonStringContext(MINECRAFT_NBT_COMPOUND_TAG.name)

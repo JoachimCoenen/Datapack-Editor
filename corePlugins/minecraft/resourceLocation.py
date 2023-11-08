@@ -238,6 +238,10 @@ def getResourceLocationContext(aType: str) -> Optional[ResourceLocationContext]:
 	return __resourceLocationContexts.get(aType, None)
 
 
+def getAllKnownResourceLocationContexts() -> Mapping[str, ResourceLocationContext]:
+	return __resourceLocationContexts
+
+
 def choicesFromResourceLocations(text: str, locations: Iterable[ResourceLocation]) -> list[str]:
 	tree = autoCompletionTreeForResourceLocations(locations)
 	return choicesFromAutoCompletionTree(tree, text)
@@ -266,6 +270,7 @@ __all__ = [
 	'ResourceLocationContext',
 	'resourceLocationContext',
 	'getResourceLocationContext',
+	'getAllKnownResourceLocationContexts',
 	'containsResourceLocation',
 	'isNamespaceValid',
 ]

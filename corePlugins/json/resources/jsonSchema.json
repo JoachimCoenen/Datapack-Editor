@@ -258,8 +258,8 @@
 					"decidingProp": "$type",
 					"values": {
 						"string": { "$ref": "orRef", "type": {
-							"$type": "object",
-							"default-property": { "$type": "any" }
+							"$type": "calculated",
+							"function": "corePlugins.json.jsonContext.getStringSchemaArgTypeArgsSchema"
 						}}
 					}
 				},

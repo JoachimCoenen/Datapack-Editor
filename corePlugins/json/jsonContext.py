@@ -12,11 +12,13 @@ from base.model.pathUtils import joinFilePath, dirFromFilePath
 from base.model.session import getSession
 from . import validator2
 from .core import *
-from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, parseNPrepare, validateTree, getSuggestions, \
-	getDocumentation, getClickableRanges, onIndicatorClicked
+from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, parseNPrepare, prepareTree, validateTree, \
+	getSuggestions, getDocumentation, getClickableRanges, onIndicatorClicked
 from base.model.utils import Position, SemanticsError, Span, GeneralError, MDStr, LanguageId
 from .argTypes import *
+from .jsonSchema import JObject, SchemaBuilder
 from .lexer import INVALID_NUMBER_MSG
+from .schema import enrichWithSchema
 from .schemaStore import JSON_SCHEMA_LOADER
 from base.model.messages import UNKNOWN_MSG
 
@@ -311,7 +313,56 @@ JSON_DEFAULT_CONTEXT = JsonContext()
 
 
 class JsonStringContext(JsonContext, ABC):
-	pass
+
+	def validateSchemaArgs(
+			self,
+			schemaBuilder: SchemaBuilder,
+			type_: JsonArgType,
+			argsNode: Optional[JObject],
+			typeDefNode: JObject,
+	):
+		expectedArgs, requireArgs = self.getArgsSchema()
+		errors = validateSimpleSchemaArgs(type_, argsNode, typeDefNode.span, expectedArgs, requireArgs, typeDefNode.ctx.filePath)
+		if errors:
+			schemaBuilder.addErrors(errors, ctx=typeDefNode.ctx)
+
+	def getArgsSchema(self) -> tuple[JsonObjectSchema | JsonUnionSchema | JsonIllegalSchema, bool]:
+		"""
+		Override this Function if args are required.
+		:return: (The schema for args or JsonIllegalSchema if there are no args.; whether the 'args' property is mandatory or not.)
+		"""
+		return JSON_ILLEGAL_SCHEMA, False
+
+
+@dataclass
+class ExpectedArg:
+	name: str
+	mandatory: bool
+	expectedType: JsonSchema
+
+
+def validateSimpleSchemaArgs(
+		type_: JsonArgType,
+		argsNode: Optional[JObject],
+		parentSpan: Span,
+		expectedArgs: JsonObjectSchema | JsonUnionSchema | JsonIllegalSchema,
+		requireArgs: bool,
+		filePath: str,
+) -> list[GeneralError]:
+	from .validator2 import MISSING_MANDATORY_PROPERTY_MSG
+
+	if argsNode is None and requireArgs:
+		return [SemanticsError(MISSING_MANDATORY_PROPERTY_MSG.format('args'), parentSpan, style='error')]
+	elif isinstance(expectedArgs, JsonIllegalSchema):
+		if argsNode is not None and argsNode.data:
+			return [SemanticsError(MDStr(f"Unexpected arguments for type '{type_.name}'."), argsNode.span, style='warning')]
+	else:
+		enrichWithSchema(argsNode.n, expectedArgs)
+		errors = []
+		prepareTree(argsNode.n, b'', filePath, errorsIO=errors)
+		validateTree(argsNode.n, b'', errorsIO=errors)
+		return errors
+
 
 
 __jsonStringContexts: dict[str, JsonStringContext] = {}
@@ -615,6 +666,25 @@ class TmplRefJsonStrContext(JsonStringContext):
 		if node.parsedValue is not None and node.parsedValue[0] is not None:
 			getSession().tryOpenOrSelectDocument(node.parsedValue[2], Span(node.parsedValue[0].span.start))
 
+
+##########################################################################################
+################## Providers for calculated schemas in jsonSchema.json ###################
+##########################################################################################
+
+
+def getStringSchemaArgTypeArgsSchema(parent: JsonObject) -> Optional[JsonObjectSchema]:
+
+	typeProp_ = parent.data.get('type', None)
+	type_ = typeProp_.value.data if typeProp_ is not None else None
+
+	jsonArgType = ALL_NAMED_JSON_ARG_TYPES.get(type_) if isinstance(type_, str) else None
+
+	# validate args:
+	if jsonArgType is not None:
+		if (ctx := getJsonStringContext(jsonArgType.name)) is not None:
+			argsSchema, requireArgs = ctx.getArgsSchema()
+			return argsSchema
+	return None
 
 
 

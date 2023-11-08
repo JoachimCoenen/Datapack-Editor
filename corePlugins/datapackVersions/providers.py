@@ -31,13 +31,13 @@ def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[JsonObject
 
 		properties.append(PropertySchema(name=state.name, value=value, optional=True, description=state.description, allowMultilineStr=None))
 
-	return JsonObjectSchema(properties=properties, allowMultilineStr=None)
+	return JsonObjectSchema(properties=properties, allowMultilineStr=None).finish()
 
 
 def propertiesFor_block_state_property(parent: JsonObject) -> Optional[JsonObjectSchema]:
 	blockVal = parent.data.get('block', None)
 	if blockVal is None or not isinstance(blockVal.value, JsonString):
-		return JsonObjectSchema(properties=[], allowMultilineStr=None)
+		return JsonObjectSchema(properties=[], allowMultilineStr=None).finish()
 	else:
 		block = blockVal.value.data
 		block = ResourceLocation.fromString(block)

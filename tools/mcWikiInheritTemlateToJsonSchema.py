@@ -83,7 +83,7 @@ def convert2(text: str, name: str, imports: str, *, forceOptional: bool) -> str:
 		f"{propsStr}\n"
 		f")\n"
 		f"\n"
-		f"{name}.buildPropertiesDict()\n"
+		f"{name}.finish()\n"
 	)
 	return addImports(schema, name)
 

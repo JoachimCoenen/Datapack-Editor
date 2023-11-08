@@ -195,16 +195,13 @@
                   "action": {
                     "optional": false,
                     "value": {
-                      "$type": "string",
-                      "type": "options",
-                      "args": {
-                        "values": {
-                          "open_url": "Opens  value as a URL in the user's default web browser.",
-                          "run_command": "Works in signs, but only on the root text component, not on any children. Activated by using the sign. In chat and written books, this has  value entered in chat as though the player typed it themselves and pressed enter. This can be used to run commands, provided the player has the required permissions. Since they are being run from chat, commands must be prefixed with the usual \"/\" slash. In signs, the command is run by the server at the sign's location, with the player who used the sign as @s. Since they are run by the server, sign commands have the same permission level as a command block instead of using the player's permission level, are not restricted by chat length limits, and do not need to be prefixed with a \"/\" slash.",
-                          "suggest_command": "Opens chat and fills in the command given in value. If a chat message was already being composed, it is overwritten. This does not work in books.",
-                          "change_page": "Can only be used in written books. Changes to page  value if that page exists.",
-                          "copy_to_clipboard": "Copies  value to the clipboard."
-                        }
+                      "$type": "enum",
+                      "options": {
+                        "open_url": "Opens  value as a URL in the user's default web browser.",
+                        "run_command": "Works in signs, but only on the root text component, not on any children. Activated by using the sign. In chat and written books, this has  value entered in chat as though the player typed it themselves and pressed enter. This can be used to run commands, provided the player has the required permissions. Since they are being run from chat, commands must be prefixed with the usual \"/\" slash. In signs, the command is run by the server at the sign's location, with the player who used the sign as @s. Since they are run by the server, sign commands have the same permission level as a command block instead of using the player's permission level, are not restricted by chat length limits, and do not need to be prefixed with a \"/\" slash.",
+                        "suggest_command": "Opens chat and fills in the command given in value. If a chat message was already being composed, it is overwritten. This does not work in books.",
+                        "change_page": "Can only be used in written books. Changes to page  value if that page exists.",
+                        "copy_to_clipboard": "Copies  value to the clipboard."
                       }
                     },
                     "description": "The action to perform when clicked."
@@ -321,15 +318,12 @@
                           },
                           "type": {
                             "optional": false,
-                            "value": { "$type": "string" },
+                            "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "entity_type"} },
                             "description": "A string containing the type of the entity. Should be a namespaced entity ID. Present `minecraft:pig` if invalid."
                           },
                           "name": {
                             "optional": true,
-                            "value": {
-                              "$type": "string",
-                              "type": "minecraft:resource_location"
-                            },
+                            "value": { "$type": "string" },
                             "description": "Hidden if not present. A raw JSON text that is displayed as the name of the entity."
                           }
                         },

@@ -498,16 +498,22 @@ class JsonObjectSchema(JsonSchema[Object]):
 		self.properties: tuple[PropertySchema, ...] = tuple(properties)
 		self.propertiesDict: Mapping[str, PropertySchema] = {}
 		self.anythingProp: Optional[PropertySchema] = None
-		self.buildPropertiesDict()
+		self.isFinished: bool = False
+		# self.finish()
 
-	def buildPropertiesDict(self) -> None:
-		self.propertiesDict, self.anythingProp = self._buildPropertiesDict()
+	def finish(self) -> JsonObjectSchema:
+		if not self.isFinished:
+			self.propertiesDict, self.anythingProp = self._buildPropertiesDict()
+			self.isFinished = True
+		return self
 
 	def _buildPropertiesDict(self) -> tuple[Mapping[str, PropertySchema], Optional[PropertySchema]]:
 		propsDict: dict[str, PropertySchema] = dict()
 		anythingProp = None
 
 		for inherit in self.inherits:
+			if not inherit.schema.isFinished:
+				inherit.schema.finish()
 			if inherit.decidingProp is None:
 				for prop in inherit.schema.propertiesDict.values():
 					anythingProp = self._addProp(anythingProp, prop, propsDict)
@@ -686,8 +692,8 @@ class JsonIllegalSchema(JsonSchema[JsonData]):
 		super(JsonIllegalSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 
 
-JSON_ANY_SCHEMA = JsonAnySchema(allowMultilineStr=None)
-JSON_ILLEGAL_SCHEMA = JsonIllegalSchema(allowMultilineStr=None)
+JSON_ANY_SCHEMA: JsonAnySchema = JsonAnySchema(allowMultilineStr=None)
+JSON_ILLEGAL_SCHEMA: JsonIllegalSchema = JsonIllegalSchema(allowMultilineStr=None)
 
 
 def resolvePath(data: JsonData, path: tuple[str | int, ...]) -> Optional[JsonData]:
