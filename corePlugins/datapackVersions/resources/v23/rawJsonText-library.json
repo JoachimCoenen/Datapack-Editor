@@ -1,371 +1,469 @@
 {
   "$schema": "dpe/json/schema/library",
+  "$meta": {
+    "last_mc_version_checked": "23w44a"
+  }, 
   "$definitions": {
     "rawJsonText": {
       "$type": "union",
       "options": [
-        { "$defRef": "strNumBool" },
+        { "$type": "string" },
         {
           "$type": "array",
           "element": { "$defRef": "rawJsonText" },
           "description": " A list of raw JSON text components. Same as having all components after the first one appended to the first's `extra` array. For example,  `[\"A\", \"B\", \"C\"]` is equivalent to `{\"text\": \"A\", \"extra\": [\"B\", \"C\"]}`."
         },
-        {
-          "$type": "object",
-          "properties": {
-            "text": {
-              "optional": true,
-              "value": { "$defRef": "strNumBool" },
-              "description": "A string containing plain text to display directly. Can also be a number or boolean that is displayed directly."
-            },
-            "translate": {
-              "optional": true,
-              "value": { "$type": "string" },
-              "description": "A translation identifier, corresponding to the identifiers found in loaded language files. Displayed as the corresponding text in the player's selected language. If no corresponding translation can be found, the identifier itself is used as the translated text."
-            },
-            "with": {
-              "optional": true,
-              "value": {
-                "$type": "array",
-                "element": { "$defRef": "rawJsonText" },
-                "description": "A raw JSON text component. If no component is provided for a slot, the slot is displayed as no text."
-              },
-              "requires": [ "translate" ],
-              "description": " A list of raw JSON text components to be inserted into slots in the translation text. Ignored if `translate` is not present. "
-            },
-            "score": {
-              "optional": true,
-              "value": {
-                "$type": "object",
-                "properties": {
-                  "name": {
-                    "optional": false,
-                    "value": {
-                      "$type": "string",
-                      "type": "minecraft:score_holder"
-                    },
-                    "description": "The name of the score holder whose score should be displayed. This can be a selector like `@p` or an explicit name. If the text is a selector, the selector must be guaranteed to never select more than one entity, possibly by adding `limit=1`. If the text is `\"*\"`, it shows the reader's own score (for example, `/tellraw @a {\"score\":{\"name\":\"*\",\"objective\":\"obj\"}}` shows every online player their own score in the \"obj\" objective)"
-                  },
-                  "objective": {
-                    "optional": false,
-                    "value": {
-                      "$type": "string",
-                      "type": "minecraft:objective"
-                    },
-                    "description": "The internal name of the objective to display the player's score in."
-                  },
-                  "value": {
-                    "optional": true,
-                    "value": { "$type": "string" },
-                    "description": "If present, this value is displayed regardless of what the score would have been."
-                  }
-                },
-                "description": "Displays a score holder's current score in an objective. Displays nothing if the given score holder or the given objective do not exist, or if the score holder is not tracked in the objective. "
-              },
-              "description": "This component is resolved into a  text component containing the scoreboard value. "
-            },
-            "selector": {
-              "optional": true,
-              "value": {
-                "$type": "string",
-                "type": "minecraft:entity"
-              },
-              "description": "Displays the name of one or more entities found by a selector. "
-            },
-            "separator": {
-              "optional": true,
-              "value": { "$defRef": "rawJsonText" },
-              "requires": [
-                "selector",
-                "nbt"
-              ],
-              "description": "Defaults to `{\"color\": \"gray\", \"text\": \", \"}`. A raw JSON text component. Used as the separator between different names, if the component selects multiple entities."
-            },
-            "keybind": {
-              "optional": true,
-              "value": { "$type": "string" },
-              "description": "A keybind identifier, to be displayed as the name of the button that is currently bound to that action. For example, `{\"keybind\": \"key.inventory\"}` displays `\"e\"` if the player is using the default control scheme."
-            },
-            "nbt": {
-              "optional": true,
-              "value": {
-                "$type": "string",
-                "type": "minecraft:nbt_path"
-              },
-              "description": "The NBT path used for looking up NBT values from an entity, block entity, or storage. Requires one of `block`, `entity`, or `storage`. Having more than one is allowed, but only one is used."
-            },
-            "interpret": {
-              "optional": true,
-              "default": "false",
-              "value": { "$type": "boolean" },
-              "requires": [ "nbt" ],
-              "description": "Optional, defaults to `false`. If true, the game attempts to parse the text of each NBT value as a raw JSON text component. Ignored if `nbt` is not present."
-            },
-            "block": {
-              "optional": true,
-              "value": {
-                "$type": "string",
-                "type": "minecraft:entity"
-              },
-              "requires": [ "nbt" ],
-              "description": "A string specifying the coordinates of the block entity from which the NBT value is obtained. The coordinates can be absolute, relative, or local. Ignored if `nbt` is not present."
-            },
-            "entity": {
-              "optional": true,
-              "value": {
-                "$type": "string",
-                "type": "minecraft:block_pos"
-              },
-              "requires": [ "nbt" ],
-              "description": "A string specifying the target selector for the entity or entities from which the NBT value is obtained. Ignored if `nbt` is not present."
-            },
-            "storage": {
-              "optional": true,
-              "value": {
-                "$type": "string",
-                "type": "minecraft:resource_location",
-                "args": { "schema": "command_storage" }
-              },
-              "requires": [ "nbt" ],
-              "description": "A string specifying the namespaced ID of the command storage from which the NBT value is obtained. Ignored if `nbt` is not present."
-            },
-            "extra": {
-              "optional": true,
-              "value": {
-                "$type": "array",
-                "element": { "$defRef": "rawJsonText" }
-              },
-              "description": "A list of additional raw JSON text components to be displayed after this one. \nChild text components inherit all formatting and interactivity from the parent component, unless they explicitly override them."
-            },
-            "color": {
-              "optional": true,
-              "value": {
-                "$type": "string",
-                "type": "minecraft:color"
-              },
-              "description": "The color to render the content in. Valid values are `\"black\"`, `\"dark_blue\"`, `\"dark_green\"`, `\"dark_aqua\"`, `\"dark_red\"`, `\"dark_purple\"`, `\"gold\"`, `\"gray\"`, `\"dark_gray\"`, `\"blue\"`, `\"green\"`, `\"aqua\"`, `\"red\"`, `\"light_purple\"`, `\"yellow\"`, `\"white\"`, and `\"reset\"` (cancels out the effects of colors used by parent objects). \nSet to `\"#<hex>\"` to insert any color in the hexadecimal color format. Example: Using `\"#FF0000\"` makes the component red. Must be a full 6-digit value, not 3-digit."
-            },
-            "font": {
-              "optional": true,
-              "default": "minecraft:default",
-              "value": { "$type": "string" },
-              "description": "The resource location of the font for this component in the resource pack within `assets/<namespace>/font`. Defaults to `\"minecraft:default\"`."
-            },
-            "bold": {
-              "optional": true,
-              "default": false,
-              "value": { "$defRef": "booleanStr" },
-              "description": "Whether to render the content in bold."
-            },
-            "italic": {
-              "optional": true,
-              "default": false,
-              "value": { "$defRef": "booleanStr" },
-              "description": "Whether to render the content in italics. Note that text that is italicized by default, such as custom item names, can be unitalicized by setting this to false."
-            },
-            "underlined": {
-              "optional": true,
-              "default": false,
-              "value": { "$defRef": "booleanStr" },
-              "description": "Whether to underline the content."
-            },
-            "strikethrough": {
-              "optional": true,
-              "default": false,
-              "value": { "$defRef": "booleanStr" },
-              "description": "Whether to strikethrough the content."
-            },
-            "obfuscated": {
-              "optional": true,
-              "default": false,
-              "value": { "$defRef": "booleanStr" },
-              "description": "Whether to render the content obfuscated."
-            },
-            "insertion": {
-              "optional": true,
-              "default": false,
-              "value": { "$defRef": "booleanStr" },
-              "description": "When the text is shift-clicked by a player, this string is inserted in their chat input. It does not overwrite any existing text the player was writing. This only works in chat messages."
-            },
-            "clickEvent": {
-              "optional": true,
-              "value": {
-                "$type": "object",
-                "properties": {
-                  "action": {
-                    "optional": false,
-                    "value": {
-                      "$type": "enum",
-                      "options": {
-                        "open_url": "Opens  value as a URL in the user's default web browser.",
-                        "run_command": "Works in signs, but only on the root text component, not on any children. Activated by using the sign. In chat and written books, this has  value entered in chat as though the player typed it themselves and pressed enter. This can be used to run commands, provided the player has the required permissions. Since they are being run from chat, commands must be prefixed with the usual \"/\" slash. In signs, the command is run by the server at the sign's location, with the player who used the sign as @s. Since they are run by the server, sign commands have the same permission level as a command block instead of using the player's permission level, are not restricted by chat length limits, and do not need to be prefixed with a \"/\" slash.",
-                        "suggest_command": "Opens chat and fills in the command given in value. If a chat message was already being composed, it is overwritten. This does not work in books.",
-                        "change_page": "Can only be used in written books. Changes to page  value if that page exists.",
-                        "copy_to_clipboard": "Copies  value to the clipboard."
-                      }
-                    },
-                    "description": "The action to perform when clicked."
-                  },
-                  "value": {
-                    "optional": false,
-                    "decidingProp": "action",
-                    "values": {
-                      "open_url": {
-                        "$type": "string",
-                        "type": "dpe:url"
-                      },
-                      "run_command": {
-                        "$type": "string",
-                        "type": "minecraft:chat_command"
-                      },
-                      "suggest_command": {
-                        "$type": "string",
-                        "type": "minecraft:chat_command",
-                        "args": { "incomplete": true }
-                      },
-                      "change_page": { "$defRef": "floatStr" },
-                      "copy_to_clipboard": { "$type": "string" }
-                    },
-                    "description": "The URL, file path, chat, command or book page used by the specified action."
-                  }
-                }
-              },
-              "description": "Allows for events to occur when the player clicks on text. Only work in chat messages and written books, unless specified otherwise. "
-            },
-            "hoverEvent": {
-              "optional": true,
-              "value": {
-                "$type": "object",
-                "properties": {
-                  "action": {
-                    "optional": false,
-                    "value": {
-                      "$type": "string",
-                      "type": "options",
-                      "args": {
-                        "values": {
-                          "show_text": "Shows a raw JSON text component.",
-                          "show_item": "Shows the tooltip of an item as if it was being hovering over it in an inventory.",
-                          "show_entity": "Shows an entity's name, type, and UUID. Used by  selector."
-                        }
-                      }
-                    },
-                    "description": "The type of tooltip to show."
-                  },
-                  "value": {
-                    "optional": true,
-                    "decidingProp": "action",
-                    "values": {
-                      "show_text": { "$defRef": "rawJsonText" },
-                      "show_item": {
-                        "$type": "string",
-                        "type": "minecraft:nbt_compound_tag",
-                        "description": "A string containing the SNBT for an item stack. See Player.dat format#Item structure."
-                      },
-                      "show_entity": {
-                        "$type": "string",
-                        "type": "minecraft:nbt_compound_tag",
-                        "description": "A string containing SNBT. The SNBT does not represent the full entity data, but only stores the name, type, and UUID of the entity. "
-                      }
-                    },
-                    "description": "The formatting and type of this tag varies depending on the action. Deprecated, use  contents instead.",
-                    "deprecated": true
-                  },
-                  "contents": {
-                    "optional": false,
-                    "decidingProp": "action",
-                    "values": {
-                      "show_text": { "$defRef": "rawJsonText" },
-                      "show_item": {
-                        "$type": "object",
-                        "properties": {
-                          "id": {
-                            "optional": false,
-                            "value": {
-                              "$type": "string",
-                              "type": "minecraft:resource_location",
-                              "args": { "schema": "item" }
-                            },
-                            "description": "The namespaced item ID. Preset `minecraft:air` if invalid."
-                          },
-                          "count": {
-                            "optional": true,
-                            "default": 1,
-                            "value": { "$defRef": "floatStr" },
-                            "description": "Size of the item stack."
-                          },
-                          "tag": {
-                            "optional": true,
-                            "value": {
-                              "$type": "string",
-                              "type": "minecraft:nbt_tag"
-                            },
-                            "description": "A string containing the serialized NBT of the additional information about the item, discussed more in the subsections of the player format page."
-                          }
-                        },
-                        "description": "The item that should be displayed."
-                      },
-                      "show_entity": {
-                        "$type": "object",
-                        "properties": {
-                          "id": {
-                            "optional": false,
-                            "value": {
-                              "$type": "string",
-                              "type": "minecraft:uuid"
-                            },
-                            "description": "A string containing the UUID of the entity in the hyphenated hexadecimal format. Should be a valid UUID."
-                          },
-                          "type": {
-                            "optional": false,
-                            "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "entity_type"} },
-                            "description": "A string containing the type of the entity. Should be a namespaced entity ID. Present `minecraft:pig` if invalid."
-                          },
-                          "name": {
-                            "optional": true,
-                            "value": { "$type": "string" },
-                            "description": "Hidden if not present. A raw JSON text that is displayed as the name of the entity."
-                          }
-                        },
-                        "description": "The entity that should be displayed."
-                      }
-                    },
-                    "description": "The URL, file path, chat, command or book page used by the specified action."
-                  }
-                }
-              },
-              "description": " Allows for a tooltip to be displayed when the player hovers their mouse over text."
+        { "$defRef": "text_component_object" }
+      ]
+    },
+    "text_component_object": {
+      "$type": "object",
+      "properties": {
+        "type": {
+          "optional": true,
+          "value": {
+            "$type": "enum",
+            "options": {
+              "text": "",
+              "translatable": "",
+              "score": "",
+              "selector": "",
+              "keybind": "",
+              "nbt": ""
             }
           },
-          "description": "A text component object. All non-content tags are optional.\nTo be valid, an object must contain the tags for one content type. The different content types and their tags are described below. Having more than one is allowed, but only one is used."
+          "default": "",
+          "description": "Specifies the content type."
+        }
+      },
+      "inherits": [
+        {"defRef": "%formatting"},
+        {"defRef": "%interactivity"},
+        {
+          "defRef": "%type_text",
+          "decidingProp": "type",
+          "decidingValues": ["text", ""]
+        },
+        {
+          "defRef": "%type_translatable",
+          "decidingProp": "type",
+          "decidingValues": ["translatable", ""]
+        },
+        {
+          "defRef": "%type_score",
+          "decidingProp": "type",
+          "decidingValues": ["score", ""]
+        },
+        {
+          "defRef": "%type_selector",
+          "decidingProp": "type",
+          "decidingValues": ["selector", ""]
+        },
+        {
+          "defRef": "%type_keybind",
+          "decidingProp": "type",
+          "decidingValues": ["keybind", ""]
+        },
+        {
+          "defRef": "%type_nbt",
+          "decidingProp": "type",
+          "decidingValues": ["nbt", ""]
         }
       ]
     },
-    "strNumBool": {
-      "$type": "union",
-      "options": [
-        {
-          "$type": "string",
-          "description": "A string containing plain text to display directly. This is the same as an object that only has a  text tag. For example, `\"A\"` and `{\"text\": \"A\"}` are equivalent."
-        },
-        {
-          "$type": "boolean",
-          "description": "A boolean is converted to a string (`\"true\"` or `\"false\"`) to display directly. This is the same as an object that only has a  text tag. For example, true, `\"true\"`, and `{\"text\": \"true\"}` are equivalent."
-        },
-        {
-          "$type": "float",
-          "description": "A number is converted to a string to display directly. This is the same as an object that only has a  text tag. For example, 1.9E10, `\"1.9E10\"`, and `{\"text\": \"1.9E10\"}` are equivalent."
+    "%type_text": {
+      "$type": "object",
+      "properties": {
+        "text": {
+          "optional": true,
+          "value": { "$type": "string" },
+          "description": "A string containing plain text to display directly. Can also be a number or boolean that is displayed directly."
         }
-      ]
+      }
     },
-    "booleanStr": {
+    "%type_translatable": {
+      "$type": "object",
+      "properties": {
+        "translate": {
+          "optional": true,
+          "value": { "$type": "string" },
+          "description": "A translation identifier, corresponding to the identifiers found in loaded language files. Displayed as the corresponding text in the player's selected language. If no corresponding translation can be found, the identifier itself is used as the translated text."
+        },
+        "fallback": {
+          "optional": true,
+          "value": { "$type": "string" },
+          "requires": [ "translate" ],
+          "description": "If no corresponding translation can be found, this is used as the translated text"
+        },
+        "with": {
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": { "$defRef": "rawJsonText" },
+            "description": "A raw JSON text component. If no component is provided for a slot, the slot is displayed as no text."
+          },
+          "requires": [ "translate" ],
+          "description": " A list of raw JSON text components to be inserted into slots in the translation text. Ignored if `translate` is not present. "
+        }
+      }
+    },
+    "%type_score": {
+      "$type": "object",
+      "properties": {
+        "score": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "name": {
+                "optional": false,
+                "value": {
+                  "$type": "string",
+                  "type": "minecraft:score_holder"
+                },
+                "description": "The name of the score holder whose score should be displayed. This can be a selector like `@p` or an explicit name. If the text is a selector, the selector must be guaranteed to never select more than one entity, possibly by adding `limit=1`. If the text is `\"*\"`, it shows the reader's own score (for example, `/tellraw @a {\"score\":{\"name\":\"*\",\"objective\":\"obj\"}}` shows every online player their own score in the \"obj\" objective)"
+              },
+              "objective": {
+                "optional": false,
+                "value": {
+                  "$type": "string",
+                  "type": "minecraft:objective"
+                },
+                "description": "The internal name of the objective to display the player's score in."
+              },
+              "value": {
+                "optional": true,
+                "value": { "$type": "string" },
+                "description": "If present, this value is displayed regardless of what the score would have been."
+              }
+            },
+            "description": "Displays a score holder's current score in an objective. Displays nothing if the given score holder or the given objective do not exist, or if the score holder is not tracked in the objective. "
+          },
+          "description": "This component is resolved into a  text component containing the scoreboard value. "
+        }
+      }
+    },
+    "%type_selector": {
+      "$type": "object",
+      "properties": {
+        "selector": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:target_selector"
+          },
+          "description": "Displays the name of one or more entities found by a selector. "
+        },
+        "separator": {
+          "optional": true,
+          "value": { "$defRef": "rawJsonText" },
+          "requires": [
+            "selector",
+            "nbt"
+          ],
+          "description": "Defaults to `{\"color\": \"gray\", \"text\": \", \"}`. A raw JSON text component. Used as the separator between different names, if the component selects multiple entities."
+        }
+      }
+    },
+    "%type_keybind": {
+      "$type": "object",
+      "properties": {
+        "keybind": {
+          "optional": true,
+          "value": { "$type": "string", "type": "minecraft:keybind_identifier" },
+          "description": "A keybind identifier, to be displayed as the name of the button that is currently bound to that action. For example, `{\"keybind\": \"key.inventory\"}` displays `\"e\"` if the player is using the default control scheme."
+        }
+      }
+    },
+    "%type_nbt": {
+      "$type": "object",
+      "properties": {
+        "source ": {
+          "optional": true,
+          "value": { "$type": "enum", "options": { "block": "", "entity": "", "storage": "" }},
+          "description": "corresponding to the source of the NBT data."
+        },
+        "nbt": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:nbt_path"
+          },
+          "description": "The NBT path used for looking up NBT values from an entity, block entity, or storage. Requires one of `block`, `entity`, or `storage`. Having more than one is allowed, but only one is used."
+        },
+        "interpret": {
+          "optional": true,
+          "default": "false",
+          "value": { "$type": "boolean" },
+          "requires": [ "nbt" ],
+          "description": "Optional, defaults to `false`. If true, the game attempts to parse the text of each NBT value as a raw JSON text component. Ignored if `nbt` is not present."
+        },
+        "separator": {
+          "optional": true,
+          "value": { "$defRef": "rawJsonText" },
+          "requires": [
+            "selector",
+            "nbt"
+          ],
+          "description": "Defaults to `{\"color\": \"gray\", \"text\": \", \"}`. A raw JSON text component. Used as the separator between different names, if the component selects multiple entities."
+        },
+          "block": {
+            "optional": true,
+            "value": {
+              "$type": "string",
+              "type": "minecraft:block_pos"
+            },
+            "requires": [ "nbt" ],
+            "description": "A string specifying the coordinates of the block entity from which the NBT value is obtained. The coordinates can be absolute, relative, or local. Ignored if `nbt` is not present."
+          },
+          "entity": {
+            "optional": true,
+            "value": {
+              "$type": "string",
+              "type": "minecraft:target_selector"
+            },
+            "requires": [ "nbt" ],
+            "description": "A string specifying the target selector for the entity or entities from which the NBT value is obtained. Ignored if `nbt` is not present."
+          },
+          "storage": {
+            "optional": true,
+            "value": {
+              "$type": "string",
+              "type": "minecraft:resource_location",
+              "args": { "schema": "command_storage" }
+            },
+            "requires": [ "nbt" ],
+            "description": "A string specifying the namespaced ID of the command storage from which the NBT value is obtained. Ignored if `nbt` is not present."
+          }
+      }
+    },
+    
+    "%formatting": {
+      "$type": "object",
+      "properties": {
+        "color": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:color"
+          },
+          "description": "The color to render the content in. Valid values are `\"black\"`, `\"dark_blue\"`, `\"dark_green\"`, `\"dark_aqua\"`, `\"dark_red\"`, `\"dark_purple\"`, `\"gold\"`, `\"gray\"`, `\"dark_gray\"`, `\"blue\"`, `\"green\"`, `\"aqua\"`, `\"red\"`, `\"light_purple\"`, `\"yellow\"`, `\"white\"`, and `\"reset\"` (cancels out the effects of colors used by parent objects). \nSet to `\"#<hex>\"` to insert any color in the hexadecimal color format. Example: Using `\"#FF0000\"` makes the component red. Must be a full 6-digit value, not 3-digit."
+        },
+        "font": {
+          "optional": true,
+          "default": "minecraft:default",
+          "value": { "$type": "string" },
+          "description": "The resource location of the font for this component in the resource pack within `assets/<namespace>/font`. Defaults to `\"minecraft:default\"`."
+        },
+        "bold": {
+          "optional": true,
+          "default": false,
+          "value": { "$defRef": "booleanStr" },
+          "description": "Whether to render the content in bold."
+        },
+        "italic": {
+          "optional": true,
+          "default": false,
+          "value": { "$defRef": "booleanStr" },
+          "description": "Whether to render the content in italics. Note that text that is italicized by default, such as custom item names, can be unitalicized by setting this to false."
+        },
+        "underlined": {
+          "optional": true,
+          "default": false,
+          "value": { "$defRef": "booleanStr" },
+          "description": "Whether to underline the content."
+        },
+        "strikethrough": {
+          "optional": true,
+          "default": false,
+          "value": { "$defRef": "booleanStr" },
+          "description": "Whether to strikethrough the content."
+        },
+        "obfuscated": {
+          "optional": true,
+          "default": false,
+          "value": { "$defRef": "booleanStr" },
+          "description": "Whether to render the content obfuscated."
+        }
+      }
+    },
+    "%interactivity": {
+      "$type": "object",
+      "properties": {
+        "extra": {
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": { "$defRef": "rawJsonText" }
+          },
+          "description": "A list of additional raw JSON text components to be displayed after this one. \nChild text components inherit all formatting and interactivity from the parent component, unless they explicitly override them."
+        },
+        "insertion": {
+          "optional": true,
+          "default": false,
+          "value": { "$defRef": "booleanStr" },
+          "description": "When the text is shift-clicked by a player, this string is inserted in their chat input. It does not overwrite any existing text the player was writing. This only works in chat messages."
+        },
+        "clickEvent": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "action": {
+                "optional": false,
+                "value": {
+                  "$type": "enum",
+                  "options": {
+                    "open_url": "Opens  value as a URL in the user's default web browser.",
+                    "run_command": "Works in signs, but only on the root text component, not on any children. Activated by using the sign. In chat and written books, this has  value entered in chat as though the player typed it themselves and pressed enter. This can be used to run commands, provided the player has the required permissions. Since they are being run from chat, commands must be prefixed with the usual \"/\" slash. In signs, the command is run by the server at the sign's location, with the player who used the sign as @s. Since they are run by the server, sign commands have the same permission level as a command block instead of using the player's permission level, are not restricted by chat length limits, and do not need to be prefixed with a \"/\" slash.",
+                    "suggest_command": "Opens chat and fills in the command given in value. If a chat message was already being composed, it is overwritten. This does not work in books.",
+                    "change_page": "Can only be used in written books. Changes to page  value if that page exists.",
+                    "copy_to_clipboard": "Copies  value to the clipboard."
+                  }
+                },
+                "description": "The action to perform when clicked."
+              },
+              "value": {
+                "optional": false,
+                "decidingProp": "action",
+                "values": {
+                  "open_url": {
+                    "$type": "string",
+                    "type": "dpe:url"
+                  },
+                  "run_command": {
+                    "$type": "string",
+                    "type": "minecraft:chat_command"
+                  },
+                  "suggest_command": {
+                    "$type": "string",
+                    "type": "minecraft:chat_command",
+                    "args": { "incomplete": true }
+                  },
+                  "change_page": { "$defRef": "floatStr" },
+                  "copy_to_clipboard": { "$type": "string" }
+                },
+                "description": "The URL, file path, chat, command or book page used by the specified action."
+              }
+            }
+          },
+          "description": "Allows for events to occur when the player clicks on text. Only work in chat messages and written books, unless specified otherwise. "
+        },
+        "hoverEvent": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "action": {
+                "optional": false,
+                "value": {
+                  "$type": "enum",
+                  "options": {
+                    "show_text": "Shows a raw JSON text component.",
+                    "show_item": "Shows the tooltip of an item as if it was being hovering over it in an inventory.",
+                    "show_entity": "Shows an entity's name, type, and UUID. Used by  selector."
+                  }
+                },
+                "description": "The type of tooltip to show."
+              },
+              "value": {
+                "optional": true,
+                "decidingProp": "action",
+                "values": {
+                  "show_text": { "$defRef": "rawJsonText" },
+                  "show_item": {
+                    "$type": "string",
+                    "type": "minecraft:nbt_compound_tag",
+                    "description": "A string containing the SNBT for an item stack. See Player.dat format#Item structure."
+                  },
+                  "show_entity": {
+                    "$type": "string",
+                    "type": "minecraft:nbt_compound_tag",
+                    "description": "A string containing SNBT. The SNBT does not represent the full entity data, but only stores the name, type, and UUID of the entity. "
+                  }
+                },
+                "description": "The formatting and type of this tag varies depending on the action. Deprecated, use  contents instead.",
+                "deprecated": true
+              },
+              "contents": {
+                "optional": false,
+                "decidingProp": "action",
+                "values": {
+                  "show_text": { "$defRef": "rawJsonText" },
+                  "show_item": {
+                    "$type": "object",
+                    "properties": {
+                      "id": {
+                        "optional": false,
+                        "value": {
+                          "$type": "string",
+                          "type": "minecraft:resource_location",
+                          "args": { "schema": "item" }
+                        },
+                        "description": "The namespaced item ID. Preset `minecraft:air` if invalid."
+                      },
+                      "count": {
+                        "optional": true,
+                        "default": 1,
+                        "value": { "$defRef": "floatStr" },
+                        "description": "Size of the item stack."
+                      },
+                      "tag": {
+                        "optional": true,
+                        "value": {
+                          "$type": "string",
+                          "type": "minecraft:nbt_tag"
+                        },
+                        "description": "A string containing the serialized NBT of the additional information about the item, discussed more in the subsections of the player format page."
+                      }
+                    },
+                    "description": "The item that should be displayed."
+                  },
+                  "show_entity": {
+                    "$type": "object",
+                    "properties": {
+                      "id": {
+                        "optional": false,
+                        "value": {
+                          "$type": "union",
+                          "options": [
+                            { "$type": "string", "type": "minecraft:uuid" },
+                            { "$type": "array", "element": { "$type": "integer", "min": -2147483648, "max": +2147483647 } }
+                          ]
+                        },
+                        "description": "A string containing the UUID of the entity in the hyphenated hexadecimal format. Should be a valid UUID."
+                      },
+                      "type": {
+                        "optional": false,
+                        "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "entity_type"} },
+                        "description": "A string containing the type of the entity. Should be a namespaced entity ID. Present `minecraft:pig` if invalid."
+                      },
+                      "name": {
+                        "optional": true,
+                        "value": { "$type": "string" },
+                        "description": "Hidden if not present. A raw JSON text that is displayed as the name of the entity."
+                      }
+                    },
+                    "description": "The entity that should be displayed."
+                  }
+                },
+                "description": "The URL, file path, chat, command or book page used by the specified action."
+              }
+            }
+          },
+          "description": " Allows for a tooltip to be displayed when the player hovers their mouse over text."
+        }
+      },
+      "description": "A text component object. All non-content tags are optional.\nTo be valid, an object must contain the tags for one content type. The different content types and their tags are described below. Having more than one is allowed, but only one is used."
+    },
+    "booleanStr": { // TODO: unsure what to do with these. Requies investigation.
       "$type": "union",
       "options": [
         { "$type": "boolean" },
-        { "$type": "string", "type": "options", "args": { "values": ["true", "false"] } }
+        { "$type": "enum", "options": {"true": "", "false": ""} }
       ]
     },
-    "floatStr": {
+    "floatStr": { // TODO: unsure what to do with these. Requies investigation.
       "$type": "union",
       "options": [
         { "$type": "string", "type": "dpe:float" },
