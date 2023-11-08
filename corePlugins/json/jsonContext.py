@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import Generator, Iterable, Optional, Callable, cast, Any
 
-from cat.utils import Decorator, flatmap
+from cat.utils import Anything, Decorator, flatmap
 from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import joinFilePath, dirFromFilePath
@@ -359,11 +359,24 @@ class JsonStringContext(JsonContext, ABC):
 		return JSON_ILLEGAL_SCHEMA, False
 
 
-@dataclass
-class ExpectedArg:
-	name: str
-	mandatory: bool
-	expectedType: JsonSchema
+def orRefSchema(schema: JsonSchema) -> JsonUnionSchema:
+	refProperties: list[PropertySchema] = [
+		PropertySchema(
+			name='$ref',
+			value=JsonStringSchema(allowMultilineStr=False),
+			optional=False,
+			allowMultilineStr=False
+		),
+		PropertySchema(
+			name=Anything(),
+			value=JSON_ANY_SCHEMA,
+			optional=False,
+			allowMultilineStr=None
+		),
+	]
+	schema2 = JsonObjectSchema(properties=refProperties, allowMultilineStr=None).finish()
+
+	return JsonUnionSchema(options=[schema, schema2], allowMultilineStr=None)
 
 
 def validateSimpleSchemaArgs(

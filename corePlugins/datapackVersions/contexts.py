@@ -6,7 +6,7 @@ from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
 from .argTypes import *
 from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, RESOURCE_LOCATION_ID, getAllKnownResourceLocationContexts
 from corePlugins.json.core import *
-from corePlugins.json.jsonContext import ParsingJsonCtx, jsonStringContext
+from corePlugins.json.jsonContext import ParsingJsonCtx, jsonStringContext, orRefSchema
 from corePlugins.nbt.tags import NBTTagSchema
 from base.model.parsing.tree import Schema
 from base.model.utils import MDStr, LanguageId
@@ -42,20 +42,20 @@ class ResourceLocationHandler(ParsingJsonCtx):
 		properties: list[PropertySchema] = [
 			PropertySchema(
 				name='schema',
-				value=JsonStringOptionsSchema(options={val: MDStr("") for val in allResLocCtxKeys}, warningOnly=True, allowMultilineStr=False),
+				value=orRefSchema(JsonStringOptionsSchema(options={val: MDStr("") for val in allResLocCtxKeys}, warningOnly=True, allowMultilineStr=False)),
 				optional=False,
 				allowMultilineStr=None
 			),
 			PropertySchema(
 				name='allowTags',
-				value=JsonBoolSchema(allowMultilineStr=None),
+				value=orRefSchema(JsonBoolSchema(allowMultilineStr=None)),
 				optional=True,
 				default=False,
 				allowMultilineStr=None
 			),
 			PropertySchema(
 				name='onlyTags',
-				value=JsonBoolSchema(allowMultilineStr=None),
+				value=orRefSchema(JsonBoolSchema(allowMultilineStr=None)),
 				optional=True,
 				default=False,
 				allowMultilineStr=None
