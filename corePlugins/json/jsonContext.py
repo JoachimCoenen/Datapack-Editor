@@ -3,7 +3,7 @@ import functools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import chain
-from typing import Iterable, Optional, Callable, cast, Any
+from typing import Generator, Iterable, Optional, Callable, cast, Any
 
 from cat.utils import Decorator, flatmap
 from base.model.parsing.bytesUtils import strToBytes
@@ -96,18 +96,40 @@ def _getBestMatch(tree: JsonNode, pos: Position, matches: Match) -> None:
 		matches.hit = tree
 
 
+def _flattenOptions(schema: JsonUnionSchema, parent: JsonObject) -> Generator[JsonSchema]:
+	for opt in schema.allOptions:
+		actualOpt = resolveCalculatedSchema(opt, parent)
+		if actualOpt is None:
+			continue
+		elif isinstance(actualOpt, JsonUnionSchema):
+			yield from _flattenOptions(actualOpt, parent)
+		else:
+			yield actualOpt
+
+
 def _suggestionsForUnionSchema(schema: JsonUnionSchema, contained: list[JsonNode], data: bytes):
 	gsfs = functools.partial(getSuggestionsForSchema, contained=contained, data=data)
-	return list(flatmap(gsfs, (s for s in schema.options)))
+	if contained:
+		return list(flatmap(gsfs, _flattenOptions(schema, contained[-1])))  # maybe contained[-2]??
+	else:
+		return list(flatmap(gsfs, schema.options))
 
 
 def _getPropsForObject(container: JsonObject, schema: JsonObjectSchema | JsonUnionSchema, prefix: str, suffix: str) -> list[str]:
 	if isinstance(schema, JsonUnionSchema):
-		return [n for opt in schema.allOptions for n in _getPropsForObject(container, opt, prefix, suffix)]
+		allOptions = list(_flattenOptions(schema, container.parent))
 	elif isinstance(schema, JsonObjectSchema):
-		return [f'{prefix}{p.name}{suffix}' for p in schema.propertiesDict.values() if p.name not in container.data and p.getValueSchemaForParent(container) is not None]
+		allOptions = (schema,)
 	else:
 		return []
+
+	return [
+		f'{prefix}{p.name}{suffix}'
+		for opt in allOptions
+		if isinstance(opt, JsonObjectSchema)
+		for p in opt.propertiesDict.values()
+		if p.name not in container.data and p.getValueSchemaForParent(container) is not None
+	]
 
 
 def _suggestionsForKeySchema(schema: JsonKeySchema, contained: list[JsonNode], data: bytes):

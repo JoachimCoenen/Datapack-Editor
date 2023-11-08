@@ -149,12 +149,25 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 				errorsIO.append(SemanticsError(msg, Span(start, end)))
 
 
+def _flattenOptions(schema: JsonUnionSchema, parent: JsonObject, allOptionsIO: list[JsonSchema]) -> None:
+	for opt in schema.allOptions:
+		actualOpt = resolveCalculatedSchema(opt, parent)
+		if actualOpt is None:
+			continue
+		elif isinstance(actualOpt, JsonUnionSchema):
+			_flattenOptions(actualOpt, parent, allOptionsIO)
+		else:
+			allOptionsIO.append(actualOpt)
+
+
 @schemaValidator(JsonUnionSchema.typeName)
 def validateJsonUnion(data: JsonData, schema: JsonUnionSchema, *, errorsIO: list[GeneralError]) -> None:
 	# we could not decide on a schema previously, so show errors for option with the least errors:
+	allOptions = []
+	_flattenOptions(schema, data.parent, allOptionsIO=allOptions)
 
 	optionsToValidate = []
-	for opt in schema.allOptions:
+	for opt in allOptions:
 		validator = getSimpleSchemaTypeChecker(opt.typeName)
 		isOk = validator(data, opt)
 		if isOk:
@@ -198,6 +211,11 @@ class TypeCheckerFunc(Protocol):
 SIMPLE_TYPE_CHECKERS: dict[str, TypeCheckerFunc] = {}
 simpleSchemaTypeChecker = AddToDictDecorator(SIMPLE_TYPE_CHECKERS)
 getSimpleSchemaTypeChecker = SIMPLE_TYPE_CHECKERS.get
+
+
+@simpleSchemaTypeChecker(JsonIllegalSchema.typeName)
+def checkJsonAnyType(data: JsonData, schema: JsonIllegalSchema) -> bool:
+	return False
 
 
 @simpleSchemaTypeChecker(JsonAnySchema.typeName)

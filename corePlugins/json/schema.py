@@ -13,7 +13,7 @@ def enrichWithSchema(data: JsonData, schema: JsonSchema) -> bool:
 
 
 def _enrichWithSchemaInternal(data: JsonData, schema: JsonSchema) -> bool:
-	dataType = type(data)
+	schema = resolveCalculatedSchema(schema, data.parent)
 	if isinstance(schema, JsonUnionSchema):
 		return _enrichWithUnionSchema(data, schema)
 
@@ -21,6 +21,7 @@ def _enrichWithSchemaInternal(data: JsonData, schema: JsonSchema) -> bool:
 		_enrichWithAnySchema(data)
 		return True
 
+	dataType = type(data)
 	if schema.DATA_TYPE == dataType:
 		data.schema = schema
 		if dataType is JsonArray and isinstance(schema, JsonArraySchema):

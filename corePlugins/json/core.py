@@ -10,7 +10,7 @@ from weakref import ref, ReferenceType
 from recordclass import as_dataclass
 
 from cat.utils import CachedProperty, Anything, Nothing, NoneType
-from cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecorator
+from cat.utils.collections_ import OrderedMultiDict, AddToDictDecorator
 from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import IndexMapper
 from base.model.parsing.tree import Node, Schema
@@ -475,9 +475,7 @@ class PropertySchema(JsonSchema[JsonProperty]):
 		else:
 			selectedSchema = self.value
 
-		if isinstance(selectedSchema, JsonCalculatedValueSchema):
-			selectedSchema = selectedSchema.func(parent)
-		return selectedSchema
+		return resolveCalculatedSchema(selectedSchema, parent)
 
 	def postProcessJsonStructure(self, structure: dict[str, Any]) -> None:
 		type_ = structure.pop('$type')
@@ -676,6 +674,12 @@ class JsonCalculatedValueSchema(JsonSchema[JsonData]):
 		structure['function'] = function
 
 
+def resolveCalculatedSchema(schema: JsonSchema, parent: JsonObject) -> Optional[JsonSchema]:
+	if isinstance(schema, JsonCalculatedValueSchema):
+		schema = schema.func(parent)
+	return schema
+
+
 class JsonAnySchema(JsonSchema[JsonData]):
 	typeName: ClassVar[str] = 'any'
 	_fields: ClassVar[dict[str, Any]] = dict()
@@ -729,7 +733,7 @@ class JsonArgType:
 	jsonProperties: str = ''
 
 
-ALL_NAMED_JSON_ARG_TYPES: OrderedDict[str, JsonArgType] = OrderedDict()
+ALL_NAMED_JSON_ARG_TYPES: dict[str, JsonArgType] = {}
 _registerNamedJsonArgType: AddToDictDecorator[str, JsonArgType] = AddToDictDecorator(ALL_NAMED_JSON_ARG_TYPES)
 
 
@@ -786,6 +790,7 @@ __all__ = [
 	'Inheritance',
 	'JsonUnionSchema',
 	'JsonCalculatedValueSchema',
+	'resolveCalculatedSchema',
 	'JsonAnySchema',
 	'JsonIllegalSchema',
 	'JSON_ANY_SCHEMA',
