@@ -1,7 +1,7 @@
 {
   "$schema": "dpe/json/schema",
   "$libraries": {
-    "cooking": "recipe/serializers/cooking.json"
+    "serializers": "recipe/serializers.json"
   },
   "$body": { "$defRef": "recipe" },
   "$templates": {},
@@ -10,7 +10,7 @@
       "$type": "object",
       "inherits": [
         {
-          "defRef": "cooking:cooking",
+          "defRef": "serializers:cooking",
           "decidingProp": "type",
           "decidingValues": [
             "blasting",
