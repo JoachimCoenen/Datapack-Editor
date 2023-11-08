@@ -22,7 +22,7 @@ class Message:
 	rawMessage: str
 	argsCount: int
 
-	def format(self, *args) -> MDStr:
+	def format(self, *args: str) -> MDStr:
 		if len(args) > self.argsCount:
 			raise ValueError(f"too many arguments supplied. expected {self.argsCount}, but got {len(args)}")
 		elif len(args) < self.argsCount:
@@ -36,7 +36,7 @@ class MessageAdapter:
 	rawMessage: str
 	argsCount: int
 
-	def format(self, msg: MessageLike, *args) -> MDStr:
+	def format(self, msg: MessageLike, *args: str) -> MDStr:
 		if len(args) < self.argsCount:
 			raise ValueError(f"too few arguments supplied. expected at least {self.argsCount}, but got {len(args)}")
 

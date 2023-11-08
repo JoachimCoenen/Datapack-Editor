@@ -3,11 +3,10 @@ from typing import Optional, Sequence, Union
 
 from cat.utils.collections_ import Stack
 from .command import *
-from .utils import CommandSyntaxError
 from .stringReader import StringReader
-from base.model.utils import Span, Message, wrapInMarkdownCode
+from base.model.utils import ParsingError, Span, Message, wrapInMarkdownCode
 
-from .commandContext import makeCommandSyntaxError, makeParsedArgument, getArgumentContext, missingArgumentContext
+from .commandContext import makeParsedArgument, getArgumentContext, missingArgumentContext
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.parser import ParserBase
 
@@ -88,7 +87,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		if commandSchema is None:
 			if sr.tryReadRemaining():  # move cursor to end
 				sr.mergeLastSave()
-			self.errors.append(CommandSyntaxError(UNKNOWN_COMMAND_MSG.format(wrapInMarkdownCode(bytesToStr(commandName))), sr.currentSpan))
+			self.errors.append(ParsingError(UNKNOWN_COMMAND_MSG.format(wrapInMarkdownCode(bytesToStr(commandName))), sr.currentSpan))
 			return None
 
 		argument: Optional[ParsedArgument] = None
@@ -98,7 +97,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			if not sr.hasReachedEnd:
 				trailingData: str = wrapInMarkdownCode(bytesToStr(sr.readUntilEndOrWhitespace()))
 				errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
-				self.errors.append(makeCommandSyntaxError(sr, errorMsg))
+				self.errors.append(ParsingError(errorMsg, sr.currentSpan))
 
 		sr.tryReadRemaining()
 		commandSpan = Span(nameSpan.start, sr.currentPos)
@@ -204,7 +203,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 					trailingData = sr.readUntilEndOrWhitespace()
 					trailingData = bytesToStr(trailingData)
 					errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
-					self.errors.append(makeCommandSyntaxError(sr, errorMsg))
+					self.errors.append(ParsingError(errorMsg, sr.currentSpan))
 					sr.rollback()
 					break
 

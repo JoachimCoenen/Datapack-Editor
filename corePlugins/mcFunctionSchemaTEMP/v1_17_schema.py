@@ -2030,8 +2030,7 @@ def buildMCFunctionSchemaFor_v1_17(version: FullMCData) -> MCFunctionSchema:
 			next=[
 				ArgumentSchema(
 					name='targetPos',
-					type=MINECRAFT_BLOCK_POS,
-					args={'type': float}
+					type=MINECRAFT_VEC3,  # uses float values
 				),
 			]
 		),

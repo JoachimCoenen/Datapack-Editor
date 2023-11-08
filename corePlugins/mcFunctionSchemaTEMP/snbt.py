@@ -4,12 +4,11 @@ from nbtlib import Parser, tokenize, Int, String, List, Compound, Path, ListInde
 from nbtlib.path import can_be_converted_to_int, NamedKey, extend_accessors
 
 from corePlugins.mcFunction.stringReader import StringReader
-from corePlugins.mcFunction.utils import CommandSyntaxError
 from corePlugins.nbt.tags import NBTTag, NBTTagSchema
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import parseNPrepare
 from base.model.pathUtils import FilePath
-from base.model.utils import Span, GeneralError, LanguageId, wrapInMarkdownCode
+from base.model.utils import ParsingError, Span, GeneralError, LanguageId, wrapInMarkdownCode
 
 
 def parseNBTTag(sr: StringReader, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
@@ -109,7 +108,7 @@ def parse_accessors(parser: Parser, literal: str):
 			break
 
 
-def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[NBTTag]:
+def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
 	sr.save()
 
 	literal = sr.text[sr.cursor:]
@@ -142,14 +141,14 @@ def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -
 			stop = ex.args[0][1] + sr.cursor
 			begin = sr.posFromColumn(start)
 			end = sr.posFromColumn(stop)
-		errorsIO.append(CommandSyntaxError(wrapInMarkdownCode(message), Span(begin, end), style='error'))
+		errorsIO.append(ParsingError(wrapInMarkdownCode(message), Span(begin, end), style='error'))
 		sr.rollback()
 		return None
 
 	return path
 
 
-def parseNBTPath(sr: StringReader, *, errorsIO: list[CommandSyntaxError]) -> Optional[Path]:
+def parseNBTPath(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[Path]:
 	path: Optional[Path] = _parseNBTPathBare(sr, errorsIO=errorsIO)
 	if path is None:
 		return None

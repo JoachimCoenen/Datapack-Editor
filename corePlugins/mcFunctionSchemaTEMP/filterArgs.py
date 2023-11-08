@@ -10,13 +10,12 @@ from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
 from corePlugins.mcFunction.commandContext import getArgumentContext, missingArgumentParser, makeParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
-from corePlugins.mcFunction.utils import CommandSyntaxError
 from .argumentValues import FilterArguments, FilterArgument
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import Suggestions, Match
 from base.model.pathUtils import FilePath
-from base.model.utils import Span, Position, GeneralError, MDStr
+from base.model.utils import ParsingError, Span, Position, GeneralError, MDStr
 
 
 @dataclass
@@ -46,7 +45,7 @@ def makeCommandPart(sr: StringReader, key: bytes) -> CommandPart:
 	return argument
 
 
-def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[FilterArguments]:
+def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[FilterArguments]:
 	if sr.tryConsumeByte(ord('[')):
 		# block states:
 		arguments: FilterArguments = FilterArguments()
@@ -58,11 +57,11 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 			key: bytes = sr.tryReadString()
 			if key is None:
 				sr.save()
-				errorsIO.append(CommandSyntaxError(MDStr(f"Expected a String."), Span(sr.currentPos), style='error'))
+				errorsIO.append(ParsingError(MDStr(f"Expected a String."), Span(sr.currentPos), style='error'))
 				key = b''
 				tsai = FALLBACK_FILTER_ARGUMENT_INFO
 			elif key not in argsInfo:
-				errorsIO.append(CommandSyntaxError(MDStr(f"Unknown argument '`{bytesToStr(key)}`'."), sr.currentSpan, style='error'))
+				errorsIO.append(ParsingError(MDStr(f"Unknown argument '`{bytesToStr(key)}`'."), sr.currentSpan, style='error'))
 				tsai = FALLBACK_FILTER_ARGUMENT_INFO
 			else:
 				tsai = argsInfo[key]
@@ -72,11 +71,11 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 
 			# duplicate?:
 			if key in arguments and not tsai.multipleAllowed:
-				errorsIO.append(CommandSyntaxError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be duplicated."), sr.currentSpan, style='error'))
+				errorsIO.append(ParsingError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be duplicated."), sr.currentSpan, style='error'))
 
 			sr.tryConsumeWhitespace()
 			if not sr.tryConsumeByte(ord('=')):
-				errorsIO.append(CommandSyntaxError(MDStr(f"Expected '`=`'."), Span(sr.currentPos), style='error'))
+				errorsIO.append(ParsingError(MDStr(f"Expected '`=`'."), Span(sr.currentPos), style='error'))
 				isNegated = False
 				sr.readUntilEndOrRegex(re.compile(rb'[],]'))
 				valueNode = None
@@ -84,7 +83,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 				sr.tryConsumeWhitespace()
 				isNegated = sr.tryConsumeByte(ord('!'))
 				if isNegated and not tsai.isNegatable:
-					errorsIO.append(CommandSyntaxError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be negated."), sr.currentSpan, style='error'))
+					errorsIO.append(ParsingError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be negated."), sr.currentSpan, style='error'))
 
 				handler = getArgumentContext(tsai.type)
 				if handler is None:
@@ -94,7 +93,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 				if valueNode is None:
 					remaining = sr.readUntilEndOrRegex(re.compile(rb'[],]'))
 					valueNode = makeParsedArgument(sr, tsai, value=remaining)
-					errorsIO.append(CommandSyntaxError(MDStr(f"Expected {tsai.type.name}."), sr.currentSpan, style='error'))
+					errorsIO.append(ParsingError(MDStr(f"Expected {tsai.type.name}."), sr.currentSpan, style='error'))
 			sr.mergeLastSave()
 			arguments.add(key, FilterArgument(keyNode, valueNode, isNegated))
 
@@ -105,9 +104,9 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 				sr.tryConsumeWhitespace()
 				continue
 			if sr.hasReachedEnd:
-				errorsIO.append(CommandSyntaxError(EXPECTED_BUT_GOT_MSG.format(f"`]`", 'end of str'), Span(sr.currentPos), style='error'))
+				errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format(f"`]`", 'end of str'), Span(sr.currentPos), style='error'))
 				break
-			errorsIO.append(CommandSyntaxError(MDStr(f"Expected `,` or `]`"), Span(sr.currentPos), style='error'))
+			errorsIO.append(ParsingError(MDStr(f"Expected `,` or `]`"), Span(sr.currentPos), style='error'))
 		return arguments
 	else:
 		return None

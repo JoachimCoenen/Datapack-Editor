@@ -8,10 +8,9 @@ from base.model.parsing.contextProvider import ContextProvider, Match, Context, 
 from .argumentTypes import LiteralsArgumentType, ArgumentType
 from .command import *
 from .stringReader import StringReader
-from .utils import CommandSyntaxError
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.pathUtils import FilePath
-from base.model.utils import Position, Span, GeneralError, MDStr, formatAsError
+from base.model.utils import ParsingError, Position, Span, GeneralError, MDStr, formatAsError
 
 
 class CommandCtxProvider(ContextProvider[CommandPart]):
@@ -235,16 +234,12 @@ def defaultDocumentationProvider(argument: CommandPart) -> MDStr:
 	return tip
 
 
-def makeCommandSyntaxError(sr: StringReader, message: MDStr, *, style: str = 'error') -> CommandSyntaxError:
-	return CommandSyntaxError(message, sr.currentSpan, style=style)
-
-
 def missingArgumentContext(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 	errorMsg = MDStr(f"missing ArgumentContext for type `{escapeForXml(ai.typeName)}`")
 	logError(errorMsg)
 
 	sr.readUntilEndOrWhitespace()
-	errorsIO.append(makeCommandSyntaxError(sr, errorMsg, style='info'))
+	errorsIO.append(ParsingError(errorMsg, sr.currentSpan, style='info'))
 	sr.rollback()
 	return None
 
@@ -254,7 +249,7 @@ def missingArgumentParser(sr: StringReader, ai: ArgumentSchema, *, errorsIO: lis
 	logError(errorMsg)
 
 	sr.readUntilEndOrWhitespace()
-	errorsIO.append(makeCommandSyntaxError(sr, errorMsg, style='info'))
+	errorsIO.append(ParsingError(errorMsg, sr.currentSpan, style='info'))
 	sr.rollback()
 	return None
 
@@ -286,7 +281,7 @@ def parseLiteral(sr: StringReader, ai: ArgumentSchema) -> Optional[ParsedArgumen
 
 class LiteralArgumentHandler(ArgumentContext):
 
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return parseLiteral(sr, ai)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:

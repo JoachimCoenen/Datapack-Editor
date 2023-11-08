@@ -9,7 +9,6 @@ from .argumentTypes import *
 from .command import ArgumentSchema, ParsedArgument, CommandPart
 from .commandContext import ArgumentContext, argumentContext, makeParsedArgument, getArgumentContext
 from .stringReader import StringReader
-from .utils import CommandSyntaxError
 
 
 def initPlugin() -> None:
@@ -102,7 +101,7 @@ class ParsingHandler(ArgumentContext, ABC):
 
 @argumentContext(BRIGADIER_BOOL.name)
 class BoolHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadBoolean()
 		if string is None:
 			return None
@@ -114,7 +113,7 @@ class BoolHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_DOUBLE.name)
 class DoubleHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadFloat()
 		if string is None:
 			return None
@@ -123,7 +122,7 @@ class DoubleHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_FLOAT.name)
 class FloatHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadFloat()
 		if string is None:
 			return None
@@ -132,7 +131,7 @@ class FloatHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_INTEGER.name)
 class IntegerHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadInt()
 		if string is None:
 			return None
@@ -141,7 +140,7 @@ class IntegerHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_LONG.name)
 class LongHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadInt()
 		if string is None:
 			return None
@@ -150,7 +149,7 @@ class LongHandler(ArgumentContext):
 
 @argumentContext(BRIGADIER_STRING.name)
 class StringHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[CommandSyntaxError]) -> Optional[ParsedArgument]:
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		string = sr.tryReadString()
 		if string is None:
 			return None

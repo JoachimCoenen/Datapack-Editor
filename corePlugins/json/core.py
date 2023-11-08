@@ -14,7 +14,7 @@ from cat.utils.collections_ import OrderedMultiDict, OrderedDict, AddToDictDecor
 from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import IndexMapper
 from base.model.parsing.tree import Node, Schema
-from base.model.utils import GeneralError, MDStr, LanguageId, Span, NULL_SPAN
+from base.model.utils import MDStr, LanguageId, Span, NULL_SPAN
 
 
 class TokenType(enum.Enum):
@@ -707,10 +707,6 @@ def resolvePath(data: JsonData, path: tuple[str | int, ...]) -> Optional[JsonDat
 	return result
 
 
-class JsonSemanticsError(GeneralError):
-	pass
-
-
 @dataclass
 class JsonArgType:
 	def __post_init__(self):
@@ -788,8 +784,6 @@ __all__ = [
 	'JSON_ILLEGAL_SCHEMA',
 
 	'resolvePath',
-
-	'JsonSemanticsError',
 
 	'JsonArgType',
 	'ALL_NAMED_JSON_ARG_TYPES',

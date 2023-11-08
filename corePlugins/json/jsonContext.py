@@ -14,7 +14,7 @@ from . import validator2
 from .core import *
 from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, parseNPrepare, validateTree, getSuggestions, \
 	getDocumentation, getClickableRanges, onIndicatorClicked
-from base.model.utils import Position, Span, GeneralError, MDStr, LanguageId
+from base.model.utils import Position, SemanticsError, Span, GeneralError, MDStr, LanguageId
 from .argTypes import *
 from .lexer import INVALID_NUMBER_MSG
 from .schemaStore import JSON_SCHEMA_LOADER
@@ -419,7 +419,7 @@ class OptionsJsonStrContext(JsonStringContext):
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
 		if isinstance(node.schema, JsonStringSchema):
 			if node.data not in node.schema.args.get('values', ()):
-				errorsIO.append(JsonSemanticsError(UNKNOWN_MSG.format("Option", node.data), node.span))
+				errorsIO.append(SemanticsError(UNKNOWN_MSG.format("Option", node.data), node.span, style=style))
 
 	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
 		if isinstance(node.schema, JsonStringSchema):
@@ -444,7 +444,7 @@ class FloatJsonStrContext(JsonStringContext):
 			node.parsedValue = number
 
 		except ValueError:
-			errorsIO.append(JsonSemanticsError(INVALID_NUMBER_MSG.format(data), span=node.span))
+			errorsIO.append(SemanticsError(INVALID_NUMBER_MSG.format(data), span=node.span))
 
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
 		if isinstance(node.schema, JsonStringSchema):
@@ -464,7 +464,7 @@ class JsonArgTypeJsonStrContext(JsonStringContext):
 		if isinstance(node.schema, JsonStringSchema):
 			pass
 		if node.data not in ALL_NAMED_JSON_ARG_TYPES:
-			errorsIO.append(JsonSemanticsError(UNKNOWN_MSG.format("JsonArgType", node.data), node.span))
+			errorsIO.append(SemanticsError(UNKNOWN_MSG.format("JsonArgType", node.data), node.span))
 
 	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
 		return list(ALL_NAMED_JSON_ARG_TYPES.keys())
@@ -508,7 +508,7 @@ class LibPathJsonStrContext(JsonStringContext):
 		if isinstance(node.schema, JsonStringSchema):
 			pass
 		if node.parsedValue is None or node.parsedValue[1] is None:
-			errorsIO.append(JsonSemanticsError(UNKNOWN_MSG.format("library", node.data), node.span))
+			errorsIO.append(SemanticsError(UNKNOWN_MSG.format("library", node.data), node.span))
 
 	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
 		return []
@@ -563,10 +563,9 @@ class TmplRefJsonStrContext(JsonStringContext):
 
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
 		if node.parsedValue is None or node.parsedValue[0] is None:
-			errorsIO.append(JsonSemanticsError(UNKNOWN_MSG.format(self.unknownMsg, node.data), node.span))
+			errorsIO.append(SemanticsError(UNKNOWN_MSG.format(self.unknownMsg, node.data), node.span))
 		else:
 			pass
-
 
 	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
 		if node.parsedValue is None:

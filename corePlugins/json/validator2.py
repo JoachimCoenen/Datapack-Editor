@@ -3,23 +3,23 @@ from typing import Protocol
 from cat.utils.collections_ import AddToDictDecorator
 from .core import *
 from base.model.messages import *
-from base.model.utils import Message, Span, GeneralError, Position
+from base.model.utils import Message, SemanticsError, Span, GeneralError, Position
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG = Message("Expected whitespace to end one argument, but found trailing data: `{0}`", 1)
 NO_JSON_SCHEMA_MSG = Message("No JSON Schema for {0}", 1)
 NO_JSON_SCHEMA_VALIDATOR_MSG = Message("No JSON Schema validator for {0}", 1)
 MISSING_JSON_STRING_HANDLER_MSG = Message("Missing JsonStringHandler for type `{0}`", 1)
-DUPLICATE_PROPERTY_MSG = Message("Duplicate property `{0}`", 1)
-UNKNOWN_PROPERTY_MSG = Message("Unknown property `{0}`", 1)
-DEPRECATED_PROPERTY_MSG = Message("Deprecated property `{0}`", 1)
-REQUIRES_PROPERTY_SET_MSG = Message("Requires property `{0}`. Will be ignored if  `{0}` is not present", 1)
-INCOMPATIBLE_PROPERTY_MSG = Message("Is incompatible with properties `{0}`", 1)
-MISSING_MANDATORY_PROPERTY_MSG = Message("Missing mandatory property `{0}`", 1)
+DUPLICATE_PROPERTY_MSG = Message("Duplicate property `'{0}'`", 1)
+UNKNOWN_PROPERTY_MSG = Message("Unknown property `'{0}'`", 1)
+DEPRECATED_PROPERTY_MSG = Message("Deprecated property `'{0}'`", 1)
+REQUIRES_PROPERTY_TO_BE_SET_MSG = Message("Requires property `'{0}'`. Will be ignored if  `'{0}'` is not present", 1)
+INCOMPATIBLE_PROPERTY_MSG = Message("Is incompatible with properties `'{0}'`", 1)
+MISSING_MANDATORY_PROPERTY_MSG = Message("Missing mandatory property `'{0}'`", 1)
 
 
 def wrongTypeError(expected: JsonSchema, got: JsonData):
 	msg = EXPECTED_BUT_GOT_MSG.format(expected.asString, got.typeName)
-	return JsonSemanticsError(msg, got.span)
+	return SemanticsError(msg, got.span)
 
 
 def validateJson(data: JsonData, errorsIO: list[GeneralError]) -> None:
@@ -78,11 +78,11 @@ def validateJsonNumber(data: JsonData, schema: JsonNumberSchema, *, errorsIO: li
 
 	if schema.typeName == JsonIntSchema.typeName and type(data.data) is float and int(data.data) != data.data:
 		msg = EXPECTED_BUT_GOT_MSG.format('integer', 'float')
-		errorsIO.append(JsonSemanticsError(msg, data.span))
+		errorsIO.append(SemanticsError(msg, data.span))
 
 	if not schema.min <= data.data <= schema.max:
 		msg = NUMBER_OUT_OF_BOUNDS_MSG.format(schema.min, schema.max)
-		errorsIO.append(JsonSemanticsError(msg, data.span))
+		errorsIO.append(SemanticsError(msg, data.span))
 
 
 @schemaValidator(JsonStringSchema.typeName)
@@ -92,7 +92,7 @@ def validateJsonString(data: JsonData, schema: JsonStringSchema, *, errorsIO: li
 		return
 	if schema.type is not None:  # specialized StringHandlers validate string on their own.
 		# if we end up here, no specialized string handler hs been found.
-		errorsIO.append(JsonSemanticsError(INTERNAL_ERROR_MSG.format(MISSING_JSON_STRING_HANDLER_MSG, schema.type), data.span, style='info'))
+		errorsIO.append(SemanticsError(INTERNAL_ERROR_MSG.format(MISSING_JSON_STRING_HANDLER_MSG, schema.type), data.span, style='info'))
 
 
 @schemaValidator(JsonArraySchema.typeName)
@@ -111,31 +111,31 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 	validatedProps: set[str] = set()
 	for name, prop in data.data.items():
 		if name in validatedProps:
-			msg = DUPLICATE_PROPERTY_MSG.format(repr(name))
-			errorsIO.append(JsonSemanticsError(msg, prop.key.span))
+			msg = DUPLICATE_PROPERTY_MSG.format(name)
+			errorsIO.append(SemanticsError(msg, prop.key.span))
 		else:
 			validatedProps.add(name)
 
 		prop_schema, value_schema = schema.getSchemaForPropAndVal(name, data)
 		isUnknownProp = prop_schema is None or value_schema is None
 		if isUnknownProp:
-			msg = UNKNOWN_PROPERTY_MSG.format(repr(name))
-			errorsIO.append(JsonSemanticsError(msg, prop.key.span))
+			msg = UNKNOWN_PROPERTY_MSG.format(name)
+			errorsIO.append(SemanticsError(msg, prop.key.span))
 			continue
 
 		missingRequiredProp = prop_schema.requires != () and any(p not in data.data for p in prop_schema.requires)
 		if missingRequiredProp:
-			msg = REQUIRES_PROPERTY_SET_MSG.format(repr(prop_schema.requires))
-			errorsIO.append(JsonSemanticsError(msg, prop.key.span, style='warning'))
+			msg = REQUIRES_PROPERTY_TO_BE_SET_MSG.format(str(prop_schema.requires))
+			errorsIO.append(SemanticsError(msg, prop.key.span, style='warning'))
 
 		hasIncompatibleProp = prop_schema.hates != () and any(p in data.data for p in prop_schema.hates)
 		if hasIncompatibleProp:
-			msg = INCOMPATIBLE_PROPERTY_MSG.format(repr(prop_schema.hates))
-			errorsIO.append(JsonSemanticsError(msg, prop.key.span, style='warning'))
+			msg = INCOMPATIBLE_PROPERTY_MSG.format(str(prop_schema.hates))
+			errorsIO.append(SemanticsError(msg, prop.key.span, style='warning'))
 
 		if prop_schema.deprecated:
-			msg = DEPRECATED_PROPERTY_MSG.format(repr(prop.key.data))
-			errorsIO.append(JsonSemanticsError(msg, prop.key.span, style='warning'))
+			msg = DEPRECATED_PROPERTY_MSG.format(prop.key.data)
+			errorsIO.append(SemanticsError(msg, prop.key.span, style='warning'))
 
 	for propSchema in schema.propertiesDict.values():
 		if propSchema.name not in validatedProps:
@@ -143,10 +143,10 @@ def validateJsonObject(data: JsonData, schema: JsonObjectSchema, *, errorsIO: li
 			hasIncompatibleProp = propSchema.hates and any(p in data.data for p in propSchema.hates)
 			isMandatory = propSchema.mandatory and not missingRequiredProp and not hasIncompatibleProp and propSchema.getValueSchemaForParent(data) is not None
 			if isMandatory:
-				msg = MISSING_MANDATORY_PROPERTY_MSG.format(repr(propSchema.name))
+				msg = MISSING_MANDATORY_PROPERTY_MSG.format(propSchema.name)
 				end = data.span.end
 				start = Position(end.line, end.column - 1, end.index - 1)
-				errorsIO.append(JsonSemanticsError(msg, Span(start, end)))
+				errorsIO.append(SemanticsError(msg, Span(start, end)))
 
 
 @schemaValidator(JsonUnionSchema.typeName)
