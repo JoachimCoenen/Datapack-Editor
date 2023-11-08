@@ -11,7 +11,7 @@
 					"dpe/json/schema/library": ""
 				}
 			},
-			"$mneta": {
+			"$meta": {
 				"optional": true,
 				"value": {
 					"$type": "object",
@@ -160,7 +160,7 @@
 					}}
 				},
 				"inherits": {
-					"description": "the object schema inherits all properties from these schemas",
+					"description": "the object schema inherits all properties from these schemas.",
 					"optional": true,
 					"decidingProp": "$type",
 					"values": {
