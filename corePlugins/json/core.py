@@ -405,7 +405,15 @@ def getDecidingPropValue(decidingProp: DecidingPropRef, parent: JsonObject) -> J
 	if dp is not None:
 		dVal = getattr(dp.value, 'data')
 	else:
-		dVal = None
+		dpSchema = decidingPropParent.schema
+		if isinstance(dpSchema, JsonObjectSchema):
+			propSchema = dpSchema.getSchemaForProp(decidingProp.name)
+			if propSchema is not None:
+				dVal = propSchema.default
+			else:
+				dVal = None
+		else:
+			dVal = None
 	return dVal
 
 
