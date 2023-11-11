@@ -431,15 +431,16 @@ class DatapackEditorGUI(AutoGUI):
 
 	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[IndexSpan], bool, bool, SearchOptions]:
 		def onGUI(gui: DatapackEditorGUI, text: Optional[str], searchExpr: Optional[str], outerGUI: DatapackEditorGUI) -> None:
-			with gui.vLayout(seamless=True):
+			with gui.vPanel(seamless=True):
+				parentShortcutDepth = 2
 				with gui.hLayout(seamless=True):
-					with gui.hPanel(seamless=True):
-						gui.customData['prevPressed'] = gui.framelessButton(icon=icons.prev, tip='previous', margins=gui.smallDefaultMargins, parentShortcut=QKeySequence.FindPrevious)
-						gui.customData['nextPressed'] = gui.framelessButton(icon=icons.next, tip='next', margins=gui.smallDefaultMargins, parentShortcut=QKeySequence.FindNext)
+					with gui.hLayout(seamless=True):
+						gui.customData['prevPressed'] = gui.framelessButton(icon=icons.prev, tip='previous', margins=gui.smallDefaultMargins, parentShortcut=QKeySequence.FindPrevious, parentShortcutDepth=parentShortcutDepth)
+						gui.customData['nextPressed'] = gui.framelessButton(icon=icons.next, tip='next', margins=gui.smallDefaultMargins, parentShortcut=QKeySequence.FindNext, parentShortcutDepth=parentShortcutDepth)
 					gui.customData['searchExpr'] = searchExpr if searchExpr is not None else gui.customData.get('searchExpr', '')
-					gui.customData['searchExpr'] = gui.textField(gui.customData['searchExpr'], placeholderText='find... [Ctrl+F]', isMultiline=False, overlap=(1, 0, 1, 1), parentShortcut=QKeySequence.Find)
+					gui.customData['searchExpr'] = gui.textField(gui.customData['searchExpr'], placeholderText='find... [Ctrl+F]', isMultiline=False, overlap=(1, 0, 1, 1), parentShortcut=QKeySequence.Find, parentShortcutDepth=parentShortcutDepth)
 
-					with gui.hPanel(seamless=True):
+					with gui.hLayout(seamless=True):
 						searchMode = SearchMode.RegEx if gui.framelessButton('.*', tip='RegEx', margins=gui.smallDefaultMargins, checkable=True) else SearchMode.Normal
 						isCaseSensitive = gui.framelessButton('Aa', tip='case sensitive', margins=gui.smallDefaultMargins, checkable=True)
 						isMultiLine = False  # gui.toggleLeft(None, 'Multiline', enabled=isRegex)

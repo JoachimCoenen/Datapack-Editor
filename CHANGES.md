@@ -3,12 +3,13 @@
  * Improved performance of Json parser by > 30%.
  * Slightly improved performance of MCFunction parser.
  * Improved error messages for validation of Json objects with union schemas.
- * Added fuzzy matching for auto-completion in source code
+ * Added fuzzy matching for auto-completion in source code.
 
 ### Fixes
- * Fixed syntax highlighting issues with escape sequences in
+ * Fixed syntax highlighting issues with escape sequences.
  * Fixed Json validation not reporting missing or illegal properties when a union schema has multiple object schemas.
- * Fixed the description property in pack.mcmeta to be a [raw Json Text](https://minecraft.wiki/w/Raw_JSON_text_format) instead of a plain string
+ * Fixed the description property in pack.mcmeta to be a [raw Json Text](https://minecraft.wiki/w/Raw_JSON_text_format) instead of a plain string.
+ * Fixed Pressing F3 is ignored within a code edit, but works when the search bar is selected (issue #38).
 
 
 ## Version 0.5.1-alpha
