@@ -1,5 +1,5 @@
 """
-for Minecraft version 1.17
+for Minecraft version 1.20.3
 """
 from dataclasses import replace
 
