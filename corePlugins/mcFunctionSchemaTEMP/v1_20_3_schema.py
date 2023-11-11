@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.18.2
+currently at minecraft version 1.19
 """
 
 from copy import copy
@@ -12,6 +12,7 @@ from base.model.parsing.bytesUtils import strToBytes
 
 from .argumentTypes import *
 from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
+from ..datapack.datapackContents import RESOURCES
 
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
@@ -1866,22 +1867,50 @@ def build_list_args(_: FullMCData) -> list[CommandPartSchema]:
 
 @addCommand(
 	name='locate',
-	description='Locates closest structure.',
+	description='Locates closest structure, biome, or point of interest (poi).',
 	opLevel=2
 )
 def build_locate_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [
-		ArgumentSchema(
-			name='StructureType',
-			type=MINECRAFT_RESOURCE_LOCATION,
-			args=dict(schema='structure', allowTags=True),
+		KeywordSchema(
+			name='structure',
+			next=[
+				ArgumentSchema(
+					name='structure',
+					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema=RESOURCES.WORLDGEN.STRUCTURE, allowTags=True),
+				)
+			]
 		),
+		KeywordSchema(
+			name='biome',
+			next=[
+				ArgumentSchema(
+					name='biome',
+					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema=RESOURCES.WORLDGEN.BIOME, allowTags=True),
+				)
+			]
+		),
+		KeywordSchema(
+			name='poi',
+			next=[
+				ArgumentSchema(
+					name='poi',
+					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema='point_of_interest_type', allowTags=True),
+				)
+			]
+		)
 	]
 
 
 @addCommand(
 	name='locatebiome',
 	description='Locates closest biome.',
+	removed=True,
+	removedVersion='1.19',
+	removedComment='Replaced with `/locate biome`',
 	opLevel=2
 )
 def build_locatebiome_args(_: FullMCData) -> list[CommandPartSchema]:
@@ -1889,7 +1918,7 @@ def build_locatebiome_args(_: FullMCData) -> list[CommandPartSchema]:
 		ArgumentSchema(
 			name='biome',
 			type=MINECRAFT_RESOURCE_LOCATION,
-			args=dict(schema='biome', allowTags=True),
+			args=dict(schema=RESOURCES.WORLDGEN.BIOME, allowTags=True),
 		),
 	]
 
@@ -2361,8 +2390,146 @@ def build_perf_args(_: FullMCData) -> list[CommandPartSchema]:
 
 
 @addCommand(
+	name='place',
+	description='Places features, jigsaws, structures, and templates at a given location.',
+	opLevel=2
+)
+def build_place_args(_: FullMCData) -> list[CommandPartSchema]:
+	return [
+		# place feature <feature> [pos]
+		KeywordSchema(
+			name='feature',
+			next=[
+				ArgumentSchema(
+					name='feature',
+					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema=RESOURCES.WORLDGEN.CONFIGURED_FEATURE),
+					next=[
+						TERMINAL,
+						ArgumentSchema(
+							name='pos',
+							type=MINECRAFT_BLOCK_POS,
+							description="The position to use as the origin for the feature placement (if omitted, ~ ~ ~ is used)."
+						),
+					]
+				),
+			]
+		),
+		# place jigsaw <pool> <start> <depth> [pos]
+		KeywordSchema(
+			name='jigsaw',
+			next=[
+				ArgumentSchema(
+					name='pool',
+					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema=RESOURCES.WORLDGEN.TEMPLATE_POOL),
+					next=[
+						ArgumentSchema(
+							name='start',
+							type=MINECRAFT_RESOURCE_LOCATION,
+							args=dict(schema='any'),
+							description="Specifies the jigsaw block that is connected to when generating the start structure pool.",
+							next=[
+								ArgumentSchema(
+									name='max_depth',
+									type=BRIGADIER_INTEGER,
+									args=dict(min=1, max=7),
+									description="The maximum number of jigsaw connections to traverse during placement.",
+									next=[
+										TERMINAL,
+										ArgumentSchema(
+											name='position',
+											type=MINECRAFT_BLOCK_POS,  # todo what does this actually do? doesn't the placement of the jigsaw block already define a a location?
+											description="The position to use as the origin for the feature placement (if omitted, ~ ~ ~ is used)."
+										),
+									]
+								),
+							]
+						),
+					]
+				),
+			]
+		),
+		# place structure <structure> [pos]
+		KeywordSchema(
+			name='structure',
+			next=[
+				ArgumentSchema(
+					name='structure',
+					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema=RESOURCES.WORLDGEN.STRUCTURE),
+					next=[
+						TERMINAL,
+						ArgumentSchema(
+							name='pos',
+							type=MINECRAFT_BLOCK_POS,
+							description="The position to use as the origin for the structure placement (if omitted, ~ ~ ~ is used)."
+						),
+					]
+				),
+			]
+		),
+		# place template <template> [pos] [rotation] [mirror] [integrity] [seed]
+		KeywordSchema(
+			name='template',
+			next=[
+				ArgumentSchema(
+					name='structure',
+					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema=RESOURCES.WORLDGEN.STRUCTURE),
+					next=[
+						TERMINAL,
+						ArgumentSchema(
+							name='pos',
+							type=MINECRAFT_BLOCK_POS,
+							description="The position to use as the origin for the template placement.",
+							next=[
+								TERMINAL,
+								ArgumentSchema(
+									name='rotation',
+									type=MINECRAFT_TEMPLATE_ROTATION,
+									description="Specifies the rotation to apply to the placed template.",
+									next=[
+										TERMINAL,
+										ArgumentSchema(
+											name='mirror',
+											type=MINECRAFT_TEMPLATE_MIRROR,
+											description="Specifies the mirroring to apply to the placed template.",
+											next=[
+												TERMINAL,
+												ArgumentSchema(
+													name='integrity',
+													type=BRIGADIER_FLOAT,
+													args=dict(min=0., max=1.),
+													description="Specifies the integrity value to apply to the placed template (how complete the template that gets placed is). If omitted, defaults to 1.0.",
+													next=[
+														TERMINAL,
+														ArgumentSchema(
+															name='seed',
+															type=BRIGADIER_INTEGER,
+															description="Specifies the seed to use for randomized degradation of the placed template when integrity is less than 1. If omitted, defaults to 0."
+														),
+													]
+												),
+											]
+										),
+									]
+								),
+							]
+						),
+					]
+				),
+			]
+		),
+	]
+
+
+@addCommand(
 	name='placefeature',
 	description='Places a configured feature at a given location.',
+	removed=True,
+	removedVersion='1.19',
+	removedComment='Replaced with `/place feature`',
 	opLevel=2
 )
 def build_placefeature_args(_: FullMCData) -> list[CommandPartSchema]:

@@ -564,6 +564,26 @@ MINECRAFT_TEAM = ArgumentType(
 	* {{cd|123}}""",
 )
 
+MINECRAFT_TEMPLATE_MIRROR = LiteralsArgumentType(
+	name='minecraft:template_mirror',
+	description="Must be one of `none`, `front_back`, and `left_right`. ",
+	description2="""""",
+	examples="""
+	* {{cd|none}}
+	* {{cd|left_right}}""",
+	options=[b'none', b'front_back', b'left_right']
+)
+
+MINECRAFT_TEMPLATE_ROTATION = LiteralsArgumentType(
+	name='minecraft:template_rotation',
+	description="Must be one of `none`, `clockwise_90`, `counterclockwise_90`, and `180`. ",
+	description2="""""",
+	examples="""
+	* {{cd|none}}
+	* {{cd|clockwise_90}}""",
+	options=[b'none', b'clockwise_90', b'counterclockwise_90', b'180']
+)
+
 MINECRAFT_TIME = ArgumentType(
 	name='minecraft:time',
 	description="{{Arg desc|je=time}}",
@@ -694,6 +714,8 @@ __all__ = [
 	'MINECRAFT_SCOREBOARD_SLOT',
 	'MINECRAFT_SWIZZLE',
 	'MINECRAFT_TEAM',
+	'MINECRAFT_TEMPLATE_MIRROR',
+	'MINECRAFT_TEMPLATE_ROTATION',
 	'MINECRAFT_TIME',
 	'MINECRAFT_UUID',
 	'MINECRAFT_VEC2',
