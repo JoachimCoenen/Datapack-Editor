@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.19
+currently at minecraft version 1.19.3
 """
 
 from copy import copy
@@ -1092,6 +1092,25 @@ def build_execute_args(_: FullMCData) -> list[CommandPartSchema]:
 	TERMINAL_LIST = [TERMINAL]
 	EXECUTE_IF_UNLESS_ARGUMENTS.append(
 		KeywordSchema(
+			name='biome',
+			next=[
+				ArgumentSchema(
+					name='pos',
+					type=MINECRAFT_BLOCK_POS,
+					next=[
+						ArgumentSchema(
+							name='biome',
+							type=MINECRAFT_RESOURCE_LOCATION,
+							args=dict(schema=RESOURCES.WORLDGEN.BIOME, allowTags=True),
+							next=ChainedList(TERMINAL_LIST, EXECUTE_INSTRUCTIONS)
+						),
+					],
+				),
+			],
+		)
+	)
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(
+		KeywordSchema(
 			name='block',
 			next=[
 				ArgumentSchema(
@@ -1266,6 +1285,7 @@ def build_execute_args(_: FullMCData) -> list[CommandPartSchema]:
 			],
 		)
 	)
+
 	EXECUTE_INSTRUCTIONS.append(
 		KeywordSchema(
 			name='if',
@@ -1532,6 +1552,49 @@ def build_fill_args(_: FullMCData) -> list[CommandPartSchema]:
 										ArgumentSchema(
 											name='replace',
 											type=MINECRAFT_BLOCK_PREDICATE
+										),
+									]
+								),
+							]
+						),
+					]
+				),
+			]
+		),
+	]
+
+
+@addCommand(
+	name='fillbiome',
+	description='Changes biome entries for an area.',
+	opLevel=2
+)
+def build_fillbiome_args(_: FullMCData) -> list[CommandPartSchema]:
+	# fillbiome <from> <to> <biome> [replace <filter>]
+	return [
+		ArgumentSchema(
+			name='from',
+			type=MINECRAFT_BLOCK_POS,
+			next=[
+				ArgumentSchema(
+					name='to',
+					type=MINECRAFT_BLOCK_POS,
+					next=[
+						ArgumentSchema(
+							name='biome',
+							type=MINECRAFT_RESOURCE_LOCATION,
+							args=dict(schema=RESOURCES.WORLDGEN.BIOME, allowTags=False),
+							description="Specifies the biome to fill the specified area with.",
+							next=[
+								TERMINAL,
+								KeywordSchema(
+									name='replace',
+									next=[
+										ArgumentSchema(
+											name='replace',
+											type=MINECRAFT_RESOURCE_LOCATION,
+											args=dict(schema=RESOURCES.WORLDGEN.BIOME, allowTags=True),
+											description="Specifies the biomes in the fill region to be replaced. If not specified, replaces all biomes in the fill region."
 										),
 									]
 								),
@@ -2614,8 +2677,23 @@ def build_publish_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [
 		TERMINAL,
 		ArgumentSchema(
-			name='port',
-			type=BRIGADIER_INTEGER,
+			name='allowCommands',
+			type=BRIGADIER_BOOL,
+			next=[
+				TERMINAL,
+				ArgumentSchema(
+					name='gamemode',
+					type=MINECRAFT_GAME_MODE,
+					next=[
+						TERMINAL,
+						ArgumentSchema(
+							name='port',
+							type=BRIGADIER_INTEGER,
+							args=dict(min=0, max=65535)
+						),
+					]
+				),
+			]
 		),
 	]
 
