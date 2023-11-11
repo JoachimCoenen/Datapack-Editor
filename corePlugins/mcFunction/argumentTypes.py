@@ -24,7 +24,7 @@ _registerNamedArgumentType: AddToDictDecorator[str, ArgumentType] = AddToDictDec
 
 
 def registerNamedArgumentType(argumentType: ArgumentType, forceOverride: bool = False) -> None:
-	_registerNamedArgumentType(argumentType.name, forceOverride)(argumentType)
+	_registerNamedArgumentType(argumentType.name, forceOverride=forceOverride)(argumentType)
 
 
 @dataclass

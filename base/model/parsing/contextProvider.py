@@ -97,7 +97,7 @@ class AddContextFunc(Protocol[_TContext]):
 
 class AddContextToDictDecorator(AddToDictDecorator[str, _TContext], Generic[_TContext]):
 	def __call__(self, key: str, *, forceOverride: bool = False, **kwargs) -> AddContextFunc[_TContext]:
-		addContextInner = super(AddContextToDictDecorator, self).__call__(key, forceOverride)
+		addContextInner = super(AddContextToDictDecorator, self).__call__(key, forceOverride=forceOverride)
 
 		def addContext(func: Type[_TContext]) -> Type[_TContext]:
 			addContextInner(func(**kwargs))

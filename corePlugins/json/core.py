@@ -448,7 +448,7 @@ class PropertySchema(JsonSchema[JsonProperty]):
 		super(PropertySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.name: Union[str, Anything] = name
 		self.optional: bool = optional
-		self.default: Optional[_TT2] = default
+		self.default: Optional[JsonValue] = default
 		self.value: Optional[JsonSchema[_TT2]] = value
 		self.decidingProp: Optional[DecidingPropRef] = decidingProp
 		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = {}
@@ -746,7 +746,7 @@ _registerNamedJsonArgType: AddToDictDecorator[str, JsonArgType] = AddToDictDecor
 
 
 def registerNamedJsonArgType(jsonArgType: JsonArgType, forceOverride: bool = False) -> None:
-	_registerNamedJsonArgType(jsonArgType.name, forceOverride)(jsonArgType)
+	_registerNamedJsonArgType(jsonArgType.name, forceOverride=forceOverride)(jsonArgType)
 
 
 OPTIONS_JSON_ARG_TYPE = JsonArgType(
