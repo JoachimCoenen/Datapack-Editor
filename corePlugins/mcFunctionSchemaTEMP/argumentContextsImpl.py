@@ -44,7 +44,7 @@ OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be
 @argumentContext(MINECRAFT_RESOURCE_LOCATION.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))
 @argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))  # TODO: add validation for objective_criteria
 @argumentContext(DPE_ADVANCEMENT.name, rlcSchema=ResourceLocationSchema('', 'advancement', allowTags=False))
-@argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome', allowTags=False))
+@argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome', allowTags=False))  # outdated. TODO: remove
 class ResourceLocationLikeHandler(ParsingHandler):
 	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()
@@ -52,6 +52,29 @@ class ResourceLocationLikeHandler(ParsingHandler):
 
 	def getSchema(self, ai: ArgumentSchema) -> ResourceLocationSchema:
 		return self.rlcSchema
+
+	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
+		return RESOURCE_LOCATION_ID
+
+	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
+		return dict(ignoreTrailingChars=True)
+
+	def getErsatzNodeForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.getSchema(ai))
+
+
+@argumentContext(MINECRAFT_RESOURCE_LOCATION.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))
+class ResourceLocationHandler(ParsingHandler):
+	def __init__(self, rlcSchema: ResourceLocationSchema):
+		super().__init__()
+		self.rlcSchema: ResourceLocationSchema = rlcSchema
+
+	def getSchema(self, ai: ArgumentSchema) -> ResourceLocationSchema:
+		schema = ai.args.get('schema', 'any')  # todo add warning if no 'schema' is given.
+		allowTags = ai.args.get('allowTags', False)
+		onlyTags = ai.args.get('onlyTags', False)
+		rlcSchema = ResourceLocationSchema('', schema, allowTags=allowTags, onlyTags=onlyTags)
+		return rlcSchema
 
 	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
 		return RESOURCE_LOCATION_ID

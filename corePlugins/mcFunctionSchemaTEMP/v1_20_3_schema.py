@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.18
+currently at minecraft version 1.18.2
 """
 
 from copy import copy
@@ -1869,11 +1869,12 @@ def build_list_args(_: FullMCData) -> list[CommandPartSchema]:
 	description='Locates closest structure.',
 	opLevel=2
 )
-def build_locate_args(version: FullMCData) -> list[CommandPartSchema]:
+def build_locate_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [
 		ArgumentSchema(
 			name='StructureType',
-			type=makeLiteralsArgumentType([strToBytes(s.path) for s in version.structures] or [b'NO_OPTIONS']),
+			type=MINECRAFT_RESOURCE_LOCATION,
+			args=dict(schema='structure', allowTags=True),
 		),
 	]
 
@@ -1887,7 +1888,8 @@ def build_locatebiome_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [
 		ArgumentSchema(
 			name='biome',
-			type=DPE_BIOME_ID,
+			type=MINECRAFT_RESOURCE_LOCATION,
+			args=dict(schema='biome', allowTags=True),
 		),
 	]
 
@@ -2359,6 +2361,29 @@ def build_perf_args(_: FullMCData) -> list[CommandPartSchema]:
 
 
 @addCommand(
+	name='placefeature',
+	description='Places a configured feature at a given location.',
+	opLevel=2
+)
+def build_placefeature_args(_: FullMCData) -> list[CommandPartSchema]:
+	return [
+		ArgumentSchema(
+			name='id',
+			type=MINECRAFT_RESOURCE_LOCATION,
+			args=dict(schema='feature'),
+			next=[
+				TERMINAL,
+				ArgumentSchema(
+					name='source',
+					type=MINECRAFT_BLOCK_POS,
+					description="The position to use as the origin for the feature placement (if omitted, ~ ~ ~ is used)."
+				),
+			]
+		),
+	]
+
+
+@addCommand(
 	name='playsound',
 	description='Plays a sound.',
 	opLevel=2
@@ -2447,6 +2472,7 @@ def build_recipe_args(_: FullMCData) -> list[CommandPartSchema]:
 						ArgumentSchema(
 							name='recipe',
 							type=MINECRAFT_RESOURCE_LOCATION,
+							args=dict(schema='feature', allowTags=True),
 						),
 					]
 				),
