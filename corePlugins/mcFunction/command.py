@@ -56,13 +56,29 @@ class ArgumentSchema(CommandPartSchema):
 
 @dataclass
 class SwitchSchema(CommandPartSchema):
-	options: list[Union[KeywordSchema, TerminalSchema]] = field(default_factory=list)
+	options: list[CommandPartSchema] = field(default_factory=list)
 	next: Sequence[CommandPartSchema] = field(default_factory=list)
 
 	@property
 	def asString(self) -> str:
 		options = '|'.join(opt.asString for opt in self.options)
 		return f"({options})"
+
+	@property
+	def hasTerminalOption(self) -> bool:
+		return isPotentiallyEmpty(self.options)
+
+	@property
+	def isPotentiallyEmpty(self) -> bool:
+		return self.hasTerminalOption and isPotentiallyEmpty(self.next)
+
+
+def isPotentiallyEmpty(options: Sequence[CommandPartSchema]) -> bool:
+	for option in options:
+		if option is TERMINAL:
+			return True
+		if isinstance(option, SwitchSchema) and option.isPotentiallyEmpty:
+			return True
 
 
 @dataclass
@@ -103,18 +119,16 @@ def formatPossibilities(possibilities: Sequence[CommandPartSchema]) -> str:
 
 @dataclass
 class CommandSchema(CommandPartSchema):
-	# name: str = field(default='')
-	# description: str = field(default='')
 	opLevel: Union[int, str] = field(default=0)
 	availableInSP: bool = field(default=True)
 	availableInMP: bool = field(default=True)
 
 	removed: bool = field(default=False)
-	removedVersion: str = field(default=None)  # , doc="""the version this command was removed, if it has been removed else""")
+	removedVersion: str = field(default=None)
 	removedComment: str = field(default='')
 
 	deprecated: bool = field(default=False)
-	deprecatedVersion: Optional[str] = field(default=None)  # , doc="""the version this command was deprecated, if it has been deprecated""")
+	deprecatedVersion: Optional[str] = field(default=None)
 	deprecatedComment: str = field(default='')
 
 	next: list[CommandPartSchema] = field(default_factory=list[CommandPartSchema])
@@ -148,11 +162,8 @@ _TCommandPartSchema = TypeVar('_TCommandPartSchema', bound=CommandPartSchema)
 class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPartSchema], ABC):
 	source: bytes = field(repr=False)
 	content: bytes = field(repr=False)
-	# @property
-	# def content(self) -> bytes:
-	# 	return self.source[self.span.slice]
 
-	switchSchema: Optional[SwitchSchema] = field(default=None, init=False)
+	potentialNextSchemas: list[CommandPartSchema] = field(default_factory=list, init=False)
 
 	_next: Optional[CommandPart] = field(default=None, init=False)
 	_prev: Optional[CommandPart] = field(default=None, init=False, repr=False)
@@ -201,7 +212,7 @@ class ParsedComment(CommandPart[CommentSchema]):
 @dataclass
 class ParsedCommand(CommandPart[CommandSchema]):
 	name: bytes
-	nameSpan: Span = field(hash=False, compare=False)
+	span: Span = field(hash=False, compare=False)
 
 	@property
 	def children(self) -> Collection[CommandPart]:
@@ -241,37 +252,8 @@ class MCFunction(CommandPart[MCFunctionSchema]):
 		return self._children
 
 
-def _addSchemas(schemas: Sequence[CommandPartSchema], allSchemasIO: list[CommandPartSchema]) -> bool:
-	"""returns True if TERMINAL was found in schemas, or schemas was empty"""
-	hasTerminal = False
-	wasEmpty = True
-	for n in schemas:
-		if n is TERMINAL:
-			hasTerminal = True
-		elif isinstance(n, SwitchSchema):
-			wasEmpty = False
-			if _addSchemas(n.options, allSchemasIO):
-				hasTerminal = _addSchemas(n.next, allSchemasIO) or hasTerminal
-		else:
-			wasEmpty = False
-			allSchemasIO.append(n)
-	return hasTerminal or wasEmpty
-
-
 def getNextSchemas(before: CommandPart) -> Sequence[CommandPartSchema]:
-	allSchemas = []
-	if (schema := before.schema) is not None:
-		if not _addSchemas(schema.next, allSchemas):
-			return allSchemas
-	else:
-		return allSchemas
-
-	prev = before
-	while (prev := prev.prev) is not None:
-		if (schema := prev.switchSchema) is not None:
-			if not _addSchemas(schema.next, allSchemas):
-				return allSchemas
-	return allSchemas
+	return before.potentialNextSchemas
 
 
 __all__ = [

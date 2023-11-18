@@ -1,6 +1,6 @@
 import re
 from abc import abstractmethod, ABC
-from typing import Iterable, Optional, Any, cast
+from typing import Iterable, Optional, Any, Sequence, cast
 
 from cat.utils import escapeForXml, Decorator
 from cat.utils.profiling import logError
@@ -46,8 +46,8 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			errorsIO += checkMCFunction(self.tree)
 		elif isinstance(self.tree, ParsedCommand):
 			from .validator import validateCommand
-			validateCommand(self.tree, errorsIO=cast(list, errorsIO))
-		pass  # TODO: validateTree for command
+			validateCommand(self.tree.next, self.tree.schema, errorsIO=cast(list, errorsIO))
+		pass
 
 	def _getCommandSuggestions(self) -> Suggestions:
 		schema = self.tree.schema
@@ -69,11 +69,20 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			if isinstance(nx, KeywordSchema):
 				result.append(nx.name + ' ')
 			elif isinstance(nx, ArgumentSchema):
-				handler = getArgumentContext(nx.type)
-				if handler is not None:
-					result += handler.getSuggestions2(nx, node, pos, replaceCtx)
+				if (ctx := getArgumentContext(nx.type)) is not None:
+					result += ctx.getSuggestions2(nx, node, pos, replaceCtx)
 			elif nx is COMMANDS_ROOT:
 				result += self._getCommandSuggestions()
+		return result
+
+	def _getNextCallTips(self, nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position) -> list[str]:
+		result = []
+		for nx in nexts:
+			result.append(nx.name)
+
+		if (ctx := self.getContext(node)) is not None:
+			result += ctx.getCallTips(node, pos)
+
 		return result
 
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
@@ -89,19 +98,22 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 
 	def getCallTips(self, pos: Position) -> list[str]:
 		match = self.getBestMatch(pos)
-		possibilities: Optional[list[CommandPartSchema]] = None
-		if (hit := match.hit) is not None:
+		hit = match.hit
+		before = match.before
+		possibilities: Optional[Sequence[CommandPartSchema]] = None
+		if hit is not None:
 			if (ctx := self.getContext(hit)) is not None:
 				if tips := ctx.getCallTips(hit, pos):
 					return tips
-			possibilities = _getCallTipsFromHit(hit)
+			before = hit.prev
 
-		if possibilities is None:
-			if (before := match.before) is not None:
-				possibilities = _getCallTipsFromBefore(before)
+		if before is not None:
+			possibilities = getNextSchemas(before)
+		elif hit is not None and hit.schema is not None:
+			possibilities = [hit.schema]
 
 		if possibilities is not None:
-			return [formatPossibilities((p,)) for p in possibilities]
+			return [p.asString for p in possibilities] or [TERMINAL.asString]
 		return ['?']
 
 	def _getClickableRangesInternal(self, span: Span, tree: CommandPart, rangesIO: list[Span]) -> None:
@@ -127,18 +139,14 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 
 
 def _getBestMatch(tree: CommandPart, pos: Position, match: Match) -> None:
-	child = tree
+	if isinstance(tree, ParsedCommand):
+		child = tree.next
+	else:
+		child = tree
+
 	while child is not None:
 		span = child.span
-		if isinstance(child, ParsedCommand):
-			span = child.nameSpan
-			isCommand = True
-		else:
-			isCommand = False
-
 		if span.end < pos:
-			if isCommand:
-				match.contained.append(child)
 			match.before = child
 		elif span.start <= pos:
 			match.hit = child
@@ -153,18 +161,14 @@ def _getBestMatch(tree: CommandPart, pos: Position, match: Match) -> None:
 
 def _getCallTipsFromHit(hit: CommandPart) -> Optional[list[CommandPartSchema]]:
 	if (prev := hit.prev) is not None:
-		if (schema := prev.schema) is not None:
-			if (next_ := schema.next) is not None:
-				return next_
+		return _getCallTipsFromBefore(prev)
 	if (schema := hit.schema) is not None:
 		return [schema]
 	return None
 
 
 def _getCallTipsFromBefore(before: CommandPart) -> Optional[list[CommandPartSchema]]:
-	if (schema := before.schema) is not None:
-		return schema.next
-	return None
+	return before.potentialNextSchemas
 
 
 class ArgumentContext(Context[ParsedArgument], ABC):

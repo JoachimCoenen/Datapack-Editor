@@ -8,7 +8,7 @@ from cat.utils import Decorator
 from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StyleId
 from .argumentTypes import *
-from .command import MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
+from .command import CommandSchema, MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
 from base.model.utils import LanguageId
 
 
@@ -118,7 +118,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		return comment.span.end.index
 
 	def styleCommand(self, command: ParsedCommand) -> int:
-		return self.styleArguments(command)
+		return self.styleArguments(command.next)
 
 	def styleArguments(self, argument: CommandPart) -> int:
 		span = argument.span.slice
@@ -128,29 +128,27 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		return span.stop
 
 	def styleArgument(self, argument: CommandPart) -> slice:
-		if isinstance(argument, ParsedCommand):
-			style = StyleIds.Command
-			span = slice(argument.nameSpan.start.index, argument.nameSpan.end.index)
-		else:
-			argument: ParsedArgument
-			span = argument.span.slice
-			schema = argument.schema
-			if isinstance(schema, KeywordSchema):
-				style = StyleIds.Keyword
-			elif isinstance(schema, ArgumentSchema):
-				if isinstance(schema.type, LiteralsArgumentType):
-					style = StyleIds.Constant
-				else:
-					typeName = schema.typeName
-					# style = _allArgumentTypeStyles.get(typeName, StyleIds.Error)
-					styler = self.argumentStylers.get(typeName, None)
-					if styler is None:
-						style = StyleIds.Error
-					else:
-						styler.style(argument)
-						return span
+		argument: ParsedArgument
+		span = argument.span.slice
+		schema = argument.schema
+		if isinstance(schema, KeywordSchema):
+			style = StyleIds.Keyword
+		elif isinstance(schema, ArgumentSchema):
+			if isinstance(schema.type, LiteralsArgumentType):
+				style = StyleIds.Constant
 			else:
-				style = StyleIds.Error
+				typeName = schema.typeName
+				# style = _allArgumentTypeStyles.get(typeName, StyleIds.Error)
+				styler = self.argumentStylers.get(typeName, None)
+				if styler is None:
+					style = StyleIds.Error
+				else:
+					styler.style(argument)
+					return span
+		elif isinstance(schema, CommandSchema):
+			style = StyleIds.Command
+		else:
+			style = StyleIds.Error
 		self.setStyling(span, StyleId(style.value + self.offset))
 		return span
 

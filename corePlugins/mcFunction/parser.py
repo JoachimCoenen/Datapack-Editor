@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional, Sequence, Union
 
-from cat.utils.collections_ import Stack
 from .command import *
 from .stringReader import StringReader
 from base.model.utils import ParsingError, Span, Message, wrapInMarkdownCode
@@ -75,39 +74,65 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 
 	def parseCommand(self, sr: StringReader) -> Optional[ParsedCommand]:
 		startCursor = sr.cursor
+		startPos = sr.currentPos
 		sr.tryConsumeByte(ord(b'/'))
+		# commandArg is the first argument of a ParsedCommand
+		didMatch, commandArg, hasErrors, lastArg = self._parseSimpleCommand(sr)
+		if commandArg is None:
+			return None
+
+		commandSpan = Span(startPos, sr.currentPos)
+		endCursor = sr.cursor
+		content = sr.text[startCursor:endCursor]
+
+		command = ParsedCommand(name=commandArg.content, schema=commandArg.schema, span=commandSpan, source=self.text, content=content)
+		command.next = commandArg
+		return command
+
+	def _parseSimpleCommand(self, sr: StringReader) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument]]:
+		"""
+		:return:(didMatch, firstArg, hasError, lastArg)
+		"""
 		commandName: Optional[bytes] = sr.tryReadLiteral()
 		if commandName is None:
-			return None
-		nameSpan = sr.currentSpan
-		if self.schema is not None:
-			commandSchema = self.schema.commands.get(commandName)
-		else:
-			commandSchema = None
+			return False, None, False, None
+
+		commandSchema = self.schema.commands.get(commandName) if self.schema is not None else None
+
 		if commandSchema is None:
 			if sr.tryReadRemaining():  # move cursor to end
 				sr.mergeLastSave()
 			self.errors.append(ParsingError(UNKNOWN_COMMAND_MSG.format(wrapInMarkdownCode(bytesToStr(commandName))), sr.currentSpan))
-			return None
+			return True, None, True, None
 
-		argument: Optional[ParsedArgument] = None
+		# commandArg is the first argument of a ParsedCommand
+		commandArg = makeParsedArgument(sr, commandSchema, commandName)
+		commandArg.potentialNextSchemas = self._getAllPossibilities(commandSchema.next)
+
 		if sr.tryConsumeWhitespace():
-			argument = self.parseArguments(sr, commandSchema)
+			didMatch, firstArg, hasErrors, lastArg = self.parseArguments(sr, commandSchema.next)
+			if firstArg is not None:
+				commandArg.next = firstArg
+			lastArg = lastArg or commandArg
+			remaining: Optional[bytes] = sr.tryReadRemaining()
+			if remaining is not None:
+				lastArg.next = makeParsedArgument(sr, None, value=remaining)
+				lastArg = lastArg.next
 		else:
+			lastArg = commandArg
+			hasErrors = False  # ? is this right?
 			if not sr.hasReachedEnd:
-				trailingData: str = wrapInMarkdownCode(bytesToStr(sr.readUntilEndOrWhitespace()))
-				errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
-				self.errors.append(ParsingError(errorMsg, sr.currentSpan))
+				self._addExpectedArgumentError(sr)
+				hasErrors = True
 
 		sr.tryReadRemaining()
-		commandSpan = Span(nameSpan.start, sr.currentPos)
-		endCursor = sr.cursor
-		content = sr.text[startCursor:endCursor]
 
-		command = ParsedCommand(name=commandName, schema=commandSchema, span=commandSpan, nameSpan=nameSpan, source=self.text, content=content)
-		command.next = argument
+		return True, commandArg, hasErrors, lastArg
 
-		return command
+	def _addExpectedArgumentError(self, sr: StringReader) -> None:
+		trailingData: str = wrapInMarkdownCode(bytesToStr(sr.readUntilEndOrWhitespace()))
+		errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
+		self.errors.append(ParsingError(errorMsg, sr.currentSpan))
 
 	@staticmethod
 	def parseKeyword(sr: StringReader, ai: KeywordSchema) -> Optional[ParsedArgument]:
@@ -137,85 +162,119 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		argument = makeParsedArgument(sr, keywords[literal], value=literal)
 		return argument
 
-	def parseArguments(self, sr: StringReader, commandInfo: CommandSchema) -> Optional[ParsedArgument]:
-		possibilities: Sequence[CommandPartSchema] = commandInfo.next
-		firstArg: Optional[ParsedArgument] = None
-		lastArg: Optional[ParsedArgument] = None
+	def parseArguments(self, sr: StringReader, possibilities: Sequence[CommandPartSchema]) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument]]:
+		"""
+		:return:(didMatch, firstArg, hasError, lastArg)
+		"""
+		hasError = False
+		didMatch = False
+		lastArg = None
+		firstArg = None
 
-		infoStack: Stack[CommandPartSchema] = Stack()
 		# try to parse Keywords & Arguments:
-		while not sr.hasReachedEnd:
-			argument: Optional[ParsedArgument] = self.parseKeywords(sr, possibilities)
+		while True: #not sr.hasReachedEnd:
+			didMatch, argument, hasError, argument2, hasConsumedWhitespace, possibilities = self.parseArgument(sr, possibilities)
 
-			if argument is None:
-				for possibility in possibilities:
-					if False and isinstance(possibility, KeywordSchema):
-						continue
-					elif isinstance(possibility, ArgumentSchema):
-						possibility: ArgumentSchema  # make the type inference of pycharm happy :(
-						ctx = getArgumentContext(possibility.type)
-						if ctx is None:
-							argument = missingArgumentContext(sr, possibility, errorsIO=self.errors)
-							# return firstArg, errors
-						else:
-							argument = ctx.parse(sr, possibility, self.filePath, errorsIO=self.errors)
-						if argument is not None:
-							break
-						pass  # TODO isinstance(possibility, ArgumentSchema):
-					elif isinstance(possibility, SwitchSchema):
-						argument = self.parseKeywords(sr, possibility.options)
-						if argument is not None:
-							argument.switchSchema = possibility
-							infoStack.push(possibility)
-
-					elif possibility is COMMANDS_ROOT:
-						cursor = sr.cursor
-						argument = self.parseCommand(sr)
-						if argument is not None:
-							break
-						sr.cursor = cursor
-					elif possibility is TERMINAL:
-						if sr.hasReachedEnd:
-							return firstArg
-
-			if argument is None:
-				if infoStack:
-					possibilities = infoStack.pop().next
-					continue
-				else:
-					break
-			else:  # we successfully parsed an argument!
-				# add argument:
-				if lastArg is None:
+			if argument is not None:
+				if firstArg is None:
 					firstArg = argument
-				else:
+				if lastArg is not None:
 					lastArg.next = argument
-				lastArg = argument
-				# get possibilities for next argument:
-				if argument.schema is None:
-					possibilities = []
-				else:
-					possibilities = argument.schema.next
+				lastArg = argument2
+
+			# if it's the first argument which did not match, there might be other possibilities, we do not know about here.
+			hasError |= firstArg is not None and not didMatch
+
+			if hasError or not didMatch:
+				break
+
+			if argument is not None:  # we successfully parsed an argument!
+				if possibilities:
+					argument2.potentialNextSchemas += self._getAllPossibilities(possibilities)
 				# finally consume whitespace:
-				if sr.tryConsumeWhitespace() or sr.hasReachedEnd:
-					continue
-				else:
-					trailingData = sr.readUntilEndOrWhitespace()
-					trailingData = bytesToStr(trailingData)
-					errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
-					self.errors.append(ParsingError(errorMsg, sr.currentSpan))
+				if not hasConsumedWhitespace and not sr.tryConsumeWhitespace() and not sr.hasReachedEnd:
+					self._addExpectedArgumentError(sr)
 					sr.rollback()
 					break
 
-		remaining: Optional[bytes] = sr.tryReadRemaining()
-		if remaining is not None:
-			argument = makeParsedArgument(sr, None, value=remaining)
-			if lastArg is None:
-				firstArg = argument
-			else:
-				lastArg.next = argument
+			if not possibilities:
+				break
 
-		return firstArg
+		return didMatch, firstArg, hasError, lastArg
+
+	def parseArgument(self, sr: StringReader, possibilities: Sequence[CommandPartSchema]) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument], bool, Sequence[CommandPartSchema]]:
+		hasError = False
+		hasConsumedWhitespace = False
+		argument: Optional[ParsedArgument] = self.parseKeywords(sr, possibilities)
+		argument2: Optional[ParsedArgument] = argument
+		if argument is not None:
+			nextPossibilities = argument.schema.next
+			didMatch = True
+		else:
+			nextPossibilities = ()
+			didMatch = not possibilities  # a TERMINAL always matches
+			for possibility in possibilities:
+
+				if False and isinstance(possibility, KeywordSchema):
+					continue
+
+				elif isinstance(possibility, (ArgumentSchema, CommandsRoot, SwitchSchema)):
+					# cursor = sr.cursor
+					if possibility is COMMANDS_ROOT:
+						argumentDidMatch, argument, hasError, argument2 = self._parseSimpleCommand(sr)
+					elif isinstance(possibility, SwitchSchema):
+						argumentDidMatch, argument, hasError, argument2 = self.parseArguments(sr, possibility.options)
+						hasConsumedWhitespace = argumentDidMatch
+					else:
+						argumentDidMatch, argument, hasError, argument2 = self._parseSimpleArgument(sr, possibility)
+
+					if hasError:
+						nextPossibilities = ()
+						break
+					elif argumentDidMatch:
+						# get possibilities for next argument:
+						nextPossibilities = possibility.next
+						didMatch = True
+						break
+					else:
+						# sr.cursor = cursor  # not necessarily needed for _parseSimpleArgument(), but required for parseCommand()
+						continue
+
+				elif possibility is TERMINAL:
+					didMatch = True  # a TERMINAL always matches
+				# if sr.hasReachedEnd:
+				# 	return True, firstArg, False, lastArg
+				elif isinstance(possibility, KeywordSchema):
+					continue
+				else:
+					raise ValueError(f"Cannot handle possibility of type ({type(possibility).__qualname__})")
+
+		return didMatch, argument, hasError, argument2, hasConsumedWhitespace, nextPossibilities
+
+	def _parseSimpleArgument(self, sr: StringReader, possibility: ArgumentSchema) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument]]:
+		"""
+		:return:(didMatch, firstArg, hasError, lastArg)
+		"""
+		ctx = getArgumentContext(possibility.type)
+		if ctx is None:
+			argument = missingArgumentContext(sr, possibility, errorsIO=self.errors)
+		else:
+			argument = ctx.parse(sr, possibility, self.filePath, errorsIO=self.errors)
+		return argument is not None, argument, False, argument
+
+	def _getAllPossibilities(self, possibilities: Sequence[CommandPartSchema]) -> list[CommandPartSchema]:
+		result = {}
+		self._addAllPossibilities(possibilities, result)
+		return list(result.values())
+
+	def _addAllPossibilities(self, possibilities: Sequence[CommandPartSchema], allIO: dict[int, CommandPartSchema]) -> None:
+		for possibility in possibilities:
+			if isinstance(possibility, SwitchSchema):
+				self._addAllPossibilities(possibility.options, allIO)
+				if possibility.hasTerminalOption:
+					self._addAllPossibilities(possibility.next, allIO)
+			else:
+				allIO[id(possibility)] = possibility
 
 	def parse(self) -> Optional[MCFunction]:
 		return self.parseMCFunction()

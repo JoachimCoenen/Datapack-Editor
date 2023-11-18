@@ -7,9 +7,11 @@
 
 ### Fixes
  * Fixed syntax highlighting issues with escape sequences.
- * Fixed Json validation not reporting missing or illegal properties when a union schema has multiple object schemas.
+ * Fixed JSON validation not reporting missing or illegal properties when a union schema has multiple object schemas.
  * Fixed the description property in pack.mcmeta to be a [raw Json Text](https://minecraft.wiki/w/Raw_JSON_text_format) instead of a plain string.
  * Fixed Pressing F3 is ignored within a code edit, but works when the search bar is selected (issue #38).
+ * Fixed Minecraft command parser incorrectly parsing certain constructs with SwitchSchemas.
+ * Fixed incorrect call tips and code suggestions for Minecraft commands which use certain constructs with SwitchSchemas.
 
 
 ## Version 0.5.1-alpha

@@ -3,7 +3,6 @@ from typing import Sequence, Optional
 from .argumentTypes import *
 from .command import *
 from .commandContext import getArgumentContext
-from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.utils import SemanticsError, Span, Message, wrapInMarkdownCode, Position
 
@@ -19,16 +18,16 @@ def checkMCFunction(mcFunction: MCFunction) -> list[SemanticsError]:
 	for command in mcFunction.commands:
 		if command is None:
 			continue
-		validateCommand(command, errorsIO=errors)
+		validateCommand(command.next, command.schema, errorsIO=errors)
 	return errors
 
 
-def validateCommand(command: ParsedCommand, *, errorsIO: list[SemanticsError]) -> None:
-	schema = command.schema
+def validateCommand(command: CommandPart, schema: CommandSchema, *, errorsIO: list[SemanticsError]) -> None:
+	assert isinstance(command, ParsedArgument)
 	if schema.removed:
-		errorsIO.append(SemanticsError(OUTDATED_COMMAND_MSG.format(bytesToStr(command.name), schema.removedVersion, schema.removedComment), command.span))
+		errorsIO.append(SemanticsError(OUTDATED_COMMAND_MSG.format(bytesToStr(command.value), schema.removedVersion, schema.removedComment), command.span))
 	elif schema.deprecated:
-		errorsIO.append(SemanticsError(DEPRECATED_COMMAND_MSG.format(bytesToStr(command.name), schema.deprecatedVersion, schema.deprecatedComment), command.span, style='warning'))
+		errorsIO.append(SemanticsError(DEPRECATED_COMMAND_MSG.format(bytesToStr(command.value), schema.deprecatedVersion, schema.deprecatedComment), command.span, style='warning'))
 
 	lastCommandPart: CommandPart = command
 	commandPart: Optional[CommandPart] = command.next
@@ -50,11 +49,9 @@ def _unknownOrTooManyArgumentsError(commandPart: CommandPart, possibilities: Seq
 		return SemanticsError(TOO_MANY_ARGUMENTS_MSG.format(valueStr), commandPart.span)
 
 
-def _missingArgumentError(command: ParsedCommand, lastCommandPart: CommandPart, possibilities: Sequence[CommandPartSchema]) -> SemanticsError:
-	errorStart = lastCommandPart.end
-	errorEnd = command.span.end
-	if errorStart.index >= errorEnd.index:
-		errorStart = Position(errorEnd.line, max(0, errorEnd.column - 1), max(0, errorEnd.index - 1))
+def _missingArgumentError(command: ParsedArgument, lastCommandPart: CommandPart, possibilities: Sequence[CommandPartSchema]) -> SemanticsError:
+	errorEnd = lastCommandPart.end
+	errorStart = errorEnd - 1
 
 	possibilitiesStr = formatPossibilities(possibilities)
 	return SemanticsError(MISSING_ARGUMENTS_MSG.format(possibilitiesStr), Span(errorStart, errorEnd))
@@ -66,7 +63,7 @@ def validateArgument(commandPart: CommandPart, *, errorsIO: list[SemanticsError]
 		before = commandPart.prev
 		remainingPossibilities = getNextSchemas(before) if before is not None else []
 		errorsIO.append(_unknownOrTooManyArgumentsError(commandPart, remainingPossibilities))
-		return commandPart.next, []
+		return commandPart.next, commandPart.potentialNextSchemas or []
 
 	if isinstance(schema, KeywordSchema):
 		return commandPart.next, schema.next
@@ -83,13 +80,7 @@ def validateArgument(commandPart: CommandPart, *, errorsIO: list[SemanticsError]
 			handler = getArgumentContext(type_)
 			if handler is not None:
 				handler.validate(commandPart, errorsIO)
-		return commandPart.next, schema.next
+		return commandPart.next, commandPart.potentialNextSchemas or schema.next
 
 	if isinstance(schema, CommandSchema):
-		# TODO: validateArgument for command. (i.e. deprecated, wrongVersion, etc...)
-		if isinstance(commandPart, ParsedCommand):
-			validateCommand(commandPart, errorsIO=errorsIO)
-			return None, []
-		else:
-			errorsIO.append(SemanticsError(INTERNAL_ERROR_MSG.format(EXPECTED_BUT_GOT_MSG, '`ParsedCommand`', type(commandPart).__name__), commandPart.span))
-			return commandPart.next, schema.next
+		return commandPart.next, commandPart.potentialNextSchemas or schema.next
