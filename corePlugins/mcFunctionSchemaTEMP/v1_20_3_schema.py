@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.19.3
+currently at minecraft version 1.19.4
 """
 
 from copy import copy
@@ -502,49 +502,166 @@ def build_clear_args(_: FullMCData) -> list[CommandPartSchema]:
 	opLevel=2
 )
 def build_clone_args(_: FullMCData) -> list[CommandPartSchema]:
-	return [
+	CLONE_MODE = ArgumentSchema(name='cloneMode', type=makeLiteralsArgumentType([b'force', b'move', b'normal']), )
+
+	MASK_OR_FILTER = [
+		TERMINAL,
 		ArgumentSchema(
-			name='begin',
-			type=MINECRAFT_BLOCK_POS,
+			name='maskMode',
+			type=makeLiteralsArgumentType([b'replace', b'masked']),
+			next=Options([
+				TERMINAL,
+				CLONE_MODE
+			])
+		),
+		KeywordSchema(
+			name='filtered',
 			next=Options([
 				ArgumentSchema(
-					name='end',
+					name='filter',
+					type=MINECRAFT_BLOCK_PREDICATE,
+					next=Options([
+						TERMINAL,
+						CLONE_MODE
+					])
+				)
+			])
+		)
+	]
+
+	TO_TARGETDIMENSION = KeywordSchema(
+		name='to',
+		next=Options([
+			ArgumentSchema(
+				name='targetDimension',
+				type=MINECRAFT_RESOURCE_LOCATION,
+				args=dict(schema=RESOURCES.DIMENSION)
+			)
+		])
+	)
+
+	TO = SwitchSchema(
+		name='...',
+		options=Options([
+			TO_TARGETDIMENSION,
+			TERMINAL
+		]),
+		next=Options([
+			ArgumentSchema(
+				name='destination',
+				type=MINECRAFT_BLOCK_POS,
+				next=Options(MASK_OR_FILTER),
+			),
+		])
+	)
+
+	FROM_TARGETDIMENSION = KeywordSchema(
+		name='from',
+		next=Options([
+			ArgumentSchema(
+				name='targetDimension',
+				type=MINECRAFT_RESOURCE_LOCATION,
+				args=dict(schema=RESOURCES.DIMENSION)
+			)
+		])
+	)
+
+	return [
+		SwitchSchema(
+			name='...',
+			options=Options([
+				FROM_TARGETDIMENSION,
+				TERMINAL
+			]),
+			next=Options([
+				ArgumentSchema(
+					name='begin',
 					type=MINECRAFT_BLOCK_POS,
 					next=Options([
 						ArgumentSchema(
-							name='destination',
+							name='end',
 							type=MINECRAFT_BLOCK_POS,
 							next=Options([
-								TERMINAL,
-								ArgumentSchema(
-									name='maskMode',
-									type=makeLiteralsArgumentType([b'replace', b'masked']),
-									next=Options([
-										TERMINAL,
-										ArgumentSchema(
-											name='cloneMode',
-											type=makeLiteralsArgumentType([b'force', b'move', b'normal']),
-										),
-									]),
-								),
-								KeywordSchema(
-									name='filtered',
-									next=Options([
-										ArgumentSchema(
-											name='filter',
-											type=MINECRAFT_BLOCK_PREDICATE,
-											next=Options([
-												TERMINAL,
-												ArgumentSchema(
-													name='cloneMode',
-													type=makeLiteralsArgumentType([b'force', b'move', b'normal']),
-												),
-											]),
-										),
-									]),
-								),
+								TO
 							]),
 						),
+					]),
+				)
+			])
+		)
+	]
+
+
+@addCommand(
+	name='damage',
+	description='Applies damage to entities.',
+	opLevel=0
+)
+def build_damage_args(_: FullMCData) -> list[CommandPartSchema]:
+	AT_LOCATION = KeywordSchema(
+		name='at',
+		next=Options([
+			ArgumentSchema(
+				name='location',
+				type=MINECRAFT_VEC3,
+			),
+		]),
+	)
+
+	FROM_CAUSE = KeywordSchema(
+		name='from',
+		next=Options([
+			ArgumentSchema(
+				name='cause',
+				type=MINECRAFT_ENTITY,
+				args=dict(single=True),  # todo: add processing of 'single' argument to class EntityHandler(ArgumentContext) and and check all places where this should be set.
+				description="Specifies the cause of the damage (for example, the skeleton that shot the arrow)."
+			),
+		]),
+	)
+
+	BY_ENTITY = KeywordSchema(
+		name='by',
+		next=Options([
+			ArgumentSchema(
+				name='entity',
+				type=MINECRAFT_ENTITY,
+				args=dict(single=True),
+				description="Specifies the entity who dealt the damage.",
+				next=Options([
+					TERMINAL,
+					FROM_CAUSE
+				])
+			),
+		]),
+	)
+
+	DAMAGE_TYPE = ArgumentSchema(
+		name='damageType',
+		type=MINECRAFT_RESOURCE_LOCATION,
+		args=dict(schema='damage_type'),
+		next=Options([
+			TERMINAL,
+			AT_LOCATION,
+			BY_ENTITY,
+			*BY_ENTITY.next.all,
+		]),
+	)
+	return [
+		# damage <target> <amount> [<damageType>] [at <location>]
+		# damage <target> <amount> [<damageType>] [by <entity>] [from <cause>]
+		ArgumentSchema(
+			name='target',
+			type=MINECRAFT_ENTITY,
+			next=Options([
+				ArgumentSchema(
+					name='amount',
+					type=BRIGADIER_FLOAT,
+					args=dict(min=0.),
+					next=Options([
+						TERMINAL,
+						DAMAGE_TYPE,
+						*DAMAGE_TYPE.next.all,
 					]),
 				),
 			]),
@@ -639,6 +756,65 @@ def build_data_args(_: FullMCData) -> list[CommandPartSchema]:
 			])
 		),
 	]
+
+	MODIFICATION_FROM = KeywordSchema(
+		name='from',
+		next=Options([
+			SwitchSchema(
+				name='SOURCE',
+				options=Options(DATA_SOURCE),
+				next=Options([
+					TERMINAL,
+					ArgumentSchema(
+						name='sourcePath',
+						type=MINECRAFT_NBT_PATH,
+					),
+				])
+			)
+		])
+	)
+	MODIFICATION_STRING = KeywordSchema(
+		name='string',
+		next=Options([
+			SwitchSchema(
+				name='SOURCE',
+				options=Options(DATA_SOURCE),
+				next=Options([
+					TERMINAL,
+					ArgumentSchema(
+						name='sourcePath',
+						type=MINECRAFT_NBT_PATH,
+						next=Options([
+							TERMINAL,
+							ArgumentSchema(
+								name='start',
+								type=BRIGADIER_INTEGER,
+								description="Specifies the index of first character to include at the start of the string. Negative values are interpreted as index counted from the end of the string.",
+								next=Options([
+									TERMINAL,
+									ArgumentSchema(
+										name='end',
+										type=BRIGADIER_INTEGER,
+										description="Specifies the index of the first character to exclude at the end of the string. Negative values are interpreted as index counted from the end of the string."
+									)
+								])
+							)
+						])
+					)
+				])
+			)
+		])
+	)
+	MODIFICATION_VALUE = KeywordSchema(
+		name='value',
+		next=Options([
+			ArgumentSchema(
+				name='value',
+				type=MINECRAFT_NBT_TAG,
+			)
+		])
+	)
+
 	return [
 		KeywordSchema(
 			name='get',
@@ -693,37 +869,15 @@ def build_data_args(_: FullMCData) -> list[CommandPartSchema]:
 									name='MODIFICATION',
 									options=Options(DATA_MODIFICATION),
 									next=Options([
-										KeywordSchema(
-											name='from',
-											next=Options([
-												SwitchSchema(
-													name='SOURCE',
-													options=Options(DATA_SOURCE),
-													next=Options([
-														TERMINAL,
-														ArgumentSchema(
-															name='sourcePath',
-															type=MINECRAFT_NBT_PATH,
-														),
-													])
-												),
-											])
-										),
-										KeywordSchema(
-											name='value',
-											next=Options([
-												ArgumentSchema(
-													name='value',
-													type=MINECRAFT_NBT_TAG,
-												),
-											])
-										),
+										MODIFICATION_FROM,
+										MODIFICATION_STRING,
+										MODIFICATION_VALUE
 									])
-								),
+								)
 							])
-						),
+						)
 					])
-				),
+				)
 			])
 		),
 		# remove <TARGET> <path>
@@ -897,10 +1051,18 @@ def build_effect_args(_: FullMCData) -> list[CommandPartSchema]:
 							type=MINECRAFT_MOB_EFFECT,
 							next=Options([
 								TERMINAL,
-								ArgumentSchema(
-									name='seconds',
-									type=BRIGADIER_INTEGER,
-									args={'min': 0, 'max': 1000000},
+								SwitchSchema(
+									name='DURATION',
+									options=Options([
+										ArgumentSchema(
+											name='seconds',
+											type=BRIGADIER_INTEGER,
+											args={'min': 0, 'max': 1000000}
+										),
+										KeywordSchema(
+											name='infinite',
+										)
+									]),
 									next=Options([
 										TERMINAL,
 										ArgumentSchema(
@@ -1071,6 +1233,58 @@ def build_execute_args(_: FullMCData) -> list[CommandPartSchema]:
 	)
 	EXECUTE_INSTRUCTIONS.append(
 		KeywordSchema(
+			name='on',
+			description="Selects entities based on relation to the current executing entity. If the relation is not applicable to the executing entity or there are no entities matching it, selector returns zero elements.",
+			next=Options([
+				KeywordSchema(
+					name='attacker',
+					description="last entity that damaged the executing entity in the previous 5 seconds.",
+					next=EXECUTE_INSTRUCTION_OPTIONS
+				),
+				KeywordSchema(
+					name='controller',
+					description="entity that is controlling the executing entity (for example: first passenger in a boat).",
+					next=EXECUTE_INSTRUCTION_OPTIONS
+				),
+				KeywordSchema(
+					name='leasher',
+					description="entity leading the executing entity with a leash (might be a leash knot in case of being attached to a fence).",
+					next=EXECUTE_INSTRUCTION_OPTIONS
+				),
+				KeywordSchema(
+					name='owner',
+					description="owner of the executing entity, if it is a tameable animal (like cats, wolves or parrots).",
+					next=EXECUTE_INSTRUCTION_OPTIONS
+				),
+				KeywordSchema(
+					name='passengers',
+					description="all entities directly riding the executing entity (no sub-passengers).",
+					next=EXECUTE_INSTRUCTION_OPTIONS
+				),
+				KeywordSchema(
+					name='target',
+					description="attack target for the executing entity.",
+					next=EXECUTE_INSTRUCTION_OPTIONS
+				),
+				KeywordSchema(
+					name='vehicle',
+					description="entity that the executing entity is riding.",
+					next=EXECUTE_INSTRUCTION_OPTIONS
+				),
+				KeywordSchema(
+					name='origin',
+					description=" - Shooter, if the executing entity is a projectile (like arrow, fireball, trident, firework, thrown potion, etc.)\n"
+								" - Thrower, if the executing entity is an item.\n"
+								" - Source of effects, if the executing entity is an area effect cloud.\n"
+								" - Igniter, if the executing entity is a primed TNT.\n"
+								" - Summoner, if the executing entity is evoker fangs or a vex.\n",
+					next=EXECUTE_INSTRUCTION_OPTIONS
+				)
+			]),
+		)
+	)
+	EXECUTE_INSTRUCTIONS.append(
+		KeywordSchema(
 			name='positioned',
 			next=Options([
 				ArgumentSchema(
@@ -1084,6 +1298,17 @@ def build_execute_args(_: FullMCData) -> list[CommandPartSchema]:
 						ArgumentSchema(
 							name='targets',
 							type=MINECRAFT_ENTITY,
+							next=EXECUTE_INSTRUCTION_OPTIONS
+						),
+					]),
+				),
+				KeywordSchema(
+					name='over',
+					description="Finds a position on top of a heightmap. Changes the height of the execution position to be on top of the given heightmap",
+					next=Options([
+						ArgumentSchema(
+							name='heightmap',
+							type=makeLiteralsArgumentType([b'world_surface', b'motion_blocking', b'motion_blocking_no_leaves', b'ocean_floor']),
 							next=EXECUTE_INSTRUCTION_OPTIONS
 						),
 					]),
@@ -1109,6 +1334,19 @@ def build_execute_args(_: FullMCData) -> list[CommandPartSchema]:
 							next=EXECUTE_INSTRUCTION_OPTIONS
 						),
 					]),
+				)
+			]),
+		)
+	)
+	EXECUTE_INSTRUCTIONS.append(
+		KeywordSchema(
+			name='summon',
+			description="Summons a new entity and binds the context (@s) to it. Meant to simplify entity setup and reduce need for raw NBT editing.",
+			next=Options([
+				ArgumentSchema(
+					name='entity',
+					type=MINECRAFT_ENTITY_SUMMON,
+					next=EXECUTE_INSTRUCTION_OPTIONS
 				)
 			]),
 		)
@@ -1241,11 +1479,38 @@ def build_execute_args(_: FullMCData) -> list[CommandPartSchema]:
 	)
 	EXECUTE_IF_UNLESS_ARGUMENTS.append(
 		KeywordSchema(
+			name='dimension',
+			description="checks if the execution is in a matching dimension.",
+			next=Options([
+				ArgumentSchema(
+					name='dimension',
+					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema=RESOURCES.DIMENSION),  # curiously, there are no tags allowed here...
+					next=EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS,
+				),
+			]),
+		)
+	)
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(
+		KeywordSchema(
 			name='entity',
 			next=Options([
 				ArgumentSchema(
 					name='entities',
 					type=MINECRAFT_ENTITY,
+					next=EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS,
+				),
+			]),
+		)
+	)
+	EXECUTE_IF_UNLESS_ARGUMENTS.append(
+		KeywordSchema(
+			name='loaded',
+			description="Checks if the position given is fully loaded (in regard to both blocks and entities).",
+			next=Options([
+				ArgumentSchema(
+					name='pos',
+					type=MINECRAFT_BLOCK_POS,
 					next=EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS,
 				),
 			]),
@@ -2778,6 +3043,38 @@ def build_replaceitem_args(_: FullMCData) -> list[CommandPartSchema]:
 
 
 @addCommand(
+	name='ride',
+	description='Used to make entities ride other entities, stop entities from riding, make rides evict their riders, or summon rides or riders.',
+	opLevel='-'
+)
+def build_ride_args(_: FullMCData) -> list[CommandPartSchema]:
+	# ride <target> mount <vehicle>
+	# ride <target> dismount
+	return [
+		ArgumentSchema(
+			name='target',
+			type=MINECRAFT_ENTITY,
+			args=dict(single=True),
+			next=Options([
+				KeywordSchema(
+					name='mount',
+					next=Options([
+						ArgumentSchema(
+							name='target',
+							type=MINECRAFT_ENTITY,
+							args=dict(single=True)
+						)
+					])
+				),
+				KeywordSchema(
+					name='dismount'
+				)
+			])
+		)
+	]
+
+
+@addCommand(
 	name='save-all',
 	description='Saves the server to disk.',
 	opLevel=4,
@@ -3875,15 +4172,15 @@ def build_title_args(_: FullMCData) -> list[CommandPartSchema]:
 					next=Options([
 						ArgumentSchema(
 							name='fadeIn',
-							type=BRIGADIER_INTEGER,
+							type=MINECRAFT_TIME,
 							next=Options([
 								ArgumentSchema(
 									name='stay',
-									type=BRIGADIER_INTEGER,
+									type=MINECRAFT_TIME,
 									next=Options([
 										ArgumentSchema(
 											name='fadeOut',
-											type=BRIGADIER_INTEGER,
+											type=MINECRAFT_TIME,
 										),
 									])
 								),
@@ -3945,7 +4242,7 @@ def build_weather_args(_: FullMCData) -> list[CommandPartSchema]:
 				TERMINAL,
 				ArgumentSchema(
 					name='duration',
-					type=BRIGADIER_INTEGER,
+					type=MINECRAFT_TIME,
 				),
 			])
 		),
