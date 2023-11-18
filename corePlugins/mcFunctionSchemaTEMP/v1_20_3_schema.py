@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.19.4
+currently at minecraft version 1.20
 """
 
 from copy import copy
@@ -3038,6 +3038,20 @@ def build_replaceitem_args(_: FullMCData) -> list[CommandPartSchema]:
 		ArgumentSchema(
 			name='OUTDATED!',
 			type=MINECRAFT_MESSAGE,
+		),
+	]
+
+
+@addCommand(
+	name='return',
+	description='Can be used to control execution flow inside functions and change their return value',
+	opLevel="N/A"
+)
+def build_replaceitem_args(_: FullMCData) -> list[CommandPartSchema]:
+	return [
+		ArgumentSchema(
+			name='value',
+			type=BRIGADIER_INTEGER,
 		),
 	]
 
