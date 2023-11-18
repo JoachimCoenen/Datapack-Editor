@@ -155,7 +155,17 @@ ORD_ASTERISK = ord(b'*')
 ORD_MINUS = ord(b'-')
 ORD_PLUS = ord(b'+')
 
+ORD_TILDE = ord(b'~')
+ORD_ROOF = ord(b'^')
+
+ORD_DOT = ord(b'.')
+ORD_COMMA = ord(b',')
+ORD_COLON = ord(b':')
+ORD_SEMICOLON = ord(b';')
+
 ORD_DOUBLE_QUOTE = ord(b'"')
 ORD_SINGLE_QUOTE = ord(b"'")
+
+ORD_SPACE = ord(b' ')
 
 ORD_LF = ord(b'\n')

@@ -4,7 +4,8 @@ from typing import Optional, final
 
 from base.model.parsing.parser import _Base
 from cat.utils.collections_ import Stack
-from base.model.parsing.bytesUtils import DIGITS, ASCII_LETTERS, JAVA_WHITESPACES, JAVA_WHITESPACES_SINGLE_BYTE, JAVA_WHITESPACES_THREE_BYTES, DIGITS_RANGE, ORD_BACKSLASH
+from base.model.parsing.bytesUtils import DIGITS, ASCII_LETTERS, JAVA_WHITESPACES, JAVA_WHITESPACES_SINGLE_BYTE, JAVA_WHITESPACES_THREE_BYTES, DIGITS_RANGE, ORD_BACKSLASH, \
+	ORD_DOT, ORD_MINUS, ORD_ROOF, ORD_SPACE, ORD_TILDE
 from base.model.utils import Position, Span
 
 Char = bytes
@@ -155,7 +156,7 @@ class StringReader(_Base):
 		text: bytes = self.text
 		length: int = self.length
 
-		if cursor < length and text[cursor] == ord('-'):
+		if cursor < length and text[cursor] == ORD_MINUS:
 			cursor += 1
 		if cursor < length and text[cursor] in DIGITS_RANGE:
 			cursor += 1
@@ -176,10 +177,10 @@ class StringReader(_Base):
 		length: int = self.length
 		hasHadDot: bool = False
 
-		if cursor < length and text[cursor] == ord('-'):
+		if cursor < length and text[cursor] == ORD_MINUS:
 			cursor += 1
 
-		if cursor < length and text[cursor] == ord('.'):
+		if cursor < length and text[cursor] == ORD_DOT:
 			hasHadDot = True
 			cursor += 1
 
@@ -189,7 +190,7 @@ class StringReader(_Base):
 			return None
 		while cursor < length and text[cursor] in DIGITS_RANGE:
 			cursor += 1
-		if cursor < length and text[cursor] == ord('.'):
+		if cursor < length and text[cursor] == ORD_DOT:
 			cursor += 1
 			if hasHadDot:
 				return None  # TODO: Lexer Errors
@@ -263,19 +264,19 @@ class StringReader(_Base):
 		cursor: int = self.cursor
 		text: bytes = self.text
 		length: int = self.length
-		if cursor >= length or text[cursor] == ord(' '):
+		if cursor >= length or text[cursor] == ORD_SPACE:
 			return None
-		while cursor < length and text[cursor] != ord(' '):
+		while cursor < length and text[cursor] != ORD_SPACE:
 			cursor += 1
 		self.save()
 		self.cursor = cursor
 		return text[start:cursor]
 
 	def tryReadTildeNotation(self) -> Optional[bytes]:
-		return self._tryReadNotation(ord('~'))
+		return self._tryReadNotation(ORD_TILDE)
 
 	def tryReadCaretNotation(self) -> Optional[bytes]:
-		return self._tryReadNotation(ord('^'))
+		return self._tryReadNotation(ORD_ROOF)
 
 	def _tryReadNotation(self, notation: int) -> Optional[bytes]:
 		start: int = self.cursor

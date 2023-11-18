@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
-from typing import Optional, Sequence, Union
+from typing import Mapping, Optional, Sequence, Union
 
 from .command import *
 from .stringReader import StringReader
 from base.model.utils import ParsingError, Span, Message, wrapInMarkdownCode
 
 from .commandContext import makeParsedArgument, getArgumentContext, missingArgumentContext
-from base.model.parsing.bytesUtils import bytesToStr, strToBytes
+from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.parser import ParserBase
 
 
@@ -107,7 +107,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 
 		# commandArg is the first argument of a ParsedCommand
 		commandArg = makeParsedArgument(sr, commandSchema, commandName)
-		commandArg.potentialNextSchemas = self._getAllPossibilities(commandSchema.next)
+		commandArg.potentialNextSchemas += commandSchema.next.flattened
 
 		if sr.tryConsumeWhitespace():
 			didMatch, firstArg, hasErrors, lastArg = self.parseArguments(sr, commandSchema.next)
@@ -147,8 +147,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			return None
 
 	@staticmethod
-	def parseKeywords(sr: StringReader, possibilities: Sequence[CommandPartSchema]) -> Optional[ParsedArgument]:
-		keywords = {strToBytes(kw.name): kw for kw in possibilities if isinstance(kw, KeywordSchema)}
+	def parseKeywords(sr: StringReader, keywords: Mapping[bytes, KeywordSchema]) -> Optional[ParsedArgument]:
 		if not keywords:
 			return None
 
@@ -162,17 +161,15 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		argument = makeParsedArgument(sr, keywords[literal], value=literal)
 		return argument
 
-	def parseArguments(self, sr: StringReader, possibilities: Sequence[CommandPartSchema]) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument]]:
+	def parseArguments(self, sr: StringReader, possibilities: Options) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument]]:
 		"""
 		:return:(didMatch, firstArg, hasError, lastArg)
 		"""
-		hasError = False
-		didMatch = False
 		lastArg = None
 		firstArg = None
 
 		# try to parse Keywords & Arguments:
-		while True: #not sr.hasReachedEnd:
+		while True:  # not sr.hasReachedEnd:
 			didMatch, argument, hasError, argument2, hasConsumedWhitespace, possibilities = self.parseArgument(sr, possibilities)
 
 			if argument is not None:
@@ -189,8 +186,6 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 				break
 
 			if argument is not None:  # we successfully parsed an argument!
-				if possibilities:
-					argument2.potentialNextSchemas += self._getAllPossibilities(possibilities)
 				# finally consume whitespace:
 				if not hasConsumedWhitespace and not sr.tryConsumeWhitespace() and not sr.hasReachedEnd:
 					self._addExpectedArgumentError(sr)
@@ -202,52 +197,37 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 
 		return didMatch, firstArg, hasError, lastArg
 
-	def parseArgument(self, sr: StringReader, possibilities: Sequence[CommandPartSchema]) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument], bool, Sequence[CommandPartSchema]]:
+	def parseArgument(self, sr: StringReader, possibilities: Options) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument], bool, Sequence[CommandPartSchema]]:
 		hasError = False
 		hasConsumedWhitespace = False
-		argument: Optional[ParsedArgument] = self.parseKeywords(sr, possibilities)
+
+		argument: Optional[ParsedArgument] = self.parseKeywords(sr, possibilities.keywords)
 		argument2: Optional[ParsedArgument] = argument
 		if argument is not None:
 			nextPossibilities = argument.schema.next
+			argument2.potentialNextSchemas += argument.schema.next.flattened
 			didMatch = True
 		else:
 			nextPossibilities = ()
-			didMatch = not possibilities  # a TERMINAL always matches
-			for possibility in possibilities:
-
-				if False and isinstance(possibility, KeywordSchema):
-					continue
-
-				elif isinstance(possibility, (ArgumentSchema, CommandsRoot, SwitchSchema)):
-					# cursor = sr.cursor
-					if possibility is COMMANDS_ROOT:
-						argumentDidMatch, argument, hasError, argument2 = self._parseSimpleCommand(sr)
-					elif isinstance(possibility, SwitchSchema):
-						argumentDidMatch, argument, hasError, argument2 = self.parseArguments(sr, possibility.options)
-						hasConsumedWhitespace = argumentDidMatch
-					else:
-						argumentDidMatch, argument, hasError, argument2 = self._parseSimpleArgument(sr, possibility)
-
-					if hasError:
-						nextPossibilities = ()
-						break
-					elif argumentDidMatch:
-						# get possibilities for next argument:
-						nextPossibilities = possibility.next
-						didMatch = True
-						break
-					else:
-						# sr.cursor = cursor  # not necessarily needed for _parseSimpleArgument(), but required for parseCommand()
-						continue
-
-				elif possibility is TERMINAL:
-					didMatch = True  # a TERMINAL always matches
-				# if sr.hasReachedEnd:
-				# 	return True, firstArg, False, lastArg
-				elif isinstance(possibility, KeywordSchema):
-					continue
+			didMatch = possibilities.hasTerminal  # a TERMINAL always matches
+			for possibility in possibilities.nonKeywords:
+				# cursor = sr.cursor
+				if possibility is COMMANDS_ROOT:
+					argumentDidMatch, argument, hasError, argument2 = self._parseSimpleCommand(sr)
+				elif isinstance(possibility, SwitchSchema):
+					argumentDidMatch, argument, hasError, argument2 = self.parseArguments(sr, possibility.options)
+					hasConsumedWhitespace = argumentDidMatch
 				else:
-					raise ValueError(f"Cannot handle possibility of type ({type(possibility).__qualname__})")
+					argumentDidMatch, argument, hasError, argument2 = self._parseSimpleArgument(sr, possibility)
+
+				if hasError:
+					break
+				elif argumentDidMatch:
+					nextPossibilities = possibility.next  # get possibilities for next argument
+					if argument2 is not None:  # we successfully parsed an argument!
+						argument2.potentialNextSchemas += possibility.next.flattened
+					didMatch = True
+					break
 
 		return didMatch, argument, hasError, argument2, hasConsumedWhitespace, nextPossibilities
 
@@ -261,20 +241,6 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		else:
 			argument = ctx.parse(sr, possibility, self.filePath, errorsIO=self.errors)
 		return argument is not None, argument, False, argument
-
-	def _getAllPossibilities(self, possibilities: Sequence[CommandPartSchema]) -> list[CommandPartSchema]:
-		result = {}
-		self._addAllPossibilities(possibilities, result)
-		return list(result.values())
-
-	def _addAllPossibilities(self, possibilities: Sequence[CommandPartSchema], allIO: dict[int, CommandPartSchema]) -> None:
-		for possibility in possibilities:
-			if isinstance(possibility, SwitchSchema):
-				self._addAllPossibilities(possibility.options, allIO)
-				if possibility.hasTerminalOption:
-					self._addAllPossibilities(possibility.next, allIO)
-			else:
-				allIO[id(possibility)] = possibility
 
 	def parse(self) -> Optional[MCFunction]:
 		return self.parseMCFunction()

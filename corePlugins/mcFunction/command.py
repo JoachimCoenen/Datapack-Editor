@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar, Collection
+from typing import Mapping, TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar, Collection
 
 from cat.utils import Singleton
 from . import MC_FUNCTION_ID
 from .argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
-from base.model.parsing.bytesUtils import bytesToStr
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.tree import Schema, Node
 from base.model.utils import Position, LanguageId, Span
 
@@ -21,11 +21,66 @@ class Named(ABC):
 
 
 @dataclass
+class Options:
+	all: Sequence[CommandPartSchema]
+	flattened: Sequence[CommandPartSchema] = field(init=False)
+	keywords: Mapping[bytes, KeywordSchema] = field(init=False)
+	nonKeywords: Sequence[SwitchSchema | ArgumentSchema | CommandsRoot] = field(init=False)
+	switchSchemas: Sequence[SwitchSchema] = field(init=False)
+	arguments: Sequence[ArgumentSchema] = field(init=False)
+	hasCommand: bool = field(init=False)
+	hasTerminal: bool = field(init=False)
+
+	def __post_init__(self):
+		self.finish()
+
+	def finish(self):
+		if not self.all:
+			self.keywords = {}
+			self.flattened = self.nonKeywords = self.switchSchemas = self.arguments = ()
+			self.hasCommand = False
+			self.hasTerminal = True
+		else:
+			self.flattened = _getAllPossibilities(self.all)
+			self.keywords = {strToBytes(kw.name): kw for kw in self.all if isinstance(kw, KeywordSchema)}
+			self.nonKeywords = [kw for kw in self.all if isinstance(kw, SwitchSchema | ArgumentSchema | CommandsRoot)]
+			self.switchSchemas = [kw for kw in self.all if isinstance(kw, SwitchSchema)]
+			self.arguments = [kw for kw in self.all if isinstance(kw, ArgumentSchema)]
+			self.hasCommand = any(isinstance(kw, CommandsRoot) for kw in self.all)
+			self.hasTerminal = not self.all or TERMINAL in self.all
+
+
+@dataclass
 class CommandPartSchema(Schema, Named, ABC):
 	description: str = field(default='')
-	next: Sequence[CommandPartSchema] = field(default_factory=list)
+	next: Options = field(default_factory=list)
 
 	language: ClassVar[LanguageId] = MC_FUNCTION_ID
+
+	def __post_init__(self):
+		self.finish()
+
+	def finish(self):
+		if hasattr(self.next, '__iter__'):
+			self.next = Options(self.next)
+		else:
+			self.next.finish()
+
+
+def _getAllPossibilities(possibilities: Sequence[CommandPartSchema]) -> list[CommandPartSchema]:
+	result = {}
+	_addAllPossibilities(possibilities, result)
+	return list(result.values())
+
+
+def _addAllPossibilities(possibilities: Sequence[CommandPartSchema], allIO: dict[int, CommandPartSchema]) -> None:
+	for possibility in possibilities:
+		if isinstance(possibility, SwitchSchema):
+			_addAllPossibilities(possibility.options.all, allIO)
+			if possibility.options.hasTerminal:
+				_addAllPossibilities(possibility.next.all, allIO)
+		else:
+			allIO[id(possibility)] = possibility
 
 
 @dataclass
@@ -45,7 +100,7 @@ class ArgumentSchema(CommandPartSchema):
 
 	subType: Optional[ArgumentType] = field(default=None)
 	args: Optional[dict[str, Union[Any, None]]] = field(default=None)
-	next: Sequence[CommandPartSchema] = field(default_factory=list)
+	next: Options = field(default_factory=list)
 
 	@property
 	def asString(self) -> str:
@@ -54,27 +109,47 @@ class ArgumentSchema(CommandPartSchema):
 		return f'<{self.name}: {self.typeName}>'
 
 
+@dataclass()
+class FilterArgumentInfo(ArgumentSchema):
+	multipleAllowed: bool = False
+	isNegatable: bool = False
+	canBeEmpty: bool = False
+
+
+FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo(
+	name='_fallback',
+	type=BRIGADIER_STRING,
+	multipleAllowed=True,
+	isNegatable=True,
+	canBeEmpty=True,
+	description=''
+)
+
+
 @dataclass
 class SwitchSchema(CommandPartSchema):
-	options: list[CommandPartSchema] = field(default_factory=list)
-	next: Sequence[CommandPartSchema] = field(default_factory=list)
+	options: Options = field(default_factory=list)
+	next: Options = field(default_factory=list)
+	isPotentiallyEmpty: bool = field(init=False)
+
+	def finish(self):
+		super().finish()
+		if hasattr(self.options, '__iter__'):
+			self.options = Options(self.options)
+		else:
+			self.options.finish()
+		self.isPotentiallyEmpty = self.options.hasTerminal and isPotentiallyEmpty(self.next)
 
 	@property
 	def asString(self) -> str:
-		options = '|'.join(opt.asString for opt in self.options)
+		options = '|'.join(opt.asString for opt in self.options.all)
 		return f"({options})"
 
-	@property
-	def hasTerminalOption(self) -> bool:
-		return isPotentiallyEmpty(self.options)
 
-	@property
-	def isPotentiallyEmpty(self) -> bool:
-		return self.hasTerminalOption and isPotentiallyEmpty(self.next)
-
-
-def isPotentiallyEmpty(options: Sequence[CommandPartSchema]) -> bool:
-	for option in options:
+def isPotentiallyEmpty(options: Options) -> bool:
+	if options.hasTerminal:
+		return True
+	for option in options.all:
 		if option is TERMINAL:
 			return True
 		if isinstance(option, SwitchSchema) and option.isPotentiallyEmpty:
@@ -131,11 +206,11 @@ class CommandSchema(CommandPartSchema):
 	deprecatedVersion: Optional[str] = field(default=None)
 	deprecatedComment: str = field(default='')
 
-	next: list[CommandPartSchema] = field(default_factory=list[CommandPartSchema])
+	next: Options = field(default_factory=list)
 
 	@property
 	def asString(self) -> str:
-		return f"{self.name} {formatPossibilities(self.next)}"
+		return f"{self.name} {formatPossibilities(self.next.flattened)}"
 
 
 @dataclass
@@ -200,7 +275,6 @@ class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPar
 		return ()
 
 
-
 @dataclass
 class ParsedComment(CommandPart[CommentSchema]):
 
@@ -257,9 +331,12 @@ def getNextSchemas(before: CommandPart) -> Sequence[CommandPartSchema]:
 
 
 __all__ = [
+	'Options',
 	'CommandPartSchema',
 	'KeywordSchema',
 	'ArgumentSchema',
+	'FilterArgumentInfo',
+	'FALLBACK_FILTER_ARGUMENT_INFO',
 	'SwitchSchema',
 	'TerminalSchema',
 	'TERMINAL',

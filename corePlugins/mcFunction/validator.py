@@ -4,7 +4,7 @@ from .argumentTypes import *
 from .command import *
 from .commandContext import getArgumentContext
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.utils import SemanticsError, Span, Message, wrapInMarkdownCode, Position
+from base.model.utils import SemanticsError, Span, Message, wrapInMarkdownCode
 
 UNKNOWN_ARGUMENT_MSG = Message("Unknown argument: expected {0}, but got: {1}", 2)
 TOO_MANY_ARGUMENTS_MSG = Message("Too many arguments: {0}", 1)
@@ -31,13 +31,13 @@ def validateCommand(command: CommandPart, schema: CommandSchema, *, errorsIO: li
 
 	lastCommandPart: CommandPart = command
 	commandPart: Optional[CommandPart] = command.next
-	possibilities: Sequence[CommandPartSchema] = command.schema.next
+	possibilities: Sequence[CommandPartSchema] = command.schema.next.flattened
 	while commandPart is not None:
 		lastCommandPart = commandPart
 		commandPart, possibilities = validateArgument(commandPart, errorsIO=errorsIO)
 
 	if possibilities and TERMINAL not in possibilities:
-		errorsIO.append(_missingArgumentError(command, lastCommandPart, possibilities))
+		errorsIO.append(_missingArgumentError(lastCommandPart))
 
 
 def _unknownOrTooManyArgumentsError(commandPart: CommandPart, possibilities: Sequence[CommandPartSchema]) -> SemanticsError:
@@ -49,11 +49,11 @@ def _unknownOrTooManyArgumentsError(commandPart: CommandPart, possibilities: Seq
 		return SemanticsError(TOO_MANY_ARGUMENTS_MSG.format(valueStr), commandPart.span)
 
 
-def _missingArgumentError(command: ParsedArgument, lastCommandPart: CommandPart, possibilities: Sequence[CommandPartSchema]) -> SemanticsError:
+def _missingArgumentError(lastCommandPart: CommandPart) -> SemanticsError:
 	errorEnd = lastCommandPart.end
 	errorStart = errorEnd - 1
 
-	possibilitiesStr = formatPossibilities(possibilities)
+	possibilitiesStr = formatPossibilities(lastCommandPart.potentialNextSchemas)
 	return SemanticsError(MISSING_ARGUMENTS_MSG.format(possibilitiesStr), Span(errorStart, errorEnd))
 
 
@@ -61,16 +61,9 @@ def validateArgument(commandPart: CommandPart, *, errorsIO: list[SemanticsError]
 	schema = commandPart.schema
 	if schema is None:
 		before = commandPart.prev
-		remainingPossibilities = getNextSchemas(before) if before is not None else []
+		remainingPossibilities = before.potentialNextSchemas if before is not None else []
 		errorsIO.append(_unknownOrTooManyArgumentsError(commandPart, remainingPossibilities))
-		return commandPart.next, commandPart.potentialNextSchemas or []
-
-	if isinstance(schema, KeywordSchema):
-		return commandPart.next, schema.next
-
-	if isinstance(schema, SwitchSchema):
-		# TODO: validateArgument for Switch?
-		return commandPart.next, schema.next
+		return commandPart.next, commandPart.potentialNextSchemas
 
 	if isinstance(schema, ArgumentSchema):
 		type_: ArgumentType = schema.type
@@ -80,7 +73,5 @@ def validateArgument(commandPart: CommandPart, *, errorsIO: list[SemanticsError]
 			handler = getArgumentContext(type_)
 			if handler is not None:
 				handler.validate(commandPart, errorsIO)
-		return commandPart.next, commandPart.potentialNextSchemas or schema.next
 
-	if isinstance(schema, CommandSchema):
-		return commandPart.next, commandPart.potentialNextSchemas or schema.next
+	return commandPart.next, commandPart.potentialNextSchemas
