@@ -13,7 +13,7 @@ from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode, RESOURCE_LOCATION_ID
 from corePlugins.nbt.tags import NBTTagSchema
 from base.model.messages import *
-from .argumentParsersImpl import _parse3dPos, tryReadNBTCompoundTag, _parse2dPos, _readResourceLocation
+from .argumentParsersImpl import _parseVec, tryReadNBTCompoundTag, _readResourceLocation
 from .argumentTypes import *
 from .argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
 from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, validateFilterArgs
@@ -89,12 +89,7 @@ class ResourceLocationHandler(ParsingHandler):
 @argumentContext(MINECRAFT_ANGLE.name)
 class AngleHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		angle = sr.tryReadTildeNotation()
-		if angle is None:
-			angle = sr.tryReadFloat()
-		if angle is None:
-			return None
-		return makeParsedArgument(sr, ai, value=angle)
+		return _parseVec(sr, ai, useFloat=True, count=1, notation=b'~')
 
 
 @argumentContext(MINECRAFT_BLOCK_STATE.name, rlcSchema=ResourceLocationSchema('', 'block', allowTags=False))
@@ -208,24 +203,7 @@ class BlockStateHandler(ArgumentContext):
 @argumentContext(MINECRAFT_COLUMN_POS.name)
 class ColumnPosHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		sr.save()
-		columnPos1: Optional[bytes] = sr.tryReadInt() or sr.tryReadTildeNotation()
-		if columnPos1 is None:
-			sr.rollback()
-			return None
-		sr.mergeLastSave()
-		if not sr.tryConsumeByte(ord(' ')):
-			sr.rollback()
-			return None
-
-		columnPos2: Optional[bytes] = sr.tryReadInt() or sr.tryReadTildeNotation()
-		if columnPos2 is None:
-			sr.rollback()
-			return None
-		sr.mergeLastSave()
-
-		blockPos = (columnPos1, columnPos2)
-		return makeParsedArgument(sr, ai, value=blockPos)
+		return _parseVec(sr, ai, useFloat=False, count=2, notation=b'~')
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return ['~ ~']
@@ -470,25 +448,8 @@ class ObjectiveHandler(ArgumentContext):
 @argumentContext(MINECRAFT_ROTATION.name)
 class RotationHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		numberReader = sr.tryReadFloat
-		sr.save()
-		yaw: Optional[bytes] = numberReader() or sr.tryReadTildeNotation()
-		if yaw is None:
-			sr.rollback()
-			return None
-		sr.mergeLastSave()
-		if not sr.tryConsumeByte(ord(' ')):
-			sr.rollback()
-			return None
-
-		pitch: Optional[bytes] = numberReader() or sr.tryReadTildeNotation()
-		if pitch is None:
-			sr.rollback()
-			return None
-		sr.mergeLastSave()
-
-		rotation = (yaw, pitch)
-		return makeParsedArgument(sr, ai, value=rotation)
+		# (yaw, pitch)
+		return _parseVec(sr, ai, useFloat=True, count=2, notation=b'~')
 
 
 @argumentContext(MINECRAFT_SCORE_HOLDER.name)
@@ -585,7 +546,7 @@ class UuidHandler(ArgumentContext):
 @argumentContext(MINECRAFT_VEC2.name)
 class Vec2Handler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		return _parse2dPos(sr, ai, useFloat=True, errorsIO=errorsIO)
+		return _parseVec(sr, ai, useFloat=True, count=2, notation=b'~^')
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return ['~ ~', '0 0']
@@ -598,7 +559,7 @@ class Vec3Handler(ArgumentContext):
 		self.useFloat: bool = useFloat
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		return _parse3dPos(sr, ai, useFloat=self.useFloat, errorsIO=errorsIO)
+		return _parseVec(sr, ai, useFloat=self.useFloat, count=3, notation=b'~^')
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
 		return ['~ ~ ~', '^ ^ ^', '0 0 0']

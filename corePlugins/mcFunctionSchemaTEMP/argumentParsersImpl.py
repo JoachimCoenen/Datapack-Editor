@@ -1,5 +1,6 @@
 from typing import Optional
 
+from base.model.parsing.bytesUtils import ORD_SPACE
 from corePlugins.mcFunction.command import ArgumentSchema
 from corePlugins.mcFunction.commandContext import makeParsedArgument
 from corePlugins.mcFunction.command import ParsedArgument
@@ -12,63 +13,34 @@ from base.model.utils import GeneralError
 from ..mcFunction.argumentContextsImpl import parseFromStringReader
 
 
-def _parse2dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: bool, notation: bytes) -> Optional[ParsedArgument]:
 	if useFloat:
 		numberReader = sr.tryReadFloat
 	else:
 		numberReader = sr.tryReadInt
 	sr.save()
-	blockPos1: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
+
+	vec = [None] * count
+	blockPos1: Optional[bytes] = numberReader() or sr.tryReadNotation2(notation)
 	if blockPos1 is None:
 		sr.rollback()
 		return None
-	sr.mergeLastSave()
-	if not sr.tryConsumeByte(ord(' ')):
-		sr.rollback()
-		return None
+	vec[0] = blockPos1
 
-	blockPos2: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
-	if blockPos2 is None:
-		sr.rollback()
-		return None
-	sr.mergeLastSave()
+	i = 1
+	for i in range(1, count):
 
-	blockPos = (blockPos1, blockPos2)
-	return makeParsedArgument(sr, ai, value=blockPos)
+		if not sr.tryConsumeByte(ORD_SPACE):
+			sr.rollback()
+			return None
 
+		blockPos2: Optional[bytes] = numberReader() or sr.tryReadNotation2(notation)
+		if blockPos2 is None:
+			sr.rollback()
+			return None
+		vec[i] = blockPos2
 
-def _parse3dPos(sr: StringReader, ai: ArgumentSchema, *, useFloat: bool, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-	if useFloat:
-		numberReader = sr.tryReadFloat
-	else:
-		numberReader = sr.tryReadInt
-	sr.save()
-	blockPos1: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
-	if blockPos1 is None:
-		sr.rollback()
-		return None
-	sr.mergeLastSave()
-	if not sr.tryConsumeByte(ord(' ')):
-		sr.rollback()
-		return None
-
-	blockPos2: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
-	if blockPos2 is None:
-		sr.rollback()
-		return None
-	sr.mergeLastSave()
-	if not sr.tryConsumeByte(ord(' ')):
-		sr.rollback()
-		return None
-
-	blockPos3: Optional[bytes] = numberReader() or sr.tryReadTildeNotation() or sr.tryReadCaretNotation()
-	if blockPos3 is None:
-		sr.rollback()
-		return None
-	sr.mergeLastSave()
-
-	blockPos = (blockPos1, blockPos2, blockPos3)
-	return makeParsedArgument(sr, ai, value=blockPos)
+	return makeParsedArgument(sr, ai, value=tuple(vec))
 
 
 def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
