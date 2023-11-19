@@ -6,8 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-from corePlugins.mcFunction.argumentTypes import *
-from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
+from corePlugins.mcFunction.command import ArgumentSchema, FALLBACK_FILTER_ARGUMENT_INFO, FilterArgumentInfo, ParsedArgument, CommandPart
 from corePlugins.mcFunction.commandContext import getArgumentContext, missingArgumentParser, makeParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
 from .argumentValues import FilterArguments, FilterArgument
@@ -16,23 +15,6 @@ from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import Suggestions, Match
 from base.model.pathUtils import FilePath
 from base.model.utils import ParsingError, Span, Position, GeneralError, MDStr
-
-
-@dataclass
-class FilterArgumentInfo(ArgumentSchema):
-	multipleAllowed: bool = False
-	isNegatable: bool = False
-	canBeEmpty: bool = False
-
-
-FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo(
-	name='_fallback',
-	type=BRIGADIER_STRING,
-	multipleAllowed=True,
-	isNegatable=True,
-	canBeEmpty=True,
-	description=''
-)
 
 
 def makeCommandPart(sr: StringReader, key: bytes) -> CommandPart:
@@ -345,7 +327,6 @@ def onIndicatorClickedForFilterArgs(filterArgs: FilterArguments, position: Posit
 
 
 __all__ = [
-	'FilterArgumentInfo',
 	'parseFilterArgs',
 	'validateFilterArgs',
 	'suggestionsForFilterArgs',

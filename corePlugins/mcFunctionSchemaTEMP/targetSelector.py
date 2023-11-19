@@ -4,11 +4,10 @@ from typing import Optional
 from base.model.utils import GeneralError, ParsingError, wrapInMDCode
 from cat.utils.collections_ import OrderedMultiDict
 from corePlugins.mcFunction.argumentTypes import *
-from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
+from corePlugins.mcFunction.command import ArgumentSchema, FilterArgumentInfo, ParsedArgument
 from corePlugins.mcFunction.commandContext import argumentContext, ArgumentContext, getArgumentContext, makeParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
 from .argumentTypes import *
-from .filterArgs import FilterArgumentInfo
 from base.model.messages import *
 from base.model.parsing.bytesUtils import strToBytes, bytesToStr
 from base.model.pathUtils import FilePath

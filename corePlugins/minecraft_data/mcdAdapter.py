@@ -2,16 +2,18 @@ from __future__ import annotations
 import json
 import os
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import ClassVar, Optional, Any
 
+from base.model.parsing.bytesUtils import strToBytes
 from base.model.pathUtils import normalizeDirSeparatorsStr
 from cat.utils.logging_ import logWarning, logError, loggingIndentInfo
 
 from cat.utils.collections_ import FrozenDict
 from base.model.utils import MDStr
 from .resourceLocation import ResourceLocation
-
+from ..mcFunction.argumentTypes import ALL_NAMED_ARGUMENT_TYPES, makeLiteralsArgumentType
+from ..mcFunction.command import FilterArgumentInfo
 
 _MINECRAFT_DATA_REL_PATH: str = 'data/data/'
 _FILE_ABS_PATH: str = normalizeDirSeparatorsStr(os.path.dirname(__file__)).removesuffix('/') + '/'
@@ -25,7 +27,22 @@ class BlockStateType:
 	type: str
 	values: list[str]
 	range: Optional[tuple[int, int]]
+	fai: FilterArgumentInfo = field(init=False)
 
+	def __post_init__(self):
+		self.fai = faiForBS(self)
+
+
+def faiForBS(bs: BlockStateType) -> FilterArgumentInfo:
+	if bs.values:
+		argType = makeLiteralsArgumentType([strToBytes(val) for val in bs.values])
+	else:
+		argType = ALL_NAMED_ARGUMENT_TYPES[bs.type]
+
+	return FilterArgumentInfo(
+		name=bs.name,
+		type=argType,
+	)
 
 @dataclass
 class MCData:
@@ -122,14 +139,13 @@ _BLOCK_STATE_TYPE_MAPPING = {
 
 def buildBlockState(state: dict) -> BlockStateType:
 	bs = BlockStateType(
-		name=(state['name']),
+		name=state['name'],
 		description=MDStr(""),
 		type=_BLOCK_STATE_TYPE_MAPPING[state['type']],
 		values=(state.get('values', [])),
 		range=((0, state['num_values']) if state['type'] == 'int' else None)
 	)
 	return bs
-
 
 def getMCDataForVersion(version: str) -> Optional[MCData]:
 	if version not in _ALL_LOADED_VERSIONS:

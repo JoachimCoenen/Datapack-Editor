@@ -7,9 +7,9 @@ from base.model.parsing.contextProvider import Suggestions, errorMsg, validateTr
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
-from base.model.utils import SemanticsError, Span, Position, GeneralError, Message, LanguageId
+from base.model.utils import Span, Position, GeneralError, Message, LanguageId
 from cat.utils.collections_ import FrozenDict
-from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
+from corePlugins.mcFunction.command import ArgumentSchema, FilterArgumentInfo, ParsedArgument, CommandPart
 from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode, RESOURCE_LOCATION_ID
@@ -18,13 +18,11 @@ from base.model.messages import *
 from .argumentParsersImpl import _parseVec, tryReadNBTCompoundTag, _readResourceLocation
 from .argumentTypes import *
 from .argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
-from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, FilterArgumentInfo, validateFilterArgs
+from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, validateFilterArgs
 from .snbt import parseNBTPath
 from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
-from corePlugins.mcFunction.argumentTypes import makeLiteralsArgumentType, ALL_NAMED_ARGUMENT_TYPES
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
-from corePlugins.minecraft_data.mcdAdapter import BlockStateType
 
 
 def initPlugin() -> None:
@@ -101,21 +99,9 @@ class BlockStateHandler(ArgumentContext):
 		super().__init__()
 		self.rlcSchema: ResourceLocationSchema = rlcSchema
 
-	@staticmethod
-	def faiForBS(bs: BlockStateType) -> FilterArgumentInfo:
-		if bs.values:
-			argType = makeLiteralsArgumentType([strToBytes(val) for val in bs.values])
-		else:
-			argType = ALL_NAMED_ARGUMENT_TYPES[bs.type]
-
-		return FilterArgumentInfo(
-			name=bs.name,
-			type=argType,
-		)
-
 	def _getBlockStatesDict(self, blockID: ResourceLocation) -> dict[bytes, FilterArgumentInfo]:
 		blockStates = getCurrentFullMcData().getBlockStates(blockID)
-		return {strToBytes(argument.name): self.faiForBS(argument) for argument in blockStates}
+		return {strToBytes(argument.name): argument.fai for argument in blockStates}
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		# block_id[block_states]{data_tags}

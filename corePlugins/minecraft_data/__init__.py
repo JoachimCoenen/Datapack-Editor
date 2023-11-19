@@ -16,4 +16,4 @@ class MinecraftDataPlugin(PluginBase):
 			registerFullMcData(data)
 
 	def dependencies(self) -> set[str]:
-		return set()
+		return {'McFunctionPlugin'}
