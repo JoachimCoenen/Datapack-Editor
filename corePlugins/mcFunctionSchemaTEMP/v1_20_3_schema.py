@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.20
+currently at minecraft version 1.20.2
 """
 
 from copy import copy
@@ -669,6 +669,49 @@ def build_damage_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
+DATA_SOURCE = [
+	KeywordSchema(
+		name='block',
+		next=Options([
+			ArgumentSchema(
+				name='sourcePos',
+				type=MINECRAFT_BLOCK_POS,
+			),
+		])
+	),
+	KeywordSchema(
+		name='entity',
+		next=Options([
+			ArgumentSchema(
+				name='source',
+				type=MINECRAFT_ENTITY,
+			),
+		])
+	),
+	KeywordSchema(
+		name='storage',
+		next=Options([
+			ArgumentSchema(
+				name='source',
+				type=MINECRAFT_RESOURCE_LOCATION,
+			),
+		])
+	),
+]
+
+DATA_SOURCE_AND_PATH = SwitchSchema(
+	name='SOURCE',
+	options=Options(DATA_SOURCE),
+	next=Options([
+		TERMINAL,
+		ArgumentSchema(
+			name='sourcePath',
+			type=MINECRAFT_NBT_PATH,
+		),
+	])
+)
+
+
 @addCommand(
 	name='data',
 	description='Gets, merges, modifies and removes block entity and entity NBT data.',
@@ -727,57 +770,16 @@ def build_data_args(_: FullMCData) -> list[CommandPartSchema]:
 			name='set',
 		),
 	]
-	DATA_SOURCE = [
-		KeywordSchema(
-			name='block',
-			next=Options([
-				ArgumentSchema(
-					name='sourcePos',
-					type=MINECRAFT_BLOCK_POS,
-				),
-			])
-		),
-		KeywordSchema(
-			name='entity',
-			next=Options([
-				ArgumentSchema(
-					name='source',
-					type=MINECRAFT_ENTITY,
-				),
-			])
-		),
-		KeywordSchema(
-			name='storage',
-			next=Options([
-				ArgumentSchema(
-					name='source',
-					type=MINECRAFT_RESOURCE_LOCATION,
-				),
-			])
-		),
-	]
 
 	MODIFICATION_FROM = KeywordSchema(
 		name='from',
-		next=Options([
-			SwitchSchema(
-				name='SOURCE',
-				options=Options(DATA_SOURCE),
-				next=Options([
-					TERMINAL,
-					ArgumentSchema(
-						name='sourcePath',
-						type=MINECRAFT_NBT_PATH,
-					),
-				])
-			)
-		])
+		next=Options([DATA_SOURCE_AND_PATH])
 	)
 	MODIFICATION_STRING = KeywordSchema(
 		name='string',
 		next=Options([
 			SwitchSchema(
-				name='SOURCE',
+				name='SOURCE',  # jsut like DATA_SOURCE_AND_PATH but with following arguments. :'(
 				options=Options(DATA_SOURCE),
 				next=Options([
 					TERMINAL,
@@ -1948,11 +1950,25 @@ def build_forceload_args(_: FullMCData) -> list[CommandPartSchema]:
 	opLevel=2
 )
 def build_function_args(_: FullMCData) -> list[CommandPartSchema]:
+	# /function <name> [<arguments>|with (block <sourcePos>|entity <source>|storage <source>) [<path>]]
 	return [
 		ArgumentSchema(
 			name='name',
 			type=MINECRAFT_FUNCTION,
-		),
+			next=Options([
+				ArgumentSchema(
+					name='arguments',
+					type=MINECRAFT_NBT_COMPOUND_TAG  # TODO: add specialized checking if parameters match the macros of the function, and if the resulting function would be valid.
+				),
+				KeywordSchema(
+					name='with',  # TODO: add specialized checking if parameters match the macros of the function, and if the resulting function would be valid.
+					description=" - The data source and path must specify a compound data entry.\n"
+								" - The compound must contain one entry for each variable used in the macro.\n"
+								" - More data may be present in the compound and if so is ignored.\n",
+					next=Options([DATA_SOURCE_AND_PATH])
+				)
+			])
+		)
 	]
 
 
@@ -2985,6 +3001,96 @@ def build_publish_args(_: FullMCData) -> list[CommandPartSchema]:
 				),
 			])
 		),
+	]
+
+
+@addCommand(
+	name='random',
+	description='Draws a random value.',
+	opLevel="0 without sequence; 2 otherwise"
+)
+def build_random_args(_: FullMCData) -> list[CommandPartSchema]:
+	# /random (value|roll) <range> [<sequenceId>]
+	#     Extract random numbers.
+	#
+	# /random reset (*|<sequenceId>) [<seed>] [<includeWorldSeed>] [<includeSequenceId>]
+	#     Reset the random number sequence.
+
+
+	SEQUENCE_ID = ArgumentSchema(
+		name='sequenceId',
+		type=MINECRAFT_RESOURCE_LOCATION,
+		args=dict(schema='random_number_sequence'),
+		description="Specifies the name of a random number sequence to be used. If you specify a sequenceId that does not exist, it is created on the spot and the command is executed."
+	)
+
+	return [
+		SwitchSchema(
+			name='draw',
+			description="Extract random numbers.",
+			options=Options([
+				KeywordSchema(
+					name='value',
+					description="Draws a new random value. The results are displayed only to the player using the command"
+				),
+				KeywordSchema(
+					name='roll',
+					description="Draws a new random value. The results are revealed to all players"
+				)
+			]),
+			next=Options([
+				ArgumentSchema(
+					name='range',
+					type=MINECRAFT_INT_RANGE,
+					args=dict(minSize=2, maxSize=2147483647),
+					next=Options([
+						TERMINAL,
+						SEQUENCE_ID
+					])
+				)
+			])
+		),
+		KeywordSchema(
+			name='reset',
+			description="Reset the random number sequence.",
+			next=Options([
+				SwitchSchema(
+					name='sequenceId',
+					description="The sequence.",
+					options=Options([
+						KeywordSchema(
+							name='*',
+							description="all sequenceIds"
+						),
+						SEQUENCE_ID
+					]),
+					next=Options([
+						TERMINAL,
+						ArgumentSchema(
+							name='seed',
+							type=BRIGADIER_LONG,
+							description="The seed value used to reset the random number sequence. Default is `0`.",
+							next=Options([
+								TERMINAL,
+								ArgumentSchema(
+									name='includeWorldSeed',
+									type=BRIGADIER_BOOL,
+									description="Whether to incorporate the world seed value when seeding the random number sequence. Default is `true`. If set to `false`, the random number sequence is reset in the same way regardless of the world.",
+									next=Options([
+										TERMINAL,
+										ArgumentSchema(
+											name='includeSequenceId',
+											type=BRIGADIER_BOOL,
+											description="Whether to include the ID of the random number column when seeding the random number column. Default is `true`. If set to `false`, the result of resetting the random number sequence is the same regardless of the random number sequence ID."
+										)
+									])
+								)
+							])
+						)
+					])
+				)
+			])
+		)
 	]
 
 
