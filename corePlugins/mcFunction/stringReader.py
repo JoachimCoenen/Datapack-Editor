@@ -298,6 +298,20 @@ class StringReader(_Base):
 		else:
 			return None
 
+	def tryReadNotation2(self, notation: bytes) -> Optional[bytes]:
+		start: int = self.cursor
+		cursor: int = self.cursor
+		text: bytes = self.text
+		length: int = self.length
+		if cursor < length and text[cursor] in notation:
+			cursor += 1
+			self.cursor = cursor
+			if self.tryReadFloat() is not None:
+				self.mergeLastSave()
+			return text[start:self.cursor]
+		else:
+			return None
+
 
 __all__ = [
 	'StringReader'
