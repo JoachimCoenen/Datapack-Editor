@@ -10,9 +10,21 @@ from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import parse, IndexMapper
 from base.model.parsing.tree import Node, Schema
 from base.model.pathUtils import FilePath
-from base.model.utils import LanguageId, MDStr, Span, Position, GeneralError, formatAsError
+from base.model.utils import LanguageId, MDStr, MessageLike, SemanticsError, Span, Position, GeneralError, formatAsError
 
 _TNode = TypeVar('_TNode', bound=Node)
+
+
+def createErrorMsg(msg: MessageLike, *args: str, span: Span, style: str = 'error') -> SemanticsError:
+	# if len(self.errors) >= self.maxErrors > 0:
+	# 	return  # don't generate too many errors!
+	msgStr = msg.format(*args)
+	return SemanticsError(msgStr, span=span, style=style)
+
+
+def errorMsg(msg: MessageLike, *args, span: Span, style: str = 'error', errorsIO: list[GeneralError]) -> None:
+	error = createErrorMsg(msg, *args, span=span, style=style)
+	errorsIO.append(error)
 
 
 Suggestion = str  # for now...
@@ -321,6 +333,8 @@ def getAutoCompletionWordSeparators(node: Node, text: bytes, pos: Position) -> l
 
 
 __all__ = [
+	'createErrorMsg',
+	'errorMsg',
 	'Suggestion',
 	'Suggestions',
 	'CtxInfo',

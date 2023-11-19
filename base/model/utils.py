@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import builtins
-from dataclasses import dataclass
-from typing import Iterator, NewType, Protocol, final
+import itertools as it
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Callable, Iterator, NewType, Optional, final
 
 import markdown
 from recordclass import as_dataclass
@@ -12,15 +14,20 @@ from cat.utils import strings, GlobalGeneratingCache, Deprecated, escapeForXmlTe
 LanguageId = NewType('LanguageId', str)
 
 
-class MessageLike(Protocol):
-	def format(self, *args) -> MDStr:
-		pass
+class MessageLike(ABC):
+	@abstractmethod
+	def format(self, *args) -> MDStr: ...
 
 
 @dataclass(frozen=True)
-class Message:
+class Message(MessageLike):
 	rawMessage: str
 	argsCount: int
+	argumentTransformers: tuple[Optional[Callable[[str], str]], ...] = field(default=(), kw_only=True)
+
+	def __post_init__(self):
+		if len(self.argumentTransformers) > self.argsCount:
+			raise ValueError(f"There are more argumentTransformers thn expected arguments. (argumentTransformers: {len(self.argumentTransformers)}, argsCount: {self.argsCount}).")
 
 	def format(self, *args: str) -> MDStr:
 		if len(args) > self.argsCount:
@@ -28,11 +35,17 @@ class Message:
 		elif len(args) < self.argsCount:
 			raise ValueError(f"too few arguments supplied. expected {self.argsCount}, but got {len(args)}")
 
+		if self.argumentTransformers:
+			args = tuple(
+				arg if transform is None else transform(arg)
+				for arg, transform in it.zip_longest(args, self.argumentTransformers, fillvalue=None)
+			)
+
 		return MDStr(self.rawMessage.format(*args))
 
 
 @dataclass(frozen=True)
-class MessageAdapter:
+class MessageAdapter(MessageLike):
 	rawMessage: str
 	argsCount: int
 
@@ -42,9 +55,7 @@ class MessageAdapter:
 
 		selfArgs = args[:self.argsCount]
 		innerArgs = args[self.argsCount:]
-
 		innerMsg = msg.format(*innerArgs)
-
 		return MDStr(self.rawMessage.format(*selfArgs, msg=innerMsg))
 
 
@@ -194,6 +205,9 @@ def wrapInMarkdownCode(text: str) -> MDStr:
 	return MDStr(text)
 
 
+wrapInMDCode = wrapInMarkdownCode  # an alias
+
+
 def addStyle(message: str, /, style: str) -> MDStr:
 	from cat.GUI import PythonGUI
 	md = f'<div style="{PythonGUI.helpBoxStyles[style]}">{message}</div>'
@@ -261,6 +275,7 @@ class WrappedError(GeneralError):
 
 __all__ = [
 	'LanguageId',
+	'MessageLike',
 	'Message',
 	'MessageAdapter',
 	'Position',
@@ -271,6 +286,7 @@ __all__ = [
 	'MDStr',
 	'formatMarkdown',
 	'wrapInMarkdownCode',
+	'wrapInMDCode',
 	'addStyle',
 	'formatAsHint',
 	'formatAsWarning',
