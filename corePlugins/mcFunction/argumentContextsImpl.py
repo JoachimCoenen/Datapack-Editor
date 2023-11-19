@@ -19,8 +19,7 @@ def parseFromStringReader(sr: StringReader, filePath: FilePath, language: Langua
 	if sr.hasReachedEnd:
 		return None
 
-	data, errors = parseNPrepare(
-		# sr.text[sr.cursor:],  #todo why copy the text?
+	data, errors, parser = parseNPrepare(
 		sr.text,
 		filePath=filePath,
 		language=language,
@@ -29,15 +28,16 @@ def parseFromStringReader(sr: StringReader, filePath: FilePath, language: Langua
 		lineStart=sr.lineStart,
 		cursor=sr.cursor,
 		cursorOffset=sr.cursorOffset,
+		indexMapper=sr.indexMapper,
 		**kwargs
 	)
 
 	errorsIO.extend(errors)
 	if data is not None:
 		sr.save()
-		sr.cursor += data.span.length  # TODO: use parser.cursor, etc. instead
-		sr.line = data.span.end.line
-		sr.lineStart = data.span.end.index - data.span.end.column
+		sr.cursor = parser.cursor
+		sr.line = parser.line
+		sr.lineStart = parser.lineStart
 	return data
 
 

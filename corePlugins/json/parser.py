@@ -532,6 +532,9 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 				span=self._current.span
 			)
 
+		self.cursor = self._tokenizer.cursor
+		self.line = self._tokenizer.line
+		self.lineStart = self._tokenizer.lineStart
 		return value
 
 

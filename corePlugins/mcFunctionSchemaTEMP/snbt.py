@@ -3,54 +3,23 @@ from typing import Optional
 from nbtlib import Parser, tokenize, Int, String, List, Compound, Path, ListIndex, CompoundMatch, InvalidLiteral
 from nbtlib.path import can_be_converted_to_int, NamedKey, extend_accessors
 
+from corePlugins.mcFunction.argumentContextsImpl import parseFromStringReader
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.nbt.tags import NBTTag, NBTTagSchema
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.contextProvider import parseNPrepare
 from base.model.pathUtils import FilePath
 from base.model.utils import ParsingError, Span, GeneralError, LanguageId, wrapInMarkdownCode
 
 
 def parseNBTTag(sr: StringReader, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
-	# parse_nbt('{foo: [hello, world], bar: [I; 1, 2, 3]}')
-	sr.save()
-	literal = sr.text[sr.cursor:]
-	if not literal:
-		sr.rollback()
-		return None
-
-	tag, errors = parseNPrepare(
-		sr.text[sr.cursor:],
+	return parseFromStringReader(
+		sr,
 		filePath=filePath,
 		language=LanguageId('SNBT'),
 		schema=NBTTagSchema(''),
-		line=sr.line,
-		lineStart=sr.lineStart,
-		cursor=0,
-		cursorOffset=sr.cursor + sr.lineStart,
+		errorsIO=errorsIO,
 		ignoreTrailingChars=True
 	)
-
-	# parser = SNBTParser(literal, ignoreTrailingChars=True)
-	# tag = parser.parseNBTTag()
-	#
-	# for ex in parser.errors:
-	# 	message = ex.message
-	# 	start = ex.span.start.index + sr.cursor
-	# 	stop = ex.span.end.index + sr.cursor
-	# 	begin = sr.posFromColumn(start)
-	# 	end = sr.posFromColumn(stop)
-	# 	style = ex.style
-	# 	errorsIO.append(SNBTError(message, Span(begin, end), style=style))
-	errorsIO.extend(errors)
-
-	if tag is not None:
-		sr.cursor += tag.span.length
-		sr.line = tag.span.end.line
-		sr.lineStart = tag.span.end.index - tag.span.end.column
-	else:
-		sr.rollback()
-	return tag
 
 
 class InvalidPath(ValueError):

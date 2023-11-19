@@ -7,7 +7,7 @@ from cat.utils import Decorator
 from cat.utils.collections_ import AddToDictDecorator
 from cat.utils.collections_.collections_ import IfKeyIssubclassGetter
 from cat.utils.logging_ import logWarning
-from base.model.parsing.parser import parse, IndexMapper
+from base.model.parsing.parser import ParserBase, parse, IndexMapper
 from base.model.parsing.tree import Node, Schema
 from base.model.pathUtils import FilePath
 from base.model.utils import LanguageId, MDStr, MessageLike, SemanticsError, Span, Position, GeneralError, formatAsError
@@ -260,8 +260,8 @@ def parseNPrepare(
 		indexMapper: IndexMapper = None,
 		maxIndex: int = None,
 		**kwargs
-) -> tuple[Optional[Node], list[GeneralError]]:
-	node, errors = parse(
+) -> tuple[Optional[Node], list[GeneralError], Optional[ParserBase]]:
+	node, errors, parser = parse(
 		text,
 		filePath=filePath,
 		language=language,
@@ -276,7 +276,7 @@ def parseNPrepare(
 	)
 	if node is not None:
 		prepareTree(node, text, filePath, errorsIO=errors)
-	return node, errors
+	return node, errors, parser
 
 
 def validateTree(node: Node, text: bytes, errorsIO: list[GeneralError]) -> None:

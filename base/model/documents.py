@@ -685,7 +685,7 @@ class ParsedDocument(TextDocument):
 		try:
 			schema = self.schema
 			language = schema.language if schema is not None else self.language
-			return parseNPrepare(text, filePath=self.filePath, language=language, schema=schema, **self.parseKwArgs)
+			return parseNPrepare(text, filePath=self.filePath, language=language, schema=schema, **self.parseKwArgs)[:2]
 		except Exception as e:
 			logError(e)
 			return None, [WrappedError(e, style='info')]

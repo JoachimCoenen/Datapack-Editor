@@ -47,14 +47,10 @@ class JsonTokenizer(TokenizerBase[Token]):
 	def __post_init__(self):
 		super(JsonTokenizer, self).__post_init__()
 
-	@property
-	def char(self) -> Char:
-		return self.text[self.cursor]
-
-	def addToken(self, start: Position, tokenType: TokenType) -> Token:
+	def addToken(self, start: Position, startCursor: int, tokenType: TokenType) -> Token:
 		end = self.currentPos
 		span = Span(start, end)
-		token = Token(self.text[start.index-self.cursorOffset:end.index-self.cursorOffset], tokenType, span)
+		token = Token(self.text[startCursor:self.cursor], tokenType, span)
 		# add errors:
 		if self._errorsNextToken:
 			for msg, args, style in self._errorsNextToken:
@@ -103,7 +99,8 @@ class JsonTokenizer(TokenizerBase[Token]):
 	def extract_string(self) -> Token:
 		"""Extracts a single string token from JSON string"""
 		start = self.currentPos
-		quote = self.text[self.cursor]
+		startCursor = self.cursor
+		quote = self.text[startCursor]
 		if quote == ORD_SINGLE_QUOTE:
 			self.errorNextToken(SINGLE_QUOTED_STRING_MSG)
 		self.cursor += 1  # opening "
@@ -115,13 +112,13 @@ class JsonTokenizer(TokenizerBase[Token]):
 			if char == ORD_BACKSLASH:
 				if self.cursor == self.length or self.text[self.cursor] in CR_LF:
 					self.errorNextToken(INCOMPLETE_ESCAPE_MSG)
-					return self.addToken(start, TokenType.string)
+					return self.addToken(start, startCursor, TokenType.string)
 				else:
 					self.cursor += 1
 					continue
 
 			elif char == quote:
-				return self.addToken(start, TokenType.string)
+				return self.addToken(start, startCursor, TokenType.string)
 
 			elif char == ORD_LF:
 				if self.allowMultilineStr:
@@ -131,19 +128,19 @@ class JsonTokenizer(TokenizerBase[Token]):
 					break
 
 		self.errorNextToken(MISSING_CLOSING_QUOTE_MSG)
-		return self.addToken(start, TokenType.string)
+		return self.addToken(start, startCursor, TokenType.string)
 
 	def extract_number(self) -> Token:
 		"""Extracts a single number token (e.g. 42, -12.3) from JSON string"""
 		start = self.currentPos
-
+		startCursor = self.cursor
 		non_exp_digit_found = False
 		decimal_point_found = False
 		exponent_found = False
 		exponent_digit_found = False
 		isValid = True
 
-		if self.cursor < self.length and self.text[self.cursor] in b'-+':
+		if startCursor < self.length and self.text[startCursor] in b'-+':
 			self.cursor += 1
 
 		while self.cursor < self.length:
@@ -182,9 +179,9 @@ class JsonTokenizer(TokenizerBase[Token]):
 		isValid = isValid and non_exp_digit_found
 		isValid = isValid and (not exponent_found or exponent_digit_found)
 
-		token = self.addToken(start, TokenType.number)
+		token = self.addToken(start, startCursor, TokenType.number)
 		if not isValid:
-			self.errorMsg(INVALID_NUMBER_MSG, token.value, span=token.span)
+			self.errorMsg(INVALID_NUMBER_MSG, bytesToStr(token.value), span=token.span)
 		return token
 
 	def extract_special(self) -> Token:
@@ -208,6 +205,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 	def extract_illegal(self) -> Token:
 		"""Extracts illegal characters from JSON string"""
 		start = self.currentPos
+		startCursor = self.cursor
 		self.cursor += 1  # first character
 		while self.cursor < self.length:
 			char = self.text[self.cursor]
@@ -219,7 +217,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 				break
 			self.cursor += 1
 
-		token = self.addToken(start, TokenType.invalid)
+		token = self.addToken(start, startCursor, TokenType.invalid)
 		if token.type is TokenType.invalid:
 			self.errorMsg(ILLEGAL_CHARS_MSG, repr(bytesToStr(token.value)), span=token.span)
 		return token

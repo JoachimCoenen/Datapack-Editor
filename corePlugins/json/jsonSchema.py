@@ -646,7 +646,7 @@ class SchemaBuilderOrchestrator:
 		except OSError as ex:
 			self.errors[fullPath].append(WrappedError(ex))
 			return None
-		schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
+		schemaJson, errors, _ = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
 		schemaJson: JsonObject
 		self.errors[fullPath].extend(errors)
 		builder = SchemaBuilder(orchestrator=self)
@@ -668,7 +668,7 @@ class SchemaBuilderOrchestrator:
 			self.errors[fullPath].append(WrappedError(ex))
 			library, partial = None, Doer2.NOP
 		else:
-			schemaJson, errors = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
+			schemaJson, errors, _ = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
 			self.errors[fullPath].extend(errors)
 
 			builder = SchemaBuilder(orchestrator=self, errors=self.errors[fullPath])

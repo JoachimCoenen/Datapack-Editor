@@ -350,10 +350,10 @@ def parse(
 		indexMapper: IndexMapper = None,
 		maxIndex: int = None,
 		**kwargs
-) -> tuple[Optional[Node], list[GeneralError]]:
+) -> tuple[Optional[Node], list[GeneralError], Optional[ParserBase]]:
 	parserCls = getParserCls(language)
 	if parserCls is None:
-		return None, [ParsingError(MDStr(f"No Parser for language `{language}` registered."), span=NULL_SPAN, style='info')]
+		return None, [ParsingError(MDStr(f"No Parser for language `{language}` registered."), span=NULL_SPAN, style='info')], None
 	if indexMapper is None:
 		indexMapper = IndexMapper()
 	maxEncIndex = maxIndex
@@ -361,7 +361,7 @@ def parse(
 		maxEncIndex = 2**63 - 1
 	parser: ParserBase = parserCls(text, line, lineStart, cursor, cursorOffset, indexMapper, maxEncIndex, schema, filePath, **kwargs)
 	node = parser.parse()
-	return node, parser.errors
+	return node, parser.errors, parser
 
 
 __all__ = [

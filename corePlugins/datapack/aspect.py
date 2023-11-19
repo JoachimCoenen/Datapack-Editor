@@ -106,7 +106,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 		except (OSError, KeyError) as e:
 			node, errors = None, [WrappedError(e)]
 		else:
-			node, errors = parseNPrepare(file, filePath=filePath, language=JSON_ID, schema=schema)
+			node, errors, _ = parseNPrepare(file, filePath=filePath, language=JSON_ID, schema=schema)
 
 		if node is not None:
 			validateTree(node, file, errors)

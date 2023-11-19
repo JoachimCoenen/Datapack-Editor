@@ -378,7 +378,11 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 	}
 
 	def parse(self) -> Optional[NBTTag]:
-		return self.parseNBTTag()
+		tag = self.parseNBTTag()
+		self.cursor = self._tokenizer.lastCursor
+		self.line = self._tokenizer.lastLine
+		self.lineStart = self._tokenizer.lastLineStart
+		return tag
 
 
 def init():

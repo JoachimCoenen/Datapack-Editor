@@ -50,6 +50,10 @@ class SNBTTokenizer(TokenizerBase[Token]):
 	ignoreTrailingChars: bool
 	_tokenStart: tuple[Position, int] = field(init=False)
 
+	lastCursor: int = field(default=-1, init=False)
+	lastLine: int = field(default=-1, init=False)
+	lastLineStart: int = field(default=-1, init=False)
+
 	@property
 	def _tokenSpan(self) -> Span:
 		return Span(self._tokenStart[0], self.currentPos)
@@ -173,9 +177,15 @@ class SNBTTokenizer(TokenizerBase[Token]):
 	}
 
 	def nextToken(self) -> Optional[Token]:
+		self.lastCursor = self.cursor
+		self.lastLine = self.line
+		self.lastLineStart = self.lineStart
 		self._consumeWhitespace()
 		self._tokenStart = self.currentPos, self.cursor
 		if self.cursor >= self.length:
+			self.cursor = self.lastCursor
+			self.line = self.lastLine
+			self.lineStart = self.lastLineStart
 			return None
 
 		c = self.text[self.cursor]

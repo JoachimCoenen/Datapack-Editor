@@ -87,7 +87,7 @@ class JsonMeta(MetaInfo):
 			return MDStr('')
 
 		from corePlugins.json import JSON_ID
-		json, errors = parse(file, filePath=self.filePath, language=JSON_ID, schema=None)
+		json, errors, _ = parse(file, filePath=self.filePath, language=JSON_ID, schema=None)
 
 		from corePlugins.json.core import JsonObject, JsonString
 		if json is not None and isinstance(json, JsonObject):

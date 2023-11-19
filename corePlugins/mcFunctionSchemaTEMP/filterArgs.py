@@ -74,7 +74,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 					valueNode = handler.parse(sr, tsai, filePath, errorsIO=errorsIO)
 				if valueNode is None:
 					remaining = sr.readUntilEndOrRegex(re.compile(rb'[],]'))
-					valueNode = makeParsedArgument(sr, tsai, value=remaining)
+					valueNode = makeParsedArgument(sr, tsai, value=None)
 					errorsIO.append(ParsingError(MDStr(f"Expected {tsai.type.name}."), sr.currentSpan, style='error'))
 			sr.mergeLastSave()
 			arguments.add(key, FilterArgument(keyNode, valueNode, isNegated))

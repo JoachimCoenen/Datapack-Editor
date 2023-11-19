@@ -435,7 +435,7 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 		schema = self.getSchema(node)
 		language = self.getLanguage(node)
 
-		data, errors = parseNPrepare(
+		data, errors, _ = parseNPrepare(
 			strToBytes(node.data),
 			filePath=info.filePath,
 			language=language,

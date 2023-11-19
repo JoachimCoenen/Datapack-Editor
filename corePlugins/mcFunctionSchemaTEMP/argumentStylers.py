@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Optional
 
+from base.model.parsing.tree import Node
 from cat.utils import first
 from base.gui.styler import StyleId
-from base.model.utils import LanguageId
+from base.model.utils import LanguageId, Span
 from corePlugins.mcFunction.command import ParsedArgument
 from corePlugins.mcFunction.mcFunctionStyler import addSimpleArgumentStyler, argumentStyler, ArgumentStyler, StyleIds
 from .argumentTypes import *
@@ -133,6 +134,14 @@ addSimpleArgumentStyler(StyleIds.TargetSelector, forArgTypes=[
 ])
 
 
+def styleForeignNode2(self: ArgumentStyler, value: Optional[Node], span: Span) -> None:
+	if value is not None:
+		idx = self.commandStyler.styleForeignNode(value)
+		if idx != value.span.start.index:
+			return
+	self.setStyling(span.slice, StyleIds.Complex)
+
+
 @argumentStyler(MINECRAFT_COMPONENT.name, forceOverride=True)
 class ComponentStyler(ArgumentStyler):
 	@classmethod
@@ -140,9 +149,7 @@ class ComponentStyler(ArgumentStyler):
 		return [LanguageId('JSON')]
 
 	def style(self, argument: ParsedArgument) -> None:
-		idx = self.commandStyler.styleForeignNode(argument.value)
-		if idx == argument.value.span.start.index:
-			self.setStyling(argument.span.slice, StyleIds.Complex)
+		styleForeignNode2(self, argument.value, argument.span)
 
 
 @argumentStyler(MINECRAFT_NBT_COMPOUND_TAG.name, forceOverride=True)
@@ -153,9 +160,7 @@ class SNBTStyler(ArgumentStyler):
 		return [LanguageId('SNBT')]
 
 	def style(self, argument: ParsedArgument) -> None:
-		idx = self.commandStyler.styleForeignNode(argument.value)
-		if idx == argument.value.span.start.index:
-			self.setStyling(argument.span.slice, StyleIds.Complex)
+		styleForeignNode2(self, argument.value, argument.span)
 
 
 @argumentStyler(MINECRAFT_ITEM_STACK.name, forceOverride=True)
@@ -171,13 +176,9 @@ class ItemStackStyler(ArgumentStyler):
 			self.setStyling(argument.span.slice, StyleIds.Complex)
 			return
 
-		idx = self.commandStyler.styleForeignNode(value.itemId)
-		if idx == value.itemId.span.start.index:
-			self.setStyling(value.itemId.span.slice, StyleIds.Complex)
+		styleForeignNode2(self, value.itemId, value.itemId.span)
 		if value.nbt is not None:
-			idx = self.commandStyler.styleForeignNode(value.nbt)
-			if idx == value.nbt.span.start.index:
-				self.setStyling(value.nbt.span.slice, StyleIds.Complex)
+			styleForeignNode2(self, value.nbt, value.nbt.span)
 
 
 @argumentStyler(MINECRAFT_BLOCK_STATE.name, forceOverride=True)
@@ -193,18 +194,14 @@ class BlockStateStyler(ArgumentStyler):
 			self.setStyling(argument.span.slice, StyleIds.Complex)
 			return
 
-		idx = self.commandStyler.styleForeignNode(value.blockId)
-		if idx == value.blockId.span.start.index:
-			self.setStyling(value.blockId.span.slice, StyleIds.Complex)
+		styleForeignNode2(self, value.blockId, value.blockId.span)
 		if value.states:
 			for name, state in value.states.items():
 				self.setStyling(state.key.span.slice, StyleIds.Complex)
 				if state.value is not None:
 					self.commandStyler.styleArguments(state.value)
 		if value.nbt is not None:
-			idx = self.commandStyler.styleForeignNode(value.nbt)
-			if idx == value.nbt.span.start.index:
-				self.setStyling(value.nbt.span.slice, StyleIds.Complex)
+			styleForeignNode2(self, value.nbt, value.nbt.span)
 
 
 @argumentStyler(MINECRAFT_ENTITY.name, forceOverride=True)
@@ -226,8 +223,4 @@ class EntityStyler(ArgumentStyler):
 				self.setStyling(state.key.span.slice, StyleIds.TargetSelector)
 				if state.value is not None:
 					self.commandStyler.styleArguments(state.value)
-
-
-
-
-
+			self.setStyling(argument.span.slice, StyleIds.TargetSelector)  # style all remaining characters

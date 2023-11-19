@@ -1,6 +1,7 @@
 ## Next Version
 ### Features 
- * Added fuzzy matching for auto-completion in source code. If you type `mosCSt` and then press `Ctrl+Space` you will be suggested `mossy_cobblestone_stairs`. 
+ * Added fuzzy matching for auto-completion in source code. If you type `mosCSt` and then press `Ctrl+Space` you will be suggested `mossy_cobblestone_stairs`.
+ * Added support for multi-line commands in .mcFunction files.
 
 ### Improvements
  * Improved performance of Json parser by > 30%.

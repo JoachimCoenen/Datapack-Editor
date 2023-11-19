@@ -73,9 +73,8 @@ class CatStyler(Generic[_TNode], ABC):
 			with styler:
 				result = styler.styleNode(node)
 				self.setStyling(slice(result, node.span.end.index), styler.offset)
-				return node.span.end.index
-		else:
-			return node.span.start.index
+			return node.span.end.index
+		return node.span.start.index
 
 	@CachedProperty
 	def localStyles(self) -> dict[str, StyleId]:

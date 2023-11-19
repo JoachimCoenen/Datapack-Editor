@@ -1,5 +1,6 @@
+import re
 from dataclasses import dataclass, field
-from typing import Mapping, Optional, Sequence, Union
+from typing import Mapping, Optional, Sequence
 
 from .command import *
 from .stringReader import StringReader
@@ -7,42 +8,21 @@ from base.model.utils import ParsingError, Span, Message, wrapInMarkdownCode
 
 from .commandContext import makeParsedArgument, getArgumentContext, missingArgumentContext
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.parser import ParserBase
+from base.model.parsing.parser import IndexMapBuilder, ParserBase
 
 
 UNKNOWN_COMMAND_MSG = Message("Unknown Command '{0}'", 1)
 EXPECTED_ARGUMENT_SEPARATOR_MSG: Message = Message("Expected whitespace to end one argument, but found trailing data: {0}", 1)
 
+_LINE_CONTINUE_PATTERN = re.compile(br'\\ *\r?\n$')
+
 
 @dataclass
 class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 
-	_lines: list[bytes] = field(init=False)
-
-	def __post_init__(self):
-		super().__post_init__()
-		self._lines = self.text.splitlines()
-
 	def parseMCFunction(self) -> Optional[MCFunction]:
-		children = []
-
 		p1 = self.currentPos
-		cursorOffset = self.cursorOffset
-		cursor = self.cursor
-		for lineNo, line in enumerate(self._lines, self.line):
-			sr = StringReader(line, self.line, self.lineStart, cursor, cursorOffset, self.indexMapper, -1, self.text)
-			if (node := self.parseLine(sr)) is not None:
-				children.append(node)
-			self.cursor += len(line)
-			if self.text[self.cursor:self.cursor+2] == b'\r\n':
-				self.cursor += 2
-			else:
-				self.cursor += 1
-			self.advanceLine()
-
-			cursorOffset = self.cursorOffset + self.cursor
-			cursor = 0
-
+		children = self._parseMcFunctionContents()
 		p2 = self.currentPos
 		result: MCFunction = MCFunction(
 			Span(p1, p2),
@@ -51,10 +31,72 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			self.text,
 			children
 		)
-
 		return result
 
-	def parseLine(self, sr: StringReader) -> Union[None, ParsedCommand, ParsedComment]:
+	def _parseMcFunctionContents(self) ->  list[ParsedCommand | ParsedComment]:
+		children = []
+		actualLines = self.text.splitlines(keepends=True)
+		linesCount = len(actualLines)
+		lineNo = 0
+		cursorOffset = self.cursorOffset
+		cursor = self.cursor
+		mergedLinesCount = 1
+		lasWasEscaped: bool = False
+		virtualLine = b''
+		while lineNo < linesCount:
+			line = actualLines[lineNo]
+			if lasWasEscaped:
+				strippedLine = line.lstrip()
+				lenDiff = len(line) - len(strippedLine)
+				idxMapBldr.addMarker(self.cursor + lenDiff, len(virtualLine) + cursorOffset)
+			else:
+				strippedLine = line
+				lenDiff = 0
+
+			lineContMatch = _LINE_CONTINUE_PATTERN.search(strippedLine)
+			if lineContMatch is not None:
+				if not lasWasEscaped:
+					# we need a new IndexMapBuilder
+					idxMapBldr = IndexMapBuilder(self.indexMapper, self.cursorOffset)  # - self.cursorOffset)  # + 1 because of opening quotation marks?
+
+				lineContpos = lineContMatch.start(0)
+				virtualLine += strippedLine[:lineContpos]
+				idxMapBldr.addMarker(self.cursor + lineContpos + lenDiff - 1, len(virtualLine) + cursorOffset - 1)
+				lasWasEscaped = True
+
+			if lineContMatch is None or lineNo == linesCount - 1:  # also parse for last line, even if we have an escape!
+				if strippedLine.endswith(b'\r\n'):
+					nlLen = 2
+				elif strippedLine.endswith(b'\n'):
+					nlLen = 1
+				else:
+					nlLen = 0
+				strippedLine = strippedLine[:len(strippedLine) - nlLen]
+				virtualLine += strippedLine
+				if lasWasEscaped:
+					# we have an IndexMapBuilder we must use:
+					idxMap = idxMapBldr.completeIndexMapper(self.cursor + len(line) - nlLen, len(virtualLine) + cursorOffset)
+				else:
+					idxMap = self.indexMapper
+				reader = StringReader(virtualLine, self.line, self.lineStart, cursor, cursorOffset, idxMap, -1, self.text)
+				if (node := self.parseVirtualLine(reader)) is not None:
+					children.append(node)
+				cursor = 0
+				virtualLine = b''
+				lasWasEscaped = False
+				self.cursor += len(line)
+				cursorOffset = self.cursorOffset + self.cursor
+				for _ in range(mergedLinesCount):
+					self.advanceLine()
+				mergedLinesCount = 1
+
+			else:
+				self.cursor += len(line)
+			lineNo += 1
+
+		return children
+
+	def parseVirtualLine(self, sr: StringReader) -> Optional[ParsedCommand | ParsedComment]:
 		sr.tryConsumeWhitespace()
 		if sr.tryPeek() == ord('#'):
 			return self.parseComment(sr)
