@@ -1,5 +1,6 @@
 import re
-from typing import Optional, Iterable, Any
+from math import inf
+from typing import Callable, Optional, Iterable, Any
 
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.contextProvider import Suggestions, errorMsg, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked
@@ -42,7 +43,6 @@ OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be
 @argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle', allowTags=False))
 @argumentContext(MINECRAFT_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'predicate', allowTags=False))
 @argumentContext(MINECRAFT_LOOT_TABLE.name, rlcSchema=ResourceLocationSchema('', 'loot_table', allowTags=False))
-@argumentContext(MINECRAFT_RESOURCE_LOCATION.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))
 @argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))  # TODO: add validation for objective_criteria
 @argumentContext(DPE_ADVANCEMENT.name, rlcSchema=ResourceLocationSchema('', 'advancement', allowTags=False))
 @argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome', allowTags=False))  # outdated. TODO: remove
@@ -259,20 +259,98 @@ class EntityHandler(ArgumentContext):
 		onIndicatorClickedForFilterArgs(node.value.arguments, position)
 
 
-@argumentContext(MINECRAFT_FLOAT_RANGE.name)
-class FloatRangeHandler(ArgumentContext):
+_INTEGER_REGEX = r'-?[0-9]+'
+_FLOAT_1_REGEX = r'-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)'
+_FLOAT_2_REGEX = r'-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)'
+_SEPARATOR_REGEX = r'\.\.'
+#                       group 0              group 1             group 2               group 3             group 4
+_INTEG_RANGE_REGEX = f"({_INTEGER_REGEX})(?:({_SEPARATOR_REGEX})({_INTEGER_REGEX})?)?|({_SEPARATOR_REGEX})({_INTEGER_REGEX})"
+_FLOAT_RANGE_REGEX = f"({_FLOAT_1_REGEX})(?:({_SEPARATOR_REGEX})({_FLOAT_2_REGEX})?)?|({_SEPARATOR_REGEX})({_FLOAT_2_REGEX})"
+_INT_RANGE_PATTERN = re.compile(strToBytes(_INTEG_RANGE_REGEX))
+_FLOAT_RANGE_PATTERN = re.compile(strToBytes(_FLOAT_RANGE_REGEX))
+
+
+@argumentContext(MINECRAFT_FLOAT_RANGE.name, pattern=_FLOAT_RANGE_PATTERN, numberParser=float)
+@argumentContext(MINECRAFT_INT_RANGE.name, pattern=_INT_RANGE_PATTERN, numberParser=int)
+class IntRangeHandler(ArgumentContext):
+	def __init__(self, pattern: re.Pattern[bytes], numberParser: Callable[[str], int | float]):
+		super().__init__()
+		self.pattern: re.Pattern[bytes] = pattern
+		self.numberParser: Callable[[str], int | float] = numberParser
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		float1Regex = r'-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)'
-		float2Regex = r'-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)'
-		separatorRegex = r'\.\.'
-		pattern = re.compile(strToBytes(f"{float1Regex}(?:{separatorRegex}(?:{float2Regex})?)?|{separatorRegex}{float2Regex}"))
-		range_ = sr.tryReadRegex(pattern)
-		if range_ is None:
+		groups = sr.tryReadRegexGroups(self.pattern)
+		if groups is None:
 			return None
-		return makeParsedArgument(sr, ai, value=range_)
+
+		stringMin = groups[0]
+		separator = groups[1] or groups[3]
+		stringMax = groups[2] or groups[4]
+		numberMin = -inf if not stringMin else self.numberParser(bytesToStr(stringMin))
+		numberMax = +inf if not stringMax else self.numberParser(bytesToStr(stringMax))
+		if not separator:  # we only have one number
+			if not stringMin:
+				numberMin = numberMax
+			elif not stringMax:
+				numberMax = numberMin
+			else:
+				raise TypeError("Internal Error that should never be possible. Has a RegEx gone bad?")
+
+		return makeParsedArgument(sr, ai, (numberMin, numberMax))
+
+	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
+		args = node.schema.args or FrozenDict.EMPTY
+		# bounded = args.get('bounded', False)
+		minSize = args.get('minSize', 0)
+		maxSize = args.get('maxSize', +inf)
+		minVal = args.get('minVal', -inf)
+		maxVal = args.get('maxVal', +inf)
+		numberMin, numberMax = node.value
+		# intAdjust is necessary, because the intRange 0...1 has a span of only 1-0 = 1, but contains two values (0, 1).
+		intAdjust = 1 if self.numberParser is int else 0
+
+		if not minVal <= numberMin <= maxVal:
+			errorMsg(NUMBER_OUT_OF_BOUNDS_MSG, minVal, maxVal, span=node.span, errorsIO=errorsIO)
+		elif not minVal <= numberMax <= maxVal:
+			errorMsg(NUMBER_OUT_OF_BOUNDS_MSG, minVal, maxVal, span=node.span, errorsIO=errorsIO)
+
+		if numberMax < numberMin:
+			errorMsg(RANGE_INVERTED_MSG, span=node.span, errorsIO=errorsIO)
+		elif (numberMax - numberMin + intAdjust) < minSize:
+			errorMsg(RANGE_TOO_SMALL_MSG, minSize, span=node.span, errorsIO=errorsIO)
+		elif (numberMax - numberMin + intAdjust) > maxSize:
+			errorMsg(RANGE_TOO_BIG_MSG, maxSize, span=node.span, errorsIO=errorsIO)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		return ['0...']
+		args = ai.args or FrozenDict.EMPTY
+		minVal = args.get('minVal', -inf)
+		maxVal = args.get('maxVal', +inf)
+		noLowerBound = minVal == -inf
+		includeMinVal = minVal >= -1000
+		includeMaxVal = maxVal <= +1000
+		includeMinZero = minVal <= 0
+		includeMaxZero = maxVal >= 0
+
+		suggestions = {}
+
+		def addSuggestion(minStr: str, maxStr: str) -> None:
+			suggestions.setdefault(f'{minStr}' if minStr == maxStr else f'{minStr}...{maxStr}')
+
+		def addSuggestions(maxStr: str):
+			if noLowerBound:
+				suggestions.setdefault(f'...{maxStr}')
+			if includeMinVal:
+				addSuggestion(minStr=f'{minVal}', maxStr=maxStr)
+			if includeMinZero:
+				addSuggestion(minStr='0', maxStr=maxStr)
+
+		addSuggestions(maxStr='')
+		if includeMaxVal:
+			addSuggestions(maxStr=f'{maxVal}')
+		if includeMaxZero:
+			addSuggestions(maxStr='0')
+
+		return list(suggestions)
 
 
 @argumentContext(MINECRAFT_GAME_PROFILE.name)
@@ -280,21 +358,6 @@ class GameProfileHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		# TODO: parseGameProfile(...)
 		return EntityHandler().parse(sr, ai, filePath, errorsIO=errorsIO)
-
-
-@argumentContext(MINECRAFT_INT_RANGE.name)
-class IntRangeHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		intRegex = r'-?[0-9]+'
-		separatorRegex = r'\.\.'
-		pattern = re.compile(strToBytes(f"{intRegex}(?:{separatorRegex}(?:{intRegex})?)?|{separatorRegex}{intRegex}"))
-		range_ = sr.tryReadRegex(pattern)
-		if range_ is None:
-			return None
-		return makeParsedArgument(sr, ai, value=range_)
-
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		return ['0...']
 
 
 @argumentContext(MINECRAFT_ITEM_SLOT.name)

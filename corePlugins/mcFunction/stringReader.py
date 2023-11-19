@@ -150,6 +150,14 @@ class StringReader(_Base):
 		self.cursor += len(text)
 		return text
 
+	def tryReadRegexGroups(self, pattern: re.Pattern[bytes]) -> Optional[tuple[bytes, ...]]:  # throws CommandSyntaxException
+		match = pattern.match(self.text, self.cursor)
+		if match is None:
+			return None
+		self.save()
+		self.cursor += len(match.group(0))
+		return match.groups()
+
 	def tryReadInt(self) -> Optional[bytes]:
 		start: int = self.cursor
 		cursor: int = self.cursor

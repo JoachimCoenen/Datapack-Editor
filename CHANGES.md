@@ -1,9 +1,13 @@
 ## Next Version
+### Features 
+ * Added fuzzy matching for auto-completion in source code. If you type `mosCSt` and then press `Ctrl+Space` you will be suggested `mossy_cobblestone_stairs`. 
+
 ### Improvements
  * Improved performance of Json parser by > 30%.
  * Slightly improved performance of MCFunction parser.
  * Improved error messages for validation of Json objects with union schemas.
- * Added fuzzy matching for auto-completion in source code.
+ * Improved code suggestions for minecraft:float_range and minecraft:int_range.
+ * Added boundary checking (min/max value, etc.) for minecraft:float_range and minecraft:int_range.
 
 ### Fixes
  * Fixed syntax highlighting issues with escape sequences.
