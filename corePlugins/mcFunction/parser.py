@@ -131,8 +131,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 
 	def _addExpectedArgumentError(self, sr: StringReader) -> None:
 		trailingData: str = wrapInMarkdownCode(bytesToStr(sr.readUntilEndOrWhitespace()))
-		errorMsg = EXPECTED_ARGUMENT_SEPARATOR_MSG.format(trailingData)
-		self.errors.append(ParsingError(errorMsg, sr.currentSpan))
+		self.errorMsg(EXPECTED_ARGUMENT_SEPARATOR_MSG, trailingData, span=sr.currentSpan)
 
 	@staticmethod
 	def parseKeyword(sr: StringReader, ai: KeywordSchema) -> Optional[ParsedArgument]:

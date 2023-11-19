@@ -1,7 +1,7 @@
 import re
 from typing import Optional
 
-from base.model.utils import GeneralError, ParsingError
+from base.model.utils import GeneralError, ParsingError, wrapInMDCode
 from cat.utils.collections_ import OrderedMultiDict
 from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
@@ -191,12 +191,12 @@ class TargetSelectorScoresArgumentHandler(ArgumentContext):
 				continue
 			else:
 				if sr.hasReachedEnd:
-					errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format("`}`", 'end of str'), sr.currentSpan, style='error'))
+					errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format("}", 'end of str'), sr.currentSpan, style='error'))
 					break
 				else:
 					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
 					remainig = bytesToStr(remainig)
-					errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format("`}` or `,`", f"'{remainig}'"), sr.currentSpan, style='error'))
+					errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG_RAW.format("`}` or `,`", wrapInMDCode(f"'{remainig}'")), sr.currentSpan, style='error'))
 					if sr.tryConsumeByte(ord('}')):
 						break
 		return makeParsedArgument(sr, ai, value=scores)

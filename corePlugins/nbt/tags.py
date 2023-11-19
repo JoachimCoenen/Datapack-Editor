@@ -135,7 +135,7 @@ class NBTProperty(NBTTag[tuple[StringTag, NBTTag]]):
 @dataclass
 class CompoundTag(NBTTag[OrderedDict[bytes, NBTProperty]]):
 	typeName: ClassVar[str] = 'compound_tag'
-	data: OrderedDict[bytes, NBTTag]
+	data: OrderedDict[str, NBTTag]
 
 	@property
 	def children(self) -> Collection[NBTTag]:

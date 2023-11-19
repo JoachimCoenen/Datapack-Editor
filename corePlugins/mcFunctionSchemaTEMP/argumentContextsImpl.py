@@ -2,7 +2,7 @@ import re
 from typing import Optional, Iterable, Any
 
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked
+from base.model.parsing.contextProvider import Suggestions, errorMsg, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
@@ -143,7 +143,7 @@ class BlockStateHandler(ArgumentContext):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		blockState: BlockState = node.value
 		if not isinstance(blockState, BlockState):
-			errorsIO.append(SemanticsError(INTERNAL_ERROR_MSG.format(EXPECTED_BUT_GOT_MSG, '`BlockState`', type(blockState).__name__), node.span))
+			errorMsg(INTERNAL_ERROR_MSG, EXPECTED_BUT_GOT_MSG, 'BlockState', type(blockState).__name__, span=node.span, errorsIO=errorsIO)
 			return
 
 		validateTree(blockState.blockId, node.source, errorsIO)
@@ -308,7 +308,7 @@ class ItemSlotHandler(ArgumentContext):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		slot: str = node.value
 		if slot not in getCurrentFullMcData().slots:
-			errorsIO.append(SemanticsError(UNKNOWN_MSG.format("item slot",  slot), node.span, style='error'))
+			errorMsg(UNKNOWN_MSG, "item slot",  slot, span=node.span, style='error', errorsIO=errorsIO)
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		return [bytesToStr(slot) for slot in getCurrentFullMcData().slots.keys()]
@@ -342,7 +342,7 @@ class ItemStackHandler(ArgumentContext):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		itemStack: ItemStack = node.value
 		if not isinstance(itemStack, ItemStack):
-			errorsIO.append(SemanticsError(INTERNAL_ERROR_MSG.format(EXPECTED_BUT_GOT_MSG, '`ItemStack`', type(itemStack).__name__), node.span))
+			errorMsg(INTERNAL_ERROR_MSG, EXPECTED_BUT_GOT_MSG, 'ItemStack', type(itemStack).__name__, span=node.span, errorsIO=errorsIO)
 			return
 
 		validateTree(itemStack.itemId, node.source, errorsIO)
@@ -446,7 +446,7 @@ class ObjectiveHandler(ArgumentContext):
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		if len(node.value) > 16 and getCurrentFullMcData().name < '1.18':
-			errorsIO.append(SemanticsError(OBJECTIVE_NAME_LONGER_THAN_16_MSG.format(), node.span, style='error'))
+			errorMsg(OBJECTIVE_NAME_LONGER_THAN_16_MSG, span=node.span, style='error', errorsIO=errorsIO)
 
 
 @argumentContext(MINECRAFT_ROTATION.name)

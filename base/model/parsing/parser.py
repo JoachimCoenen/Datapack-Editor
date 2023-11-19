@@ -7,7 +7,7 @@ from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar
 from cat.utils.collections_ import AddToDictDecorator
 from base.model.parsing.tree import Node, Schema, TokenLike
 from base.model.pathUtils import FilePath
-from base.model.utils import Message, ParsingError, Position, GeneralError, LanguageId, MDStr, Span, wrapInMarkdownCode, NULL_SPAN
+from base.model.utils import MessageLike, ParsingError, Position, GeneralError, LanguageId, MDStr, Span, wrapInMarkdownCode, NULL_SPAN
 
 _TToken = TypeVar('_TToken', bound=TokenLike)
 _TNode = TypeVar('_TNode', bound=Node)
@@ -299,7 +299,7 @@ class _Base(ABC):
 		error = self.createError(message, span, style)
 		self.errors.append(error)
 
-	def errorMsg(self, msg: Message, *args, span: Span, style: str = 'error') -> None:
+	def errorMsg(self, msg: MessageLike, *args: str, span: Span, style: str = 'error') -> None:
 		if len(self.errors) >= self.maxErrors > 0:
 			return  # don't generate too many errors!
 		msgStr = msg.format(*args)

@@ -9,7 +9,7 @@ from .snbtTokenizer import SNBTTokenizer, Token, TokenType
 from .tags import *
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.parser import ParserBase
-from base.model.utils import Message, Position, Span, MDStr
+from base.model.utils import Message, Position, Span, MDStr, wrapInMDCode
 
 INVALID_NUMBER_MSG: Message = Message("Invalid {0}: '`{1}`'", 2)
 
@@ -89,11 +89,11 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 	def _consumeToken(self, kind: TokenType) -> bool:
 		current = self._current
 		if current is None:
-			self._error(EXPECTED_BUT_GOT_MSG.format(f"`{kind.name}`", 'end of str'), self._last)
+			self._error(EXPECTED_BUT_GOT_MSG.format(f"{kind.name}", 'end of str'), self._last)
 			return False
 		if current.type != kind:
 			content = self._getContent(current)
-			self._error(EXPECTED_BUT_GOT_MSG.format(f"`{kind.name}`", bytesToStr(content)), current)
+			self._error(EXPECTED_BUT_GOT_MSG.format(f"{kind.name}", bytesToStr(content)), current)
 			return False
 		self._next()
 		return True
@@ -101,11 +101,11 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 	def _consumeAnyOfToken(self, kinds: set[TokenType]) -> bool:
 		current = self._current
 		if current is None:
-			self._error(EXPECTED_BUT_GOT_MSG.format(f"any of ({', '.join(f'`{k.name}`' for k in kinds)})", 'end of str'), self._last)
+			self._error(EXPECTED_BUT_GOT_MSG_RAW.format(f"any of ({', '.join(wrapInMDCode(f'{k.name}') for k in kinds)})", 'end of str'), self._last)
 			return False
 		if current.type not in kinds:
 			content = self._getContent(current)
-			self._error(EXPECTED_BUT_GOT_MSG.format(f"any of ({', '.join(f'`{k.name}`' for k in kinds)})", bytesToStr(content)), current)
+			self._error(EXPECTED_BUT_GOT_MSG_RAW.format(f"any of ({', '.join(wrapInMDCode(f'{k.name}') for k in kinds)})", wrapInMDCode(bytesToStr(content))), current)
 			return False
 		self._next()
 		return True
@@ -113,7 +113,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 	def parseNBTTag(self) -> Optional[NBTTag]:
 		current = self._current
 		if current is None:
-			self._error(EXPECTED_BUT_GOT_MSG.format("a NBTTag", 'end of str'), self._last)
+			self._error(EXPECTED_BUT_GOT_MSG_RAW.format("a NBTTag", 'end of str'), self._last)
 			return None
 
 		parser = self._PARSER_BY_TYPE.get(current.type)
@@ -121,7 +121,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 			tag = parser(self)
 			return tag
 		else:
-			self._error(EXPECTED_BUT_GOT_MSG.format("a NBTTag", self._current.type.name), current)
+			self._error(EXPECTED_BUT_GOT_MSG_RAW.format("a NBTTag", self._current.type.name), current)
 			return None
 	
 	def _parseStringOrBoolTag(self) -> Optional[NBTTag]:
@@ -147,7 +147,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 			self._next()
 			return BooleanTag(current.span, None, False, content)
 		else:
-			self._error(EXPECTED_BUT_GOT_MSG.format('a boolean', bytesToStr(content)), current)
+			self._error(EXPECTED_BUT_GOT_MSG_RAW.format('a boolean', wrapInMDCode(bytesToStr(content))), current)
 
 	def _parseNumberTag(self) -> Optional[NumberTag]:
 		# TODO: all numbers are interoperable (even int / float, ...)
@@ -190,7 +190,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 					self._error(NUMBER_OUT_OF_BOUNDS_MSG.format(minVal, maxVal), current)
 				self._next()
 				return cls(current.span, None, value, content)
-		self._error(EXPECTED_BUT_GOT_MSG.format(name, bytesToStr(content)), current)
+		self._error(EXPECTED_BUT_GOT_MSG_RAW.format(name, wrapInMDCode(bytesToStr(content))), current)
 		return None
 
 	def parseByteTag(self) -> Optional[ByteTag]:
@@ -247,7 +247,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 	def parseStringTag(self, acceptNumber: bool = False) -> Optional[StringTag]:
 		current = self._current
 		if current is None:
-			self._error(EXPECTED_BUT_GOT_MSG.format('a String', 'nothing'), self._last)
+			self._error(EXPECTED_BUT_GOT_MSG_RAW.format('a String', 'nothing'), self._last)
 			return None  # oh no!
 
 		content: bytes = self._getContent(current)
@@ -256,7 +256,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 		elif (current.type == TokenType.String) or (acceptNumber and current.type == TokenType.Number):
 			data: str = bytesToStr(content)  # we're good
 		else:
-			self._error(EXPECTED_BUT_GOT_MSG.format('a String', bytesToStr(content)), current)
+			self._error(EXPECTED_BUT_GOT_MSG.format('a String', wrapInMDCode(bytesToStr(content))), current)
 			return None  # oh no!
 
 		self._next()
@@ -293,7 +293,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 			if tagType is None:
 				tagType = type(tag)
 			if type(tag) != tagType:
-				self.errorMsg(EXPECTED_BUT_GOT_MSG, f'`{tagType.__name__}`', type(tag).__name__, span=tag.span)
+				self.errorMsg(EXPECTED_BUT_GOT_MSG_RAW, tagType.__name__, type(tag).__name__, span=tag.span)
 			values.append(tag)
 			return True
 

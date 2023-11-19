@@ -104,7 +104,7 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 				sr.tryConsumeWhitespace()
 				continue
 			if sr.hasReachedEnd:
-				errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format(f"`]`", 'end of str'), Span(sr.currentPos), style='error'))
+				errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format(f"]", 'end of str'), Span(sr.currentPos), style='error'))
 				break
 			errorsIO.append(ParsingError(MDStr(f"Expected `,` or `]`"), Span(sr.currentPos), style='error'))
 		return arguments
