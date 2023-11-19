@@ -7,6 +7,7 @@ from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
 from base.model.utils import SemanticsError, Span, Position, GeneralError, Message, LanguageId
+from cat.utils.collections_ import FrozenDict
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument, CommandPart
 from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
 from corePlugins.mcFunction.stringReader import StringReader
@@ -70,9 +71,10 @@ class ResourceLocationHandler(ParsingHandler):
 		self.rlcSchema: ResourceLocationSchema = rlcSchema
 
 	def getSchema(self, ai: ArgumentSchema) -> ResourceLocationSchema:
-		schema = ai.args.get('schema', 'any')  # todo add warning if no 'schema' is given.
-		allowTags = ai.args.get('allowTags', False)
-		onlyTags = ai.args.get('onlyTags', False)
+		args = ai.args or FrozenDict.EMPTY
+		schema = args.get('schema', 'any')  # todo add warning if no 'schema' is given.
+		allowTags = args.get('allowTags', False)
+		onlyTags = args.get('onlyTags', False)
 		rlcSchema = ResourceLocationSchema('', schema, allowTags=allowTags, onlyTags=onlyTags)
 		return rlcSchema
 
@@ -164,7 +166,7 @@ class BlockStateHandler(ArgumentContext):
 		blockID = blockState.blockId
 		argsStart = blockID.span.end
 
-		if pos.index >= argsStart.index and (blockStatesDict := self._getBlockStatesDict(blockID)):
+		if pos.index >= argsStart.index and not (blockState.nbt is not None and blockState.nbt.span.__contains__(pos)) and (blockStatesDict := self._getBlockStatesDict(blockID)):
 			contextStr = node.source[argsStart.index:node.end.index]
 			relCursorPos = pos.index - argsStart.index
 			suggestions += suggestionsForFilterArgs(blockState.states, contextStr, relCursorPos, pos, replaceCtx, blockStatesDict)
@@ -322,6 +324,8 @@ class ItemStackHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		# item_id{data_tags}
 		itemID = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
+		if itemID is None:
+			return None
 
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
