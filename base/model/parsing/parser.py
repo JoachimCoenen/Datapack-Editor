@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar
 
 from cat.utils.collections_ import AddToDictDecorator
-from base.model.parsing.tree import Node, Schema, TokenLike
+from base.model.parsing.tree import Node, Schema, TokenLike, LanguageId2
 from base.model.pathUtils import FilePath
 from base.model.utils import MessageLike, ParsingError, Position, GeneralError, LanguageId, MDStr, Span, wrapInMarkdownCode, NULL_SPAN
 
@@ -341,7 +341,7 @@ def parse(
 		text: bytes,
 		*,
 		filePath: FilePath,
-		language: LanguageId,
+		language: LanguageId | LanguageId2[_TNode],
 		schema: Optional[Schema],
 		line: int = 0,
 		lineStart: int = 0,
@@ -350,7 +350,7 @@ def parse(
 		indexMapper: IndexMapper = None,
 		maxIndex: int = None,
 		**kwargs
-) -> tuple[Optional[Node], list[GeneralError], Optional[ParserBase]]:
+) -> tuple[Optional[_TNode], list[GeneralError], Optional[ParserBase]]:
 	parserCls = getParserCls(language)
 	if parserCls is None:
 		return None, [ParsingError(MDStr(f"No Parser for language `{language}` registered."), span=NULL_SPAN, style='info')], None

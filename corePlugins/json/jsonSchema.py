@@ -10,7 +10,6 @@ from typing import Collection, NamedTuple, Optional, TypeVar, Type, Callable, Ma
 
 from cat.utils import Nothing, Anything
 from cat.utils.collections_ import AddToDictDecorator
-from . import JSON_ID
 from .core import *
 from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.parser import parse
@@ -646,7 +645,7 @@ class SchemaBuilderOrchestrator:
 		except OSError as ex:
 			self.errors[fullPath].append(WrappedError(ex))
 			return None
-		schemaJson, errors, _ = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
+		schemaJson, errors, _ = parse(schemaBytes, filePath=fullPath, language=JSON_ID2, schema=None)
 		schemaJson: JsonObject
 		self.errors[fullPath].extend(errors)
 		builder = SchemaBuilder(orchestrator=self)
@@ -668,7 +667,7 @@ class SchemaBuilderOrchestrator:
 			self.errors[fullPath].append(WrappedError(ex))
 			library, partial = None, Doer2.NOP
 		else:
-			schemaJson, errors, _ = parse(schemaBytes, filePath=fullPath, language=JSON_ID, schema=None)
+			schemaJson, errors, _ = parse(schemaBytes, filePath=fullPath, language=JSON_ID2, schema=None)
 			self.errors[fullPath].extend(errors)
 
 			builder = SchemaBuilder(orchestrator=self, errors=self.errors[fullPath])

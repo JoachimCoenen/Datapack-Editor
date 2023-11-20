@@ -13,7 +13,7 @@ from cat.utils import CachedProperty, Anything, Nothing, NoneType
 from cat.utils.collections_ import OrderedMultiDict, AddToDictDecorator
 from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import IndexMapper
-from base.model.parsing.tree import Node, Schema
+from base.model.parsing.tree import LanguageId2, Node, Schema
 from base.model.utils import MDStr, LanguageId, Span, NULL_SPAN
 
 
@@ -230,6 +230,9 @@ class JsonObject(JsonData[Object]):
 	@property
 	def children(self) -> Collection[JsonProperty]:
 		return self.data.values()
+
+
+JSON_ID2: LanguageId2[JsonNode] = LanguageId2('JSON', JsonNode)
 
 
 # ## SCHEMAS: #############################################################################
@@ -780,6 +783,7 @@ __all__ = [
 	'JsonArray',
 	'JsonObject',
 	'JsonProperty',
+	'JSON_ID2',
 
 	'JsonSchema',
 	'JsonNullSchema',

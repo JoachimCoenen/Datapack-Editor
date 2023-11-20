@@ -1,12 +1,31 @@
+from __future__ import annotations
+
+import functools as ft
 from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Collection, Iterable, Iterator, TypeVar, Generic, Optional, ClassVar, Protocol
+from typing import Collection, Iterable, Iterator, TypeVar, Generic, Optional, ClassVar, Protocol, Type
 
 from base.model.utils import Span, LanguageId
 
 _TNode = TypeVar('_TNode', bound='Node')
 _TSchema = TypeVar('_TSchema', bound='Schema')
+
+
+@ft.total_ordering
+@dataclass(eq=False, order=False, unsafe_hash=False, frozen=True)
+class LanguageId2(Generic[_TNode]):
+	name: str
+	nodeCls: Type[_TNode]
+
+	def __lt__(self, other) -> bool:
+		return self.name < (other.name if isinstance(other, LanguageId2) else other)
+
+	def __eq__(self, other) -> bool:
+		return self.name == (other.name if isinstance(other, LanguageId2) else other)
+
+	def __hash__(self) -> int:
+		return hash(self.name)
 
 
 class TokenLike(Protocol):
@@ -55,6 +74,7 @@ class Schema:
 
 
 __all__ = [
+	'LanguageId2',
 	'TokenLike',
 	'Node',
 	'Schema',
