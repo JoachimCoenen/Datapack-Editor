@@ -1956,6 +1956,7 @@ def build_function_args(_: FullMCData) -> list[CommandPartSchema]:
 			name='name',
 			type=MINECRAFT_FUNCTION,
 			next=Options([
+				TERMINAL,
 				ArgumentSchema(
 					name='arguments',
 					type=MINECRAFT_NBT_COMPOUND_TAG  # TODO: add specialized checking if parameters match the macros of the function, and if the resulting function would be valid.
