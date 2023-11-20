@@ -1,28 +1,29 @@
 import re
 from math import inf
-from typing import Callable, Optional, Iterable, Any
+from typing import Any, Callable, Iterable, Optional
 
+from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.contextProvider import Suggestions, errorMsg, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked
+from base.model.parsing.contextProvider import Suggestions, errorMsg, getClickableRanges, getSuggestions, onIndicatorClicked, validateTree
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import FilePath
-from base.model.utils import Span, Position, GeneralError, Message, LanguageId
+from base.model.utils import GeneralError, LanguageId, Message, Position, Span
 from cat.utils.collections_ import FrozenDict
-from corePlugins.mcFunction.command import ArgumentSchema, FilterArgumentInfo, ParsedArgument, CommandPart
+from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
+from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, FilterArgumentInfo, ParsedArgument
 from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
 from corePlugins.mcFunction.stringReader import StringReader
-from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationSchema, ResourceLocationNode, RESOURCE_LOCATION_ID
-from corePlugins.nbt.tags import NBTTagSchema
-from base.model.messages import *
-from .argumentParsersImpl import _parseVec, tryReadNBTCompoundTag, _readResourceLocation
-from .argumentTypes import *
-from .argumentValues import BlockState, ItemStack, FilterArguments, TargetSelector
-from .filterArgs import parseFilterArgs, suggestionsForFilterArgs, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, validateFilterArgs
-from .snbt import parseNBTPath
-from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
-from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
+from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
+from corePlugins.nbt import SNBT_ID
+from corePlugins.nbt.path import NBTPathSchema, SNBT_PATH_ID
+from corePlugins.nbt.tags import NBTTagSchema
+from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag
+from .argumentTypes import *
+from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector
+from .filterArgs import clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, parseFilterArgs, suggestionsForFilterArgs, validateFilterArgs
+from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 
 
 def initPlugin() -> None:
@@ -447,22 +448,16 @@ class MessageHandler(ArgumentContext):
 		return makeParsedArgument(sr, ai, value=message)
 
 
-# @argumentContext(MINECRAFT_NBT_COMPOUND_TAG.name)
-# class NbtCompoundTagHandler(ArgumentContext):
-# 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-# 		nbt = tryReadNBTCompoundTag(sr, ai, errorsIO=errorsIO)
-# 		if nbt is None:
-# 			return None
-# 		return makeParsedArgument(sr, ai, value=nbt)
-
-
 @argumentContext(MINECRAFT_NBT_PATH.name)
-class NbtPathHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		path = parseNBTPath(sr, errorsIO=errorsIO)
-		if path is None:
-			return None
-		return makeParsedArgument(sr, ai, value=path)
+class NbtPathHandler(ParsingHandler):
+	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
+		return NBTPathSchema('')
+
+	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
+		return SNBT_PATH_ID
+
+	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
+		return dict(ignoreTrailingChars=True)
 
 
 @argumentContext(MINECRAFT_NBT_COMPOUND_TAG.name)
@@ -472,16 +467,10 @@ class NbtTagHandler(ParsingHandler):
 		return NBTTagSchema('')
 
 	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
-		return LanguageId('SNBT')
+		return SNBT_ID
 
 	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
 		return dict(ignoreTrailingChars=True)
-
-	# def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-	# 	nbt = parseNBTTag(sr, errorsIO=errorsIO)
-	# 	if nbt is None:
-	# 		return None
-	# 	return makeParsedArgument(sr, ai, value=nbt)
 
 
 @argumentContext(MINECRAFT_OBJECTIVE.name)

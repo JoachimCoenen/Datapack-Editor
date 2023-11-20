@@ -26,8 +26,11 @@ class SNBTPlugin(PluginBase):
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from .snbtParser import SNBTParser
+		from corePlugins.nbt.path import SNBT_PATH_ID
+		from corePlugins.nbt.path import SNBTPathParser
 		return {
 			SNBT_ID: SNBTParser,
+			SNBT_PATH_ID: SNBTPathParser,
 		}
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:

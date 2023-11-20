@@ -1,16 +1,16 @@
-from typing import Optional
+from typing import Optional, cast
 
 from base.model.parsing.bytesUtils import ORD_SPACE
+from corePlugins.mcFunction.argumentContextsImpl import parseFromStringReader
 from corePlugins.mcFunction.command import ArgumentSchema
 from corePlugins.mcFunction.commandContext import makeParsedArgument
 from corePlugins.mcFunction.command import ParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
+from corePlugins.nbt import SNBT_ID
 from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, ResourceLocationNode
-from corePlugins.nbt.tags import NBTTag, CompoundTag
-from .snbt import parseNBTTag
+from corePlugins.nbt.tags import NBTTag, CompoundTag, NBTTagSchema
 from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError
-from ..mcFunction.argumentContextsImpl import parseFromStringReader
 
 
 def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: bool, notation: bytes) -> Optional[ParsedArgument]:
@@ -27,7 +27,6 @@ def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: boo
 		return None
 	vec[0] = blockPos1
 
-	i = 1
 	for i in range(1, count):
 
 		if not sr.tryConsumeByte(ORD_SPACE):
@@ -44,7 +43,14 @@ def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: boo
 
 
 def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
-	tag = parseNBTTag(sr, filePath, errorsIO=errorsIO)
+	tag = cast(NBTTag, parseFromStringReader(
+		sr,
+		filePath=filePath,
+		language=SNBT_ID,
+		schema=NBTTagSchema(''),
+		errorsIO=errorsIO,
+		ignoreTrailingChars=True
+	))
 	if tag is None:
 		return None
 

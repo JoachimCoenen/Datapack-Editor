@@ -6,7 +6,7 @@ from base.model.parsing.parser import _Base
 from cat.utils.collections_ import Stack
 from base.model.parsing.bytesUtils import DIGITS, ASCII_LETTERS, JAVA_WHITESPACES, JAVA_WHITESPACES_SINGLE_BYTE, JAVA_WHITESPACES_THREE_BYTES, DIGITS_RANGE, ORD_BACKSLASH, \
 	ORD_DOT, ORD_MINUS, ORD_ROOF, ORD_SPACE, ORD_TILDE
-from base.model.utils import Position, Span
+from base.model.utils import Span
 
 Char = bytes
 Byte = int
@@ -30,18 +30,10 @@ class StringReader(_Base):
 	def hasReachedEnd(self) -> bool:
 		return self.cursor >= self.length
 
-	def posFromColumn(self, cursor: int) -> Position:
-		# ugh. Definitely not threadsafe, but it gets the job done.
-		currentCursor = self.cursor
-		self.cursor = cursor
-		pos = self.currentPos
-		self.cursor = currentCursor
-		return pos
-
 	@property
 	def currentSpan(self) -> Span:
 		start = self.lastCursors.peek()
-		begin = self.posFromColumn(start)
+		begin = self._posFromColumn(start)
 		end = self.currentPos
 		return Span(begin, end)
 

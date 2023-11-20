@@ -1,25 +1,13 @@
-from typing import Optional
+from dataclasses import dataclass
+from typing import ClassVar, Collection, Optional
 
-from nbtlib import Parser, tokenize, Int, String, List, Compound, Path, ListIndex, CompoundMatch, InvalidLiteral
-from nbtlib.path import can_be_converted_to_int, NamedKey, extend_accessors
+from nbtlib import Compound, CompoundMatch, Int, InvalidLiteral, List, ListIndex, Parser, Path, String, tokenize
+from nbtlib.path import NamedKey, can_be_converted_to_int, extend_accessors
 
-from corePlugins.mcFunction.argumentContextsImpl import parseFromStringReader
-from corePlugins.mcFunction.stringReader import StringReader
-from corePlugins.nbt.tags import NBTTag, NBTTagSchema
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.pathUtils import FilePath
-from base.model.utils import ParsingError, Span, GeneralError, LanguageId, wrapInMarkdownCode
-
-
-def parseNBTTag(sr: StringReader, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
-	return parseFromStringReader(
-		sr,
-		filePath=filePath,
-		language=LanguageId('SNBT'),
-		schema=NBTTagSchema(''),
-		errorsIO=errorsIO,
-		ignoreTrailingChars=True
-	)
+from base.model.parsing.parser import ParserBase
+from base.model.parsing.tree import Node, Schema, _TNode
+from base.model.utils import GeneralError, LanguageId, ParsingError, Span, wrapInMarkdownCode
 
 
 class InvalidPath(ValueError):
@@ -77,8 +65,8 @@ def parse_accessors(parser: Parser, literal: str):
 			break
 
 
-def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
-	sr.save()
+def _parseNBTPathBare(sr: ParserBase, *, errorsIO: list[GeneralError]) -> Optional[Path]:
+	p1 = sr.currentPos
 
 	literal = sr.text[sr.cursor:]
 	literal = bytesToStr(literal)  # TODO utf-8-ify _parseNBTPathBare(...)!
@@ -104,21 +92,47 @@ def _parseNBTPathBare(sr: StringReader, *, errorsIO: list[GeneralError]) -> Opti
 	except (InvalidLiteral, InvalidPath) as ex:
 		message = ex.args[1]
 		if ex.args[0] is None:
-			begin, end = sr.currentSpan.asTuple
+			p2 = sr.currentPos
+			begin, end = p1, p2
 		else:
 			start = ex.args[0][0] + sr.cursor
 			stop = ex.args[0][1] + sr.cursor
-			begin = sr.posFromColumn(start)
-			end = sr.posFromColumn(stop)
+			begin = sr._posFromColumn(start)
+			end = sr._posFromColumn(stop)
 		errorsIO.append(ParsingError(wrapInMarkdownCode(message), Span(begin, end), style='error'))
-		sr.rollback()
 		return None
 
 	return path
 
 
-def parseNBTPath(sr: StringReader, *, errorsIO: list[GeneralError]) -> Optional[Path]:
-	path: Optional[Path] = _parseNBTPathBare(sr, errorsIO=errorsIO)
-	if path is None:
-		return None
-	return path
+SNBT_PATH_ID: LanguageId = LanguageId('SNBTPath')
+
+
+class NBTPathSchema(Schema):
+	def asString(self) -> str:
+		return 'NBTPathSchema'
+	language: ClassVar[LanguageId] = SNBT_PATH_ID
+
+
+@dataclass
+class NBTPath(Node['NBTPath', NBTPathSchema]):
+	@property
+	def children(self) -> Collection[_TNode]:
+		return ()
+
+	language: ClassVar[LanguageId] = SNBT_PATH_ID
+	path: Path
+
+
+@dataclass
+class SNBTPathParser(ParserBase[NBTPath, NBTPathSchema]):
+	ignoreTrailingChars: bool = False
+
+	def parse(self) -> Optional[NBTPath]:
+		p1 = self.currentPos
+		path: Optional[Path] = _parseNBTPathBare(self, errorsIO=self.errors)
+		if path is None:
+			return None
+		p2 = self.currentPos
+		return NBTPath(Span(p1, p2), self.schema, path)
+

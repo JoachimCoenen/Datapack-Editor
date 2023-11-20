@@ -76,6 +76,16 @@ class NBTJsonStrContext(ParsingJsonCtx):
 		return LanguageId('SNBT')
 
 
+@jsonStringContext(MINECRAFT_NBT_PATH.name)
+class NBTPathJsonStrContext(ParsingJsonCtx):
+
+	def getSchema(self, node: JsonString) -> Optional[Schema]:
+		return None
+
+	def getLanguage(self, node: JsonString) -> LanguageId:
+		return LanguageId('SNBTPath')  # todo implement proper nbt path parsing
+
+
 @jsonStringContext(MINECRAFT_CHAT_COMMAND.name)
 class CommandJsonStrContext(ParsingJsonCtx):
 

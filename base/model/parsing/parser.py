@@ -215,6 +215,14 @@ class _Base(ABC):
 			actualCursor = self.indexMapper.toEncoded(actualCursor)
 		return Position(self.line, actualCursor - self.lineStart, actualCursor)
 
+	def _posFromColumn(self, cursor: int) -> Position:
+		# ugh. Definitely not threadsafe, but it gets the job done.
+		currentCursor = self.cursor
+		self.cursor = cursor
+		pos = self.currentPos
+		self.cursor = currentCursor
+		return pos
+
 	# @property
 	# def currentPos(self) -> Position:
 	# 	actualCursor = self.indexMapper.toEncoded(self.cursor) + self.cursorOffset
