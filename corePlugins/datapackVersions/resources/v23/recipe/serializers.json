@@ -83,7 +83,7 @@
       "inherits": [{ "defRef": "%smithing_base" }],
       "properties": {
         "result": {
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "value": { "$defRef": "%item" },
           "optional": false,
           "description": "Item specifying the resulting upgraded item."
         }
@@ -157,14 +157,21 @@
       ]
     },
     
-    "%item_or_tag": {
+    "%item": {
       "$type": "object",
       "properties": {
         "item": {
           "description": "An [ [Java Edition data values#Items|item ID] ].",
           "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
           "optional": true
-        },
+        }
+      }
+    },
+    
+    "%item_or_tag": {
+      "$type": "object",
+      "inherits": [{ "defRef": "%item" }],
+      "properties": {
         "tag": {
           "description": "An [ [Tag#Item tags|item tag] ].",
           "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item", "onlyTags": true } },
