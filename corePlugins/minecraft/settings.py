@@ -51,7 +51,7 @@ def minecraftVersionValidator(version: str) -> Optional[ValidatorResult]:
 @dataclass
 class MinecraftVersion(SerializableDataclass):
 	name: str = field(
-		default='1.17',
+		default='1.20.2',
 		metadata=catMeta(
 			kwargs=dict(label='Name'),
 			decorators=[]
@@ -70,7 +70,7 @@ class MinecraftVersion(SerializableDataclass):
 	)
 
 	minecraftExecutable: str = field(
-		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/versions/1.17.1/1.17.1.jar').replace('\\', '/'),
+		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/versions/1.20.2/1.20.2.jar').replace('\\', '/'),
 		metadata=catMeta(
 			kwargs=dict(label='Executable'),
 			decorators=[

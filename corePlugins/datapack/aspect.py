@@ -56,7 +56,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 		return DATAPACK_ASPECT_TYPE
 
 	dpVersion: str = field(
-		default='7',
+		default='23',
 		metadata=catMeta(
 			deferLoading=True,
 			kwargs=dict(label='Datapack Version'),
@@ -67,7 +67,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 	)
 
 	minecraftVersion: str = field(
-		default='1.17',
+		default='1.20.2',
 		metadata=catMeta(
 			kwargs=dict(label='Minecraft Version'),
 			decorators=[

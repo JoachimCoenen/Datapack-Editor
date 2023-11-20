@@ -3,6 +3,7 @@
  * Added fuzzy matching for auto-completion in source code. If you type `mosCSt` and then press `Ctrl+Space` you will be suggested `mossy_cobblestone_stairs`.
  * Added support for multi-line commands in .mcFunction files.
  * Added file extension filter to Validate Files dialog.
+ * Added support for Minecraft version 1.20.3, dropped support for versions 1.17 & 1.18.
 
 ### Improvements
  * Improved performance of Json parser by > 30%.

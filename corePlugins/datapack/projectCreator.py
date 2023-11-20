@@ -57,7 +57,7 @@ class DatapackProjectCreatorData(SerializableDataclass):
 	)
 
 	dpVersion: str = field(
-		default='7',
+		default='23',
 		metadata=catMeta(
 			kwargs=dict(label='Datapack Version'),
 			decorators=[
@@ -67,7 +67,7 @@ class DatapackProjectCreatorData(SerializableDataclass):
 	)
 
 	minecraftVersion: str = field(
-		default='1.17',
+		default='1.20.2',
 		metadata=catMeta(
 			kwargs=dict(label='Minecraft Version'),
 			decorators=[

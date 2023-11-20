@@ -12,9 +12,7 @@ class DatapackVersionsPlugin(PluginBase):
 	def initPlugin(self):
 		from . import providers  # loads all resource location contexts
 		from . import contexts  # loads all resource location contexts
-		from . import version7
 		from . import version23
-		version7.initVersion()
 		version23.initVersion()
 
 	def dependencies(self) -> set[str]:

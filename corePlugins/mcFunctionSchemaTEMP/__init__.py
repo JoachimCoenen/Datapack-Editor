@@ -22,11 +22,7 @@ class McFunctionSchemasTEMPPlugin(PluginBase):
 	def schemas(self) -> dict[str, Schema]:
 		schemas = {}
 
-		from .v1_17_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_17
-		from .v1_18_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_18
 		from .v1_20_3_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_3
 
-		schemas |= buildMCFunctionSchemas_1_17()
-		schemas |= buildMCFunctionSchemas_1_18()
 		schemas |= buildMCFunctionSchemas_1_20_3()
 		return schemas
