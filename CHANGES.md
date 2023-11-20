@@ -2,6 +2,7 @@
 ### Features 
  * Added fuzzy matching for auto-completion in source code. If you type `mosCSt` and then press `Ctrl+Space` you will be suggested `mossy_cobblestone_stairs`.
  * Added support for multi-line commands in .mcFunction files.
+ * Added file extension filter to Validate Files dialog.
 
 ### Improvements
  * Improved performance of Json parser by > 30%.
@@ -9,6 +10,7 @@
  * Improved error messages for validation of Json objects with union schemas.
  * Improved code suggestions for minecraft:float_range and minecraft:int_range.
  * Added boundary checking (min/max value, etc.) for minecraft:float_range and minecraft:int_range.
+ * Results in the Validate Files dialog are now displayed in a proper treeview.
 
 ### Fixes
  * Fixed syntax highlighting issues with escape sequences.

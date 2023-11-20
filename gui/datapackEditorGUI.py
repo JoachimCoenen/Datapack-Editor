@@ -536,31 +536,34 @@ class DatapackEditorGUI(AutoGUI):
 			self.helpBox(f"Everything's fine!", style='info')
 
 	@CachedProperty
-	def _htmlDelegate(self) -> HTMLDelegate:
+	def htmlDelegate(self) -> HTMLDelegate:
 		return HTMLDelegate()
 
-	def errorsList(self: DatapackEditorGUI, errors: Sequence[GeneralError], onDoubleClicked: Callable[[GeneralError], None], **kwargs):
-
-		def getLabel(error: GeneralError, i: int) -> str:
+	# def getErrorLabelForList(self, columnCount: int) -> Callable[[GeneralError, int], str]:
+	def getErrorLabelForList(self, error: GeneralError, i: int) -> str:
+		if i == 0:
+			return error.htmlMessage.replace('\n', '')
+		elif i == 1:
 			if error.position is not None:
-				positionMsg = f'at line {error.position.line + 1}, pos {error.position.column}'
-			else:
-				positionMsg = ''
-			errorMsg = error.htmlMessage.replace('\n', '')
-			return (errorMsg, positionMsg)[i]
+				return f'at line {error.position.line + 1}, pos {error.position.column}'
+		return ''
 
-		def getIcon(error: GeneralError, i: int) -> Optional[QIcon]:
-			if i == 0:
-				return self.getErrorIcon(error.style)
-			else:
-				return None
+	def getErrorIconForList(self, error: GeneralError, i: int) -> Optional[QIcon]:
+		if i == 0:
+			return self.getErrorIcon(error.style)
+		else:
+			return None
 
+	def getErrorToolTipForList(self, error: GeneralError, i: int) -> str:
+		return self.getErrorLabelForList(error, 0)
+
+	def errorsList(self: DatapackEditorGUI, errors: Sequence[GeneralError], onDoubleClicked: Callable[[GeneralError], None], **kwargs):
 		self.tree(
 			DataListBuilder(
 				errors,
-				labelMaker=getLabel,
-				iconMaker=getIcon,
-				toolTipMaker=lambda e, i: getLabel(e, 0),
+				labelMaker=self.getErrorLabelForList,
+				iconMaker=self.getErrorIconForList,
+				toolTipMaker=self.getErrorToolTipForList,
 				columnCount=2,
 				onDoubleClick=onDoubleClicked,  # lambda e: onDoubleClicked(e) or self.redrawGUI(),
 				onCopy=lambda e: e.message,
@@ -569,7 +572,7 @@ class DatapackEditorGUI(AutoGUI):
 			headerVisible=False,
 			stretchLastColumn=False,
 			columnResizeModes=(ResizeMode.Stretch, ResizeMode.ResizeToContents),
-			itemDelegate=self._htmlDelegate,
+			itemDelegate=self.htmlDelegate,
 			**kwargs
 		)
 

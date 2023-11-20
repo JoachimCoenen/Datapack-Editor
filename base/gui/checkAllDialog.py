@@ -1,33 +1,101 @@
 from __future__ import annotations
-import os
+
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from operator import itemgetter
-from typing import Optional, Collection
+from typing import Optional, Sequence
 
-from PyQt5.QtCore import pyqtSignal, QEventLoop, QObject, Qt, QTimer
-from PyQt5.QtWidgets import QApplication, QDialog, QSizePolicy, QWidget
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QSizePolicy, QWidget
+from recordclass import as_dataclass
 
-from cat.GUI import SizePolicy
-from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from cat.GUI.utilities import connect
-from gui.icons import icons
-from cat.utils import format_full_exc, BusyIndicator
-from cat.utils.formatters import SW, formatDictOnly
-from cat.utils.profiling import TimedMethod, logError
-from base.model.project.project import Root
-from base.model.session import getSession
-from basePlugins.projectFiles import FilesIndex
-from base.model.utils import WrappedError, GeneralError
+from base.gui.onProjectFilesDialogBase import OnProjectFilesDialogBase
 from base.model.documents import ErrorCounts, getErrorCounts, loadDocument
-from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
-from base.model.pathUtils import FilePath, ZipFilePool, ArchiveFilePool, FilePathTpl
+from base.model.pathUtils import ArchiveFilePool, FilePathTpl, ZipFilePool, fileNameFromFilePath, toDisplayPath
+from base.model.session import getSession
+from base.model.utils import GeneralError, Span, WrappedError
+from cat.GUI import SizePolicy
+from cat.GUI.components.treeBuilders import DataTreeBuilder
+from cat.utils import format_full_exc, override
+from cat.utils.formatters import SW, formatDictOnly
+from cat.utils.profiling import logError
+from gui.datapackEditorGUI import ContextMenuEntries, DatapackEditorGUI
+from gui.icons import icons
 
 
-def checkFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collection[GeneralError]:
+@as_dataclass()
+class ErrorsResult:
+	file: FilePathTpl
+	errors: Sequence[GeneralError]
+	counts: ErrorCounts
+
+	def __ne__(self, other):
+		if type(other) is not type(self):
+			return NotImplemented
+		return self.file != other.file
+
+	def __eq__(self, other):
+		if type(other) is not type(self):
+			return NotImplemented
+		return self.file == other.file
+
+	def __hash__(self):
+		return hash(self.file)
+
+
+@as_dataclass(hashable=True)
+class Error:
+	file: FilePathTpl
+	error: GeneralError
+
+
+@dataclass()
+class ResultRoot:
+	results: list[ErrorsResult]
+	errorCountHistogram: defaultdict[int, int] = field(default_factory=lambda: defaultdict(int))
+	totalCounts: ErrorCounts = field(default_factory=ErrorCounts)
+
+	def add(self, result: ErrorsResult) -> None:
+		self.results.append(result)
+		self.errorCountHistogram[result.counts.errors] += 1
+		self.totalCounts += result.counts
+
+	def sort(self) -> None:
+		self.results.sort(key=lambda ers: ers.counts.errors, reverse=True)
+		self.errorCountHistogram = defaultdict(int, sorted(self.errorCountHistogram.items(), key=itemgetter(0), reverse=False))
+
+	def clear(self):
+		self.results.clear()
+		self.errorCountHistogram.clear()
+		self.totalCounts = ErrorCounts()
+
+	def __hash__(self):
+		return id(self)
+
+
+def errorStatsToStr(errorStats: ResultRoot) -> str:
+	errors1Str = SW()
+	errors2Str = SW()
+	formatDictOnly({er.file: er.counts.errors for er in errorStats.results if er.counts.errors > 0}, tab=1, s=errors1Str)
+	formatDictOnly(errorStats.errorCountHistogram, tab=1, s=errors2Str)
+	result = (
+		f"Errors By Path = {errors1Str}\n"
+		f"Errors Histogram = {errors2Str}\n"
+		f"Errors Total = {errorStats.totalCounts}\n"
+	)
+	return result
+
+
+def checkFile(filePath: FilePathTpl, archiveFilePool: ArchiveFilePool) -> Sequence[GeneralError]:
 	try:
 		document = loadDocument(filePath, archiveFilePool, observeFileSystem=False)
-		document.asyncValidate.callNow()
+		if getattr(document, 'schema', 123) is None:
+			# we have no schema, so we can only perform a syntax check.
+			if document.tree is None:
+				document.asyncParse.callNow()
+		else:
+			document.asyncValidate .callNow()
 		errors = document.errors
 		return errors
 	except Exception as e:
@@ -36,185 +104,165 @@ def checkFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> Collectio
 		return [WrappedError(e)]
 
 
-class CheckAllDialog(CatFramelessWindowMixin, QDialog):
-
-	progressSignal = pyqtSignal(int)
-	errorCountsUpdateSignal = pyqtSignal()
+class CheckAllDialog(OnProjectFilesDialogBase):
 
 	def __init__(self, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=DatapackEditorGUI, parent=parent)
-
-		self.totalErrorCounts: ErrorCounts = ErrorCounts()
-		self.errorsByFile: dict[FilePath, Collection[GeneralError]] = {}
-
-		self._includedRoots: list[Root] = []
-		# self._fileTypes: dict[str, EntryHandlerInfo] = {}
-		self._allFiles: list[FilePath] = []
-		self._filesCount: int = 0
-		self._filesChecked: int = -1
+		self.result: ResultRoot = ResultRoot([])
 
 		self._spoilerSizePolicy = QSizePolicy(SizePolicy.Expanding.value, SizePolicy.Fixed.value)
 
 		self.setWindowTitle('Validate Files')
 
-	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		includedRoots = []
-		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
-			for root in getSession().project.roots:
-				if gui.checkboxLeft(None, root.name):
-					includedRoots.append(root)
-			gui.vSeparator()
-			for root in getSession().project.deepDependencies:
-				if gui.checkboxLeft(None, root.name):
-					includedRoots.append(root)
-		self._includedRoots = includedRoots
-
-	def OnGUI(self, gui: DatapackEditorGUI) -> None:
+	@override
+	def optionsGUI(self, gui: DatapackEditorGUI):
 		with gui.hLayout():
-			gui.progressBar(self.progressSignal, min=0, max=self._filesCount, value=self._filesChecked, format='', textVisible=True)
+			self.addProgressBar(gui)
 			if gui.button('Check Files', default=True):
-				self.resetUserInterface()
-				QTimer.singleShot(1, self.checkAllFiles)
-			if self._filesChecked > -1:
+				self.run()
+			if self.processedFilesCount > -1:
 				if gui.button(icon=icons.signal, tip='Show Stats', default=False):
-					stats = getErrorStats(self.errorsByFile)
-					errorStatsStr = errorStatsToStr(stats)
+					errorStatsStr = errorStatsToStr(self.result)
 					gui.askUserInput(
 						"Check all Files Results",
 						errorStatsStr,
 						lambda g, v: g.codeField(errorStatsStr)
 					)
 
-		self.totalErrorsSummaryGUI(gui)
+	@override
+	def resultsSummaryGUI(self, gui: DatapackEditorGUI) -> None:
+		with gui.hLayout(preventHStretch=True):
+			gui.errorsSummaryGUI(self.result.totalCounts)
+			if self.processedFilesCount > 0:
+				errorsPerFile = self.result.totalCounts.errors / self.processedFilesCount
+			else:
+				errorsPerFile = 0
+			gui.label(f'{self.processedFilesCount} / {self.allFilesCount} files checked. ({errorsPerFile:.1f} errors / file)')
+
+	@override
+	def resetUserInterface(self):
+		super().resetUserInterface()
+		self.result.clear()
+
+	@override
+	def resultsGUI(self, gui: DatapackEditorGUI) -> None:
+		self.resultsGUI2(gui)
+
+	def resultsGUI1(self, gui: DatapackEditorGUI) -> None:
+
+		def onContextMenu(x: FilePathTpl):
+			with gui.popupMenu(atMousePosition=True) as menu:
+				menu.addItems(ContextMenuEntries.fileItems(x, getSession().tryOpenOrSelectDocument))
 
 		with gui.scrollBox():
-			errorsByFile: list[tuple[FilePath, Collection[GeneralError], ErrorCounts]] = \
-				[(fp, ers, getErrorCounts(ers)) for fp, ers in self.errorsByFile.items() if ers]
-
-			errorsByFile = sorted(errorsByFile, key=lambda itm: (itm[2].errors,), reverse=True)
-
-			def onContextMenu(x: FilePath, *, s=self):
-				with gui.popupMenu(atMousePosition=True) as menu:
-					menu.addItems(ContextMenuEntries.fileItems(x, getSession().tryOpenOrSelectDocument))
-
-			for file, errors, errorCounts in errorsByFile:
-				label = ''
-				if isinstance(file, str):
-					label = f"{os.path.basename(file)} ('{file}')"
-				else:
-					label = f"{os.path.basename(file[1])} ('{file[1]}') in '{file[0]}'"
-				label = f'errors: {errorCounts.errors:2} | warnings: {errorCounts.warnings:2} | hints: {errorCounts.hints:2} | {label}'
+			for errors in self.result.results:
+				file = errors.file
+				counts = errors.counts
+				label = f"{fileNameFromFilePath(file)} ('{file[1]}') in '{file[0]}'"
+				label = f'errors: {counts.errors:2} | warnings: {counts.warnings:2} | hints: {counts.hints:2} | {label}'
 
 				opened = gui.spoiler(
 					label=label,
 					isOpen=None,
 					sizePolicy=self._spoilerSizePolicy,
-					onDoubleClicked=lambda _, file=file, s=self: getSession().tryOpenOrSelectDocument(file),
+					onDoubleClicked=lambda _, f=file: getSession().tryOpenOrSelectDocument(f),
 					contextMenuPolicy=Qt.CustomContextMenu,
-					onCustomContextMenuRequested=lambda pos, file=file: onContextMenu(file),
+					onCustomContextMenuRequested=lambda pos, f=file: onContextMenu(f),
 				)
 
 				with gui.indentation():
 					if opened:
-						gui.errorsList(errors, onDoubleClicked=lambda e, file=file, s=self: getSession().tryOpenOrSelectDocument(file, e.span))
+						gui.errorsList(errors.errors, onDoubleClicked=lambda e, f=file: getSession().tryOpenOrSelectDocument(f, Span(e.start)))
 
 			gui.addVSpacer(0, SizePolicy.Expanding)
 
-	def totalErrorsSummaryGUI(self, gui: DatapackEditorGUI) -> None:
-		def innerTotalErrorsSummaryGUI(gui: DatapackEditorGUI, self=self):
-			with gui.hLayout(preventHStretch=True):
-				gui.errorsSummaryGUI(self.totalErrorCounts)
-				if self._filesChecked > 0:
-					errorsPerFile = self.totalErrorCounts.errors / self._filesChecked
-				else:
-					errorsPerFile = 0
-				gui.label(f'{self._filesChecked} / {self._filesCount} files checked. ({errorsPerFile:.1f} errors / file)')
+	def resultsGUI2(self, gui: DatapackEditorGUI) -> None:
 
-		errorsSummary = gui.subGUI(DatapackEditorGUI, innerTotalErrorsSummaryGUI, suppressRedrawLogging=True)
-		errorsSummary.redrawGUI()
-		# connect to signal:
-		if QObject.receivers(self, self.errorCountsUpdateSignal) > 0:
-			self.errorCountsUpdateSignal.disconnect()
-		connect(self.errorCountsUpdateSignal, lambda es=errorsSummary: es.redrawGUI())
+		def labelMaker(x: ResultRoot | ErrorsResult | Error, i: int) -> str:
+			if isinstance(x, Error):
+				return gui.getErrorLabelForList(x.error, i)
+			elif isinstance(x, ErrorsResult):
+				if i == 0:
+					return fileNameFromFilePath(x.file[1])
+				elif i == 1:
+					counts = x.counts
+					return f'errors: {counts.errors:2} | warnings: {counts.warnings:2} | hints: {counts.hints:2}'
+				elif i == 2:
+					return fileNameFromFilePath(x.file[0])
+			return "<root>"
 
-	def resetUserInterface(self):
-		self.errorsByFile.clear()
-		self.totalErrorCounts = ErrorCounts()
-		self._allFiles = self.collectAllFiles()
-		self._filesCount = len(self._allFiles)
-		self._filesChecked = -1
+		def iconMaker(x: ResultRoot | ErrorsResult | Error, i: int) -> Optional[QIcon]:
+			if isinstance(x, Error):
+				return gui.getErrorIconForList(x.error, i)
+			return None
 
-	def collectAllFiles(self):
-		filePathsToSearch: list[FilePath] = []
-		for p in self._includedRoots:
-			if (filesIndex := p.indexBundles.get(FilesIndex)) is not None:
-				for fe in filesIndex.files.values():
-					filePathsToSearch.append(fe.fullPath)
+		def toolTipMaker(x: ResultRoot | ErrorsResult | Error, i: int) -> Optional[str]:
+			if isinstance(x, Error):
+				return gui.getErrorToolTipForList(x.error, i)
+			elif isinstance(x, ErrorsResult):
+				return toDisplayPath(x.file)
+			return ""
 
-		return filePathsToSearch
+		def openDocument(x: ResultRoot | ErrorsResult | Error) -> None:
+			if isinstance(x, Error):
+				getSession().tryOpenOrSelectDocument(x.file, Span(x.error.start))
+			elif isinstance(x, ErrorsResult):
+				getSession().tryOpenOrSelectDocument(x.file)
 
-	@BusyIndicator
-	@TimedMethod()
-	def checkAllFiles(self) -> None:
-		gui = self._gui
+		def onContextMenu(x: ResultRoot | ErrorsResult | Error, column: int) -> None:
+			if isinstance(x, Error):
+				with gui.popupMenu(atMousePosition=True) as menu:
+					menu.addItems(ContextMenuEntries.fileItems(x.file, lambda fp: getSession().tryOpenOrSelectDocument(fp, Span(x.error.start))))
+			elif isinstance(x, ErrorsResult):
+				with gui.popupMenu(atMousePosition=True) as menu:
+					menu.addItems(ContextMenuEntries.fileItems(x.file, getSession().tryOpenOrSelectDocument))
 
-		gui.redrawGUI()
-		try:
-			self.totalErrorCounts = ErrorCounts()
-			with ZipFilePool() as archiveFilePool:
-				for i, filePath in enumerate(self._allFiles):
-					self._filesChecked = i + 1
-					errors = checkFile(filePath, archiveFilePool)
+		def onCopy(x: ResultRoot | ErrorsResult | Error) -> Optional[str]:
+			if isinstance(x, Error):
+				return x.error.message
+			elif isinstance(x, ErrorsResult):
+				return toDisplayPath(x.file)
 
-					self.totalErrorCounts += getErrorCounts(errors)
-					self.errorsByFile[filePath] = errors
+		def childrenMaker(x: ResultRoot | ErrorsResult | Error) -> Sequence[ErrorsResult | Error]:
+			if isinstance(x, Error):
+				return ()
+			elif isinstance(x, ErrorsResult):
+				return [Error(x.file, e) for e in x.errors]
+				# return [(fp, x.occurrences.getall(fp)) for fp in x.occurrences.uniqueKeys()]
+			else:
+				return [er for er in x.results if er.errors]
 
-					if i % 25 == 0:
-						self.progressSignal.emit(i + 1)
-						self.errorCountsUpdateSignal.emit()
-						QApplication.processEvents(QEventLoop.ExcludeUserInputEvents, 1)
-		finally:
-			self.errorCountsUpdateSignal.emit()
-			gui.redrawGUILater()
+		gui.tree(
+			DataTreeBuilder(
+				self.result,
+				childrenMaker,  # lambda x: x.occurrences.items() if isinstance(x, SearchResult) else [],
+				labelMaker,
+				iconMaker,
+				toolTipMaker,
+				3,
+				showRoot=False,
+				onDoubleClick=openDocument,
+				onContextMenu=onContextMenu,
+				onCopy=onCopy
+			),
+			itemDelegate=gui.htmlDelegate
+		)
 
+	@override
+	def prepareRun(self) -> tuple[bool, None]:
+		"""
+		returns a tuple consisting of two entries:
+			- True if it is OK to run, otherwise return false
+			- an arbitrary value, which is passed on to each processFile(...) method.
+		"""
+		return True, None
 
-@dataclass
-class TotalErrorStats:
-	errorCountsByPath: dict[FilePathTpl, int]
-	errorCountHistogram: dict[int, int]
-	total: int = 0
+	@override
+	def finishedRun(self, fromPrepareRun: None) -> None:
+		self.result.sort()
 
-	def add(self, filePath: FilePathTpl, errorsCount: int) -> None:
-		self.errorCountsByPath[filePath] = errorsCount
-		self.errorCountHistogram[errorsCount] += 1
-		self.total += errorsCount
-
-	def finish(self) -> TotalErrorStats:
-		self.errorCountsByPath = dict(sorted(filter(lambda x: x[1] > 0, self.errorCountsByPath.items()), key=itemgetter(1), reverse=True))
-		self.errorCountHistogram = dict(sorted(self.errorCountHistogram.items(), key=itemgetter(0), reverse=False))
-		return self
-
-
-def getErrorStats(errorsByPath: dict[FilePathTpl, Collection[GeneralError]]) -> TotalErrorStats:
-	totalErrorCounts = ErrorCounts()
-	errorStats = TotalErrorStats({}, defaultdict(int))
-
-	for filePath, errors in errorsByPath.items():
-		errorCounts = getErrorCounts(errors)
-		totalErrorCounts += errorCounts
-		errorStats.add(filePath, errorCounts.errors)
-
-	return errorStats.finish()
-
-
-def errorStatsToStr(errorStats: TotalErrorStats) -> str:
-	errors1Str = SW()
-	errors2Str = SW()
-	formatDictOnly(errorStats.errorCountsByPath, tab=1, s=errors1Str)
-	formatDictOnly(errorStats.errorCountHistogram, tab=1, s=errors2Str)
-	result = (
-		f"Errors By Path = {errors1Str}\n"
-		f"Errors Histogram = {errors2Str}\n"
-		f"Errors Total = {errorStats.total}\n"
-	)
-	return result
+	@override
+	def processFile(self, filePath: FilePathTpl, pool: ZipFilePool, fromPrepareRun: None):
+		errors = checkFile(filePath, pool)
+		counts = getErrorCounts(errors)
+		self.result.add(ErrorsResult(filePath, errors, counts))
