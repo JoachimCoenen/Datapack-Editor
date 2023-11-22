@@ -167,11 +167,10 @@ class AboutQt:
 
 @dataclass()
 class AboutSettings(SerializableDataclass):
-	pass  # TODO AboutSettings
 
 	title: str = field(default="Datapack Editor", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', style=getStyles().title), decorators=[pd.ReadOnlyLabel()]))
 
-	version: str = field(default="""0.5.1-alpha""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()]))
+	version: str = field(default="""0.6.0-alpha""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()]))
 
 	# @pd.NoUI()
 	@property

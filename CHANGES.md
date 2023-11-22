@@ -1,4 +1,4 @@
-## Next Version
+## 0.6.0-alpha
 ### Features 
  * Added support for Minecraft version 1.20.2, dropped support for versions 1.17 & 1.18.
    * Added support for multi-line commands in .mcFunction files.

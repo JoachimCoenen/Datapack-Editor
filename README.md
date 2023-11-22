@@ -7,17 +7,22 @@
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FJoachimCoenen%2FDatapack-Editor&count_bg=%230072FF&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
 ![GitHub all releases](https://img.shields.io/github/downloads/JoachimCoenen/Datapack-Editor/total?color=0072FF)
 
-An advanced editor for Minecraft Datapacks for Minecraft 1.17 and 1.18+. _Currently runs only on Windows._
+An advanced editor for Minecraft Datapacks for Minecraft 1.20.2+ (datapack version 18+). _Currently, runs only on Windows._
 
 ![MainWindow1_IMG][MainWindow1_IMG]
 
 
 ## Features
-- Basic features
+- Code Editing
   - Syntax highlighting 
   - Error checking
   - Rich code suggestions and code completion for `.mcFunction` and `.json` files
   - Add, rename and delete files and folders via the left-side tree view
+- Project
+  - Open or create a new datapack project
+  - Validate all files (for `.mcFunction` and `.json` files) within a project
+  - Multi-root projects
+  - supports dependencies between datapacks / projects via `dependencies.json`
 - Customization
   - custom themes
   - plugin support
@@ -25,30 +30,25 @@ An advanced editor for Minecraft Datapacks for Minecraft 1.17 and 1.18+. _Curren
   - Ctrl-Click to follow symbols (functions & function tags, block tags, ... )
   - Multi-tab & multi-view editor
   - Quickly find and open files with `Ctrl`+`P`
-  - Search all files
-- Project
-  - Open or create a new datapack project
-  - Validate all files (for `.mcFunction` and `.json` files) within a project
-  - Multi-root projects
-  - supports dependencies between datapacks / projects via `dependencies.json`
+  - Search in all files
 
 
 ## Keyboard Shortcuts
 
-| Action | Shortcut |
-| ------------- | ------------- |
-| Find in all files | `Ctrl`+`Shift`+`F` |
-| Quickly find & open a file | `Ctrl`+`P` |
-| New (scratch) file | `Ctrl`+`N` |
-| Save current file | `Ctrl`+`S` |
-| Save as | `Ctrl`+`Shift`+`S` |
+| Action                     | Shortcut           |
+|----------------------------|--------------------|
+| Find in all files          | `Ctrl`+`Shift`+`F` |
+| Quickly find & open a file | `Ctrl`+`P`         |
+| New (scratch) file         | `Ctrl`+`N`         |
+| Save current file          | `Ctrl`+`S`         |
+| Save as                    | `Ctrl`+`Shift`+`S` |
 
-| Action | Shortcut |
-| ------------- | ------------- |
-| Duplicate line | `Ctrl`+`D` |
-| Find in current document | `Ctrl`+`F` |
+| Action                   | Shortcut       |
+|--------------------------|----------------|
+| Duplicate line           | `Ctrl`+`D`     |
+| Find in current document | `Ctrl`+`F`     |
 | Trigger code suggestions | `Ctrl`+`Space` |
-| Show call tips | `Ctrl`+`K` |
+| Show call tips           | `Ctrl`+`K`     |
 
 
 ## Download & Install
