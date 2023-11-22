@@ -18,6 +18,8 @@ def checkMCFunction(mcFunction: MCFunction) -> list[SemanticsError]:
 	for command in mcFunction.commands:
 		if command is None:
 			continue
+		if command.isTemplateCommand:
+			continue  # Don't validate template commands as their syntax cannot be parsed properly, and therefor cannot be validated correctly.
 		validateCommand(command.next, command.schema, errorsIO=errors)
 	return errors
 

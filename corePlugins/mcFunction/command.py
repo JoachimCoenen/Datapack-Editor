@@ -287,6 +287,7 @@ class ParsedComment(CommandPart[CommentSchema]):
 class ParsedCommand(CommandPart[CommandSchema]):
 	name: bytes
 	span: Span = field(hash=False, compare=False)
+	isTemplateCommand: bool
 
 	@property
 	def children(self) -> Collection[CommandPart]:

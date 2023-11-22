@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Mapping, Optional, Sequence
 
 from .command import *
@@ -33,7 +33,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		)
 		return result
 
-	def _parseMcFunctionContents(self) ->  list[ParsedCommand | ParsedComment]:
+	def _parseMcFunctionContents(self) -> list[ParsedCommand | ParsedComment]:
 		children = []
 		actualLines = self.text.splitlines(keepends=True)
 		linesCount = len(actualLines)
@@ -115,11 +115,18 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		)
 
 	def parseCommand(self, sr: StringReader) -> Optional[ParsedCommand]:
+		isTemplateCommand =  sr.tryConsumeByte(ord(b'$'))
 		startCursor = sr.cursor
 		startPos = sr.currentPos
 		sr.tryConsumeByte(ord(b'/'))
-		# commandArg is the first argument of a ParsedCommand
-		didMatch, commandArg, hasErrors, lastArg = self._parseSimpleCommand(sr)
+
+		if isTemplateCommand:
+			oldErrors = self.errors.copy()
+			didMatch, commandArg, hasErrors, lastArg = self._parseSimpleCommand(sr)
+			self.errors = oldErrors
+		else:
+			didMatch, commandArg, hasErrors, lastArg = self._parseSimpleCommand(sr)
+
 		if commandArg is None:
 			return None
 
@@ -127,7 +134,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		endCursor = sr.cursor
 		content = sr.text[startCursor:endCursor]
 
-		command = ParsedCommand(name=commandArg.content, schema=commandArg.schema, span=commandSpan, source=self.text, content=content)
+		command = ParsedCommand(name=commandArg.content, schema=commandArg.schema, span=commandSpan, source=self.text, content=content, isTemplateCommand=isTemplateCommand)
 		command.next = commandArg
 		return command
 
