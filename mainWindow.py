@@ -269,8 +269,9 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			if button(icon=icons.spellCheck, tip='Check all Files', **btnKwArgs, enabled=True):
 				self.checkAllDialog.show()
 
-			if button(icon=icons.color, tip='Reload Color Scheme', **btnKwArgs, enabled=True):
-				theme.reloadAllColorSchemes()
+			if applicationSettings.debugging.isDeveloperMode:
+				if button(icon=icons.color, tip='Reload Color Scheme', **btnKwArgs, enabled=True):
+					theme.reloadAllColorSchemes()
 
 			if button(icon=icons.settings, tip='Settings', **btnKwArgs, windowShortcut=QKeySequence.Preferences):
 				self._showSettingsDialog(gui)
