@@ -56,7 +56,7 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 		return DATAPACK_ASPECT_TYPE
 
 	dpVersion: str = field(
-		default='23',
+		default='18',
 		metadata=catMeta(
 			deferLoading=True,
 			kwargs=dict(label='Datapack Version'),

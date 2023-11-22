@@ -57,7 +57,7 @@ class DatapackProjectCreatorData(SerializableDataclass):
 	)
 
 	dpVersion: str = field(
-		default='23',
+		default='18',
 		metadata=catMeta(
 			kwargs=dict(label='Datapack Version'),
 			decorators=[

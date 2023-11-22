@@ -12,6 +12,7 @@ from corePlugins.minecraft_data.fullData import getFullMcData
 
 
 def initVersion() -> None:
+	registerDPVersion(version18)
 	registerDPVersion(version23)
 
 
@@ -232,6 +233,13 @@ version23 = DPVersion(
 	name='23',
 	structure=buildEntryHandlers(DATAPACK_CONTENTS),
 	jsonSchemas=JSON_SCHEMAS,  # todo add schemata here, so they are synced to datapack version.
+	mcFunctionSchema=buildMCFunctionSchema()
+)
+
+version18 = DPVersion(
+	name='18',
+	structure=buildEntryHandlers(DATAPACK_CONTENTS),
+	jsonSchemas=JSON_SCHEMAS,
 	mcFunctionSchema=buildMCFunctionSchema()
 )
 
