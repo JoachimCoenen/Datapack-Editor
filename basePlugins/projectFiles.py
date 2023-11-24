@@ -17,8 +17,9 @@ from cat.Serializable.serializableDataclasses import catMeta
 from gui.icons import icons
 from cat.utils import DeferredCallOnceMethod, openOrCreate
 from base.model import filesystemEvents
-from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDirSeparators, splitPath, normalizeDirSeparatorsStr, unitePath, \
-	fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, getAllFilesFromArchive, isExcludedDirectory
+from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDirSeparators, splitPath, \
+	normalizeDirSeparatorsStr, unitePath, fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, \
+	getAllFilesFromArchive, isExcludedDirectory, ZipFilePool
 from base.model.aspect import AspectType
 from base.model.project.index import Index
 from base.model.project.project import Project, ProjectRoot, ProjectAspect, Root, IndexBundleAspect, AspectFeatures, FileEntry, makeFileEntry
@@ -426,11 +427,6 @@ def _filesTreeChildrenMaker(data: FilesTreeItem) -> list[AnyFilesTreeElement]:
 
 
 def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Callable[[FilePath], None]):
-	# nsHandlers = getEntryHandlersForFolder(folderPath, getSession().datapackData.structure)
-	# extensions = [h.extension for ns, h, _ in nsHandlers]
-	# extensions = ['.json', '.mcfunction']
-	# CUSTOM_EXT = "[custom]"
-	# extensions.append(CUSTOM_EXT)
 
 	@dataclass
 	class Context:
@@ -487,9 +483,10 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 			return index.add(path[1], path, makeFileEntry(path, self._root, isFile))
 
 	def _analyzeFile(self, fileEntry: FileEntry) -> None:
-		for aspect in self._project.aspects:
-			if aspect.aspectFeatures.analyzeFiles:
-				aspect.analyzeFile(self._root, fileEntry)
+		with ZipFilePool() as pool:
+			for aspect in self._project.aspects:
+				if aspect.aspectFeatures.analyzeFiles:
+					aspect.analyzeFile(self._root, fileEntry, pool)
 
 	def _addFileEntryAndAnalyzeFile(self, path: FilePathTpl) -> None:
 		fileEntry = self._addFileOrFolderEntry(self._root.indexBundles.setdefault(FilesIndex).files, path, True)
@@ -678,12 +675,13 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 			return
 		aspects = [a for a in project.aspects if a.aspectFeatures.analyzeFiles]
 		idx = root.indexBundles.setdefault(FilesIndex).files
-		for jf in rawLocalFiles:
-			fileEntry = makeFileEntry(jf, root, True)
-			for aspect in aspects:
-				if aspect.aspectFeatures.analyzeFiles:
-					aspect.analyzeFile(root, fileEntry)
-			idx.add(jf[1], jf, fileEntry)
+		with ZipFilePool() as pool:
+			for jf in rawLocalFiles:
+				fileEntry = makeFileEntry(jf, root, True)
+				for aspect in aspects:
+					if aspect.aspectFeatures.analyzeFiles:
+						aspect.analyzeFile(root, fileEntry, pool)
+				idx.add(jf[1], jf, fileEntry)
 
 		idx = root.indexBundles.get(FilesIndex).folders
 		for jf in rawLocalFolders:

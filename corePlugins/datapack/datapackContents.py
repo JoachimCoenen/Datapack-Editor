@@ -8,7 +8,7 @@ from cat.utils import unescapeFromXml, escapeForXmlAttribute, CachedProperty
 from base.model.aspect import AspectType
 from base.model.project.index import DeepIndex, Index
 from base.model.parsing.parser import parse
-from base.model.pathUtils import FilePathTpl, loadBinaryFile, loadTextFile, ZipFilePool
+from base.model.pathUtils import ArchiveFilePool, FilePathTpl, loadBinaryFile, loadTextFile, ZipFilePool
 from base.model.project.project import IndexBundleAspect, Root
 from base.model.utils import MDStr
 from corePlugins.minecraft.resourceLocation import ResourceLocation, MetaInfo
@@ -271,7 +271,7 @@ def getMetaInfo(fullPath: FilePathTpl, handlers: EntryHandlers) -> MetaInfo | No
 			return metaInfo
 
 
-def collectEntry(fullPath: FilePathTpl, handlers: EntryHandlers, root: Root) -> None:
+def collectEntry(fullPath: FilePathTpl, handlers: EntryHandlers, root: Root, pool: ArchiveFilePool) -> None:
 	if (resLocHandler := getEntryHandlerForFile(fullPath, handlers)) is not None:
 		resLoc: ResourceLocation | None
 		handler: EntryHandlerInfo

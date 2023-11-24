@@ -12,7 +12,7 @@ from cat.Serializable.serializableDataclasses import SerializableDataclass, catM
 from cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from cat.utils.logging_ import logWarning
 from base.model.project.index import IndexBundle
-from base.model.pathUtils import FilePathTpl, FilePathStr, normalizeDirSeparatorsStr
+from base.model.pathUtils import FilePathTpl, FilePathStr, normalizeDirSeparatorsStr, ArchiveFilePool
 from base.model.aspect import AspectDict, Aspect, SerializableDataclassWithAspects
 from base.model.utils import Span, GeneralError, MDStr, SemanticsError, NULL_SPAN
 
@@ -38,7 +38,7 @@ class AspectFeatures:
 	"""
 	analyzeFiles: bool = False
 	"""
-	def analyzeFile(self, root: Root, path: FilePathTpl) -> None: ...
+	def analyzeFile(self, root: Root, path: FilePathTpl, pool: ArchiveFilePool) -> None: ...
 	"""
 
 
@@ -107,7 +107,7 @@ class ProjectAspect(Aspect, SerializableDataclass, ABC):
 		"""
 		pass
 
-	def analyzeFile(self, root: Root, fileEntry: FileEntry) -> None:
+	def analyzeFile(self, root: Root, fileEntry: FileEntry, pool: ArchiveFilePool) -> None:
 		"""
 		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeFiles=True)): ...
 		"""

@@ -12,7 +12,7 @@ from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.aspect import AspectType
 from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr, FileEntry, Project
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
-from base.model.pathUtils import ZipFilePool, loadBinaryFile, normalizeDirSeparators
+from base.model.pathUtils import ArchiveFilePool, ZipFilePool, loadBinaryFile, normalizeDirSeparators
 from base.model.session import getSession
 from base.model.utils import WrappedError
 from .datapackContents import collectEntry
@@ -140,9 +140,9 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
 		return resolveDependency(dependencyDescr)
 
-	def analyzeFile(self, root: Root, fileEntry: FileEntry) -> None:
+	def analyzeFile(self, root: Root, fileEntry: FileEntry, pool: ArchiveFilePool) -> None:
 		handlers = self.dpVersionData.structure
-		collectEntry(fileEntry.fullPath, handlers, root)
+		collectEntry(fileEntry.fullPath, handlers, root, pool)
 
 	def onCloseProject(self, project: Project) -> None:
 		_reloadDPVersion(self.dpVersion, None)
