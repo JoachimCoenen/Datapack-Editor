@@ -26,10 +26,6 @@ from .filterArgs import clickableRangesForFilterArgs, onIndicatorClickedForFilte
 from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
 
 
-def initPlugin() -> None:
-	pass
-
-
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
 
 

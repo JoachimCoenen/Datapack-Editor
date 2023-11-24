@@ -1,4 +1,5 @@
 from base.model.defaultSchemaProvider import SchemaMapping
+from base.model.parsing.tree import Schema
 from base.model.utils import LanguageId
 from base.plugin import PLUGIN_SERVICE, PluginBase
 
@@ -10,13 +11,15 @@ def initPlugin() -> None:
 class DatapackVersionsPlugin(PluginBase):
 
 	def initPlugin(self):
-		from . import providers  # loads all resource location contexts
-		from . import contexts  # loads all resource location contexts
+		from . import providers
+		from . import contexts
 		from . import version23
 		version23.initVersion()
+		from .commands import argumentContextsImpl
+		from .commands import argumentStylers
 
 	def dependencies(self) -> set[str]:
-		return {'DatapackPlugin', 'JsonPlugin', 'NbtPlugin', 'DatapackPlugin', 'MinecraftPlugin'}
+		return {'DatapackPlugin', 'JsonPlugin', 'NbtPlugin', 'DatapackPlugin', 'MinecraftPlugin', 'McFunctionPlugin'}
 
 	def schemaMappings(self) -> dict[LanguageId, list[SchemaMapping]]:
 		from corePlugins.datapackVersions.allVersions import REGISTRY_TAGS, WORLDGEN
@@ -92,3 +95,12 @@ class DatapackVersionsPlugin(PluginBase):
 
 		from corePlugins.json import JSON_ID
 		return {JSON_ID: mappings}
+
+	def schemas(self) -> dict[str, Schema]:
+		schemas = {}
+
+		from corePlugins.datapackVersions.commands.v1_20_3_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_3
+
+		schemas |= buildMCFunctionSchemas_1_20_3()  # legacy way of doing it.
+		return schemas
+

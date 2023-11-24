@@ -2,9 +2,8 @@ from typing import Optional, cast
 
 from base.model.parsing.bytesUtils import ORD_SPACE
 from corePlugins.mcFunction.argumentContextsImpl import parseFromStringReader
-from corePlugins.mcFunction.command import ArgumentSchema
+from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
 from corePlugins.mcFunction.commandContext import makeParsedArgument
-from corePlugins.mcFunction.command import ParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.nbt import SNBT_ID
 from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, ResourceLocationNode
@@ -63,8 +62,3 @@ def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePa
 
 def _readResourceLocation(sr: StringReader, filePath: FilePath, schema: ResourceLocationSchema, *, errorsIO: list[GeneralError]) -> Optional[ResourceLocationNode]:
 	return parseFromStringReader(sr, filePath, schema.language, schema, errorsIO=errorsIO, ignoreTrailingChars=True)
-
-
-def _parseResourceLocation(sr: StringReader, filePath: FilePath, ai: ArgumentSchema, schema: ResourceLocationSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-	location = _readResourceLocation(sr, filePath, schema, errorsIO=errorsIO)
-	return makeParsedArgument(sr, ai, value=location)

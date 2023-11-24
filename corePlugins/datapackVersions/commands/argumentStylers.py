@@ -12,10 +12,6 @@ from .argumentTypes import *
 from .argumentValues import ItemStack, BlockState, TargetSelector
 
 
-def initPlugin() -> None:
-	pass
-
-
 _allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
 	# BRIGADIER_BOOL.name:               StyleIds.Constant,
 	# BRIGADIER_DOUBLE.name:             StyleIds.Number,

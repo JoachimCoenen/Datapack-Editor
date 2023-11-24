@@ -6,14 +6,13 @@ from copy import copy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
-from cat.utils.collections_ import AddToDictDecorator, ChainedList
-from corePlugins.mcFunction.argumentTypes import *
-from corePlugins.mcFunction.command import CommandPartSchema, CommandSchema, KeywordSchema, ArgumentSchema, Options, TERMINAL, COMMANDS_ROOT, SwitchSchema, MCFunctionSchema
 from base.model.parsing.bytesUtils import strToBytes
-
-from .argumentTypes import *
+from cat.utils.collections_ import AddToDictDecorator, ChainedList
+from corePlugins.datapack.datapackContents import RESOURCES
+from corePlugins.mcFunction.argumentTypes import *
+from corePlugins.mcFunction.command import ArgumentSchema, COMMANDS_ROOT, CommandPartSchema, CommandSchema, KeywordSchema, MCFunctionSchema, Options, SwitchSchema, TERMINAL
 from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
-from ..datapack.datapackContents import RESOURCES
+from .argumentTypes import *
 
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
@@ -23,7 +22,7 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 
 
 @dataclass
-class CommandCreators:
+class CommandCreator:
 	creators: dict[Callable[[FullMCData], list[CommandPartSchema]], list[dict[str, Any]]] = field(default_factory=dict)
 
 	def add(
@@ -84,7 +83,7 @@ class CommandCreators:
 		return MCFunctionSchema('', commands=basicCmdInfo)
 
 
-COMMANDS: CommandCreators = CommandCreators()
+COMMANDS: CommandCreator = CommandCreator()
 
 
 @COMMANDS.add(

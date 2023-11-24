@@ -3,12 +3,12 @@ import os
 from corePlugins.datapack.datapackContents import RESOURCES, buildJsonMeta, EntryHandlerInfo, NAME_SPACE_VAR, DatapackContents, GenerationInfo, DefaultFileInfo, \
 	buildFunctionMeta, buildNbtMeta, buildEntryHandlers
 from corePlugins.datapack.dpVersions import DPVersion, registerDPVersion
-from corePlugins.datapackVersions.allVersions import REGISTRY_TAGS, WORLDGEN
 from corePlugins.json.core import JsonSchema
 from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
 from corePlugins.mcFunction.command import MCFunctionSchema
-from corePlugins.mcFunctionSchemaTEMP.v1_20_3_schema import COMMANDS
 from corePlugins.minecraft_data.fullData import getFullMcData
+from .allVersions import REGISTRY_TAGS, WORLDGEN
+from .commands.v1_20_3_schema import COMMANDS
 
 
 def initVersion() -> None:
