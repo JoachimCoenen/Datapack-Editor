@@ -116,28 +116,30 @@ class CheckAllDialog(OnProjectFilesDialogBase):
 
 	@override
 	def optionsGUI(self, gui: DatapackEditorGUI):
-		with gui.hLayout():
-			self.addProgressBar(gui)
-			if gui.button('Check Files', default=True):
-				self.run()
-			if self.processedFilesCount > -1:
-				if gui.button(icon=icons.signal, tip='Show Stats', default=False):
-					errorStatsStr = errorStatsToStr(self.result)
-					gui.askUserInput(
-						"Check all Files Results",
-						errorStatsStr,
-						lambda g, v: g.codeField(errorStatsStr)
-					)
+		pass  # moved to resultsSummaryGUI
 
 	@override
 	def resultsSummaryGUI(self, gui: DatapackEditorGUI) -> None:
-		with gui.hLayout(preventHStretch=True):
-			gui.errorsSummaryGUI(self.result.totalCounts)
-			if self.processedFilesCount > 0:
-				errorsPerFile = self.result.totalCounts.errors / self.processedFilesCount
-			else:
-				errorsPerFile = 0
-			gui.label(f'{self.processedFilesCount} / {self.allFilesCount} files checked. ({errorsPerFile:.1f} errors / file)')
+		with gui.vPanel(windowPanel=True):
+			with gui.hLayout():
+				self.addProgressBar(gui)
+				if gui.button('Check Files', default=True):
+					self.run()
+				if self.processedFilesCount > -1:
+					if gui.button(icon=icons.signal, tip='Show Stats', default=False):
+						errorStatsStr = errorStatsToStr(self.result)
+						gui.askUserInput(
+							"Check all Files Results",
+							errorStatsStr,
+							lambda g, v: g.codeField(errorStatsStr)
+						)
+			with gui.hLayout(preventHStretch=True):
+				gui.errorsSummaryGUI(self.result.totalCounts)
+				if self.processedFilesCount > 0:
+					errorsPerFile = self.result.totalCounts.errors / self.processedFilesCount
+				else:
+					errorsPerFile = 0
+				gui.label(f'{self.processedFilesCount} / {self.allFilesCount} files checked. ({errorsPerFile:.1f} errors / file)')
 
 	@override
 	def resetUserInterface(self):

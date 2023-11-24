@@ -54,19 +54,7 @@ class SearchAllDialog(OnProjectFilesDialogBase):
 
 	@override
 	def optionsGUI(self, gui: DatapackEditorGUI):
-		with gui.vLayout(preventVStretch=False):
-			with gui.hLayout(horizontalSpacing=0):
-				self.searchExpr = gui.codeField(self.searchExpr, isMultiline=False, roundedCorners=CORNERS.NONE)
-				if gui.toolButton(icon=icons.search, overlap=(1, 0), roundedCorners=(False, True, False, True), default=True, windowShortcut=QKeySequence("Return")):
-					self.run()
-			if self.searchOptions.searchMode == SearchMode.RegEx:
-				try:
-					re.compile(self.searchExpr)
-				except Exception as e:
-					gui.helpBox(str(e), 'error', hasLabel=False)
-
-		self._searchOptionsGUI(gui)
-		self.addProgressBar(gui)
+		pass  # moved to resultsSummaryGUI
 
 	def _searchOptionsGUI(self, gui: DatapackEditorGUI):
 		so = self.searchOptions
@@ -82,10 +70,23 @@ class SearchAllDialog(OnProjectFilesDialogBase):
 
 	@override
 	def resultsSummaryGUI(self, gui: DatapackEditorGUI) -> None:
-		if self._searchResult.error is not None:
-			gui.helpBox(f'error during search: {self._searchResult.error}', style='error')
-		else:
-			gui.label(f'found {len(self._searchResult.occurrences)} occurrences in {len(self._searchResult.occurrences.uniqueKeys())} files ({self.processedFilesCount} files searched total): (double-click to open)')
+		with gui.vPanel(seamless=False, windowPanel=True, verticalSpacing=0):
+			with gui.hPanel(seamless=True, roundedCorners=CORNERS.RIGHT):
+				self.searchExpr = gui.codeField(self.searchExpr, isMultiline=False, placeholderText="search...")
+				if gui.toolButton(icon=icons.search, default=True, windowShortcut=QKeySequence("Return")):
+					self.run()
+			if self.searchOptions.searchMode == SearchMode.RegEx:
+				try:
+					re.compile(self.searchExpr)
+				except Exception as e:
+					gui.helpBox(str(e), 'error', hasLabel=False)
+			self._searchOptionsGUI(gui)
+			self.addProgressBar(gui)
+
+			if self._searchResult.error is not None:
+				gui.helpBox(f'error during search: {self._searchResult.error}', style='error')
+			else:
+				gui.label(f'found {len(self._searchResult.occurrences)} occurrences in {len(self._searchResult.occurrences.uniqueKeys())} files ({self.processedFilesCount} files searched total): (double-click to open)')
 
 	@override
 	def resultsGUI(self, gui: DatapackEditorGUI) -> None:

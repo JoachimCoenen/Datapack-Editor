@@ -31,6 +31,8 @@ class OnProjectFilesDialogBase(CatFramelessWindowMixin, QDialog):
 
 	def __init__(self, GUICls: Type[DatapackEditorGUI] = DatapackEditorGUI, parent: Optional[QWidget] = None):
 		super().__init__(GUICls=GUICls, parent=parent)
+		self.disableSidebarMargins = True
+		self.disableContentMargins = True
 
 		self._allFileOptions: AllFileOptions = AllFileOptions()
 		self._allFiles: list[FilePathTpl] = []
@@ -69,13 +71,12 @@ class OnProjectFilesDialogBase(CatFramelessWindowMixin, QDialog):
 
 	@classmethod
 	def allFilesGUI(cls, gui: DatapackEditorGUI, allFiles: AllFileOptions) -> AllFileOptions:
-		with gui.vLayout1C(preventVStretch=False):
-			fileTypesStr = gui.codeField(allFiles.fileTypesStr, label="File Extensions:", placeholderText="All Extensions", tip="comma-separated list of file extensions eg.: '.json, .xml'. Leave blank for all files.", isMultiline=False)
+		with gui.vPanel(preventVStretch=False, seamless=False, windowPanel=True):
+			fileTypesStr = gui.codeField(allFiles.fileTypesStr, placeholderText="file extensions...", tip="comma-separated list of file extensions eg.: '.json, .xml'. Leave blank for all files.", isMultiline=False)
 
-		gui.vSeparator()
 		oldIncludedRootIds = {r.name for r in allFiles.includedRoots}
 		includedRoots = []
-		with gui.vLayout(preventVStretch=True, verticalSpacing=0):
+		with gui.scrollBox(preventVStretch=True, verticalSpacing=0):
 			includedRoots += cls._rootsListGUI(gui, oldIncludedRootIds, getSession().project.roots)
 			gui.vSeparator()
 			includedRoots += cls._rootsListGUI(gui, oldIncludedRootIds, getSession().project.deepDependencies)
@@ -91,7 +92,7 @@ class OnProjectFilesDialogBase(CatFramelessWindowMixin, QDialog):
 
 	def OnGUI(self, gui: DatapackEditorGUI):
 		self.optionsGUI(gui)
-		resultsSummaryGUI = gui.subGUI(type(gui), self.resultsSummaryGUI, suppressRedrawLogging=False)
+		resultsSummaryGUI = gui.subGUI(type(gui), self.resultsSummaryGUI, suppressRedrawLogging=False, seamless=True)
 		connectOnlyOnce(self, self.progressSignal, lambda i: resultsSummaryGUI.redrawGUI(), 'resultsGUI')
 		resultsSummaryGUI.redrawGUI()
 		self.resultsGUI(gui)
