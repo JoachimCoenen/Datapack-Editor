@@ -7,7 +7,7 @@ from corePlugins.datapackVersions.allVersions import REGISTRY_TAGS, WORLDGEN
 from corePlugins.json.core import JsonSchema
 from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
 from corePlugins.mcFunction.command import MCFunctionSchema
-from corePlugins.mcFunctionSchemaTEMP.v1_20_3_schema import buildMCFunctionSchemaFor_v1_20_3
+from corePlugins.mcFunctionSchemaTEMP.v1_20_3_schema import COMMANDS
 from corePlugins.minecraft_data.fullData import getFullMcData
 
 
@@ -207,7 +207,7 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 
 def buildMCFunctionSchema() -> MCFunctionSchema:
 	version1_20_3 = getFullMcData('1.20.3')
-	schema_1_20_3 = buildMCFunctionSchemaFor_v1_20_3(version1_20_3)  # todo: update!
+	schema_1_20_3 = COMMANDS.buildSchema(version1_20_3)  # todo: update!
 	return schema_1_20_3
 
 

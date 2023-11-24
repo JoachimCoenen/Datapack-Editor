@@ -1,8 +1,9 @@
 """
-currently at minecraft version 1.20.2
+currently at minecraft version 1.20.3
 """
 
 from copy import copy
+from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
 from cat.utils.collections_ import AddToDictDecorator, ChainedList
@@ -17,72 +18,76 @@ from ..datapack.datapackContents import RESOURCES
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_20_3 = getFullMcData('1.20.3')
-	schema_1_20_3 = buildMCFunctionSchemaFor_v1_20_3(version1_20_3)
+	schema_1_20_3 = COMMANDS.buildSchema(version1_20_3)
 	return {'Minecraft 1.20.3': schema_1_20_3}
 
 
-_COMMAND_CREATORS: dict[Callable[[FullMCData], list[CommandPartSchema]], list[dict[str, Any]]] = {}
+@dataclass
+class CommandCreators:
+	creators: dict[Callable[[FullMCData], list[CommandPartSchema]], list[dict[str, Any]]] = field(default_factory=dict)
+
+	def add(
+			self,
+			*,
+			name: str = ...,
+			names: tuple[str, ...] = ...,
+	
+			description: str = '',
+			opLevel: int|str = 0,
+			availableInSP: bool = True,
+			availableInMP: bool = True,
+	
+			removed: bool = False,
+			removedVersion: Optional[str] = None,
+			removedComment: str = '',
+	
+			deprecated: bool = False,
+			deprecatedVersion: Optional[str] = None,
+			deprecatedComment: str = '',
+	) -> Callable[[Callable[[FullMCData], list[CommandPartSchema]]], Callable[[FullMCData], list[CommandPartSchema]]]:
+		if name is not ...:
+			names = (name,)
+		if names is ...:
+			ValueError("at least one of (name, names) must be specified")
+	
+		kwargs = dict(
+			description=description,
+			opLevel=opLevel,
+			availableInSP=availableInSP,
+			availableInMP=availableInMP,
+			removed=removed,
+			removedVersion=removedVersion,
+			removedComment=removedComment,
+			deprecated=deprecated,
+			deprecatedVersion=deprecatedVersion,
+			deprecatedComment=deprecatedComment,
+		)
+	
+		def _addCommandFunc(func: Callable[[FullMCData], list[CommandPartSchema]]) -> Callable[[FullMCData], list[CommandPartSchema]]:
+			if (aliases := self.creators.get(func)) is None:
+				self.creators[func] = aliases = []
+			for name2 in names:
+				aliases.append(dict(kwargs, name=name2))
+			return func
+	
+		return _addCommandFunc
+
+	def buildSchema(self, version: FullMCData) -> MCFunctionSchema:
+		basicCmdInfo: dict[bytes, CommandSchema] = {}
+		_addCommand = AddToDictDecorator(basicCmdInfo)
+	
+		for cc, aliases in self.creators.items():
+			args = cc(version)
+			for cmdSchemaKwargs in aliases:
+				_addCommand(strToBytes(cmdSchemaKwargs['name']))(CommandSchema(**cmdSchemaKwargs, next=Options(args)))
+	
+		return MCFunctionSchema('', commands=basicCmdInfo)
 
 
-def buildMCFunctionSchemaFor_v1_20_3(version: FullMCData) -> MCFunctionSchema:
-	basicCmdInfo: dict[bytes, CommandSchema] = {}
-	_addCommand = AddToDictDecorator(basicCmdInfo)
-
-	for cc, aliases in _COMMAND_CREATORS.items():
-		args = cc(version)
-		for cmdSchemaKwargs in aliases:
-			_addCommand(strToBytes(cmdSchemaKwargs['name']))(CommandSchema(**cmdSchemaKwargs, next=Options(args)))
-
-	return MCFunctionSchema('', commands=basicCmdInfo)
+COMMANDS: CommandCreators = CommandCreators()
 
 
-def addCommand(
-		*,
-		name: str = ...,
-		names: tuple[str, ...] = ...,
-
-		description: str = '',
-		opLevel: int|str = 0,
-		availableInSP: bool = True,
-		availableInMP: bool = True,
-
-		removed: bool = False,
-		removedVersion: Optional[str] = None,
-		removedComment: str = '',
-
-		deprecated: bool = False,
-		deprecatedVersion: Optional[str] = None,
-		deprecatedComment: str = '',
-) -> Callable[[Callable[[FullMCData], list[CommandPartSchema]]], Callable[[FullMCData], list[CommandPartSchema]]]:
-	if name is not ...:
-		names = (name,)
-	if names is ...:
-		ValueError("at least one of (name, names) must be specified")
-
-	kwargs = dict(
-		description=description,
-		opLevel=opLevel,
-		availableInSP=availableInSP,
-		availableInMP=availableInMP,
-		removed=removed,
-		removedVersion=removedVersion,
-		removedComment=removedComment,
-		deprecated=deprecated,
-		deprecatedVersion=deprecatedVersion,
-		deprecatedComment=deprecatedComment,
-	)
-
-	def _addCommandFunc(func: Callable[[FullMCData], list[CommandPartSchema]]) -> Callable[[FullMCData], list[CommandPartSchema]]:
-		if (aliases := _COMMAND_CREATORS.get(func)) is None:
-			_COMMAND_CREATORS[func] = aliases = []
-		for name2 in names:
-			aliases.append(dict(kwargs, name=name2))
-		return func
-
-	return _addCommandFunc
-
-
-@addCommand(
+@COMMANDS.add(
 	name='?',
 	description='An alias of /help. Provides help for commands.',
 	opLevel=0
@@ -91,7 +96,7 @@ def build_help_args(_: FullMCData) -> list[CommandPartSchema]:
 	return []
 
 
-@addCommand(
+@COMMANDS.add(
 	name='advancement',
 	description='Gives, removes, or checks player advancements.',
 	opLevel=2
@@ -159,7 +164,7 @@ def build_advancement_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='attribute',
 	description='Queries, adds, removes or sets an entity attribute.',
 	opLevel=2
@@ -278,7 +283,7 @@ def build_attribute_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='ban',
 	description='Adds player to banlist.',
 	opLevel=3,
@@ -300,7 +305,7 @@ def build_ban_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='ban-ip',
 	description='Adds IP address to banlist.',
 	opLevel=3,
@@ -322,7 +327,7 @@ def build_ban_ip_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='banlist',
 	description='Displays banlist.',
 	opLevel=3,
@@ -340,7 +345,7 @@ def build_banlist_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='bossbar',
 	description='Creates and modifies bossbars.',
 	opLevel=2
@@ -467,7 +472,7 @@ def build_bossbar_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='clear',
 	description='Clears items from player inventory.',
 	opLevel=2
@@ -496,7 +501,7 @@ def build_clear_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='clone',
 	description='Copies blocks from one place to another.',
 	opLevel=2
@@ -592,7 +597,7 @@ def build_clone_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='damage',
 	description='Applies damage to entities.',
 	opLevel=0
@@ -712,7 +717,7 @@ DATA_SOURCE_AND_PATH = SwitchSchema(
 )
 
 
-@addCommand(
+@COMMANDS.add(
 	name='data',
 	description='Gets, merges, modifies and removes block entity and entity NBT data.',
 	opLevel=2
@@ -901,7 +906,7 @@ def build_data_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='datapack',
 	description='Controls loaded data packs.',
 	opLevel=2
@@ -969,7 +974,7 @@ def build_datapack_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='debug',
 	description='Starts or stops a debugging session.',
 	opLevel=3
@@ -990,7 +995,7 @@ def build_debug_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='defaultgamemode',
 	description='Sets the default game mode.',
 	opLevel=2
@@ -1004,7 +1009,7 @@ def build_defaultgamemode_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='deop',
 	description='Revokes operator status from a player.',
 	opLevel=3,
@@ -1019,7 +1024,7 @@ def build_deop_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='difficulty',
 	description='Sets the difficulty level.',
 	opLevel=2
@@ -1034,7 +1039,7 @@ def build_difficulty_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='effect',
 	description='Add or remove status effects.',
 	opLevel=2
@@ -1107,7 +1112,7 @@ def build_effect_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='enchant',
 	description="Adds an enchantment to a player's selected item.",
 	opLevel=2
@@ -1134,7 +1139,7 @@ def build_enchant_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='execute',
 	description='Executes another command.',
 	opLevel=2
@@ -1747,7 +1752,7 @@ def build_execute_args(_: FullMCData) -> list[CommandPartSchema]:
 	return EXECUTE_INSTRUCTIONS
 
 
-@addCommand(
+@COMMANDS.add(
 	names=('experience', 'xp'),
 	description='An alias of /xp. Adds or removes player experience.',
 	opLevel=2
@@ -1814,7 +1819,7 @@ def build_experience_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='fill',
 	description='Fills a region with a specific block.',
 	opLevel=2
@@ -1857,7 +1862,7 @@ def build_fill_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='fillbiome',
 	description='Changes biome entries for an area.',
 	opLevel=2
@@ -1900,7 +1905,7 @@ def build_fillbiome_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='forceload',
 	description='Forces chunks to constantly be loaded or not.',
 	opLevel=2
@@ -1944,7 +1949,7 @@ def build_forceload_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='function',
 	description='Runs a function.',
 	opLevel=2
@@ -1973,7 +1978,7 @@ def build_function_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='gamemode',
 	description="Sets a player's game mode.",
 	opLevel=2
@@ -1994,7 +1999,7 @@ def build_gamemode_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='gamerule',
 	description='Sets or queries a game rule value.',
 	opLevel=2
@@ -2015,7 +2020,7 @@ def build_gamerule_args(version: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='give',
 	description='Gives an item to a player.',
 	opLevel=2
@@ -2042,7 +2047,7 @@ def build_give_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='help',
 	description='An alias of /?. Provides help for commands.',
 	opLevel=0
@@ -2051,7 +2056,7 @@ def build_help_args(_: FullMCData) -> list[CommandPartSchema]:
 	return []
 
 
-@addCommand(
+@COMMANDS.add(
 	name='item',
 	description='Manipulates items in inventories.',
 	opLevel=2
@@ -2176,7 +2181,7 @@ def build_item_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='jfr',
 	description='Starts or stops a JFR profiling.',
 	opLevel=4
@@ -2188,7 +2193,7 @@ def build_jfr_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='kick',
 	description='Kicks a player off a server.',
 	opLevel=3
@@ -2209,7 +2214,7 @@ def build_kick_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='kill',
 	description='Kills entities (players, mobs, items, etc.).',
 	opLevel=2
@@ -2224,7 +2229,7 @@ def build_kill_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='list',
 	description='Lists players on the server.',
 	opLevel=0
@@ -2236,7 +2241,7 @@ def build_list_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='locate',
 	description='Locates closest structure, biome, or point of interest (poi).',
 	opLevel=2
@@ -2276,7 +2281,7 @@ def build_locate_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='locatebiome',
 	description='Locates closest biome.',
 	removed=True,
@@ -2294,7 +2299,7 @@ def build_locatebiome_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='loot',
 	description='Drops items from an inventory slot onto the ground.',
 	opLevel=2
@@ -2451,7 +2456,7 @@ def build_loot_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='me',
 	description='Displays a message about the sender.',
 	opLevel=0
@@ -2465,7 +2470,7 @@ def build_me_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	names=('msg', 'tell', 'w'),
 	description='An alias of /tell and /w. Displays a private message to other players.',
 	opLevel=0
@@ -2485,7 +2490,7 @@ def build_msg_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='op',
 	description='Grants operator status to a player.',
 	opLevel=3,
@@ -2500,7 +2505,7 @@ def build_op_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='pardon',
 	description='Removes entries from the banlist.',
 	opLevel=3,
@@ -2515,7 +2520,7 @@ def build_pardon_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='pardon-ip',
 	description='Removes entries from the banlist.',
 	opLevel=3,
@@ -2530,7 +2535,7 @@ def build_pardon_ip_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='particle',
 	description='Creates particles.',
 	opLevel=2
@@ -2746,7 +2751,7 @@ def build_particle_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='perf',
 	description='Captures info and metrics about the game for 10 seconds.',
 	opLevel=4,
@@ -2759,7 +2764,7 @@ def build_perf_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='place',
 	description='Places features, jigsaws, structures, and templates at a given location.',
 	opLevel=2
@@ -2894,7 +2899,7 @@ def build_place_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='placefeature',
 	description='Places a configured feature at a given location.',
 	removed=True,
@@ -2920,7 +2925,7 @@ def build_placefeature_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='playsound',
 	description='Plays a sound.',
 	opLevel=2
@@ -2974,7 +2979,7 @@ def build_playsound_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='publish',
 	description='Opens single-player world to local network.',
 	opLevel=4,
@@ -3005,7 +3010,7 @@ def build_publish_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='random',
 	description='Draws a random value.',
 	opLevel="0 without sequence; 2 otherwise"
@@ -3095,7 +3100,7 @@ def build_random_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='recipe',
 	description='Gives or takes player recipes.',
 	opLevel=2
@@ -3123,7 +3128,7 @@ def build_recipe_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='reload',
 	description='Reloads loot tables, advancements, and functions from disk.',
 	opLevel=2
@@ -3132,7 +3137,7 @@ def build_reload_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [TERMINAL]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='replaceitem',
 	description='Replaces items in inventories.',
 	removed=True,
@@ -3149,7 +3154,7 @@ def build_replaceitem_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='return',
 	description='Can be used to control execution flow inside functions and change their return value',
 	opLevel="N/A"
@@ -3163,7 +3168,7 @@ def build_replaceitem_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='ride',
 	description='Used to make entities ride other entities, stop entities from riding, make rides evict their riders, or summon rides or riders.',
 	opLevel='-'
@@ -3195,7 +3200,7 @@ def build_ride_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='save-all',
 	description='Saves the server to disk.',
 	opLevel=4,
@@ -3208,7 +3213,7 @@ def build_save_all_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='save-off',
 	description='Disables automatic server saves.',
 	opLevel=4,
@@ -3218,7 +3223,7 @@ def build_save_off_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [TERMINAL]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='save-on',
 	description='Enables automatic server saves.',
 	opLevel=4,
@@ -3228,7 +3233,7 @@ def build_save_on_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [TERMINAL]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='say',
 	description='Displays a message to multiple players.',
 	opLevel=2
@@ -3242,7 +3247,7 @@ def build_say_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='schedule',
 	description='Delays the execution of a function.',
 	opLevel=2
@@ -3284,7 +3289,7 @@ def build_schedule_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='scoreboard',
 	description='Manages scoreboard objectives and players.',
 	opLevel=2
@@ -3570,7 +3575,7 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='seed',
 	description='Displays the world seed.',
 	opLevel='0 in singleplayer, 2 in multiplayer'
@@ -3579,7 +3584,7 @@ def build_seed_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [TERMINAL]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='setblock',
 	description='Changes a block to another block.',
 	opLevel=2
@@ -3606,7 +3611,7 @@ def build_setblock_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='setidletimeout',
 	description='Sets the time before idle players are kicked.',
 	opLevel=3,
@@ -3621,7 +3626,7 @@ def build_setidletimeout_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='setworldspawn',
 	description='Sets the world spawn.',
 	opLevel=2
@@ -3643,7 +3648,7 @@ def build_setworldspawn_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='spawnpoint',
 	description='Sets the spawn point for a player.',
 	opLevel=2
@@ -3672,7 +3677,7 @@ def build_spawnpoint_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='spectate',
 	description='Make one player in spectator mode spectate an entity.',
 	opLevel=2
@@ -3693,7 +3698,7 @@ def build_spectate_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='spreadplayers',
 	description='Teleports entities to random locations.',
 	opLevel=2
@@ -3744,7 +3749,7 @@ def build_spreadplayers_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='stop',
 	description='Stops a server.',
 	opLevel=4,
@@ -3754,7 +3759,7 @@ def build_stop_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [TERMINAL]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='stopsound',
 	description='Stops a sound.',
 	opLevel=2
@@ -3783,7 +3788,7 @@ def build_stopsound_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='summon',
 	description='Summons an entity.',
 	opLevel=2
@@ -3811,7 +3816,7 @@ def build_summon_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='tag',
 	description='Controls entity tags.',
 	opLevel=2
@@ -3846,7 +3851,7 @@ def build_tag_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='team',
 	description='Controls teams.',
 	opLevel=2
@@ -4080,7 +4085,7 @@ def build_team_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	names=('teammsg', 'tm'),
 	description='An alias of /tm. Specifies the message to send to team.',
 	opLevel=0
@@ -4094,7 +4099,7 @@ def build_teammsg_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	names=('teleport', 'tp'),
 	description='An alias of /tp. Teleports entities.',
 	opLevel=2
@@ -4159,7 +4164,7 @@ def build_teleport_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='tellraw',
 	description='Displays a JSON message to players.',
 	opLevel=2
@@ -4179,7 +4184,7 @@ def build_tellraw_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='testfor',
 	description='Counts entities matching specified conditions.',
 	removed=True,
@@ -4191,7 +4196,7 @@ def build_testfor_args(_: FullMCData) -> list[CommandPartSchema]:
 	return []
 
 
-@addCommand(
+@COMMANDS.add(
 	name='testforblock',
 	description='Tests whether a block is in a location.',
 	removed=True,
@@ -4203,7 +4208,7 @@ def build_testforblock_args(_: FullMCData) -> list[CommandPartSchema]:
 	return []
 
 
-@addCommand(
+@COMMANDS.add(
 	name='testforblocks',
 	description='Tests whether the blocks in two regions match.',
 	removed=True,
@@ -4215,7 +4220,7 @@ def build_testforblocks_args(_: FullMCData) -> list[CommandPartSchema]:
 	return []
 
 
-@addCommand(
+@COMMANDS.add(
 	name='time',
 	description="Changes or queries the world's game time.",
 	opLevel=2
@@ -4263,7 +4268,7 @@ def build_time_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='title',
 	description='Manages screen titles.',
 	opLevel=2
@@ -4314,7 +4319,7 @@ def build_title_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='trigger',
 	description='Sets a trigger to be activated.',
 	opLevel=0
@@ -4349,7 +4354,7 @@ def build_trigger_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='weather',
 	description='Sets the weather.',
 	opLevel=2
@@ -4370,7 +4375,7 @@ def build_weather_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-@addCommand(
+@COMMANDS.add(
 	name='whitelist',
 	description='Manages server whitelist.',
 	opLevel=3,
@@ -4381,7 +4386,7 @@ def build_whitelist_args(_: FullMCData) -> list[CommandPartSchema]:
 	return []
 
 
-@addCommand(
+@COMMANDS.add(
 	name='worldborder',
 	description='Manages the world border.',
 	opLevel=2
