@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.20.3 (23w43a)
+currently at minecraft version 1.20.3 (23w44a)
 """
 
 import copy
@@ -17,14 +17,14 @@ from .v1_20_2_schema import CommandsCreator
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_20_3 = getFullMcData('1.20.3')
-	schema_1_20_3 = COMMANDS_V22.buildSchema(version1_20_3)
+	schema_1_20_3 = COMMANDS_V23.buildSchema(version1_20_3)
 	return {'Minecraft 1.20.3': schema_1_20_3}
 
 
-COMMANDS_V20: CommandsCreator = copy.deepcopy(v1_20_2_schema.COMMANDS)
+COMMANDS_V23: CommandsCreator = copy.deepcopy(v1_20_2_schema.COMMANDS)
 
 
-@COMMANDS_V20.modify(name='execute')
+@COMMANDS_V23.modify(name='execute')
 def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	EXECUTE_INSTRUCTIONS: list[CommandPartSchema] = args
 	EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS = Options(ChainedList([TERMINAL], EXECUTE_INSTRUCTIONS))
@@ -33,7 +33,7 @@ def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[Co
 		name='function',
 		description="Runs a function or function tag and matches the return value(s). If a tag is given, all functions run regardless of the results of prior functions.\n"
 					" - The function call evaluates to `true` if at least one function returned a non-zero value using the return command\n"
-					" - If no functions exited with return, neither if or unless will run",
+					" - If no functions exited with return, it evaluates to `false`",
 					# from mojang https://www.minecraft.net/en-us/article/minecraft-snapshot-23w41a:
 					# "<b>The matching of the result value of the function(s) that run:</b>\n"
 					# "	At least one of the function call(s) must succeed for the match to succeed\n"
@@ -54,25 +54,28 @@ def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[Co
 	return args
 
 
-@COMMANDS_V20.modify(name='return')
+@COMMANDS_V23.modify(name='return')
 def modify_return_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
-	args.append(KeywordSchema(
-		name='run',
-		description="Takes the `result` value from running the specified `command` and returns that as the return value of the function.\n"
-					" - If command did not return any value (like, for example, call to a `function` without `return`), return will not execute and function will continue execution\n"
-					" - If the given command fails, the return value is `0`\n"
-					" - In all other aspects, it works like `return` with a specified return value\n"
-					" - In case of fork (for example `return run execute as @e run some_command`) the first execution of the command will return\n"
-					"   - If there are no executions (for example in `return run execute if @e[something_impossible] run some_command`) function will not return and will continue execution",
-		next=Options([COMMANDS_ROOT])
-	))
+	args.extend([
+		KeywordSchema(
+			name='run',
+			description="Takes the `result` value from running the specified `command` and returns that as the return value of the function.\n"
+						" - If there are no valid results from returned command, function containing `/return run` will fail (i.e. `success=0` and `result=0`)."
+						" - If the given command fails, the return will fail (i.e. `success=0` and `result=0`)."
+						" - In all other aspects, it works like `return` with a specified return value\n"
+						" - In case of fork (for example `return run execute as @e run some_command`) the first execution of the command will return\n"
+						"   - If there are no executions (for example in `return run execute if @e[something_impossible] run some_command`) function will fail (i.e. `success=0` and `result=0`).",
+			next=Options([COMMANDS_ROOT])
+		),
+		KeywordSchema(
+			name='fail',
+			description="Makes whole function fail (i.e. return `success=0` and `result=0`)."
+		)
+	])
 	return args
 
 
-COMMANDS_V22: CommandsCreator = copy.deepcopy(COMMANDS_V20)
-
-
-@COMMANDS_V20.add(
+@COMMANDS_V23.add(
 	name='tick',
 	description="Control the ticking flow and measure the performance of the game. \nRequires elevated permissions (admins and above), and so it is not by default available in command blocks and data packs.",
 	opLevel=3
@@ -102,6 +105,7 @@ def build_tick_args(_: FullMCData) -> list[CommandPartSchema]:
 			name='step',
 			description="",
 			next=Options([
+				TERMINAL,
 				ArgumentSchema(
 					name='time',
 					description="Runs the game for the specified number of ticks and then freezes the game again.This allows to step through the game a set amount of ticks at a time. Only works when the game is frozen.",

@@ -5,15 +5,13 @@ from corePlugins.datapack.datapackContents import RESOURCES, buildJsonMeta, Entr
 from corePlugins.datapack.dpVersions import DPVersion, registerDPVersion
 from corePlugins.json.core import JsonSchema
 from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
-from corePlugins.mcFunction.command import MCFunctionSchema
 from corePlugins.minecraft_data.fullData import getFullMcData
 from .allVersions import REGISTRY_TAGS, WORLDGEN
-from .commands.v1_20_2_schema import COMMANDS
 
 
 def initVersion() -> None:
-	registerDPVersion(version18)
-	registerDPVersion(version23)
+	registerDPVersion(buildVersion18())
+	registerDPVersion(buildVersion23())
 
 
 LOAD_JSON_CONTENTS = f"""{{
@@ -205,12 +203,6 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 ]
 
 
-def buildMCFunctionSchema() -> MCFunctionSchema:
-	version1_20_3 = getFullMcData('1.20.3')
-	schema_1_20_3 = COMMANDS.buildSchema(version1_20_3)  # todo: update!
-	return schema_1_20_3
-
-
 def loadJsonSchemas() -> dict[str, JsonSchema]:
 	resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
 	v23Dir = os.path.join(resourcesDir, "v23/")
@@ -229,18 +221,24 @@ def loadJsonSchemas() -> dict[str, JsonSchema]:
 
 JSON_SCHEMAS = loadJsonSchemas()
 
-version23 = DPVersion(
-	name='23',
-	structure=buildEntryHandlers(DATAPACK_CONTENTS),
-	jsonSchemas=JSON_SCHEMAS,  # todo add schemata here, so they are synced to datapack version.
-	mcFunctionSchema=buildMCFunctionSchema()
-)
 
-version18 = DPVersion(
-	name='18',
-	structure=buildEntryHandlers(DATAPACK_CONTENTS),
-	jsonSchemas=JSON_SCHEMAS,
-	mcFunctionSchema=buildMCFunctionSchema()
-)
+def buildVersion23() -> DPVersion:
+	from .commands.v1_20_3_schema import COMMANDS_V23
+	return DPVersion(
+		name='23',
+		structure=buildEntryHandlers(DATAPACK_CONTENTS),
+		jsonSchemas=JSON_SCHEMAS,  # todo add schemata here, so they are synced to datapack version.
+		mcFunctionSchema=COMMANDS_V23.buildSchema(getFullMcData('1.20.3'))
+	)
+
+
+def buildVersion18() -> DPVersion:
+	from .commands.v1_20_2_schema import COMMANDS
+	return DPVersion(
+		name='18',
+		structure=buildEntryHandlers(DATAPACK_CONTENTS),
+		jsonSchemas=JSON_SCHEMAS,
+		mcFunctionSchema=COMMANDS.buildSchema(getFullMcData('1.20.2'))
+	)
 
 # DATAPACK_CONTENTS_STRUCTURE: EntryHandlers = buildEntryHandlers(DATAPACK_CONTENTS)
