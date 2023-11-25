@@ -1,10 +1,14 @@
 from abc import abstractmethod, ABC
-from typing import Optional, Iterable, Any
+from math import inf
+from typing import Callable, Optional, Iterable, Any
 
-from base.model.parsing.contextProvider import Suggestions, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
+from base.model.messages import NUMBER_OUT_OF_BOUNDS_MSG
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.parsing.contextProvider import Suggestions, errorMsg, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
 from base.model.utils import Span, Position, GeneralError, MDStr, LanguageId
+from cat.utils.collections_ import FrozenDict
 from .argumentTypes import *
 from .command import ArgumentSchema, ParsedArgument, CommandPart
 from .commandContext import ArgumentContext, argumentContext, makeParsedArgument, getArgumentContext
@@ -111,40 +115,51 @@ class BoolHandler(ArgumentContext):
 		return ['true', 'false']
 
 
-@argumentContext(BRIGADIER_DOUBLE.name)
-class DoubleHandler(ArgumentContext):
+@argumentContext(BRIGADIER_DOUBLE.name, numberReader=StringReader.tryReadFloat, numberParser=float)
+@argumentContext(BRIGADIER_FLOAT.name, numberReader=StringReader.tryReadFloat, numberParser=float)
+@argumentContext(BRIGADIER_INTEGER.name, numberReader=StringReader.tryReadInt, numberParser=int)
+@argumentContext(BRIGADIER_LONG.name, numberReader=StringReader.tryReadInt, numberParser=int)
+class NumberHandler(ArgumentContext):
+	def __init__(self, numberReader: Callable[[StringReader], Optional[bytes]], numberParser: Callable[[str], int | float]):
+		super().__init__()
+		self.numberReader: Callable[[StringReader], Optional[bytes]] = numberReader
+		self.numberParser: Callable[[str], int | float] = numberParser
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadFloat()
+		string = self.numberReader(sr)
 		if string is None:
 			return None
-		return makeParsedArgument(sr, ai, value=string)
+		return makeParsedArgument(sr, ai, value=self.numberParser(bytesToStr(string)))
 
+	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
+		if not isinstance(node.value, (int | float)):
+			return
 
-@argumentContext(BRIGADIER_FLOAT.name)
-class FloatHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadFloat()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
+		args = node.schema.args or FrozenDict.EMPTY
 
+		minVal = args.get('min', -inf)
+		maxVal = args.get('max', +inf)
 
-@argumentContext(BRIGADIER_INTEGER.name)
-class IntegerHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadInt()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
+		if not minVal <= node.value <= maxVal:
+			errorMsg(NUMBER_OUT_OF_BOUNDS_MSG, minVal, maxVal, span=node.span, errorsIO=errorsIO)
 
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		args = ai.args or FrozenDict.EMPTY
+		minVal = args.get('min', -inf)
+		maxVal = args.get('max', +inf)
 
-@argumentContext(BRIGADIER_LONG.name)
-class LongHandler(ArgumentContext):
-	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		string = sr.tryReadInt()
-		if string is None:
-			return None
-		return makeParsedArgument(sr, ai, value=string)
+		suggestions = []
+
+		if minVal > -inf:
+			suggestions.append(str(minVal))
+
+		if minVal < 0 < maxVal:
+			suggestions.append('0')
+
+		if minVal < maxVal < +inf:
+			suggestions.append(str(maxVal))
+
+		return suggestions
 
 
 @argumentContext(BRIGADIER_STRING.name)

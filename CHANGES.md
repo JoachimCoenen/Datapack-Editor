@@ -1,3 +1,8 @@
+## Next Version
+### Improvements
+ * Added bounds checking and suggestions for numbers in commands.
+
+
 ## 0.6.0-alpha
 ### Features 
  * Added support for Minecraft version 1.20.2, dropped support for versions 1.17 & 1.18.
