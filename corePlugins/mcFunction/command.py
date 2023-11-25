@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Mapping, TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar, Collection
 
@@ -48,6 +49,25 @@ class Options:
 			self.arguments = [kw for kw in self.all if isinstance(kw, ArgumentSchema)]
 			self.hasCommand = any(isinstance(kw, CommandsRoot) for kw in self.all)
 			self.hasTerminal = not self.all or TERMINAL in self.all
+
+	def deepFinish(self):
+		alreadySeen: set[int] = set()
+		toBeFinished: deque[Options] = deque()
+
+		def queueOptions(options: Options):
+			if id(options) not in alreadySeen:
+				toBeFinished.append(options)
+				alreadySeen.add(id(options))
+
+		queueOptions(self)
+
+		while toBeFinished:
+			options = toBeFinished.popleft()
+			options.finish()
+			for arg in options.all:
+				queueOptions(arg.next)
+				if isinstance(arg, SwitchSchema):
+					queueOptions(arg.options)
 
 
 @dataclass

@@ -4,10 +4,10 @@ currently at minecraft version 1.20.2
 
 from copy import copy
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable, NamedTuple, Optional, TypeAlias
 
 from base.model.parsing.bytesUtils import strToBytes
-from cat.utils.collections_ import AddToDictDecorator, ChainedList
+from cat.utils.collections_ import AddToDictDecorator, ChainedList, FrozenDict
 from corePlugins.datapack.datapackContents import RESOURCES
 from corePlugins.mcFunction.argumentTypes import *
 from corePlugins.mcFunction.command import ArgumentSchema, COMMANDS_ROOT, CommandPartSchema, CommandSchema, KeywordSchema, MCFunctionSchema, Options, SwitchSchema, TERMINAL
@@ -21,9 +21,57 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	return {'Minecraft 1.20.2': schema_1_20_2}
 
 
+ArgumentsCreator: TypeAlias = Callable[[FullMCData], list[CommandPartSchema]]
+ArgumentsModifier: TypeAlias = Callable[[FullMCData, list[CommandPartSchema]], list[CommandPartSchema]]
+
+
+class _CommandCreator(NamedTuple):
+	argsCreator: ArgumentsCreator
+	cmdSchemaArgs: FrozenDict[str, Any]
+	name: str
+
+
+def _putIfNotEllipsis(aDict: dict[str, Any], **kwargs) -> dict[str, Any]:
+	for key, value in kwargs.items():
+		if value is not ...:
+			aDict[key] = value
+		return aDict
+
+
+def cmdSchemaArgs(
+		description: str = ...,
+		opLevel: int | str = ...,
+		availableInSP: bool = ...,
+		availableInMP: bool = ...,
+
+		removed: bool = ...,
+		removedVersion: Optional[str] = ...,
+		removedComment: str = ...,
+
+		deprecated: bool = ...,
+		deprecatedVersion: Optional[str] = ...,
+		deprecatedComment: str = ...,
+) -> FrozenDict[str, Any]:
+	return FrozenDict(_putIfNotEllipsis(
+			{},
+			description=description,
+			opLevel=opLevel,
+			availableInSP=availableInSP,
+			availableInMP=availableInMP,
+			removed=removed,
+			removedVersion=removedVersion,
+			removedComment=removedComment,
+			deprecated=deprecated,
+			deprecatedVersion=deprecatedVersion,
+			deprecatedComment=deprecatedComment,
+	))
+
+
 @dataclass
-class CommandCreator:
-	creators: dict[Callable[[FullMCData], list[CommandPartSchema]], list[dict[str, Any]]] = field(default_factory=dict)
+class CommandsCreator:
+	_byArgumentsCreator: dict[ArgumentsCreator, list[_CommandCreator]] = field(default_factory=dict)
+
+	_byName: dict[str, _CommandCreator] = field(default_factory=dict)
 
 	def add(
 			self,
@@ -32,7 +80,7 @@ class CommandCreator:
 			names: tuple[str, ...] = ...,
 	
 			description: str = '',
-			opLevel: int|str = 0,
+			opLevel: int | str = 0,
 			availableInSP: bool = True,
 			availableInMP: bool = True,
 	
@@ -43,13 +91,13 @@ class CommandCreator:
 			deprecated: bool = False,
 			deprecatedVersion: Optional[str] = None,
 			deprecatedComment: str = '',
-	) -> Callable[[Callable[[FullMCData], list[CommandPartSchema]]], Callable[[FullMCData], list[CommandPartSchema]]]:
+	) -> Callable[[ArgumentsCreator], ArgumentsCreator]:
 		if name is not ...:
 			names = (name,)
 		if names is ...:
 			ValueError("at least one of (name, names) must be specified")
 	
-		kwargs = dict(
+		kwargs = FrozenDict(
 			description=description,
 			opLevel=opLevel,
 			availableInSP=availableInSP,
@@ -62,28 +110,125 @@ class CommandCreator:
 			deprecatedComment=deprecatedComment,
 		)
 	
-		def _addCommandFunc(func: Callable[[FullMCData], list[CommandPartSchema]]) -> Callable[[FullMCData], list[CommandPartSchema]]:
-			if (aliases := self.creators.get(func)) is None:
-				self.creators[func] = aliases = []
+		def _addCommandFunc(func: ArgumentsCreator) -> ArgumentsCreator:
+			if (commandCreators := self._byArgumentsCreator.get(func)) is None:
+				self._byArgumentsCreator[func] = commandCreators = []
 			for name2 in names:
-				aliases.append(dict(kwargs, name=name2))
+				creator = _CommandCreator(
+					func,
+					kwargs,
+					name2
+				)
+				commandCreators.append(creator)
+				self._byName[name2] = creator
 			return func
 	
 		return _addCommandFunc
 
-	def buildSchema(self, version: FullMCData) -> MCFunctionSchema:
+	def modify(
+			self,
+			*,
+			name: str,
+			names: dict[str, str | tuple[str, FrozenDict[str, Any]]] = ...,
+
+			description: str = ...,
+			opLevel: int | str = ...,
+			availableInSP: bool = ...,
+			availableInMP: bool = ...,
+
+			removed: bool = ...,
+			removedVersion: Optional[str] = ...,
+			removedComment: str = ...,
+
+			deprecated: bool = ...,
+			deprecatedVersion: Optional[str] = ...,
+			deprecatedComment: str = ...,
+	) -> Callable[[ArgumentsCreator], ArgumentsCreator]:
+
+		oldMainCmdCreator = self.getCommandSchemaCreator(name)
+		oldArgsCreator = oldMainCmdCreator.argsCreator
+		oldCmdCreators = self._popAllAliasCreators(oldMainCmdCreator)
+
+		kwargsUpdate = _putIfNotEllipsis(
+			{},
+			description=description,
+			opLevel=opLevel,
+			availableInSP=availableInSP,
+			availableInMP=availableInMP,
+			removed=removed,
+			removedVersion=removedVersion,
+			removedComment=removedComment,
+			deprecated=deprecated,
+			deprecatedVersion=deprecatedVersion,
+			deprecatedComment=deprecatedComment,
+		)
+
+		if names is ...:
+			newNamesWithCmdSchemaArgs: tuple[tuple[str, FrozenDict[str, Any]], ...] = tuple(
+				(occ.name, FrozenDict(occ.cmdSchemaArgs, **kwargsUpdate))
+				for occ in oldCmdCreators
+			)
+		else:
+			names2: dict[str, tuple[str, FrozenDict[str, Any]]] = {
+				oldName: (newName[0], FrozenDict(kwargsUpdate, **(newName[1]))) if isinstance(newName, tuple) else (newName, kwargsUpdate)
+				for oldName, newName in names.items()
+			}
+			oldCmdCreatorsByName: dict[str, _CommandCreator] = {occ.name: occ for occ in oldCmdCreators}
+			newNamesWithCmdSchemaArgs: tuple[tuple[str, FrozenDict[str, Any]], ...] = tuple(
+				(
+					newName,
+					FrozenDict((oldCmdCreatorsByName.get(oldName) or oldMainCmdCreator).cmdSchemaArgs, **cmdSchemaUpdate)
+				)
+				for oldName, (newName, cmdSchemaUpdate) in names2.items()
+				if newName is not None
+			)
+
+		def _modifyCommandFunc(func: ArgumentsModifier) -> ArgumentsModifier:
+			def func2(mcdata: FullMCData) -> list[CommandPartSchema]:
+				return func(mcdata, oldArgsCreator(mcdata))
+
+			self._byArgumentsCreator[func2] = commandCreators = []
+
+			for newName, newCmdSchemaArgs in newNamesWithCmdSchemaArgs:
+				creator = _CommandCreator(
+					func2,
+					newCmdSchemaArgs,
+					newName
+				)
+				commandCreators.append(creator)
+				self._byName[newName] = creator
+			return func
+
+		return _modifyCommandFunc
+
+	def getCommandSchemaCreator(self, name: str) -> _CommandCreator:
+		if (creator := self._byName.get(name)) is not None:
+			return creator
+		raise ValueError(f"No command schema creator with name {name!r} registered.")
+
+	def _getAllAliasCreators(self, creator: _CommandCreator) -> list[_CommandCreator]:
+		return self._byArgumentsCreator[creator.argsCreator]
+
+	def _popAllAliasCreators(self, creatorOld: _CommandCreator) -> list[_CommandCreator]:
+		oldCreators = self._byArgumentsCreator.pop(creatorOld.argsCreator)
+		for occ in oldCreators:
+			del self._byName[occ.name]
+		return oldCreators
+
+	def buildSchema(self, mcdata: FullMCData) -> MCFunctionSchema:
 		basicCmdInfo: dict[bytes, CommandSchema] = {}
 		_addCommand = AddToDictDecorator(basicCmdInfo)
 	
-		for cc, aliases in self.creators.items():
-			args = cc(version)
-			for cmdSchemaKwargs in aliases:
-				_addCommand(strToBytes(cmdSchemaKwargs['name']))(CommandSchema(**cmdSchemaKwargs, next=Options(args)))
+		for argsCreator, aliases in self._byArgumentsCreator.items():
+			nextArgs = Options(argsCreator(mcdata))
+			nextArgs.deepFinish()
+			for cmdCreator in aliases:
+				_addCommand(strToBytes(cmdCreator.name))(CommandSchema(**cmdCreator.cmdSchemaArgs, name=cmdCreator.name, next=nextArgs))
 	
 		return MCFunctionSchema('', commands=basicCmdInfo)
 
 
-COMMANDS: CommandCreator = CommandCreator()
+COMMANDS: CommandsCreator = CommandsCreator()
 
 
 @COMMANDS.add(
@@ -2003,7 +2148,7 @@ def build_gamemode_args(_: FullMCData) -> list[CommandPartSchema]:
 	description='Sets or queries a game rule value.',
 	opLevel=2
 )
-def build_gamerule_args(version: FullMCData) -> list[CommandPartSchema]:
+def build_gamerule_args(mcdata: FullMCData) -> list[CommandPartSchema]:
 	return [
 		KeywordSchema(
 			name=gr.name,
@@ -2015,7 +2160,7 @@ def build_gamerule_args(version: FullMCData) -> list[CommandPartSchema]:
 					type=ALL_NAMED_ARGUMENT_TYPES[gr.type],
 				),
 			])
-		) for gr in version.gamerules.values()
+		) for gr in mcdata.gamerules.values()
 	]
 
 
@@ -3020,7 +3165,6 @@ def build_random_args(_: FullMCData) -> list[CommandPartSchema]:
 	#
 	# /random reset (*|<sequenceId>) [<seed>] [<includeWorldSeed>] [<includeSequenceId>]
 	#     Reset the random number sequence.
-
 
 	SEQUENCE_ID = ArgumentSchema(
 		name='sequenceId',
