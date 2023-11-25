@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.20.3
+currently at minecraft version 1.20.2
 """
 
 from copy import copy
@@ -16,9 +16,9 @@ from .argumentTypes import *
 
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
-	version1_20_3 = getFullMcData('1.20.3')
-	schema_1_20_3 = COMMANDS.buildSchema(version1_20_3)
-	return {'Minecraft 1.20.3': schema_1_20_3}
+	version1_20_2 = getFullMcData('1.20.2')
+	schema_1_20_2 = COMMANDS.buildSchema(version1_20_2)
+	return {'Minecraft 1.20.2': schema_1_20_2}
 
 
 @dataclass

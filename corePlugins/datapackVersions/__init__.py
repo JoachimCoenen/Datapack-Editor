@@ -99,7 +99,7 @@ class DatapackVersionsPlugin(PluginBase):
 	def schemas(self) -> dict[str, Schema]:
 		schemas = {}
 
-		from corePlugins.datapackVersions.commands.v1_20_3_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_3
+		from corePlugins.datapackVersions.commands.v1_20_2_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_3
 
 		schemas |= buildMCFunctionSchemas_1_20_3()  # legacy way of doing it.
 		return schemas
