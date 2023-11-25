@@ -1,6 +1,7 @@
 ## Next Version
 ### Improvements
  * Added bounds checking and suggestions for numbers in commands.
+ * Added bounds checking and code suggestions for minecraft:time arguments in commands
 
 
 ## 0.6.0-alpha

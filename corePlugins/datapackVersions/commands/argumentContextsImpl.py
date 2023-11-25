@@ -255,7 +255,7 @@ _FLOAT_RANGE_PATTERN = re.compile(strToBytes(_FLOAT_RANGE_REGEX))
 
 @argumentContext(MINECRAFT_FLOAT_RANGE.name, pattern=_FLOAT_RANGE_PATTERN, numberParser=float)
 @argumentContext(MINECRAFT_INT_RANGE.name, pattern=_INT_RANGE_PATTERN, numberParser=int)
-class IntRangeHandler(ArgumentContext):
+class NumberRangeHandler(ArgumentContext):
 	def __init__(self, pattern: re.Pattern[bytes], numberParser: Callable[[str], int | float]):
 		super().__init__()
 		self.pattern: re.Pattern[bytes] = pattern
@@ -554,17 +554,74 @@ class TimeHandler(ArgumentContext):
 		number = sr.tryReadFloat()
 		if number is None:
 			return None
+		number = float(bytesToStr(number))
 		unit = sr.tryReadLiteral()
 		if unit is None:
-			sr.rollback()
-			return None
-
-		if unit not in (b'd', b's', b't'):
+			unit = b't'
+		elif unit not in (b'd', b's', b't'):
 			sr.rollback()
 			sr.rollback()
 			return None
-		sr.mergeLastSave()
+		else:
+			sr.mergeLastSave()
 		return makeParsedArgument(sr, ai, value=(number, unit))
+
+	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
+		number, unit = node.value
+
+		match unit:
+			case b't':
+				ticks = number * 1
+			case b's':
+				ticks = number * 20
+			case b'd':
+				ticks = number * 24_000  # 24 thousand
+
+		args = node.schema.args or FrozenDict.EMPTY
+		minVal = args.get('min', -inf)
+		maxVal = args.get('max', +inf)
+
+		if not minVal <= ticks <= maxVal:
+			errorMsg(NUMBER_OUT_OF_BOUNDS_MSG, minVal, maxVal, span=node.span, errorsIO=errorsIO)
+
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		args = ai.args or FrozenDict.EMPTY
+		minVal = args.get('min', -inf)
+		maxVal = args.get('max', +inf)
+		additionalSuggestions = args.get('suggestions', ())
+
+		suggestions = []
+		if replaceCtx and not replaceCtx.endswith(('t', 's', 'd')):
+			suggestions.append(replaceCtx + 't')
+			suggestions.append(replaceCtx + 's')
+			suggestions.append(replaceCtx + 'd')
+		elif node is not None and not node.content.endswith((b't', b's', b'd')):
+			# this is justa workaround, because currently, replaceCtx is always empty for numbers.
+			suggestions.append('t')
+			suggestions.append('s')
+			suggestions.append('d')
+
+		def add(number: int):
+			if number // 24_000 > 0 and number % 24_000 == 0:
+				suggestions.append(f'{number//24_000}d')
+			elif number // 20 > 0 and number % 20 == 0:
+				suggestions.append(f'{number//20}s')
+			else:
+				suggestions.append(f'{number}t')
+
+		for suggestion in additionalSuggestions:
+			add(suggestion)
+
+		if minVal > -inf:
+			add(minVal)
+
+		if minVal < 0 < maxVal:
+			add(0)
+
+		if minVal < maxVal < +inf:
+			add(maxVal)
+
+		return suggestions
 
 
 # 8-4-4-4-12

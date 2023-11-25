@@ -3407,6 +3407,7 @@ def build_schedule_args(_: FullMCData) -> list[CommandPartSchema]:
 						ArgumentSchema(
 							name='time',
 							type=MINECRAFT_TIME,
+							args=dict(min=0),
 							next=Options([
 								TERMINAL,
 								ArgumentSchema(
@@ -4377,6 +4378,7 @@ def build_time_args(_: FullMCData) -> list[CommandPartSchema]:
 				ArgumentSchema(
 					name='time',
 					type=MINECRAFT_TIME,
+					args=dict(min=0, suggestions=[24_000])
 				),
 			])
 		),
@@ -4405,6 +4407,7 @@ def build_time_args(_: FullMCData) -> list[CommandPartSchema]:
 				ArgumentSchema(
 					name='time',
 					type=MINECRAFT_TIME,
+					args=dict(min=0)
 				),
 			])
 		),
@@ -4442,14 +4445,17 @@ def build_title_args(_: FullMCData) -> list[CommandPartSchema]:
 						ArgumentSchema(
 							name='fadeIn',
 							type=MINECRAFT_TIME,
+							args=dict(min=0, suggestions=[20]),
 							next=Options([
 								ArgumentSchema(
 									name='stay',
 									type=MINECRAFT_TIME,
+									args=dict(min=0, suggestions=[20 * 10]),
 									next=Options([
 										ArgumentSchema(
 											name='fadeOut',
 											type=MINECRAFT_TIME,
+											args=dict(min=0, suggestions=[20]),
 										),
 									])
 								),
@@ -4512,6 +4518,7 @@ def build_weather_args(_: FullMCData) -> list[CommandPartSchema]:
 				ArgumentSchema(
 					name='duration',
 					type=MINECRAFT_TIME,
+					args=dict(min=0, suggestions=[24_000]),
 				),
 			])
 		),

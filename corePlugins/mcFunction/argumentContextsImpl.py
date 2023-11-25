@@ -147,8 +147,9 @@ class NumberHandler(ArgumentContext):
 		args = ai.args or FrozenDict.EMPTY
 		minVal = args.get('min', -inf)
 		maxVal = args.get('max', +inf)
+		additionalSuggestions = args.get('suggestions', ())
 
-		suggestions = []
+		suggestions = [str(suggestion) for suggestion in additionalSuggestions]
 
 		if minVal > -inf:
 			suggestions.append(str(minVal))
