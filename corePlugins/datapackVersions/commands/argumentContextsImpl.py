@@ -32,7 +32,7 @@ OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be
 @argumentContext(MINECRAFT_DIMENSION.name, rlcSchema=ResourceLocationSchema('', 'dimension', allowTags=False))
 @argumentContext(MINECRAFT_ENTITY_SUMMON.name, rlcSchema=ResourceLocationSchema('', 'entity_type', allowTags=False))
 @argumentContext(MINECRAFT_ENTITY_TYPE.name, rlcSchema=ResourceLocationSchema('', 'entity_type', allowTags=True))
-@argumentContext(MINECRAFT_FUNCTION.name, rlcSchema=ResourceLocationSchema('', 'function', allowTags=True))
+@argumentContext(MINECRAFT_FUNCTION.name, rlcSchema=ResourceLocationSchema('', 'functions', allowTags=True))
 @argumentContext(MINECRAFT_ITEM_ENCHANTMENT.name, rlcSchema=ResourceLocationSchema('', 'enchantment', allowTags=False))
 @argumentContext(MINECRAFT_MOB_EFFECT.name, rlcSchema=ResourceLocationSchema('', 'mob_effect', allowTags=False))
 @argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle', allowTags=False))

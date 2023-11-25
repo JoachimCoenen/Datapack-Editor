@@ -150,7 +150,7 @@
     // additional tags:
     "block_type": { "$defRef": "block"}, // alias
     "fluid_type": { "$defRef": "fluid"}, // alias
-    "function": { "$ref": "tags", "schema": "function" },
+    "function": { "$ref": "tags", "schema": "functions" },
     "item_type": { "$defRef": "item"}, // alias
     "chat_type": { "$ref": "tags", "schema": "chat_type" },
     "damage_type": { "$ref": "tags", "schema": "damage_type" },

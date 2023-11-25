@@ -35,7 +35,7 @@ class AdvancementResourceLocationContext(SimpleResourceLocationContext1):
 		return ()
 
 
-@resourceLocationContext('function', _indexPath=RESOURCES.FUNCTIONS, _tagsIndexPath=TAGS.FUNCTION)
+@resourceLocationContext('functions', _indexPath=RESOURCES.FUNCTIONS, _tagsIndexPath=TAGS.FUNCTION)
 class FunctionResourceLocationContext(SimpleResourceLocationContext1):
 	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return ()

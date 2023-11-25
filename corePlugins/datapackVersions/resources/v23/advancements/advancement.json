@@ -526,7 +526,7 @@
               },
               "function": {
                 "description": "To run a [ [Function (Java Edition)|function] ]. [ [Tag#Function Tags|Function tags] ] are not allowed.",
-                "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "function" } },
+                "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "functions" } },
                 "optional": true
               }
             }

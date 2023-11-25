@@ -70,7 +70,7 @@
     "block_type": { "$ref": "tags", "schema": "block" },
     "entity_type": { "$ref": "tags", "schema": "entity_type" },
     "fluid_type": { "$ref": "tags", "schema": "fluid" },
-    "function": { "$ref": "tags", "schema": "function" },
+    "function": { "$ref": "tags", "schema": "functions" },
     "game_event": { "$ref": "tags", "schema": "game_event" },
     "item_type": { "$ref": "tags", "schema": "item" }
   }
