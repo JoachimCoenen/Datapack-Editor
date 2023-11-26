@@ -147,6 +147,7 @@ def buildBlockState(state: dict) -> BlockStateType:
 	)
 	return bs
 
+
 def getMCDataForVersion(version: str) -> Optional[MCData]:
 	if version not in _ALL_LOADED_VERSIONS:
 		_ALL_LOADED_VERSIONS[version] = fillFromVersion(version)

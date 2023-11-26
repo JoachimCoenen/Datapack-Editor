@@ -523,6 +523,15 @@ class ScoreboardSlotHandler(ArgumentContext):
 		return makeParsedArgument(sr, ai, value=literal)
 
 
+@argumentContext(MINECRAFT_STYLE.name)
+class ComponentHandler(ParsingHandler):
+	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
+		return GLOBAL_SCHEMA_STORE.get('minecraft:raw_json_style', LanguageId('JSON'))
+
+	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
+		return LanguageId('JSON')
+
+
 @argumentContext(MINECRAFT_SWIZZLE.name)
 class SwizzleHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:

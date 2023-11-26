@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.20.3 (23w44a)
+currently at minecraft version 1.20.3 (23w46a)
 """
 
 import copy
@@ -17,8 +17,20 @@ from .v1_20_2_schema import CommandsCreator
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_20_3 = getFullMcData('1.20.3')
-	schema_1_20_3 = COMMANDS_V23.buildSchema(version1_20_3)
-	return {'Minecraft 1.20.3': schema_1_20_3}
+	schema_v23 = COMMANDS_V23.buildSchema(version1_20_3)
+	schema_v25 = COMMANDS_V25.buildSchema(version1_20_3)
+	return {
+		'Minecraft 23w44a': schema_v23,
+		'Minecraft 23w46a': schema_v25,
+		'Minecraft 1.20.3': schema_v25
+	}
+
+
+def getArgOptions(args: list[CommandPartSchema], name1: str, *names: str) -> CommandPartSchema:
+	keywordArg = first(arg for arg in args if arg.name == name1)
+	for name in names:
+		keywordArg = first(arg for arg in keywordArg.next.all if arg.name == name)
+	return keywordArg
 
 
 COMMANDS_V23: CommandsCreator = copy.deepcopy(v1_20_2_schema.COMMANDS)
@@ -28,7 +40,7 @@ COMMANDS_V23: CommandsCreator = copy.deepcopy(v1_20_2_schema.COMMANDS)
 def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	EXECUTE_INSTRUCTIONS: list[CommandPartSchema] = args
 	EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS = Options(ChainedList([TERMINAL], EXECUTE_INSTRUCTIONS))
-	ifArg = first(arg for arg in args if isinstance(arg, KeywordSchema) and arg.name == 'if')
+	ifArg = getArgOptions(args, 'if')
 	ifArg.next.all.append(KeywordSchema(
 		name='function',
 		description="Runs a function or function tag and matches the return value(s). If a tag is given, all functions run regardless of the results of prior functions.\n"
@@ -139,4 +151,104 @@ def build_tick_args(_: FullMCData) -> list[CommandPartSchema]:
 			])
 		)
 	]
+
+
+COMMANDS_V25: CommandsCreator = copy.deepcopy(COMMANDS_V23)
+
+
+@COMMANDS_V25.modify(name='scoreboard')
+def modify_scoreboard_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
+	NUMBER_FORMAT_OPTIONS = Options([
+		TERMINAL,
+		KeywordSchema(
+			name='styled',
+			description="The score will be displayed with the selected style (e.g. `{\"bold\":true}`).",
+			next=Options([
+				ArgumentSchema(
+					name='format',
+					type=MINECRAFT_STYLE,
+				)
+			])
+		),
+		KeywordSchema(
+			name='fixed',
+			description="The score is replaced by the given text component.",
+			next=Options([
+				ArgumentSchema(
+					name='text component',
+					type=MINECRAFT_COMPONENT,
+				)
+			])
+		),
+		KeywordSchema(
+			name='blank',
+			description="The score is not shown."
+		)
+	])
+
+	objectivesModifyObjectiveArg = getArgOptions(args, 'objectives', 'modify', 'objective')
+	objectivesModifyObjectiveArg.next.all.extend([
+		KeywordSchema(
+			name='displayautoupdate',
+			description="Determines whether the objective should automatically update on every score update (disabled by default).",
+			next=Options([
+				ArgumentSchema(
+					name='displayautoupdate',
+					type=BRIGADIER_BOOL,
+				),
+			])
+		),
+		KeywordSchema(
+			name='numberformat',
+			description="Changes (or resets, if no format is given) the default number format of the given objective.",
+			next=NUMBER_FORMAT_OPTIONS
+		)
+	])
+
+	playersArg = getArgOptions(args, 'players', )
+	playersArg.next.all.extend([
+		KeywordSchema(
+			name='name',
+			description="Changes (or resets, if no name is given) the display name of the targets' scores.",
+			next=Options([
+				ArgumentSchema(
+					name='targets',
+					type=MINECRAFT_SCORE_HOLDER,
+					next=Options([
+						ArgumentSchema(
+							name='objective',
+							type=MINECRAFT_OBJECTIVE,
+							next=Options([
+								TERMINAL,
+								ArgumentSchema(
+									name='text',
+									description="Changes the display name of the targets' scores.",
+									type=MINECRAFT_COMPONENT
+								)
+							])
+						)
+					])
+				)
+			])
+		),
+		KeywordSchema(
+			name='numberformat',
+			description="Changes (or resets, if no format is given) the default number format of the given objective.",
+			next=Options([
+				ArgumentSchema(
+					name='targets',
+					type=MINECRAFT_SCORE_HOLDER,
+					next=Options([
+						ArgumentSchema(
+							name='objective',
+							type=MINECRAFT_OBJECTIVE,
+							next=NUMBER_FORMAT_OPTIONS
+						)
+					])
+				)
+			])
+		)
+	])
+
+	return args
 

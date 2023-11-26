@@ -546,6 +546,14 @@ MINECRAFT_SCOREBOARD_SLOT = ArgumentType(
 	* {{cd|foo.bar}}""",
 )
 
+MINECRAFT_STYLE = ArgumentType(
+	name='minecraft:style',
+	description="Must be a JSON object containing style information.",
+	description2="""""",
+	examples="""
+	* {{cd|{"bold": true} }}""",
+)
+
 MINECRAFT_SWIZZLE = ArgumentType(
 	name='minecraft:swizzle',
 	description="{{Arg desc|je=swizzle}}",
@@ -712,6 +720,7 @@ __all__ = [
 	'MINECRAFT_ROTATION',
 	'MINECRAFT_SCORE_HOLDER',
 	'MINECRAFT_SCOREBOARD_SLOT',
+	'MINECRAFT_STYLE',
 	'MINECRAFT_SWIZZLE',
 	'MINECRAFT_TEAM',
 	'MINECRAFT_TEMPLATE_MIRROR',

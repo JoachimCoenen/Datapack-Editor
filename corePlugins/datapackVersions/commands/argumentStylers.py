@@ -139,6 +139,7 @@ def styleForeignNode2(self: ArgumentStyler, value: Optional[Node], span: Span) -
 
 
 @argumentStyler(MINECRAFT_COMPONENT.name, forceOverride=True)
+@argumentStyler(MINECRAFT_STYLE.name, forceOverride=True)
 class ComponentStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:

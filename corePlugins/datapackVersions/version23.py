@@ -209,6 +209,7 @@ def loadJsonSchemas() -> dict[str, JsonSchema]:
 	v23Schemas = {
 		**JSON_SCHEMA_LOADER.loadSchemaLibrary('minecraft:tags', os.path.join(v23Dir, 'tags.json')),
 		'minecraft:raw_json_text': JSON_SCHEMA_LOADER.loadSchema('minecraft:raw_json_text', os.path.join(v23Dir, 'rawJsonText.json')),
+		'minecraft:raw_json_style': JSON_SCHEMA_LOADER.loadSchema('minecraft:raw_json_style', os.path.join(v23Dir, 'rawJsonStyle.json')),
 		'minecraft:predicate': JSON_SCHEMA_LOADER.loadSchema('minecraft:predicate', os.path.join(v23Dir, 'predicate.json')),
 		'minecraft:recipe': JSON_SCHEMA_LOADER.loadSchema('minecraft:recipe', os.path.join(v23Dir, 'recipe.json')),
 		'minecraft:pack': JSON_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v23Dir, 'pack.json')),
@@ -223,12 +224,12 @@ JSON_SCHEMAS = loadJsonSchemas()
 
 
 def buildVersion23() -> DPVersion:
-	from .commands.v1_20_3_schema import COMMANDS_V23
+	from .commands.v1_20_3_schema import COMMANDS_V25
 	return DPVersion(
 		name='23',
 		structure=buildEntryHandlers(DATAPACK_CONTENTS),
 		jsonSchemas=JSON_SCHEMAS,  # todo add schemata here, so they are synced to datapack version.
-		mcFunctionSchema=COMMANDS_V23.buildSchema(getFullMcData('1.20.3'))
+		mcFunctionSchema=COMMANDS_V25.buildSchema(getFullMcData('1.20.3'))
 	)
 
 
