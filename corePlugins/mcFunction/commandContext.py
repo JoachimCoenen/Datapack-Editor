@@ -35,6 +35,8 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			schema = node.schema
 			if isinstance(schema, ArgumentSchema):
 				return getArgumentContext(schema.type)
+			elif isinstance(schema, KeywordSchema):
+				return KEYWORD_CONTEXT
 		return None
 
 	def prepareTree(self, filePath: FilePath, errorsIO: list[GeneralError]) -> None:
@@ -73,16 +75,6 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 					result += ctx.getSuggestions2(nx, node, pos, replaceCtx)
 			elif nx is COMMANDS_ROOT:
 				result += self._getCommandSuggestions()
-		return result
-
-	def _getNextCallTips(self, nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position) -> list[str]:
-		result = []
-		for nx in nexts:
-			result.append(nx.name)
-
-		if (ctx := self.getContext(node)) is not None:
-			result += ctx.getCallTips(node, pos)
-
 		return result
 
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
@@ -159,18 +151,6 @@ def _getBestMatch(tree: CommandPart, pos: Position, match: Match) -> None:
 		child = child.next
 
 
-def _getCallTipsFromHit(hit: CommandPart) -> Optional[list[CommandPartSchema]]:
-	if (prev := hit.prev) is not None:
-		return _getCallTipsFromBefore(prev)
-	if (schema := hit.schema) is not None:
-		return [schema]
-	return None
-
-
-def _getCallTipsFromBefore(before: CommandPart) -> Optional[list[CommandPartSchema]]:
-	return before.potentialNextSchemas
-
-
 class ArgumentContext(Context[ParsedArgument], ABC):
 	@abstractmethod
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
@@ -202,6 +182,14 @@ class ArgumentContext(Context[ParsedArgument], ABC):
 		pass
 
 
+class KeywordContext(ArgumentContext, ABC):
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		return missingArgumentParser(sr, ai, errorsIO=errorsIO)  # parsing is KeywordArguments is handled by the parser itself.
+
+
+KEYWORD_CONTEXT: KeywordContext = KeywordContext()
+
+
 __argumentContexts: dict[str, ArgumentContext] = {}
 argumentContext = Decorator(AddContextToDictDecorator[ArgumentContext](__argumentContexts))
 
@@ -223,15 +211,15 @@ def defaultDocumentationProvider(argument: CommandPart) -> MDStr:
 		if isinstance(schema, ArgumentSchema):
 			typeStr = escapeForXml(schema.type.name)
 			typeDescription = [
+				name,
+				f'`{typeStr}`',
+				description,
 				schema.type.description,
 				schema.type.description2,
 			]
+			tip = '\n\n'.join(typeDescription)
 		else:
-			typeStr = ""
-			typeDescription = []
-		tip = f"{name}\n\n`{typeStr}`\n\n{description}"
-		if typeDescription:
-			tip += '\n\n'.join(typeDescription)
+			tip = description
 	else:
 		message = 'no documentation available (most likely due to parsing errors)'
 		tip = formatAsError(message)
