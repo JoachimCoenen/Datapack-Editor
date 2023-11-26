@@ -1,13 +1,16 @@
+from __future__ import annotations
 from abc import abstractmethod
 import functools as ft
-from dataclasses import replace
-from typing import TypeVar, Generic, final, Optional, Type
+from collections import defaultdict
+from dataclasses import dataclass, field, replace
+from operator import itemgetter
+from typing import Callable, TypeVar, Generic, final, Optional, Type
 
 from PyQt5.Qsci import QsciLexer
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from cat.GUI import SizePolicy, getStyles
-from cat.GUI.pythonGUI import EditorBase
+from cat.GUI.pythonGUI import EditorBase, MenuItemData
 from cat.GUI.components import codeEditor
 from cat.utils import format_full_exc, override
 from cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
@@ -180,7 +183,8 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 		if hasattr(lexer, 'setDocument'):
 			lexer.setDocument(document)
 
-		document.strContent, document.highlightErrors, document.cursorPosition, document.forceLocate = drawCodeField(
+		# document.strContent, document.highlightErrors, document.cursorPosition, document.forceLocate = drawCodeField(
+		document.strContent, document.highlightErrors, _, document.forceLocate = drawCodeField(
 			gui,
 			document.strContent,
 			lexer=lexer,
@@ -210,10 +214,21 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 	def schemaContextMenu(self, pos):
 		document = self.model()
 		if isinstance(document, ParsedDocument):
+			schemas = self.getSchemaContextMenuData(document)
 			with self._gui.popupMenu(True) as menu:
-				menu.addItem("None", lambda: setattr(document, 'schemaId', None) or document.asyncParseNValidate())
-				for schemaId in GLOBAL_SCHEMA_STORE.getAllForLanguage(LanguageId(document.language)):
-					menu.addItem(schemaId, lambda l=schemaId: setattr(document, 'schemaId', l) or document.asyncParseNValidate())
+				menu.addItems(schemas)
+
+	def getSchemaContextMenuData(self, document):
+		schemas = SchemasMenu()
+		schemas.schemas["None"] = lambda: setattr(document, 'schemaId', None) or document.asyncParseNValidate()
+		for schemaId in GLOBAL_SCHEMA_STORE.getAllForLanguage(LanguageId(document.language)):
+			path, _, name = schemaId.rpartition('/')
+			iSchemas: SchemasMenu = schemas
+			if path:
+				for part in path.split('/'):
+					iSchemas = iSchemas.schemas[part + '/']
+			iSchemas.schemas[name] = lambda l=schemaId: setattr(document, 'schemaId', l) or document.asyncParseNValidate()
+		return schemas.toMenu()
 
 	def tabSettingsContextMenu(self, pos):
 		document = self.model()
@@ -225,6 +240,17 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			menu.addItem(f"Indent Using Spaces", lambda t=i: setattr(document, 'indentationSettings', replace(indentation, useSpaces=not indentation.useSpaces)), checkable=True, checked=indentation.useSpaces)
 			menu.addSeparator()
 			menu.addItem(f"ConvertIndentation", lambda t=i: document.convertIndentationsToUseTabsSettings())
+
+
+@dataclass
+class SchemasMenu:
+	schemas: defaultdict[str, Callable[[], None] | SchemasMenu] = field(default_factory=lambda: defaultdict(SchemasMenu))
+
+	def toMenu(self) -> list[MenuItemData]:
+		return [
+			(name, contents.toMenu() if isinstance(contents, SchemasMenu) else contents)
+			for name, contents in sorted(self.schemas.items(), key=itemgetter(0))
+		]
 
 
 def _setCursorPos(a, b, d: Document):
