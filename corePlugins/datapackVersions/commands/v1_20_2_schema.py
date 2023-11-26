@@ -3439,10 +3439,9 @@ def build_schedule_args(_: FullMCData) -> list[CommandPartSchema]:
 	opLevel=2
 )
 def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
-	SCOREBOARD_OBJECTIVES = []
-	SCOREBOARD_OBJECTIVES.append(KeywordSchema(name='list'))
-	# scoreboard objectives add <objective> <criteria> [<displayName>]
-	SCOREBOARD_OBJECTIVES.append(
+	SCOREBOARD_OBJECTIVES = [
+		KeywordSchema(name='list'),
+		# scoreboard objectives add <objective> <criteria> [<displayName>]
 		KeywordSchema(
 			name='add',
 			next=Options([
@@ -3464,10 +3463,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					])
 				),
 			])
-		)
-	)
-	# scoreboard objectives remove <objective>
-	SCOREBOARD_OBJECTIVES.append(
+		),
+		# scoreboard objectives remove <objective>
 		KeywordSchema(
 			name='remove',
 			next=Options([
@@ -3476,10 +3473,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					type=MINECRAFT_OBJECTIVE,
 				),
 			])
-		)
-	)
-	# scoreboard objectives setdisplay <slot> [<objective>]
-	SCOREBOARD_OBJECTIVES.append(
+		),
+		# scoreboard objectives setdisplay <slot> [<objective>]
 		KeywordSchema(
 			name='setdisplay',
 			next=Options([
@@ -3495,11 +3490,9 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					])
 				),
 			])
-		)
-	)
-	# scoreboard objectives modify <objective> displayname <displayName>
-	# scoreboard objectives modify <objective> rendertype (hearts|integer)
-	SCOREBOARD_OBJECTIVES.append(
+		),
+		# scoreboard objectives modify <objective> displayname <displayName>
+		# scoreboard objectives modify <objective> rendertype (hearts|integer)
 		KeywordSchema(
 			name='modify',
 			next=Options([
@@ -3529,10 +3522,10 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 				),
 			])
 		)
-	)
-	SCOREBOARD_PLAYERS = []
-	# scoreboard players list [<target>]
-	SCOREBOARD_PLAYERS.append(
+	]
+
+	SCOREBOARD_PLAYERS = [
+		# scoreboard players list [<target>]
 		KeywordSchema(
 			name='list',
 			next=Options([
@@ -3542,10 +3535,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					type=MINECRAFT_SCORE_HOLDER,
 				),
 			])
-		)
-	)
-	# scoreboard players get <target> <objective>
-	SCOREBOARD_PLAYERS.append(
+		),
+		# scoreboard players get <target> <objective>
 		KeywordSchema(
 			name='get',
 			next=Options([
@@ -3560,10 +3551,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					])
 				),
 			])
-		)
-	)
-	# scoreboard players set <targets> <objective> <score>
-	SCOREBOARD_PLAYERS.append(
+		),
+		# scoreboard players set <targets> <objective> <score>
 		KeywordSchema(
 			name='set',
 			next=Options([
@@ -3584,10 +3573,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					])
 				),
 			])
-		)
-	)
-	# scoreboard players add <targets> <objective> <score>
-	SCOREBOARD_PLAYERS.append(
+		),
+		# scoreboard players add <targets> <objective> <score>
 		KeywordSchema(
 			name='add',
 			next=Options([
@@ -3608,10 +3595,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					])
 				),
 			])
-		)
-	)
-	# scoreboard players remove <targets> <objective> <score>
-	SCOREBOARD_PLAYERS.append(
+		),
+		# scoreboard players remove <targets> <objective> <score>
 		KeywordSchema(
 			name='remove',
 			next=Options([
@@ -3632,10 +3617,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					])
 				),
 			])
-		)
-	)
-	# scoreboard players reset <targets> [<objective>]
-	SCOREBOARD_PLAYERS.append(
+		),
+		# scoreboard players reset <targets> [<objective>]
 		KeywordSchema(
 			name='reset',
 			next=Options([
@@ -3651,10 +3634,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					])
 				),
 			])
-		)
-	)
-	# scoreboard players enable <targets> <objective>
-	SCOREBOARD_PLAYERS.append(
+		),
+		# scoreboard players enable <targets> <objective>
 		KeywordSchema(
 			name='enable',
 			next=Options([
@@ -3669,10 +3650,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 					])
 				),
 			])
-		)
-	)
-	# scoreboard players operation <targets> <targetObjective> <operation> <source> <sourceObjective>
-	SCOREBOARD_PLAYERS.append(
+		),
+		# scoreboard players operation <targets> <targetObjective> <operation> <source> <sourceObjective>
 		KeywordSchema(
 			name='operation',
 			next=Options([
@@ -3706,7 +3685,8 @@ def build_scoreboard_args(_: FullMCData) -> list[CommandPartSchema]:
 				),
 			])
 		)
-	)
+	]
+
 	return [
 		KeywordSchema(
 			name='objectives',
