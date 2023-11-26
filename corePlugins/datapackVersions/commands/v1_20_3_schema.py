@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.20.3 (23w46a)
+currently at minecraft version 1.20.3 (1.20.3-pre2)
 """
 
 import copy
@@ -22,7 +22,8 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	return {
 		'Minecraft 23w44a': schema_v23,
 		'Minecraft 23w46a': schema_v25,
-		'Minecraft 1.20.3': schema_v25
+		'Minecraft 1.20.3-pre2': COMMANDS_V26,
+		'Minecraft 1.20.3': COMMANDS_V26
 	}
 
 
@@ -252,3 +253,5 @@ def modify_scoreboard_args(_: FullMCData, args: list[CommandPartSchema]) -> list
 
 	return args
 
+
+COMMANDS_V26: CommandsCreator = copy.deepcopy(COMMANDS_V25)
