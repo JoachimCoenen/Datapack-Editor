@@ -19,11 +19,12 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_20_3 = getFullMcData('1.20.3')
 	schema_v23 = COMMANDS_V23.buildSchema(version1_20_3)
 	schema_v25 = COMMANDS_V25.buildSchema(version1_20_3)
+	schema_v26 = COMMANDS_V26.buildSchema(version1_20_3)
 	return {
 		'Minecraft 23w44a': schema_v23,
 		'Minecraft 23w46a': schema_v25,
-		'Minecraft 1.20.3-pre2': COMMANDS_V26,
-		'Minecraft 1.20.3': COMMANDS_V26
+		'Minecraft 1.20.3-pre2': schema_v26,
+		'Minecraft 1.20.3': schema_v26
 	}
 
 
