@@ -85,6 +85,9 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			before = hit.prev
 		if before is not None:
 			return self._getNextKeywords(getNextSchemas(before), hit, pos, replaceCtx)
+		elif hit is not None and isinstance(hit, ParsedArgument) and isinstance(hit.schema, ArgumentSchema):
+			if (ctx := getArgumentContext(hit.schema.type)) is not None:
+				return ctx.getSuggestions2(hit.schema, hit, pos, replaceCtx)
 
 		return self._getCommandSuggestions()
 

@@ -179,6 +179,10 @@ class ContextProvider(Generic[_TNode], ABC):
 
 	@abstractmethod
 	def getCallTips(self, pos: Position) -> list[str]:
+		match = self.getBestMatch(pos)
+		if match.hit is not None:
+			if (ctx := self.getContext(match.hit)) is not None:
+				return ctx.getCallTips(match.hit, pos)
 		return []
 
 	@final

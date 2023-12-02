@@ -6,13 +6,12 @@ from itertools import chain
 from typing import Generator, Iterable, Optional, Callable, cast, Any
 
 from cat.utils import Anything, Decorator, flatmap
-from base.model.parsing.bytesUtils import strToBytes
 from base.model.parsing.tree import Schema
 from base.model.pathUtils import joinFilePath, dirFromFilePath
 from base.model.session import getSession
 from .core import *
-from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, parseNPrepare, prepareTree, validateTree, \
-	getSuggestions, getDocumentation, getClickableRanges, onIndicatorClicked
+from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, CtxInfo, getCallTips, parseNPrepare, prepareTree, \
+	validateTree, getSuggestions, getDocumentation, getClickableRanges, onIndicatorClicked
 from base.model.utils import Position, SemanticsError, Span, GeneralError, MDStr, LanguageId
 from .argTypes import *
 from .jsonSchema import JObject, SchemaBuilder
@@ -293,13 +292,7 @@ class JsonCtxProvider(ContextProvider[JsonNode]):
 		return MDStr('\n\n'.join(tips))  # '\n<br/>\n'.join(tips)
 
 	def getCallTips(self, pos: Position) -> list[str]:
-		matches = self.getBestMatch(pos)
-
-		if matches.hit is None and matches.after is not None and matches.after.span.start == pos:
-			matches.hit = matches.after
-			matches.after = None
-
-		return ['?']
+		return super().getCallTips(pos)
 
 	def getClickableRangesInternal(self, span: Span) -> Iterable[Span]:
 		ranges: list[Span] = []
@@ -468,6 +461,11 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 				docs.append(valueDoc)
 
 		return MDStr('\n\n'.join(docs))
+
+	def getCallTips(self, node: JsonString, pos: Position) -> list[str]:
+		if node.parsedValue is not None:
+			return getCallTips(node.parsedValue, b'', pos)
+		return []
 
 	def getClickableRanges(self, node: JsonString) -> Optional[Iterable[Span]]:
 		if node.parsedValue is not None:

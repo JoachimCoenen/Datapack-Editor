@@ -4,7 +4,8 @@ from typing import Callable, Optional, Iterable, Any
 
 from base.model.messages import NUMBER_OUT_OF_BOUNDS_MSG
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.contextProvider import Suggestions, errorMsg, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare
+from base.model.parsing.contextProvider import Suggestions, errorMsg, getCallTips, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, \
+	parseNPrepare
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
 from base.model.utils import Span, Position, GeneralError, MDStr, LanguageId
@@ -95,6 +96,9 @@ class ParsingHandler(ArgumentContext, ABC):
 			getDocumentation(node.value, node.source, pos)
 		]
 		return MDStr('\n\n'.join(docs))
+
+	def getCallTips(self, node: ParsedArgument, pos: Position) -> list[str]:
+		return getCallTips(node.value, node.source, pos)
 
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		return getClickableRanges(node.value, node.source)
