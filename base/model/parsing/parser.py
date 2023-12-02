@@ -198,7 +198,6 @@ class _Base(ABC):
 	cursor: int
 	cursorOffset: int
 	indexMapper: IndexMapper
-	maxEncIndex: int
 	errors: list[GeneralError] = field(default_factory=list, init=False)
 	maxErrors: int = field(default=200, init=False)
 
@@ -356,7 +355,6 @@ def parse(
 		cursor: int = 0,
 		cursorOffset: int = 0,
 		indexMapper: IndexMapper = None,
-		maxIndex: int = None,
 		**kwargs
 ) -> tuple[Optional[_TNode], list[GeneralError], Optional[ParserBase]]:
 	parserCls = getParserCls(language)
@@ -364,10 +362,7 @@ def parse(
 		return None, [ParsingError(MDStr(f"No Parser for language `{language}` registered."), span=NULL_SPAN, style='info')], None
 	if indexMapper is None:
 		indexMapper = IndexMapper()
-	maxEncIndex = maxIndex
-	if maxEncIndex is None:
-		maxEncIndex = 2**63 - 1
-	parser: ParserBase = parserCls(text, line, lineStart, cursor, cursorOffset, indexMapper, maxEncIndex, schema, filePath, **kwargs)
+	parser: ParserBase = parserCls(text, line, lineStart, cursor, cursorOffset, indexMapper, schema, filePath, **kwargs)
 	node = parser.parse()
 	return node, parser.errors, parser
 

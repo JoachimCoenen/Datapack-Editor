@@ -258,7 +258,6 @@ def parseNPrepare(
 		cursor: int = 0,
 		cursorOffset: int = 0,
 		indexMapper: IndexMapper = None,
-		maxIndex: int = None,
 		**kwargs
 ) -> tuple[Optional[Node], list[GeneralError], Optional[ParserBase]]:
 	node, errors, parser = parse(
@@ -271,7 +270,6 @@ def parseNPrepare(
 		cursor=cursor,
 		cursorOffset=cursorOffset,
 		indexMapper=indexMapper,
-		maxIndex=maxIndex,
 		**kwargs
 	)
 	if node is not None:

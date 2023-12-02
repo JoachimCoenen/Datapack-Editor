@@ -55,7 +55,6 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			self.cursor,
 			self.cursorOffset,
 			self.indexMapper,
-			self.maxEncIndex,
 			allowMultilineStr
 		)
 		self._tokens, self._eofToken = self.tokenize()
@@ -140,71 +139,6 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			return self._last  # TODO: WTF ?????
 		self._next()
 		return current
-
-	# def parse_object(self) -> JsonObject:
-	# 	"""Parses an object out of JSON tokens"""
-	# 	objData: OrderedMultiDict[str, JsonProperty] = OrderedMultiDict()
-	#
-	# 	start = self._last
-	#
-	# 	token = self.acceptAnyOf({TokenType.right_brace, TokenType.string})
-	# 	if token.type is TokenType.eof:
-	# 		return JsonObject(Span(start.span.start, token.span.end), None, objData)
-	# 	# special case:
-	# 	if token.type is TokenType.right_brace:
-	# 		return JsonObject(Span(start.span.start, token.span.end), None, objData)
-	#
-	# 	token = self.parse_properties(objData, token)
-	#
-	# 	if token.type is TokenType.eof:
-	# 		token = self._last
-	# 	return JsonObject(Span(start.span.start, token.span.end), None, objData)
-	#
-	# def parse_properties(self, objData: OrderedMultiDict[str, JsonProperty], token: Token):
-	# 	while token is not None:
-	# 		# parse KEY:
-	# 		if token.type == TokenType.string:
-	# 			key = self.parse_string()
-	# 			key.schema = JSON_KEY_SCHEMA
-	# 		else:
-	# 			if token.type == TokenType.comma:
-	# 				token = self.accept(TokenType.string)
-	# 				continue
-	# 			if token.type == TokenType.right_brace:
-	# 				break
-	# 			key = JsonString(token.span, JSON_KEY_SCHEMA, '', IndexMapper())
-	#
-	# 		if token.type != TokenType.colon:
-	# 			token = self.accept(TokenType.colon)
-	# 		if token.type is TokenType.eof:
-	# 			value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
-	# 			objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
-	# 			break
-	# 		elif token.type != TokenType.colon:
-	# 			if token.type == TokenType.comma:
-	# 				value = JsonInvalid(self._last.span, None, '')
-	# 				objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), None, key, value))
-	# 				token = self.accept(TokenType.string)
-	# 				continue
-	# 			if token.type == TokenType.right_brace:
-	# 				value = JsonInvalid(self._last.span, None, '')
-	# 				objData.add(key.data, JsonProperty(Span(key.span.start, token.span.start), None, key, value))
-	# 				break
-	# 			pass
-	# 		self.acceptAnyOf(self._PARSERS.keys())
-	# 		value = self._internalParseTokens()
-	#
-	# 		token = self.acceptAnyOf({TokenType.comma, TokenType.right_brace})
-	# 		if token.type is TokenType.eof:
-	# 			objData.add(key.data, JsonProperty(Span(key.span.start, token.span.end), None, key, value))
-	# 			break
-	# 		objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
-	# 		if token.type is TokenType.comma:
-	# 			token = self.accept(TokenType.string)
-	# 			continue
-	# 		if token.type == TokenType.right_brace:
-	# 			break
-	# 	return token
 
 	def parse_object2(self) -> JsonObject:
 		"""Parses an object out of JSON tokens"""
@@ -427,10 +361,11 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 					strStreakStart = index
 
 			chars += (string[strStreakStart:index])
-			value = bytesToStr(chars)
 			decPosLastChar = len(chars)  # = index
 			encPosLastChar = len(string) - 2  # we have to account for the quotation marks at start and end of string
 			idxMap = idxMapBldr.completeIndexMapper(encPosLastChar, decPosLastChar)
+			string = chars
+			value = bytesToStr(chars)
 		else:
 			if string:
 				if string[0] == ORD_DOUBLE_QUOTE:
@@ -449,7 +384,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			else:
 				idxMap = IndexMapper.IDENTITY_MAPPER
 
-		return JsonString(token.span, None, value, idxMap)
+		return JsonString(token.span, None, value, string, idxMap)
 
 	def makeIndexMapBuilderForStr(self, token: Token) -> IndexMapBuilder:
 		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(token.span.start.index) + 1)  # - self.cursorOffset)  # + 1 because of opening quotation marks?

@@ -78,7 +78,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 					idxMap = idxMapBldr.completeIndexMapper(self.cursor + len(line) - nlLen, len(virtualLine) + cursorOffset)
 				else:
 					idxMap = self.indexMapper
-				reader = StringReader(virtualLine, self.line, self.lineStart, cursor, cursorOffset, idxMap, -1, self.text)
+				reader = StringReader(virtualLine, self.line, self.lineStart, cursor, cursorOffset, idxMap, self.text)
 				if (node := self.parseVirtualLine(reader)) is not None:
 					children.append(node)
 				cursor = 0
