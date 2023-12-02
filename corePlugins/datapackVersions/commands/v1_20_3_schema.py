@@ -101,7 +101,7 @@ def build_tick_args(_: FullMCData) -> list[CommandPartSchema]:
 			description="Outputs the current target ticking rate, with information about the tick times performance."
 		),
 		KeywordSchema(
-			name='rate ',
+			name='rate',
 			description="Sets a custom target ticking rate to the specified value. The value `rate` must be greater than `1.0` and lower than `10000.0`.",
 			next=Options([
 				ArgumentSchema(

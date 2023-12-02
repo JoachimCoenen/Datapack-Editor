@@ -12,6 +12,7 @@
  * Fixed call tips not showing up in most circumstances.
  * Fixed documentation for keywords in minecraft commands not showing up.
  * Unsilenced a potential silent crash.
+ * Fixed `tick rate` command not being recognized.
 
 
 ## 0.6.0-alpha
