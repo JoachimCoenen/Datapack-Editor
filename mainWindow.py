@@ -359,7 +359,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			errors: Sequence[GeneralError] = []
 		gui.errorsList(
 			errors,
-			onDoubleClicked=lambda e: (document.locatePosition(e.position, e.end) if e.position is not None else None) or self._gui.redrawGUI(),
+			onDoubleClicked=lambda e: getSession().documents.selectDocument(document, e.span),  # or self._gui.redrawGUI(),
 		)
 
 	# Dialogs:
