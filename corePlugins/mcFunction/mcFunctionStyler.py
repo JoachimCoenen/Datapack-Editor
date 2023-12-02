@@ -108,7 +108,11 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		for child in function.children:
 			if child is None:
 				continue
-			elif isinstance(child, ParsedComment):
+			if child.start.index > self.ctx.end:
+				break
+			if child.end.index < self.ctx.start:
+				continue
+			if isinstance(child, ParsedComment):
 				end = self.styleComment(child)
 			else:
 				child: ParsedCommand
@@ -125,7 +129,10 @@ class MCCommandStyler(CatStyler[CommandPart]):
 	def styleArguments(self, argument: CommandPart) -> int:
 		span = argument.span.slice
 		while argument is not None:
-			span = self.styleArgument(argument)
+			if argument.start.index > self.ctx.end:
+				break
+			if argument.end.index >= self.ctx.start:
+				span = self.styleArgument(argument)
 			argument = argument.next
 		return span.stop
 

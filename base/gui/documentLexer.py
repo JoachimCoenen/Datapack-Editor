@@ -247,17 +247,23 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 
 	def startStyling(self, pos: int, styleBits: int = ...) -> None:
 		self._lastStylePos = pos
-		super().startStyling(pos)
+		super(DocumentLexer, self).startStyling(pos)
 
 	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
 	# @ProfiledFunction()
 	def styleText(self, start: int, end: int):
-		text: bytes = self.getText()
-		start = 0
-		end = len(text)
+		# text: bytes = self.getText()
+		# start = 0
+		# end = len(text)
 
+		self.actuallyStyleText(start, end)
+		self.actuallyFoldText(start, end)
+
+	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
+	# @ProfiledFunction()
+	def actuallyStyleText(self, start: int, end: int):
 		tree = self.getTree()
-		if tree is None or text is None:
+		if tree is None:
 			return
 
 		stylerCtx = StylerCtxQScintilla(DEFAULT_STYLE_ID, start, end, self)
@@ -266,6 +272,9 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 			self.startStyling(start)
 			styler.styleNode(tree)
 
+	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
+	# @ProfiledFunction()
+	def actuallyFoldText(self, start: int, end: int):
 		folder = Folder(self.editor())
 		folder.add_folding(start, end - start)
 
