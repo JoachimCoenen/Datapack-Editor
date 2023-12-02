@@ -2,7 +2,7 @@
 from ast import literal_eval
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional, AbstractSet, Callable
+from typing import Any, Optional, AbstractSet, Callable, cast
 
 from cat.utils import CachedProperty
 from cat.utils.collections_ import OrderedMultiDict
@@ -41,8 +41,8 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 	_waitingForClosing: dict[TokenType, int] = field(default_factory=lambda: defaultdict(int), init=False)
 	# tokens: deque[Token] = field(init=False)
 	_tokenizer: JsonTokenizer = field(init=False)
-	_current: Optional[Token] = field(init=False)
-	_eofToken: Optional[Token] = field(init=False)
+	_current: Token = field(init=False)
+	_eofToken: Token = field(init=False)
 	_last: Optional[Token] = field(init=False, default=None)
 
 	def __post_init__(self):
@@ -60,9 +60,8 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		self._tokens, self._eofToken = self.tokenize()
 		self._tokensIter = iter(self._tokens)
 		self.errors = self._tokenizer.errors  # sync errors
-		self._current = None
-		self._last = None
-		self._next()
+		self._current = cast(Any, None)
+		self._next()  # sets self._current, self._last
 
 	def tokenize(self):
 		tokens = []
@@ -85,27 +84,31 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 
 	def _next(self) -> None:
 		self._last = self._current
-		# self._current = self._tokenizer.nextToken()
 		self._current = next(self._tokensIter, self._eofToken)
 
 	def tryAccept(self, tokenType: TokenType) -> Optional[Token]:
-		if self._current is None or self._current.type is not tokenType:
+		if self._current.type is not tokenType:
 			return None
 		self._next()
 		return self._last  # current == self._last
 
 	def tryAcceptAnyOf(self, tokenTypes: AbstractSet[TokenType]) -> Optional[Token]:
-		if self._current is None or self._current.type not in tokenTypes:
+		if self._current.type not in tokenTypes:
 			return None
 		self._next()
 		return self._last  # current == self._last
 
-	def accept(self, tokenType: TokenType, advanceIfBad: bool = True) -> Optional[Token]:
-		current = self._current
-		if current is None:
+	def _checkEof(self) -> bool:
+		if self._current.type is TokenType.eof:
 			span = self._last.span if self._last is not None else NULL_SPAN
 			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
-			return self._last  # TODO: WTF ?????
+			return True
+		return False
+
+	def accept(self, tokenType: TokenType, advanceIfBad: bool = True) -> Optional[Token]:
+		current = self._current
+		if self._checkEof():
+			return current
 
 		if current.type is not tokenType:
 			self.errorMsg(EXPECTED_BUT_GOT_MSG, tokenType.asString, bytesToStr(current.value), span=current.span)
@@ -117,10 +120,8 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 
 	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType], advanceIfBad: bool = True) -> Optional[Token]:
 		current = self._current
-		if current is None:
-			span = self._last.span if self._last is not None else NULL_SPAN
-			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
-			return self._last  # TODO: WTF ?????
+		if self._checkEof():
+			return current
 
 		if current.type not in tokenTypes:
 			name = ' | '.join(tk.asString for tk in tokenTypes)
@@ -132,13 +133,11 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		return current  # current == (self._last if _next() was called, else self._current)
 
 	def acceptAny(self) -> Optional[Token]:
-		current = self._current
-		if current is None:
-			span = self._last.span if self._last is not None else NULL_SPAN
-			self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
-			return self._last  # TODO: WTF ?????
+		if self._checkEof():
+			return self._current
+
 		self._next()
-		return current
+		return self._last
 
 	def parse_object2(self) -> JsonObject:
 		"""Parses an object out of JSON tokens"""
@@ -258,7 +257,6 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 						return
 					# tryParseItem(goodValueTokens)
 					continue
-			return
 
 	def parse_array(self) -> JsonArray:
 		"""Parses an array out of JSON tokens"""
@@ -387,7 +385,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		return JsonString(token.span, None, value, string, idxMap)
 
 	def makeIndexMapBuilderForStr(self, token: Token) -> IndexMapBuilder:
-		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(token.span.start.index) + 1)  # - self.cursorOffset)  # + 1 because of opening quotation marks?
+		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(token.span.start.index) + 1)  # + 1 because of opening quotation marks?
 
 	def parse_number(self) -> JsonNumber:
 		"""Parses a number out of a JSON token"""
@@ -405,7 +403,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			return JsonNumber(token.span, None, number)
 
 		except ValueError:
-			pass # numbers are checked by lexer already.
+			pass  # numbers are checked by lexer already.
 		return JsonNumber(token.span, None, 0)
 
 	def parse_boolean(self) -> JsonBool:
@@ -420,7 +418,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 		return JsonNull(token.span, None)
 
 	def parse_invalid(self) -> JsonInvalid:
-		"""Parses a invalid token out of a JSON token"""
+		"""Parses an invalid token out of a JSON token"""
 		token = self._last
 		return JsonInvalid(token.span, None, bytesToStr(token.value))
 

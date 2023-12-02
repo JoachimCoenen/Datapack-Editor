@@ -349,7 +349,7 @@ class JsonStringContext(JsonContext, ABC):
 		expectedArgs, requireArgs = self.getArgsSchema()
 		errors = validateSimpleSchemaArgs(type_, argsNode, typeDefNode.span, expectedArgs, requireArgs, typeDefNode.ctx.filePath)
 		if errors:
-			schemaBuilder.addErrors(errors, ctx=typeDefNode.ctx)
+			schemaBuilder.reader.addErrors(errors, ctx=typeDefNode.ctx)
 
 	def getArgsSchema(self) -> tuple[JsonObjectSchema | JsonUnionSchema | JsonIllegalSchema, bool]:
 		"""
@@ -436,7 +436,7 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 		language = self.getLanguage(node)
 
 		data, errors, _ = parseNPrepare(
-			strToBytes(node.data),
+			node.rawData,
 			filePath=info.filePath,
 			language=language,
 			schema=schema,

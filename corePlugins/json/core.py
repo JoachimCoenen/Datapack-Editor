@@ -4,13 +4,16 @@ import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from math import inf
-from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable
+from types import EllipsisType
+from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, \
+	Callable, overload, TypeAlias
 from weakref import ref, ReferenceType
 
 from recordclass import as_dataclass
 
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from cat.utils import CachedProperty, Anything, Nothing, NoneType
-from cat.utils.collections_ import OrderedMultiDict, AddToDictDecorator
+from cat.utils.collections_ import OrderedMultiDict, AddToDictDecorator, FrozenDict
 from cat.utils.logging_ import logWarning
 from base.model.parsing.parser import IndexMapper
 from base.model.parsing.tree import LanguageId2, Node, Schema
@@ -86,11 +89,13 @@ JsonValue = NoneType | bool | int | float | str | Array | Object
 
 PyJsonArray = list['PyJsonValue']
 PyJsonObject = dict[str, 'PyJsonValue']
-PyJsonValue = NoneType | bool | int | float | str | PyJsonArray | PyJsonObject
+PyJsonSimpleValue = NoneType | bool | int | float | str
+PyJsonValue = PyJsonSimpleValue | PyJsonArray | PyJsonObject
 
 
 _TT = TypeVar('_TT')  # , NoneType, bool, int, float, str, Array, Object)
 _TT2 = TypeVar('_TT2')  # , NoneType, bool, int, float, str, Array, Object)
+_TJN = TypeVar('_TJN', bound='JsonNode')
 _TJD = TypeVar('_TJD', type(None), bool, int, float, str, Array, Object)
 _TN = TypeVar('_TN', int, float)
 
@@ -110,6 +115,13 @@ class JsonNode(Node['JsonNode', 'JsonSchema'], ABC):
 	def walkTree(self) -> Iterator[JsonNode]:
 		yield self
 		yield from _walkChildren(self.children)
+
+	@abstractmethod
+	def asString(self) -> bytes:
+		raise NotImplementedError()
+
+	def __str__(self) -> str:
+		return bytesToStr(self.asString())
 
 
 def _walkChildren(children: Collection[JsonNode]) -> Iterator[JsonNode]:
@@ -141,6 +153,9 @@ class JsonInvalid(JsonData):
 	def children(self) -> Collection[JsonNode]:
 		return ()
 
+	def asString(self) -> bytes:
+		return b'invalid'
+
 
 @dataclass
 class JsonNull(JsonData[None]):
@@ -150,6 +165,9 @@ class JsonNull(JsonData[None]):
 	@property
 	def children(self) -> Collection[JsonNode]:
 		return ()
+
+	def asString(self) -> bytes:
+		return b'null'
 
 
 @dataclass(unsafe_hash=True, order=True)
@@ -161,6 +179,9 @@ class JsonBool(JsonData[bool]):
 	def children(self) -> Collection[JsonNode]:
 		return ()
 
+	def asString(self) -> bytes:
+		return b'true' if self.data else b'false'
+
 
 @dataclass(unsafe_hash=True, order=True)
 class JsonNumber(JsonData[Union[int, float]]):
@@ -171,10 +192,14 @@ class JsonNumber(JsonData[Union[int, float]]):
 	def children(self) -> Collection[JsonNode]:
 		return ()
 
+	def asString(self) -> bytes:
+		return strToBytes(str(self.data))
+
 
 @dataclass(unsafe_hash=True, order=True)
 class JsonString(JsonData[str]):
 	data: str
+	rawData: bytes
 	indexMapper: IndexMapper
 	parsedValue: Optional[Any] = None
 	typeName: ClassVar[str] = 'string'
@@ -182,6 +207,16 @@ class JsonString(JsonData[str]):
 	@property
 	def children(self) -> Collection[JsonNode]:
 		return ()
+
+	def asString(self) -> bytes:
+		rawData = self.rawData
+		rawDataStr = str(rawData)
+		if rawDataStr.endswith("'"):
+			rawDataStr = rawDataStr[2:-1].replace("\\'", "'").replace('"', '\\"')
+			rawDataStr = f'"{rawDataStr}"'
+		else:
+			rawDataStr = rawDataStr[1:]
+		return strToBytes(rawDataStr)
 
 
 @dataclass
@@ -197,6 +232,9 @@ class JsonArray(JsonData[Array]):
 	@property
 	def children(self) -> Collection[JsonData]:
 		return self.data
+
+	def asString(self) -> bytes:
+		return b'[' + b', '.join(d.asString() for d in self.data) + b']'
 
 
 @dataclass
@@ -215,6 +253,9 @@ class JsonProperty(JsonNode):
 	def children(self) -> Collection[JsonData]:
 		return self.key, self.value
 
+	def asString(self) -> bytes:
+		return self.key.asString() + b': ' + self.value.asString()
+
 
 @dataclass
 class JsonObject(JsonData[Object]):
@@ -231,22 +272,31 @@ class JsonObject(JsonData[Object]):
 	def children(self) -> Collection[JsonProperty]:
 		return self.data.values()
 
+	def getValue(self, key: str, default: _TT = None) -> JsonData | _TT:
+		prop = self.data.get(key)
+		return prop.value if prop is not None else default
+
+	def asString(self) -> bytes:
+		return b'{' + b', '.join(d.asString() for d in self.data.values()) + b'}'
+
 
 JSON_ID2: LanguageId2[JsonNode] = LanguageId2('JSON', JsonNode)
 
 
 # ## SCHEMAS: #############################################################################
 
+FieldsMeta: TypeAlias = dict[str, tuple[str | EllipsisType, Any]]
 
-class JsonSchema(Schema, Generic[_TT], ABC):
+
+class JsonSchema(Schema, ABC):
 	"""
 	A schema description to contextualize and validate JSON files.
 	Note: This is NOT an implementation of the JSON Schema specification!
 	"""
-	DATA_TYPE: ClassVar[Type[_TT]] = JsonData
-	typeName: ClassVar[str] = 'JsonData'
+	DATA_TYPE: ClassVar[Type[JsonNode]] = JsonData
+	typeName: ClassVar[str] = 'JsonNode'
 	language: ClassVar[LanguageId] = 'JSON'
-	_fields: ClassVar[dict[str, Any]] = dict(description='', deprecated=False)
+	_fields: ClassVar[FieldsMeta] = dict(description=(..., ''), deprecated=(..., False))
 
 	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool] = None):
 		self.description: MDStr = description
@@ -268,20 +318,26 @@ class JsonSchema(Schema, Generic[_TT], ABC):
 		pass
 
 
-class JsonNullSchema(JsonSchema[JsonNull]):
+class JsonDataSchema(JsonSchema, ABC):
+	DATA_TYPE: ClassVar[Type[JsonData]] = JsonData
+	typeName: ClassVar[str] = 'JsonData'
+	_fields: ClassVar[FieldsMeta] = dict(typeName=('$type', ''))
+
+
+class JsonNullSchema(JsonDataSchema):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonNull
 	typeName: ClassVar[str] = 'null'
 
 
-class JsonBoolSchema(JsonSchema[JsonBool]):
+class JsonBoolSchema(JsonDataSchema):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonBool
 	typeName: ClassVar[str] = 'boolean'
 
 
-class JsonNumberSchema(JsonSchema[JsonNumber], ABC):
+class JsonNumberSchema(JsonDataSchema, ABC):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonNumber
 	typeName: ClassVar[str] = 'number'
-	_fields: ClassVar[dict[str, Any]] = dict(min=-inf, max=inf)
+	_fields: ClassVar[FieldsMeta] = dict(min=(..., -inf), max=(..., inf))
 
 	def __init__(self, *, minVal: _TN = -inf, maxVal: _TN = inf, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool] = None):
 		super(JsonNumberSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
@@ -297,10 +353,10 @@ class JsonFloatSchema(JsonNumberSchema):
 	typeName: ClassVar[str] = 'float'
 
 
-class JsonStringSchema(JsonSchema[JsonString]):
+class JsonStringSchema(JsonDataSchema):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonString
 	typeName: ClassVar[str] = 'string'
-	_fields: ClassVar[dict[str, Any]] = dict(type=None, args={})
+	_fields: ClassVar[FieldsMeta] = dict(type=(..., None), args=(..., FrozenDict.EMPTY))
 
 	def __init__(
 			self,
@@ -341,10 +397,10 @@ class JsonStringOptionsSchema(JsonStringSchema):
 		del structure['type']
 
 
-class JsonArraySchema(JsonSchema[JsonArray]):
+class JsonArraySchema(JsonDataSchema):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonArray
 	typeName: ClassVar[str] = 'array'
-	_fields: ClassVar[dict[str, Any]] = dict(element=Nothing)
+	_fields: ClassVar[FieldsMeta] = dict(element=(..., Nothing))
 
 	def __init__(self, *, description: MDStr = '', element: JsonSchema, deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		super(JsonArraySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
@@ -404,34 +460,21 @@ def getDecidingPropValue(decidingProp: DecidingPropRef, parent: JsonObject) -> J
 		logWarning(msg)
 		return DecidingPropNotFound(msg)
 
-	dp = decidingPropParent.data.get(decidingProp.name)
-	if dp is not None:
-		dVal = getattr(dp.value, 'data')
-	else:
-		dpSchema = decidingPropParent.schema
-		if isinstance(dpSchema, JsonObjectSchema):
-			propSchema = dpSchema.getSchemaForProp(decidingProp.name)
-			if propSchema is not None:
-				dVal = propSchema.default
-			else:
-				dVal = None
-		else:
-			dVal = None
-	return dVal
+	return getEffectivePropertyValue(decidingProp.name, decidingPropParent)
 
 
-class PropertySchema(JsonSchema[JsonProperty]):
+class PropertySchema(JsonSchema):
 	DATA_TYPE: ClassVar[Type[JsonNode]] = JsonProperty
 	typeName: ClassVar[str] = 'property'
-	_fields: ClassVar[dict[str, Any]] = dict(
-		name=Nothing,
-		optional=Nothing,
-		default=None,
-		value=None,
-		decidingProp=None,
-		values={},
-		requires=(),
-		hates=(),
+	_fields: ClassVar[FieldsMeta] = dict(
+		name=(..., Nothing),
+		optional=(..., Nothing),
+		default=(..., None),
+		value=(..., None),
+		decidingProp=(..., None),
+		values=(..., FrozenDict.EMPTY),
+		requires=(..., ()),
+		hates=(..., ()),
 	)
 
 	def __init__(
@@ -439,11 +482,11 @@ class PropertySchema(JsonSchema[JsonProperty]):
 			*,
 			name: Union[str, Anything],
 			description: MDStr = '',
-			value: Optional[JsonSchema[_TT2]],
+			value: Optional[JsonDataSchema],
 			optional: bool = False,
-			default: JsonValue = None,
+			default: PyJsonValue = None,
 			decidingProp: Optional[DecidingPropRef] = None,
-			values: dict[Union[tuple[Union[str, int, bool], ...], Union[str, int, bool]], JsonSchema[_TT2]] = None,
+			values: dict[PyJsonSimpleValue | tuple[PyJsonSimpleValue, ...], JsonDataSchema] = None,
 			requires: Optional[tuple[str, ...]] = None,
 			hates: tuple[str, ...] = (),
 			deprecated: bool = False,
@@ -451,10 +494,10 @@ class PropertySchema(JsonSchema[JsonProperty]):
 		super(PropertySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.name: Union[str, Anything] = name
 		self.optional: bool = optional
-		self.default: Optional[JsonValue] = default
-		self.value: Optional[JsonSchema[_TT2]] = value
+		self.default: PyJsonValue = default
+		self.value: Optional[JsonDataSchema] = value
 		self.decidingProp: Optional[DecidingPropRef] = decidingProp
-		self.values: dict[Union[str, int, bool], JsonSchema[_TT2]] = {}
+		self.values: dict[PyJsonSimpleValue, JsonDataSchema] = {}
 		if requires is None:
 			requires = ()
 		elif isinstance(requires, str):
@@ -473,7 +516,7 @@ class PropertySchema(JsonSchema[JsonProperty]):
 	def mandatory(self) -> bool:
 		return not self.optional
 
-	def getValueSchemaForParent(self, parent: JsonObject) -> Optional[JsonSchema[_TT2]]:
+	def getValueSchemaForParent(self, parent: JsonObject) -> Optional[JsonDataSchema]:
 		decidingProp = self.decidingProp
 		if decidingProp is not None:
 			dVal = getDecidingPropValue(decidingProp, parent)
@@ -489,16 +532,17 @@ class PropertySchema(JsonSchema[JsonProperty]):
 		return resolveCalculatedSchema(selectedSchema, parent)
 
 	def postProcessJsonStructure(self, structure: dict[str, Any]) -> None:
-		type_ = structure.pop('$type')
-		assert type_ == self.typeName
+		# type_ = structure.pop('$type')
+		# assert type_ == self.typeName
+		pass
 
 
-class JsonObjectSchema(JsonSchema[Object]):
+class JsonObjectSchema(JsonDataSchema):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonObject
 	typeName: ClassVar[str] = 'object'
-	_fields: ClassVar[dict[str, Any]] = dict(
-		inherits=(),
-		properties=Nothing
+	_fields: ClassVar[FieldsMeta] = dict(
+		inherits=(..., ()),
+		properties=(..., Nothing),
 	)
 
 	def __init__(self, *, description: MDStr = '', properties: list[PropertySchema], inherits: list[Inheritance] = (), deprecated: bool = False, allowMultilineStr: Optional[bool]):
@@ -630,26 +674,15 @@ class Inheritance:
 	decidingValues: tuple[str, ...] = ()
 
 
-class JsonUnionSchema(JsonSchema[JsonData]):
+class JsonUnionSchema(JsonDataSchema):
 	typeName: ClassVar[str] = 'union'
-	_fields: ClassVar[dict[str, Any]] = dict(options=Nothing)
+	_fields: ClassVar[FieldsMeta] = dict(options=(..., Nothing))
 
-	def __init__(self, *, description: MDStr = '', options: Sequence[JsonSchema], allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = '', options: Sequence[JsonDataSchema], allowMultilineStr: Optional[bool]):
 		super(JsonUnionSchema, self).__init__(description=description, allowMultilineStr=allowMultilineStr)
-		self.options: Sequence[JsonSchema] = options
+		self.options: Sequence[JsonDataSchema] = options
 
-	def optionsDict2(self) -> dict[Type[JsonData], JsonSchema]:
-		result = {}
-		for opt in self.options:
-			if isinstance(opt, JsonUnionSchema):
-				result.update(opt.optionsDict2)
-			else:
-				result[opt.DATA_TYPE] = opt
-		return result
-
-	optionsDict2: dict[Type[JsonData], JsonSchema] = CachedProperty(optionsDict2)
-
-	def allOptions(self) -> list[JsonSchema]:
+	def _getAllOptions(self) -> list[JsonDataSchema]:
 		result = []
 		for opt in self.options:
 			if isinstance(opt, JsonUnionSchema):
@@ -658,7 +691,7 @@ class JsonUnionSchema(JsonSchema[JsonData]):
 				result.append(opt)
 		return result
 
-	allOptions: list[JsonSchema] = CachedProperty(allOptions)
+	allOptions: list[JsonDataSchema] = CachedProperty(_getAllOptions)
 
 	# @CachedProperty
 	@property
@@ -666,9 +699,9 @@ class JsonUnionSchema(JsonSchema[JsonData]):
 		return f"({'|'.join(o.asString for o in self.options)})"
 
 
-class JsonCalculatedValueSchema(JsonSchema[JsonData]):
+class JsonCalculatedValueSchema(JsonDataSchema):
 	typeName: ClassVar[str] = 'calculated'
-	_fields: ClassVar[dict[str, Any]] = dict(func=Nothing)
+	_fields: ClassVar[FieldsMeta] = dict(func=(..., Nothing))
 
 	def __init__(self, *, description: MDStr = '', func: Callable[[JsonObject], Optional[JsonSchema]], deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		super(JsonCalculatedValueSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
@@ -691,17 +724,15 @@ def resolveCalculatedSchema(schema: JsonSchema, parent: JsonObject) -> Optional[
 	return schema
 
 
-class JsonAnySchema(JsonSchema[JsonData]):
+class JsonAnySchema(JsonDataSchema):
 	typeName: ClassVar[str] = 'any'
-	_fields: ClassVar[dict[str, Any]] = dict()
 
 	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		super(JsonAnySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 
 
-class JsonIllegalSchema(JsonSchema[JsonData]):
+class JsonIllegalSchema(JsonDataSchema):
 	typeName: ClassVar[str] = 'illegal'
-	_fields: ClassVar[dict[str, Any]] = dict()
 
 	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		super(JsonIllegalSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
@@ -728,6 +759,62 @@ def resolvePath(data: JsonData, path: tuple[str | int, ...]) -> Optional[JsonDat
 				return None
 			result = result.data[item]
 	return result
+
+
+def getEffectivePropertyValue(propertyName: str, jObject: JsonObject) -> PyJsonValue:
+	dp = jObject.data.get(propertyName)
+	if dp is not None:
+		dVal = toPyValue(dp.value)
+	elif isinstance(jObject.schema, JsonObjectSchema) and (propSchema := jObject.schema.getSchemaForProp(propertyName)) is not None:
+		# property was not set. Try to get the default value for property
+		dVal = propSchema.default
+	else:  # property was not set and there's no default value.
+		dVal = None
+	return dVal
+
+
+_toPyValueHandlers: dict[str, Callable[[JsonData, Callable[[JsonData, _TT], _TT]], Any]] = {}
+
+_toPyValueHandler = AddToDictDecorator(_toPyValueHandlers)
+
+
+@overload
+def toPyValue(data: JsonData) -> PyJsonValue: ...
+@overload
+def toPyValue(data: _TT, resolver: Callable[[JsonData, _TT], _TT]) -> PyJsonValue: ...
+
+
+def toPyValue(data: _TT, resolver: Callable[[JsonData, _TT], _TT] = ...) -> PyJsonValue:
+	if resolver is ...:
+		return _toPyValue(data, lambda e, parent: e)
+	return _toPyValue(data, resolver)
+
+
+def _toPyValue(data: _TT, resolver: Callable[[JsonData, _TT], _TT]) -> PyJsonValue:
+	return _toPyValueHandlers[data.typeName](data, resolver)
+
+
+@_toPyValueHandler('invalid')
+def _invalidHandler(node: JsonObject, resolver: Callable[[JsonData, _TT], _TT]) -> None:
+	return None
+
+
+@_toPyValueHandler('object')
+def _objectHandler(node: JsonObject, resolver: Callable[[JsonData, _TT], _TT]) -> PyJsonObject:
+	return {toPyValue(resolver(p.key, node), resolver): toPyValue(resolver(p.value, node), resolver) for p in node.data.values()}
+
+
+@_toPyValueHandler('array')
+def _arrayHandler(node: JsonArray, resolver: Callable[[JsonData, _TT], _TT]) -> PyJsonArray:
+	return [toPyValue(resolver(e, node), resolver) for e in node.data]
+
+
+@_toPyValueHandler('string')
+@_toPyValueHandler('boolean')
+@_toPyValueHandler('number')
+@_toPyValueHandler('null')
+def _stringHandler(node: JsonData, resolver: Callable[[JsonData, _TT], _TT]) -> PyJsonValue:
+	return node.data
 
 
 @dataclass
@@ -809,6 +896,8 @@ __all__ = [
 	'JSON_ILLEGAL_SCHEMA',
 
 	'resolvePath',
+	'getEffectivePropertyValue',
+	'toPyValue',
 
 	'JsonArgType',
 	'ALL_NAMED_JSON_ARG_TYPES',
