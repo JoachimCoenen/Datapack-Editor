@@ -5,64 +5,88 @@ from .core import *
 def enrichWithSchema(data: JsonData, schema: JsonSchema) -> bool:
 	# data.schema = schema
 	if schema is not None:
-		return _enrichWithSchemaInternal(data, schema)
+		return _enrichWithSchemaInternal(data, schema) > 0
 	else:
 		_enrichWithAnySchema(data)
 		data.schema = None
 		return False
 
 
-def _enrichWithSchemaInternal(data: JsonData, schema: JsonSchema) -> bool:
+def _enrichWithSchemaInternal(data: JsonData, schema: JsonSchema) -> int:
+	# 2 = OK, 1 = Maybe, 0 = No
 	schema = resolveCalculatedSchema(schema, data.parent)
 	if isinstance(schema, JsonUnionSchema):
 		return _enrichWithUnionSchema(data, schema)
 
 	if schema.typeName == 'any':
 		_enrichWithAnySchema(data)
-		return True
+		return 2
 
 	dataType = type(data)
-	if schema.DATA_TYPE == dataType:
+	if schema.DATA_TYPE is dataType:
 		data.schema = schema
 		if dataType is JsonArray and isinstance(schema, JsonArraySchema):
 			return _enrichArrayWithSchema(data, schema)
 		elif dataType is JsonObject and isinstance(schema, JsonObjectSchema):
 			return _enrichObjectWithSchema(data, schema)
-		return True
-	return False
+		return 2
+	# elif dataType is JsonInvalid:
+	# 	data.schema = schema
+	return 0
 
 
-def _enrichWithUnionSchema(data: JsonData, schema: JsonUnionSchema) -> bool:
+def _enrichWithUnionSchema(data: JsonData, schema: JsonUnionSchema) -> int:
+	result = 0
 	for opt in schema.allOptions:
-		if _enrichWithSchemaInternal(data, opt):
-			return True
-	data.schema = schema
-	return False
-
-
-def _enrichArrayWithSchema(data: JsonArray, schema: JsonArraySchema) -> bool:
-	result = True  # todo: check, use false here, if array contains any values.
-	for v in data.data:
-		result |= enrichWithSchema(v, schema.element)
+		internal = _enrichWithSchemaInternal(data, opt)
+		if internal == 2:
+			return 2
+		if internal == 1:
+			result = 1
+	if result == 0:
+		data.schema = schema
 	return result
 
 
-def _enrichObjectWithSchema(data: JsonObject, schema: JsonObjectSchema) -> bool:
-	result = True  # 2 = OK, 1 = Maybe, 0 = No
+def _enrichArrayWithSchema(data: JsonArray, schema: JsonArraySchema) -> int:
+	atLeastOneOK = False
+	allOK = True
+	for v in data.data:
+		if enrichWithSchema(v, schema.element):
+			atLeastOneOK = True
+		else:
+			allOK = False
+	return 2 if allOK else (1 if atLeastOneOK else 0)
 
-	for prop in schema.properties:
-		if prop.mandatory and not prop.values and prop.name is not Anything:
-			if not all(r in data.data for r in prop.requires):
-				continue
+
+def _enrichObjectWithSchema(data: JsonObject, schema: JsonObjectSchema) -> int:
+	# 2 = OK, 1 = Maybe, 0 = No
+	needsAMandatory = False
+	atLeastOneMandatory = False
+	allMandatory = True
+	for prop in schema.propertiesDict.values():
+		if prop.mandatory and not prop.values:
 			if any(r in data.data for r in prop.hates):
 				continue
+			needsAMandatory = True
+			if prop.name in data.data:
+				atLeastOneMandatory = True
+			if not all(r in data.data for r in prop.requires):
+				continue
 			if prop.name not in data.data:
-				result = False
+				allMandatory = False
 
+	atLeastOneMandatory = atLeastOneMandatory or not needsAMandatory  # treat atLeastOneMandatory as True if nothing in the schema is mandatory.
+
+	atLeastOneOK = False
+	allOK = True
 	for name, prop in data.data.items():
-		result = _enrichProperty(name, prop, schema, data) and result
+		if _enrichProperty(name, prop, schema, data):
+			atLeastOneOK = True
+		else:
+			allOK = False
 
-	return result
+	return 2 if allOK and allMandatory else (1 if atLeastOneOK and atLeastOneMandatory else 0)
 
 
 def _enrichProperty(name: str, prop: JsonProperty, parentSchema: JsonObjectSchema, parent: JsonObject) -> bool:

@@ -251,7 +251,7 @@ class JsonCtxProvider(ContextProvider[JsonNode]):
 			return []
 
 		hit = matches.hit
-		if hit is not None:
+		if hit is not None and hit.typeName is not JsonInvalid.typeName:
 			return self._getSuggestionsForHit(pos, matches.hit, matches.contained, replaceCtx)
 		if matches.before is not None:
 			return self._getSuggestionsForBefore(pos, matches.before, matches.contained, replaceCtx)
@@ -444,7 +444,8 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 		node.parsedValue = data
 
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
-		validateTree(node.parsedValue, b'', errorsIO)
+		if node.parsedValue is not None:
+			validateTree(node.parsedValue, b'', errorsIO)
 
 	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
 		if node.parsedValue is not None:
