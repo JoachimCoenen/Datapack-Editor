@@ -92,6 +92,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 
 			else:
 				self.cursor += len(line)
+				mergedLinesCount += 1
 			lineNo += 1
 
 		return children

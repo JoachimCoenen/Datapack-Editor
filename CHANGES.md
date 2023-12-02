@@ -13,6 +13,7 @@
  * Fixed documentation for keywords in minecraft commands not showing up.
  * Unsilenced a potential silent crash.
  * Fixed `tick rate` command not being recognized.
+ * Fixed wrong line numbers for errors in commands after a multi-line command.
 
 
 ## 0.6.0-alpha
