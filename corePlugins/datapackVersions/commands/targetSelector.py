@@ -1,16 +1,16 @@
 import re
 from typing import Optional
 
-from base.model.utils import GeneralError, ParsingError, wrapInMDCode
-from cat.utils.collections_ import OrderedMultiDict
+from base.model.utils import GeneralError, ParsingError
 from corePlugins.mcFunction.argumentTypes import *
-from corePlugins.mcFunction.command import ArgumentSchema, FilterArgumentInfo, ParsedArgument
+from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, FilterArgumentInfo, ParsedArgument
 from corePlugins.mcFunction.commandContext import argumentContext, ArgumentContext, getArgumentContext, makeParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
 from .argumentTypes import *
 from base.model.messages import *
-from base.model.parsing.bytesUtils import strToBytes, bytesToStr
+from base.model.parsing.bytesUtils import strToBytes
 from base.model.pathUtils import FilePath
+from .filterArgs import makeCommandPart, parseFilterArgsLike
 
 DPE_TARGET_SELECTOR_SCORES = ArgumentType(
 	name='dpe:target_selector_scores',
@@ -141,63 +141,34 @@ FALLBACK_TS_ARGUMENT_INFO = FilterArgumentInfo(
 	canBeEmpty=True,
 )
 
+OBJECTIVE_RANGE_INFO = FilterArgumentInfo(
+	name='_objective',
+	type=MINECRAFT_INT_RANGE,
+	multipleAllowed=True,
+	isNegatable=False,
+	canBeEmpty=False,
+)
+
 
 _GOTO_NEXT_ARG_PATTERN = re.compile(rb'[,}=]')
 
 
 @argumentContext(DPE_TARGET_SELECTOR_SCORES.name)
 class TargetSelectorScoresArgumentHandler(ArgumentContext):
+
+	def parseObjective(self, sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], filePath: FilePath, errorsIO: list[GeneralError]) -> tuple[bytes, CommandPart, FilterArgumentInfo]:
+		handler = getArgumentContext(MINECRAFT_OBJECTIVE)
+		objectiveNode = handler.parse(sr, None, filePath, errorsIO=errorsIO)
+		if objectiveNode is None:
+			objective = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
+			objectiveNode = makeCommandPart(sr, objective)
+			errorsIO.append(ParsingError(EXPECTED_MSG.format("an objective"), sr.currentSpan, style='error'))
+		else:
+			objective = objectiveNode.value
+		return objective, objectiveNode, OBJECTIVE_RANGE_INFO
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		if not sr.tryConsumeByte(ord('{')):
-			return None
-
-		scores: OrderedMultiDict[str, ParsedArgument] = OrderedMultiDict[str, ParsedArgument]()
-		sr.tryConsumeWhitespace()
-		sr.save()
-		while not sr.tryConsumeByte(ord('}')):
-			sr.mergeLastSave()
-
-			handler = getArgumentContext(MINECRAFT_OBJECTIVE)
-			objective = handler.parse(sr, None, filePath, errorsIO=errorsIO)
-			if objective is None:
-				objective = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
-				errorsIO.append(ParsingError(EXPECTED_MSG.format("an objective"), sr.currentSpan, style='error'))
-			else:
-				objective = objective.value
-
-			sr.tryConsumeWhitespace()
-			if not sr.tryConsumeByte(ord('=')):
-				sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
-				errorsIO.append(ParsingError(EXPECTED_MSG.format("'='"), sr.currentSpan, style='error'))
-				sr.mergeLastSave()
-			else:
-				sr.tryConsumeWhitespace()
-
-				handler = getArgumentContext(MINECRAFT_INT_RANGE)
-				value = handler.parse(sr, None, filePath, errorsIO=errorsIO)
-				if value is None:
-					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
-					value = makeParsedArgument(sr, None, value=remainig)
-					errorsIO.append(ParsingError(EXPECTED_MSG.format(MINECRAFT_INT_RANGE.name), sr.currentSpan, style='error'))
-				sr.mergeLastSave()
-				scores.add(objective, value)
-
-			sr.tryConsumeWhitespace()
-			if sr.tryConsumeByte(ord('}')):
-				break
-			elif sr.tryConsumeByte(ord(',')):
-				sr.tryConsumeWhitespace()
-				continue
-			else:
-				if sr.hasReachedEnd:
-					errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format("}", 'end of str'), sr.currentSpan, style='error'))
-					break
-				else:
-					remainig = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
-					remainig = bytesToStr(remainig)
-					errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG_RAW.format("`}` or `,`", wrapInMDCode(f"'{remainig}'")), sr.currentSpan, style='error'))
-					if sr.tryConsumeByte(ord('}')):
-						break
+		scores = parseFilterArgsLike(sr, {}, b'{', b'}', self.parseObjective, filePath, errorsIO=errorsIO)
 		return makeParsedArgument(sr, ai, value=scores)
 
 

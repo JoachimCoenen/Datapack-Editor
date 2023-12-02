@@ -152,7 +152,7 @@ class BlockStateHandler(ArgumentContext):
 		if pos.index >= argsStart.index and not (blockState.nbt is not None and blockState.nbt.span.__contains__(pos)) and (blockStatesDict := self._getBlockStatesDict(blockID)):
 			contextStr = node.source[argsStart.index:node.end.index]
 			relCursorPos = pos.index - argsStart.index
-			suggestions += suggestionsForFilterArgs(blockState.states, contextStr, relCursorPos, pos, replaceCtx, blockStatesDict)
+			suggestions += suggestionsForFilterArgs(blockState.states, contextStr, relCursorPos, pos, replaceCtx, blockStatesDict, b'[', b']')
 
 		if blockID.span.__contains__(pos):
 			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
@@ -229,7 +229,7 @@ class EntityHandler(ArgumentContext):
 		targetSelector: TargetSelector = node.value
 		if not isinstance(targetSelector, TargetSelector):
 			return []
-		return suggestionsForFilterArgs(targetSelector.arguments, node.content[2:], pos.index - node.span.start.index - 2, pos, replaceCtx, TARGET_SELECTOR_ARGUMENTS_DICT)
+		return suggestionsForFilterArgs(targetSelector.arguments, node.content[2:], pos.index - node.span.start.index - 2, pos, replaceCtx, TARGET_SELECTOR_ARGUMENTS_DICT, b'[', b']')
 
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		targetSelector: TargetSelector = node.value

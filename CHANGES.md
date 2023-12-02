@@ -4,9 +4,10 @@
  * Added bounds checking and code suggestions for minecraft:time arguments in commands
  * The schema context menu has been tidied up.
  * Reduced number of false positives & false negatives when validating incomplete json objects with union schemas. 
- * Added validation for following JsonArgumentTypes: `minecraft:score_holder`, `minecraft:objective`, `minecraft:target_selector`, `minecraft:block_pos`, `minecraft:color`, and `minecraft:uuid`.
+ * Added validation, parsing, etc. for following JsonArgumentTypes: `minecraft:score_holder`, `minecraft:objective`, `minecraft:target_selector`, `minecraft:block_pos`, `minecraft:color`, and `minecraft:uuid`.
  * Improved performance when selecting an error while many documents are open.
  * Improved performance of syntax highlighting of large files.
+ * Added syntax highlighting for target_selector_scores.
 
 ### Fixes
  * Fixed command parser getting out of sync when failing to parse caret notation or tilde notation with non-caret or non-tilde elements.

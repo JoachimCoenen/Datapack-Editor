@@ -4,7 +4,7 @@ They are either block states ot target selector arguments
 """
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 from corePlugins.mcFunction.command import ArgumentSchema, FALLBACK_FILTER_ARGUMENT_INFO, FilterArgumentInfo, ParsedArgument, CommandPart
 from corePlugins.mcFunction.commandContext import getArgumentContext, missingArgumentParser, makeParsedArgument
@@ -28,28 +28,26 @@ def makeCommandPart(sr: StringReader, key: bytes) -> CommandPart:
 
 
 def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[FilterArguments]:
-	if sr.tryConsumeByte(ord('[')):
+	return parseFilterArgsLike(sr, argsInfo, b'[', b']', parseSimpleKey, filePath, errorsIO=errorsIO)
+
+
+def parseFilterArgsLike(
+		sr: StringReader,
+		argsInfo: dict[bytes, FilterArgumentInfo],
+		opening: bytes, closing: bytes,
+		parseKey: Callable[[StringReader, dict[bytes, FilterArgumentInfo], FilePath, list[GeneralError]], tuple[bytes, CommandPart, FilterArgumentInfo]],
+		filePath: FilePath,
+		*, errorsIO: list[GeneralError]) -> Optional[FilterArguments]:
+	gotoNextArgPattern = re.compile(rb'[' + closing + b',=]')
+	if sr.tryConsumeByte(ord(opening)):
 		# block states:
 		arguments: FilterArguments = FilterArguments()
 		sr.tryConsumeWhitespace()
 		sr.save()
-		while not sr.tryConsumeByte(ord(']')):
+		while not sr.tryConsumeByte(ord(closing)):
 			sr.mergeLastSave()
 
-			key: bytes = sr.tryReadString()
-			if key is None:
-				sr.save()
-				errorsIO.append(ParsingError(MDStr(f"Expected a String."), Span(sr.currentPos), style='error'))
-				key = b''
-				tsai = FALLBACK_FILTER_ARGUMENT_INFO
-			elif key not in argsInfo:
-				errorsIO.append(ParsingError(MDStr(f"Unknown argument '`{bytesToStr(key)}`'."), sr.currentSpan, style='error'))
-				tsai = FALLBACK_FILTER_ARGUMENT_INFO
-			else:
-				tsai = argsInfo[key]
-
-			keyNode = makeCommandPart(sr, key)
-			assert keyNode.content == key, f"keyNode.content = {keyNode.content!r}, key = {bytesToStr(key)!r}"
+			key, keyNode, tsai = parseKey(sr, argsInfo, filePath, errorsIO)
 
 			# duplicate?:
 			if key in arguments and not tsai.multipleAllowed:
@@ -59,39 +57,60 @@ def parseFilterArgs(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo],
 			if not sr.tryConsumeByte(ord('=')):
 				errorsIO.append(ParsingError(MDStr(f"Expected '`=`'."), Span(sr.currentPos), style='error'))
 				isNegated = False
-				sr.readUntilEndOrRegex(re.compile(rb'[],]'))
+				sr.readUntilEndOrRegex(gotoNextArgPattern)
 				valueNode = None
 			else:
 				sr.tryConsumeWhitespace()
-				isNegated = sr.tryConsumeByte(ord('!'))
-				if isNegated and not tsai.isNegatable:
-					errorsIO.append(ParsingError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be negated."), sr.currentSpan, style='error'))
-
-				handler = getArgumentContext(tsai.type)
-				if handler is None:
-					valueNode = missingArgumentParser(sr, tsai, errorsIO=errorsIO)
-				else:
-					valueNode = handler.parse(sr, tsai, filePath, errorsIO=errorsIO)
-				if valueNode is None:
-					remaining = sr.readUntilEndOrRegex(re.compile(rb'[],]'))
-					valueNode = makeParsedArgument(sr, tsai, value=None)
-					errorsIO.append(ParsingError(MDStr(f"Expected {tsai.type.name}."), sr.currentSpan, style='error'))
+				isNegated, valueNode = parseValue(sr, filePath, tsai, key, gotoNextArgPattern, errorsIO)
 			sr.mergeLastSave()
 			arguments.add(key, FilterArgument(keyNode, valueNode, isNegated))
 
 			sr.tryConsumeWhitespace()
-			if sr.tryConsumeByte(ord(']')):
+			if sr.tryConsumeByte(ord(closing)):
 				break
 			if sr.tryConsumeByte(ord(',')):
 				sr.tryConsumeWhitespace()
 				continue
 			if sr.hasReachedEnd:
-				errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format(f"]", 'end of str'), Span(sr.currentPos), style='error'))
+				errorsIO.append(ParsingError(EXPECTED_BUT_GOT_MSG.format(bytesToStr(closing), 'end of str'), Span(sr.currentPos), style='error'))
 				break
-			errorsIO.append(ParsingError(MDStr(f"Expected `,` or `]`"), Span(sr.currentPos), style='error'))
+			errorsIO.append(ParsingError(MDStr(f"Expected `,` or `{bytesToStr(closing)}`"), Span(sr.currentPos), style='error'))
 		return arguments
 	else:
 		return None
+
+
+def parseValue(sr: StringReader, filePath, tsai: FilterArgumentInfo, key: bytes, gotoNextArgPattern: re.Pattern[bytes], errorsIO: list[GeneralError]) -> tuple[bool, ParsedArgument]:
+	isNegated = sr.tryConsumeByte(ord('!'))
+	if isNegated and not tsai.isNegatable:
+		errorsIO.append(ParsingError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be negated."), sr.currentSpan, style='error'))
+	handler = getArgumentContext(tsai.type)
+	if handler is None:
+		valueNode = missingArgumentParser(sr, tsai, errorsIO=errorsIO)
+	else:
+		valueNode = handler.parse(sr, tsai, filePath, errorsIO=errorsIO)
+	if valueNode is None:
+		remaining = sr.readUntilEndOrRegex(gotoNextArgPattern)
+		valueNode = makeParsedArgument(sr, tsai, value=None)
+		errorsIO.append(ParsingError(MDStr(f"Expected {tsai.type.name}."), sr.currentSpan, style='error'))
+	return isNegated, valueNode
+
+
+def parseSimpleKey(sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], filePath: FilePath, errorsIO: list[GeneralError]) -> tuple[bytes, CommandPart, FilterArgumentInfo]:
+	key: Optional[bytes] = sr.tryReadString()
+	if key is None:
+		sr.save()
+		errorsIO.append(ParsingError(MDStr(f"Expected a String."), Span(sr.currentPos), style='error'))
+		key = b''
+		tsai = FALLBACK_FILTER_ARGUMENT_INFO
+	elif key not in argsInfo:
+		errorsIO.append(ParsingError(MDStr(f"Unknown argument '`{bytesToStr(key)}`'."), sr.currentSpan, style='error'))
+		tsai = FALLBACK_FILTER_ARGUMENT_INFO
+	else:
+		tsai = argsInfo[key]
+	keyNode = makeCommandPart(sr, key)
+	assert keyNode.content == key, f"keyNode.content = {keyNode.content!r}, key = {bytesToStr(key)!r}"
+	return key, keyNode, tsai
 
 
 def validateFilterArgs(fas: FilterArguments, argsInfo: dict[bytes, FilterArgumentInfo], errorsIO: list[GeneralError]) -> None:
@@ -103,47 +122,6 @@ def getBestFAMatch(fas: FilterArguments, cursorPos: int) -> Optional[ParsedArgum
 		if (value := fa.value) is not None and value.span.start.index <= cursorPos <= value.span.end.index:
 			return value
 	return None
-
-
-@dataclass
-class CursorCtx:
-	fa: Optional[FilterArgument]
-	isValue: bool
-	inside: bool = False
-	after: bool = False
-
-
-def getCursorContext(contextStr: bytes, cursorPos: int, pos: Position, argsInfo: dict[bytes, FilterArgumentInfo], fas: FilterArguments) -> CursorCtx:
-	assert contextStr
-	assert contextStr[0] == ord('[')
-	if cursorPos == 1:
-		return CursorCtx(None, isValue=False, inside=False, after=False)
-
-	for fa in reversed(fas.values()):
-		keySpan = fa.key.span
-		if (value := fa.value) is not None:
-			valSpan = value.span
-			if valSpan.end < pos:
-				if re.search(rb', *$', contextStr[:cursorPos]) is not None:
-					return CursorCtx(fa, isValue=False, inside=True)
-				else:
-					return CursorCtx(fa, isValue=True, after=True)
-			elif valSpan.start <= pos and not pos <= keySpan.end:
-				# TODO: check if value is parsable: if not: set after=False
-				return CursorCtx(fa, isValue=True, inside=True, after=False)
-
-		if keySpan.end < pos:
-			if re.search(rb'= *$', contextStr[:cursorPos]) is not None:
-				return CursorCtx(fa, isValue=True, inside=True)
-			else:
-				return CursorCtx(fa, isValue=False, after=True)
-		elif keySpan.start <= pos:
-			if (keyMatch := re.search(rb'\w+$', contextStr[:cursorPos])) is not None:
-				keyStr = keyMatch.group(0)
-				return CursorCtx(fa, isValue=False, inside=True, after=keyStr in argsInfo)
-			return CursorCtx(fa, isValue=False, inside=True)
-
-	return CursorCtx(None, isValue=False, inside=False, after=False)
 
 
 def _getBestMatch(tree: FilterArguments, pos: Position, matches: Match[CommandPart]) -> None:
@@ -220,8 +198,6 @@ class CursorCtx2:
 
 
 def getCursorContext2(contextStr: bytes, cursorPos: int, pos: Position, argsInfo: dict[bytes, FilterArgumentInfo], fas: FilterArguments) -> CursorCtx2:
-	assert contextStr
-	assert contextStr[0] == ord('[')
 	if cursorPos == 1:
 		return CursorCtx2(None, inside=False, after=False)
 
@@ -250,19 +226,19 @@ def getCursorContext2(contextStr: bytes, cursorPos: int, pos: Position, argsInfo
 		return CursorCtx2(None, inside=False, after=False)
 
 
-def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes, cursorPos: int, pos: Position, replaceCtx: str, argsInfo: dict[bytes, FilterArgumentInfo]) -> Suggestions:
+def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes, cursorPos: int, pos: Position, replaceCtx: str, argsInfo: dict[bytes, FilterArgumentInfo], opening: bytes, closing: bytes) -> Suggestions:
 	if node is None or cursorPos == 0:
 		# if len(contextStr) == 0:
 		if not argsInfo:
-			return [replaceCtx + '[]']
+			return [replaceCtx + bytesToStr(opening + closing)]
 		else:
-			return [replaceCtx + '[']
+			return [replaceCtx + bytesToStr(opening)]
 	# elif cursorPos == 1:
 	# 	if len(contextStr) >= 1:
 	# 		if contextStr[0] == '[':
 	#
-	if contextStr.startswith(b'[') and not contextStr.endswith(b']'):
-		contextStr += b']'
+	if contextStr.startswith(opening) and not contextStr.endswith(closing):
+		contextStr += closing
 
 	if node is None:
 		return []
@@ -270,10 +246,12 @@ def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes,
 	cursorTouchesWord = re.search(rb'\w*$', contextStr[:cursorPos]).group()
 	cursorTouchesWord = bytesToStr(cursorTouchesWord)
 
+	assert contextStr
+	assert contextStr[0] == ord(opening)
 	context = getCursorContext2(contextStr, cursorPos, pos, argsInfo, node)
 	# context = getCursorContext(contextStr, cursorPos, pos, argsInfo, node)
 	if context.value is None and context.after is False and context.inside is False:  # and re.search(rb'\[\s*$', contextStr[:cursorPos]) is not None:
-		return [cursorTouchesWord + ']'] + _getKeySuggestions(argsInfo, False)
+		return [cursorTouchesWord + bytesToStr(closing)] + _getKeySuggestions(argsInfo, False)
 
 	suggestions: Suggestions = []
 	if context.isValue:
@@ -287,7 +265,7 @@ def suggestionsForFilterArgs(node: Optional[FilterArguments], contextStr: bytes,
 						# TODO: maybe log if no handler has been found...
 		if context.after:
 			suggestions.append(cursorTouchesWord + ', ')
-			suggestions.append(cursorTouchesWord + ']')
+			suggestions.append(cursorTouchesWord + bytesToStr(closing))
 	else:
 		if context.after and not context.inside:
 			suggestions.append(cursorTouchesWord + '=')
@@ -328,6 +306,7 @@ def onIndicatorClickedForFilterArgs(filterArgs: FilterArguments, position: Posit
 
 __all__ = [
 	'parseFilterArgs',
+	'parseFilterArgsLike',
 	'validateFilterArgs',
 	'suggestionsForFilterArgs',
 	'clickableRangesForFilterArgs',

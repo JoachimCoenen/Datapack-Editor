@@ -6,11 +6,12 @@ from base.model.parsing.tree import Node
 from cat.utils import first
 from base.gui.styler import StyleId
 from base.model.utils import LanguageId, Span
+from cat.utils.collections_ import OrderedMultiDict
 from corePlugins.mcFunction.command import ParsedArgument
 from corePlugins.mcFunction.mcFunctionStyler import addSimpleArgumentStyler, argumentStyler, ArgumentStyler, StyleIds
 from .argumentTypes import *
-from .argumentValues import ItemStack, BlockState, TargetSelector
-
+from .argumentValues import FilterArguments, ItemStack, BlockState, TargetSelector
+from .targetSelector import DPE_TARGET_SELECTOR_SCORES
 
 _allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
 	# BRIGADIER_BOOL.name:               StyleIds.Constant,
@@ -193,10 +194,7 @@ class BlockStateStyler(ArgumentStyler):
 
 		styleForeignNode2(self, value.blockId, value.blockId.span)
 		if value.states:
-			for name, state in value.states.items():
-				self.setStyling(state.key.span.slice, StyleIds.Complex)
-				if state.value is not None:
-					self.commandStyler.styleArguments(state.value)
+			styleFilterArgs(self, value.states)
 		if value.nbt is not None:
 			styleForeignNode2(self, value.nbt, value.nbt.span)
 
@@ -216,8 +214,24 @@ class EntityStyler(ArgumentStyler):
 		else:
 			slice1 = slice(argument.span.start.index, first(value.arguments.values()).key.span.start.index)
 			self.setStyling(slice1, StyleIds.TargetSelector)
-			for name, state in value.arguments.items():
-				self.setStyling(state.key.span.slice, StyleIds.TargetSelector)
-				if state.value is not None:
-					self.commandStyler.styleArguments(state.value)
+			styleFilterArgs(self, value.arguments)
 			self.setStyling(argument.span.slice, StyleIds.TargetSelector)  # style all remaining characters
+
+
+@argumentStyler(DPE_TARGET_SELECTOR_SCORES.name, forceOverride=True)
+class TargetSelectorScoresStyler(ArgumentStyler):
+	@classmethod
+	def localLanguages(cls) -> list[LanguageId]:
+		return []
+
+	def style(self, argument: ParsedArgument) -> None:
+		value: FilterArguments = argument.value
+		styleFilterArgs(self, value)
+		self.setStyling(argument.span.slice, StyleIds.TargetSelector)  # style all remaining characters
+
+
+def styleFilterArgs(self: ArgumentStyler, filterArgs: FilterArguments):
+	for name, state in filterArgs.items():
+		self.setStyling(state.key.span.slice, StyleIds.TargetSelector)
+		if state.value is not None:
+			self.commandStyler.styleArguments(state.value)
