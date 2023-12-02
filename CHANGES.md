@@ -6,6 +6,7 @@
 
 ### Fixes
  * Fixed command parser getting out of sync when failing to parse caret notation or tilde notation with non-caret or non-tilde elements.
+ * Fixed some commands not being styling correctly when nested within a JSON nested within another command.
 
 
 ## 0.6.0-alpha

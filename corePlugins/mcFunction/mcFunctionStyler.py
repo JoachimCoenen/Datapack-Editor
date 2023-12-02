@@ -93,13 +93,15 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		}
 
 	def styleNode(self, data: CommandPart) -> int:
-		if isinstance(data, MCFunction):
-			return self.styleMCFunction(data)
+		if isinstance(data, ParsedCommand):
+			return self.styleCommand(data)
 		elif isinstance(data, ParsedComment):
 			return self.styleComment(data)
+		elif isinstance(data, MCFunction):
+			return self.styleMCFunction(data)
 		else:
-			data: ParsedCommand
-			return self.styleCommand(data)
+			data: ParsedArgument
+			return self.styleArguments(data)
 
 	def styleMCFunction(self, function: MCFunction) -> int:
 		end = function.span.start.index
