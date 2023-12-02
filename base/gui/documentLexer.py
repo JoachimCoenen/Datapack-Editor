@@ -360,7 +360,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	@override
 	def postAutoCompletionSelected(self, selection: str) -> None:
-		QTimer.singleShot(0, lambda: (self._editor is not None) and (self._editor.showCallTips() or self._editor.myStartAutoCompletion()))
+		QTimer.singleShot(0, CrashReportWrapped(lambda: (self._editor is not None) and (self._editor.showCallTips() or self._editor.myStartAutoCompletion())))
 
 	@property
 	def autoCompletionTree(self) -> AutoCompletionTree:

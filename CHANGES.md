@@ -11,6 +11,7 @@
  * Fixed some commands not being styling correctly when nested within a JSON nested within another command.
  * Fixed call tips not showing up in most circumstances.
  * Fixed documentation for keywords in minecraft commands not showing up.
+ * Unsilenced a potential silent crash.
 
 
 ## 0.6.0-alpha
