@@ -25,6 +25,7 @@ def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: boo
 		sr.rollback()
 		return None
 	vec[0] = blockPos1
+	sr.mergeLastSave()
 
 	for i in range(1, count):
 
@@ -37,6 +38,7 @@ def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: boo
 			sr.rollback()
 			return None
 		vec[i] = blockPos2
+		sr.mergeLastSave()
 
 	return makeParsedArgument(sr, ai, value=tuple(vec))
 

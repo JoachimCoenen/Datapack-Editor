@@ -304,6 +304,7 @@ class StringReader(_Base):
 		text: bytes = self.text
 		length: int = self.length
 		if cursor < length and text[cursor] in notation:
+			self.save()
 			cursor += 1
 			self.cursor = cursor
 			if self.tryReadFloat() is not None:

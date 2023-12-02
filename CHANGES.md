@@ -4,6 +4,9 @@
  * Added bounds checking and code suggestions for minecraft:time arguments in commands
  * The schema context menu has been tidied up.
 
+### Fixes
+ * Fixed command parser getting out of sync when failing to parse caret notation or tilde notation with non-caret or non-tilde elements.
+
 
 ## 0.6.0-alpha
 ### Features 
