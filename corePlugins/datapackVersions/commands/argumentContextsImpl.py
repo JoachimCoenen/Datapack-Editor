@@ -286,11 +286,12 @@ class NumberRangeHandler(ArgumentContext):
 		if groups is None:
 			return None
 
+		args = ai.args or FrozenDict.EMPTY
 		stringMin = groups[0]
 		separator = groups[1] or groups[3]
 		stringMax = groups[2] or groups[4]
-		numberMin = -inf if not stringMin else self.numberParser(bytesToStr(stringMin))
-		numberMax = +inf if not stringMax else self.numberParser(bytesToStr(stringMax))
+		numberMin = args.get('minVal', -inf) if not stringMin else self.numberParser(bytesToStr(stringMin))
+		numberMax = args.get('maxVal', +inf) if not stringMax else self.numberParser(bytesToStr(stringMax))
 		if not separator:  # we only have one number
 			if not stringMin:
 				numberMin = numberMax
@@ -302,8 +303,9 @@ class NumberRangeHandler(ArgumentContext):
 		return makeParsedArgument(sr, ai, (numberMin, numberMax))
 
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
+		if node.value is None:
+			return
 		args = node.schema.args or FrozenDict.EMPTY
-		# bounded = args.get('bounded', False)
 		minSize = args.get('minSize', 0)
 		maxSize = args.get('maxSize', +inf)
 		minVal = args.get('minVal', -inf)

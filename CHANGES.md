@@ -5,7 +5,6 @@
  * Added target_selector_advancements.
  * Added syntax validation and code suggestions for values 
 
-
 ### Improvements
  * Added bounds checking and suggestions for numbers in commands.
  * Added bounds checking and code suggestions for minecraft:time arguments in commands
@@ -22,6 +21,7 @@
  * Unsilenced a potential silent crash.
  * Fixed `tick rate` command not being recognized.
  * Fixed wrong line numbers for errors in commands after a multi-line command.
+ * Fixed ranges without an explicit start or end value but with an implicit one being treated as unbounded ranges.
 
 
 ## 0.6.0-alpha
