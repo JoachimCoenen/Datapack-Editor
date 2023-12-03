@@ -268,7 +268,7 @@ def build_advancement_args(_: FullMCData) -> list[CommandPartSchema]:
 										TERMINAL,
 										ArgumentSchema(
 											name='criterion',
-											type=BRIGADIER_STRING,
+											type=BRIGADIER_STRING, # TODO check advancement criterion
 										),
 									])
 								),

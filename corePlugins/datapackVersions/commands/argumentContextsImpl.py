@@ -237,13 +237,19 @@ class EntityHandler(ArgumentContext):
 
 		return makeParsedArgument(sr, ai, value=locator)
 
+	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
+		targetSelector: TargetSelector = node.value
+		if not isinstance(targetSelector, TargetSelector):
+			return
+		validateFilterArgs(targetSelector.arguments, errorsIO)
+
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		if node is None or pos.index - node.span.start.index < 2:
 			return ['@a', '@e', '@s', '@p', '@r', ]
 		targetSelector: TargetSelector = node.value
 		if not isinstance(targetSelector, TargetSelector):
 			return []
-		return suggestionsForFilterArgs(targetSelector.arguments, node.content[2:], pos.index - node.span.start.index - 2, pos, replaceCtx, TARGET_SELECTOR_ARGUMENTS_DICT, b'[', b']')
+		return suggestionsForFilterArgs(targetSelector.arguments, node.content[2:], pos.index - node.span.start.index - 2, pos, replaceCtx, TARGET_SELECTOR_ARG_OPTIONS)
 
 	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
 		targetSelector: TargetSelector = node.value

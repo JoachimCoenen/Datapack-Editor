@@ -6,12 +6,12 @@ from base.model.parsing.tree import Node
 from cat.utils import first
 from base.gui.styler import StyleId
 from base.model.utils import LanguageId, Span
-from cat.utils.collections_ import OrderedMultiDict
-from corePlugins.mcFunction.command import ParsedArgument
+from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
 from corePlugins.mcFunction.mcFunctionStyler import addSimpleArgumentStyler, argumentStyler, ArgumentStyler, StyleIds
 from .argumentTypes import *
 from .argumentValues import FilterArguments, ItemStack, BlockState, TargetSelector
-from .targetSelector import DPE_TARGET_SELECTOR_SCORES
+from .targetSelector import DPE_TARGET_SELECTOR_ADVANCEMENTS, DPE_TARGET_SELECTOR_ADVANCEMENTS_CRITERION, DPE_TARGET_SELECTOR_SCORES
+from ...mcFunction.argumentTypes import LiteralsArgumentType
 
 _allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
 	# BRIGADIER_BOOL.name:               StyleIds.Constant,
@@ -219,6 +219,8 @@ class EntityStyler(ArgumentStyler):
 
 
 @argumentStyler(DPE_TARGET_SELECTOR_SCORES.name, forceOverride=True)
+@argumentStyler(DPE_TARGET_SELECTOR_ADVANCEMENTS.name, forceOverride=True)
+@argumentStyler(DPE_TARGET_SELECTOR_ADVANCEMENTS_CRITERION.name, forceOverride=True)
 class TargetSelectorScoresStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
@@ -226,12 +228,16 @@ class TargetSelectorScoresStyler(ArgumentStyler):
 
 	def style(self, argument: ParsedArgument) -> None:
 		value: FilterArguments = argument.value
-		styleFilterArgs(self, value)
+		if value is not None:
+			styleFilterArgs(self, value)
 		self.setStyling(argument.span.slice, StyleIds.TargetSelector)  # style all remaining characters
 
 
 def styleFilterArgs(self: ArgumentStyler, filterArgs: FilterArguments):
 	for name, state in filterArgs.items():
-		self.setStyling(state.key.span.slice, StyleIds.TargetSelector)
+		if isinstance(state.key.schema, ArgumentSchema) and isinstance(state.key.schema.type, LiteralsArgumentType):
+			self.setStyling(state.key.span.slice, StyleIds.TargetSelector)
+		else:
+			self.commandStyler.styleArguments(state.key)
 		if state.value is not None:
 			self.commandStyler.styleArguments(state.value)

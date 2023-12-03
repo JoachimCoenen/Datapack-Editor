@@ -30,8 +30,8 @@ def registerNamedArgumentType(argumentType: ArgumentType, forceOverride: bool = 
 @dataclass
 class LiteralsArgumentType(ArgumentType):
 	def __post_init__(self):
-		if not self.options:
-			raise ValueError("options must be set for a LiteralsArgumentType.")
+		# if not self.options:
+		# 	raise ValueError("options must be set for a LiteralsArgumentType.")
 		assert all(isinstance(o, bytes) for o in self.options)
 
 	options: list[bytes] = None

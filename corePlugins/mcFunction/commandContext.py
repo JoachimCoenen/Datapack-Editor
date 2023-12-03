@@ -1,16 +1,16 @@
 import re
-from abc import abstractmethod, ABC
-from typing import Iterable, Optional, Any, Sequence, cast
+from abc import ABC, abstractmethod
+from typing import Any, Iterable, Optional, Sequence, cast
 
-from cat.utils import escapeForXml, Decorator
+from base.model.parsing.bytesUtils import bytesToStr
+from base.model.parsing.contextProvider import AddContextToDictDecorator, Context, ContextProvider, Match, Suggestions
+from base.model.pathUtils import FilePath
+from base.model.utils import GeneralError, MDStr, ParsingError, Position, Span, formatAsError
+from cat.utils import Decorator, escapeForXml
 from cat.utils.profiling import logError
-from base.model.parsing.contextProvider import ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
-from .argumentTypes import LiteralsArgumentType, ArgumentType
+from .argumentTypes import ArgumentType, LiteralsArgumentType
 from .command import *
 from .stringReader import StringReader
-from base.model.parsing.bytesUtils import bytesToStr
-from base.model.pathUtils import FilePath
-from base.model.utils import ParsingError, Position, Span, GeneralError, MDStr, formatAsError
 
 
 class CommandCtxProvider(ContextProvider[CommandPart]):
@@ -49,7 +49,9 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 		elif isinstance(self.tree, ParsedCommand):
 			from .validator import validateCommand
 			validateCommand(self.tree.next, self.tree.schema, errorsIO=cast(list, errorsIO))
-		pass
+		elif isinstance(self.tree, CommandPart):
+			from .validator import validateArgument
+			validateArgument(self.tree, errorsIO=cast(list, errorsIO))
 
 	def _getCommandSuggestions(self) -> Suggestions:
 		schema = self.tree.schema
