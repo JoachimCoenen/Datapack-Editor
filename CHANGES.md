@@ -1,9 +1,9 @@
-## Next Version
+## 0.7.0-alpha
 ### Features
  * Added validation, parsing, etc. for following JsonArgumentTypes: `minecraft:score_holder`, `minecraft:objective`, `minecraft:target_selector`, `minecraft:block_pos`, `minecraft:color`, and `minecraft:uuid`.
- * Added syntax highlighting for target_selector_scores.
- * Added target_selector_advancements.
- * Added syntax validation and code suggestions for values 
+ * Added syntax highlighting for filter argument target_selector_scores.
+ * Added filter argument target_selector_advancements.
+ * Added syntax validation and code suggestions for values of filter arguments
 
 ### Improvements
  * Added bounds checking and suggestions for numbers in commands.
