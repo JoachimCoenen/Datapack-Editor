@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Callable, ClassVar
 
+from recordclass import as_dataclass
+
 from base.model.parsing.bytesUtils import WHITESPACE_CHARS
 from base.model.parsing.parser import TokenizerBase
 from base.model.utils import Position, Span
@@ -26,7 +28,7 @@ class TokenType(Enum):
 	Comma = 12
 
 
-@dataclass
+@as_dataclass()
 class Token:
 	type: TokenType
 	span: Span
