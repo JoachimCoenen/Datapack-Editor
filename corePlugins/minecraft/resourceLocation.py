@@ -7,7 +7,7 @@ from typing import Optional, Collection, Iterable, Mapping, ClassVar
 
 from base.model.parsing.parser import ParserBase
 from cat.GUI.components.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
-from cat.utils import Deprecated, Decorator
+from cat.utils import Deprecated
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import AddContextFunc, ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
 from base.model.parsing.tree import Schema, Node
@@ -17,7 +17,7 @@ from base.model.session import getSession
 from base.model.utils import Span, Position, GeneralError, SemanticsError, MDStr, LanguageId
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData, FullMCData
 from corePlugins.minecraft_data.resourceLocation import isNamespaceValid, ResourceLocation, RESOURCE_LOCATION_PATTERN
-from base.model.messages import INTERNAL_ERROR_MSG, EXPECTED_MSG, UNKNOWN_MSG, TRAILING_NOT_ALLOWED_MSG
+from base.model.messages import *
 
 RESOURCE_LOCATION_ID = LanguageId('minecraft:resource_location')
 
@@ -138,7 +138,7 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 	@staticmethod
 	def _checkIsResourceLocation(node: ResourceLocationNode, errorsIO: list[GeneralError]) -> bool:
 		if len(node.asString) == 0:
-			errorsIO.append(SemanticsError(INTERNAL_ERROR_MSG.format(EXPECTED_MSG, '`ResourceLocation`'), node.span))
+			errorsIO.append(SemanticsError(INTERNAL_ERROR_MSG.format(EXPECTED_MSG_RAW, 'ResourceLocation'), node.span))
 			return False
 		return True
 
