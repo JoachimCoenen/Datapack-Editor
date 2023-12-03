@@ -8,9 +8,9 @@ from base.model.parsing.tree import Schema
 from base.model.utils import GeneralError, LanguageId, MDStr, Span
 from cat.utils.logging_ import logError
 from corePlugins.json.core import *
-from corePlugins.json.jsonContext import JsonStringContext, ParsingJsonCtx, jsonStringContext, orRefSchema
+from corePlugins.json.jsonContext import ParsingJsonCtx, jsonStringContext, orRefSchema
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
-from corePlugins.mcFunction.argumentTypes import ALL_NAMED_ARGUMENT_TYPES, ArgumentType
+from corePlugins.mcFunction.argumentTypes import ArgumentType
 from corePlugins.mcFunction.command import ArgumentSchema
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocationSchema, getAllKnownResourceLocationContexts
@@ -155,5 +155,5 @@ class McFunctionArgumentContextAdaptor(ParsingJsonCtx, ABC):
 			node.parsedValue = parsedArg
 
 			if parsedArg is not None:
-				context.prepare(parsedArg, info, errorsIO=errorsIO)
+				context.prepare(parsedArg, cast(CtxInfo, info), errorsIO=errorsIO)
 
