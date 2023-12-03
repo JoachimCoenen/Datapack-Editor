@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.20.3 (1.20.3-pre2)
+currently at minecraft version 1.20.3 (1.20.3-rc1)
 """
 
 import copy
@@ -23,7 +23,7 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	return {
 		'Minecraft 23w44a': schema_v23,
 		'Minecraft 23w46a': schema_v25,
-		'Minecraft 1.20.3-pre2': schema_v26,
+		'Minecraft 1.20.3-rc1': schema_v26,
 		'Minecraft 1.20.3': schema_v26
 	}
 
