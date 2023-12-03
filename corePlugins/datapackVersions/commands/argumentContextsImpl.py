@@ -11,7 +11,8 @@ from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError, LanguageId, Message, Position, Span
 from cat.utils.collections_ import FrozenDict
 from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
-from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, FilterArgumentInfo, ParsedArgument
+from corePlugins.mcFunction.argumentTypes import makeLiteralsArgumentType
+from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, FALLBACK_FILTER_ARGUMENT_INFO, FilterArgumentInfo, ParsedArgument
 from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocation, ResourceLocationNode, ResourceLocationSchema
@@ -22,9 +23,8 @@ from corePlugins.nbt.tags import NBTTagSchema
 from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag
 from .argumentTypes import *
 from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector
-from .filterArgs import clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, parseFilterArgs, suggestionsForFilterArgs, validateFilterArgs
-from .targetSelector import TARGET_SELECTOR_ARGUMENTS_DICT
-
+from .filterArgs import FilterArgOptions, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, parseFilterArgsLike, suggestionsForFilterArgs, validateFilterArgs
+from .targetSelector import TARGET_SELECTOR_ARG_OPTIONS
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
 
@@ -100,16 +100,30 @@ class BlockStateHandler(ArgumentContext):
 		blockStates = getCurrentFullMcData().getBlockStates(blockID)
 		return {strToBytes(argument.name): argument.fai for argument in blockStates}
 
+	def _getBlockStatesArgOptions(self, blockStates: dict[bytes, FilterArgumentInfo]) -> FilterArgOptions:
+		return FilterArgOptions(
+			opening=b'[',
+			closing=b']',
+			keySchema=ArgumentSchema(
+				name='key',
+				type=makeLiteralsArgumentType(list(blockStates.keys())),
+			),
+			getArgsInfo=lambda key: blockStates.get(key.content, FALLBACK_FILTER_ARGUMENT_INFO)
+		)  # todo: improve performance!
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		# block_id[block_states]{data_tags}
 		blockID = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
 
 		# block states:
-		blockStatesDict = self._getBlockStatesDict(blockID)
-		states: Optional[FilterArguments] = parseFilterArgs(sr, blockStatesDict, filePath, errorsIO=errorsIO)
-		if states is not None:
-			sr.mergeLastSave()
-		else:
+		states = None
+		if sr.tryPeek() == ord('['):
+			blockStatesDict = self._getBlockStatesDict(blockID)
+			blockStatesOptions = self._getBlockStatesArgOptions(blockStatesDict)
+			states: Optional[FilterArguments] = parseFilterArgsLike(sr, blockStatesOptions, filePath, errorsIO=errorsIO)
+			if states is not None:
+				sr.mergeLastSave()
+		if states is None:
 			states = FilterArguments()
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
@@ -130,8 +144,7 @@ class BlockStateHandler(ArgumentContext):
 			return
 
 		validateTree(blockState.blockId, node.source, errorsIO)
-		blockStatesDict = self._getBlockStatesDict(blockState.blockId)
-		validateFilterArgs(blockState.states, blockStatesDict, errorsIO)
+		validateFilterArgs(blockState.states, errorsIO)
 
 		if blockState.nbt is not None:
 			validateTree(blockState.nbt, node.source, errorsIO)
@@ -152,7 +165,8 @@ class BlockStateHandler(ArgumentContext):
 		if pos.index >= argsStart.index and not (blockState.nbt is not None and blockState.nbt.span.__contains__(pos)) and (blockStatesDict := self._getBlockStatesDict(blockID)):
 			contextStr = node.source[argsStart.index:node.end.index]
 			relCursorPos = pos.index - argsStart.index
-			suggestions += suggestionsForFilterArgs(blockState.states, contextStr, relCursorPos, pos, replaceCtx, blockStatesDict, b'[', b']')
+			blockStatesOptions = self._getBlockStatesArgOptions(blockStatesDict)
+			suggestions += suggestionsForFilterArgs(blockState.states, contextStr, relCursorPos, pos, replaceCtx, blockStatesOptions)
 
 		if blockID.span.__contains__(pos):
 			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
@@ -214,7 +228,7 @@ class EntityHandler(ArgumentContext):
 			if variable is None:
 				return None
 			variable = bytesToStr(variable)
-			arguments = parseFilterArgs(sr, TARGET_SELECTOR_ARGUMENTS_DICT, filePath, errorsIO=errorsIO)
+			arguments = parseFilterArgsLike(sr, TARGET_SELECTOR_ARG_OPTIONS, filePath, errorsIO=errorsIO)
 			if arguments is None:
 				arguments = FilterArguments()
 			else:

@@ -141,38 +141,57 @@ FALLBACK_TS_ARGUMENT_INFO = FilterArgumentInfo(
 	canBeEmpty=True,
 )
 
+OBJECTIVE_RANGE_KEY_SCHEMA = ArgumentSchema(
+	name='_scores',
+	type=MINECRAFT_OBJECTIVE
+)
+
 OBJECTIVE_RANGE_INFO = FilterArgumentInfo(
 	name='_objective',
 	type=MINECRAFT_INT_RANGE,
 	multipleAllowed=True,
 	isNegatable=False,
 	canBeEmpty=False,
+	keySchema=OBJECTIVE_RANGE_KEY_SCHEMA
 )
 
 
-_GOTO_NEXT_ARG_PATTERN = re.compile(rb'[,}=]')
+TARGET_SELECTOR_ARG_OPTIONS: FilterArgOptions = FilterArgOptions(
+	opening=b'[',
+	closing=b']',
+	keySchema=ArgumentSchema(
+		name='key',
+		type=makeLiteralsArgumentType(list(TARGET_SELECTOR_ARGUMENTS_DICT.keys())),
+	),
+	getArgsInfo=lambda key: TARGET_SELECTOR_ARGUMENTS_DICT.get(key.content, FALLBACK_FILTER_ARGUMENT_INFO)
+)
 
 
-@argumentContext(DPE_TARGET_SELECTOR_SCORES.name)
-class TargetSelectorScoresArgumentHandler(ArgumentContext):
+# ========================================================================================
 
-	def parseObjective(self, sr: StringReader, argsInfo: dict[bytes, FilterArgumentInfo], filePath: FilePath, errorsIO: list[GeneralError]) -> tuple[bytes, CommandPart, FilterArgumentInfo]:
-		handler = getArgumentContext(MINECRAFT_OBJECTIVE)
-		objectiveNode = handler.parse(sr, None, filePath, errorsIO=errorsIO)
-		if objectiveNode is None:
-			objective = sr.readUntilEndOrRegex(_GOTO_NEXT_ARG_PATTERN)
-			objectiveNode = makeCommandPart(sr, objective)
-			errorsIO.append(ParsingError(EXPECTED_MSG.format("an objective"), sr.currentSpan, style='error'))
-		else:
-			objective = objectiveNode.value
-		return objective, objectiveNode, OBJECTIVE_RANGE_INFO
+
+_TARGET_SELECTOR_SCORES_OPTIONS = FilterArgOptions(
+	opening=b'{',
+	closing=b'}',
+	keySchema=OBJECTIVE_RANGE_KEY_SCHEMA,
+	getArgsInfo=lambda key: OBJECTIVE_RANGE_INFO
+)
+
+
+
+@argumentContext(DPE_TARGET_SELECTOR_SCORES.name, options=_TARGET_SELECTOR_SCORES_OPTIONS)
+class TargetSelectorFilterArgArgumentHandler(ArgumentContext):
+	def __init__(self, options: FilterArgOptions):
+		self.options: FilterArgOptions = options
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		scores = parseFilterArgsLike(sr, {}, b'{', b'}', self.parseObjective, filePath, errorsIO=errorsIO)
-		return makeParsedArgument(sr, ai, value=scores)
+		scores = parseFilterArgsLike(sr, self.options, filePath, errorsIO=errorsIO)
+		if scores is not None:
+			return makeParsedArgument(sr, ai, value=scores)
 
 
 __all__ = [
 	'TARGET_SELECTOR_ARGUMENTS_DICT',
+	'TARGET_SELECTOR_ARG_OPTIONS',
 	'FALLBACK_TS_ARGUMENT_INFO',
 ]

@@ -4,8 +4,9 @@ from abc import ABC
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Mapping, TypeVar, Union, Optional, Sequence, Any, Generic, ClassVar, Collection
+from warnings import warn
 
-from cat.utils import Singleton
+from cat.utils import Nothing, Singleton
 from . import MC_FUNCTION_ID
 from .argumentTypes import ArgumentType, BRIGADIER_STRING, LiteralsArgumentType
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
@@ -129,11 +130,22 @@ class ArgumentSchema(CommandPartSchema):
 		return f'<{self.name}: {self.typeName}>'
 
 
-@dataclass()
+@dataclass
 class FilterArgumentInfo(ArgumentSchema):
-	multipleAllowed: bool = False
-	isNegatable: bool = False
-	canBeEmpty: bool = False
+	multipleAllowed: bool = field(default=False, kw_only=True) # overrides multipleAllowedIfNegated field
+	multipleAllowedIfNegated: bool = field(default=False, kw_only=True)
+	isNegatable: bool = field(default=False, kw_only=True)
+	canBeEmpty: bool = field(default=False, kw_only=True)
+	defaultValue: Any = field(default=Nothing, kw_only=True)
+	keySchema: CommandPartSchema = field(default=None, kw_only=True)
+
+	def __post_init__(self):
+		if self.keySchema is None:
+			self.keySchema = KeywordSchema(self.name)
+		if self.multipleAllowed and self.multipleAllowedIfNegated:
+			warn("Both `multipleAllowed` and `multipleAllowedIfNegated` are set to True. This is probably not intentional.", RuntimeWarning, 3)
+		if self.multipleAllowedIfNegated and not self.isNegatable:
+			warn("`multipleAllowedIfNegated` is set to True, but `isNegatable` is False. This is probably not intentional.", RuntimeWarning, 3)
 
 
 FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo(
