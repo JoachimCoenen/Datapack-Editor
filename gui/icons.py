@@ -2,11 +2,11 @@ import os
 
 from PyQt5.QtGui import QIcon
 
-from cat.GUI.components import catWidgetMixins
+from cat.GUI.components.catWidgetMixins import getGUIColors
 from cat.GUI.icons import CompositionMode, iconCombiner, iconFromSVG, _Icons as CatIcons, iconGetter
 from cat.utils import getExePath
 
-_ICON_IN_TREE_OPTIONS = dict(color_on=lambda: catWidgetMixins.standardBaseColors.Icon)
+_ICON_IN_TREE_OPTIONS = dict(color_on=lambda: getGUIColors().Icon)
 
 
 def makeIcon(name: str, ext='.svg'):
@@ -152,6 +152,15 @@ class _Icons(CatIcons):
 	git:              QIcon = iconGetter("fa5s.code-branch")  # = iconGetter("fa5b.git-alt")  # = makeIcon("git-alt-brands")
 	java:             QIcon = iconGetter('fa5b.java')  # = makeIcon("java-brands")
 	python:           QIcon = iconGetter('fa5b.python')
+
+	# @lru_cache(maxsize=64)
+	# def disabled(self, icon: QIcon):
+	# 	"""
+	# 	crosses out an icon.
+	# 	:param icon: the icon to be striked through
+	# 	:return: the crossed out icon.
+	# 	"""
+	# 	return iconCombiner(icon, *_Icons._shadowedSlash).__get__(self, _Icons)
 
 
 icons = _Icons()

@@ -184,7 +184,7 @@ def start(argv) -> QtWidgets.QApplication:
 		app.setOrganizationName(getApplicationSettings().organization)
 
 		applyStyle(app, Style({'QWidget': getStyles().hostWidgetStyle}))  # + styles.layoutingBorder))
-		catWidgetMixins.setGUIColors(catWidgetMixins.standardBaseColors)
+		catWidgetMixins.setGUIColors(catWidgetMixins.getGUIColors())
 
 		with loggingIndentInfo("Collecting & Loading all plugins..."):
 			loadActualBasePlugins()
