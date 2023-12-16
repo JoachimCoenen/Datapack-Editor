@@ -22,7 +22,7 @@ from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDir
 	getAllFilesFromArchive, isExcludedDirectory, ZipFilePool
 from base.model.aspect import AspectType
 from base.model.project.index import Index
-from base.model.project.project import Project, ProjectRoot, ProjectAspect, Root, IndexBundleAspect, AspectFeatures, FileEntry, makeFileEntry
+from base.model.project.project import AnalyzeRootsAspectPart, Project, ProjectRoot, ProjectAspect, Root, IndexBundleAspect, FileEntry, makeFileEntry
 from base.model.session import getSession
 from base.model.utils import Span, formatMarkdown
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, SearchableListContext
@@ -468,13 +468,13 @@ def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
 # Non-GUI stuff:
 
 
-class _FileSysytemChangeHandler(FileSystemEventHandler):
+class _FileSystemChangeHandler(FileSystemEventHandler):
 	"""
 	Base file system event handler that you can override methods from.
 	"""
 
 	def __init__(self, root: Root, project: Project):
-		super(_FileSysytemChangeHandler, self).__init__()
+		super(_FileSystemChangeHandler, self).__init__()
 		self._project: Project = project
 		self._root: Root = root
 
@@ -485,8 +485,8 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 	def _analyzeFile(self, fileEntry: FileEntry) -> None:
 		with ZipFilePool() as pool:
 			for aspect in self._project.aspects:
-				if aspect.aspectFeatures.analyzeFiles:
-					aspect.analyzeFile(self._root, fileEntry, pool)
+				if aspect.analyzeFilesPart is not None:
+					aspect.analyzeFilesPart.analyzeFile(self._root, fileEntry, pool)
 
 	def _addFileEntryAndAnalyzeFile(self, path: FilePathTpl) -> None:
 		fileEntry = self._addFileOrFolderEntry(self._root.indexBundles.setdefault(FilesIndex).files, path, True)
@@ -600,7 +600,14 @@ class _FileSysytemChangeHandler(FileSystemEventHandler):
 
 
 @dataclass
-class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
+class FilesAspect(ProjectAspect):
+
+	@classmethod
+	def getAspectType(cls) -> AspectType:
+		return AspectType('cce:files_aspect')
+
+	def __post_init__(self):
+		self.analyzeRootsPart = AnalyzeRootsFilesAspectPart(self)
 
 	_excludedDirectories: str = field(default='', metadata=catMeta(
 		serializedName='excludedDirectories',
@@ -624,28 +631,9 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 	def excludedDirectories(self, excludedDirs: tuple[str, ...]) -> None:
 		self._excludedDirectories = '\n'.join(excludedDirs)
 
-	@classmethod
-	def getAspectType(cls) -> AspectType:
-		return AspectType('cce:files_aspect')
 
-	def onRootRenamed(self, root: Root, oldName: str, newName: str) -> None:
-		indexBundle = root.indexBundles.get(FilesIndex)
-		if indexBundle is None:
-			return
-
-		for fe in indexBundle.folders.values():
-			assert fe.virtualPath.startswith(oldName)
-			fe.virtualPath = f'{newName}/{fe.fullPath[1]}'
-
-		for fe in indexBundle.files.values():
-			assert fe.virtualPath.startswith(oldName)
-			fe.virtualPath = f'{newName}/{fe.fullPath[1]}'
-
-	def onRootAdded(self, root: Root, project: Project) -> None:
-		filesystemEvents.FILESYSTEM_OBSERVER.schedule("cce:files_aspect", root.normalizedLocation, _FileSysytemChangeHandler(root, project))
-
-	def onRootRemoved(self, root: Root, project: Project) -> None:
-		filesystemEvents.FILESYSTEM_OBSERVER.unschedule("cce:files_aspect", root.normalizedLocation)
+@dataclass
+class AnalyzeRootsFilesAspectPart(AnalyzeRootsAspectPart[FilesAspect]):
 
 	def analyzeRoot(self, root: Root, project: Project) -> None:
 		location = root.normalizedLocation
@@ -662,7 +650,7 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 		if not pif.divider:
 			return
 
-		excludedDirs = self.excludedDirectories
+		excludedDirs = self.aspect.excludedDirectories
 
 		if not os.path.exists(location):
 			return
@@ -673,19 +661,37 @@ class FilesAspect(ProjectAspect, features=AspectFeatures(analyzeRoots=True)):
 			rawLocalFolders = []
 		else:
 			return
-		aspects = [a for a in project.aspects if a.aspectFeatures.analyzeFiles]
+		aspects = [a.analyzeFilesPart for a in project.aspects if a.analyzeFilesPart is not None]
 		idx = root.indexBundles.setdefault(FilesIndex).files
 		with ZipFilePool() as pool:
 			for jf in rawLocalFiles:
 				fileEntry = makeFileEntry(jf, root, True)
 				for aspect in aspects:
-					if aspect.aspectFeatures.analyzeFiles:
-						aspect.analyzeFile(root, fileEntry, pool)
+					aspect.analyzeFile(root, fileEntry, pool)
 				idx.add(jf[1], jf, fileEntry)
 
 		idx = root.indexBundles.get(FilesIndex).folders
 		for jf in rawLocalFolders:
 			idx.add(jf[1], jf, makeFileEntry(jf, root, False))
+
+	def onRootRenamed(self, root: Root, oldName: str, newName: str) -> None:
+		indexBundle = root.indexBundles.get(FilesIndex)
+		if indexBundle is None:
+			return
+
+		for fe in indexBundle.folders.values():
+			assert fe.virtualPath.startswith(oldName)
+			fe.virtualPath = f'{newName}/{fe.fullPath[1]}'
+
+		for fe in indexBundle.files.values():
+			assert fe.virtualPath.startswith(oldName)
+			fe.virtualPath = f'{newName}/{fe.fullPath[1]}'
+
+	def onRootAdded(self, root: Root, project: Project) -> None:
+		filesystemEvents.FILESYSTEM_OBSERVER.schedule("cce:files_aspect", root.normalizedLocation, _FileSystemChangeHandler(root, project))
+
+	def onRootRemoved(self, root: Root, project: Project) -> None:
+		filesystemEvents.FILESYSTEM_OBSERVER.unschedule("cce:files_aspect", root.normalizedLocation)
 
 
 @dataclass

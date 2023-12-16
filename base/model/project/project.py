@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional, ClassVar, final
+from typing import Generic, Optional, TypeVar, final
 
 from recordclass import as_dataclass
 
@@ -24,94 +24,83 @@ def _fillProjectAspects(aspectsDict: AspectDict):
 			aspectsDict.setdefault(aspectCls)
 
 
-@dataclass(kw_only=True)
-class AspectFeatures:
-	dependencies: bool = False
+_TProjectAspect = TypeVar('_TProjectAspect', bound='ProjectAspect')
+
+
+@dataclass
+class ProjectAspectPart(Generic[_TProjectAspect], ABC):
 	"""
-	def getDependencies(self, root: Root) -> list[DependencyDescr]: ...
-	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]: ...
+	todo: description for ProjectAspectPart
 	"""
-	analyzeRoots: bool = False
-	"""
-	def analyzeRoot(self, root: Root) -> None: ...
-	def onRootRenamed(self, root: Root, project: Project, oldName: str, newName: str) -> None: ...
-	"""
-	analyzeFiles: bool = False
-	"""
-	def analyzeFile(self, root: Root, path: FilePathTpl, pool: ArchiveFilePool) -> None: ...
-	"""
+	aspect: _TProjectAspect
+
+
+@dataclass
+class DependenciesAspectPart(ProjectAspectPart[_TProjectAspect], Generic[_TProjectAspect], ABC):
+
+	@abstractmethod
+	def preResolveDependencies(self, project: Project) -> None:
+		"""
+		called once for a project, just before all dependencies are resolved (.getDependencies(...) and .resolveDependency(...) for all roots & dependencies)
+		"""
+		pass
+
+	@abstractmethod
+	def getDependencies(self, root: Root, project: Project) -> list[DependencyDescr]:
+		"""
+		for now. might change.
+		"""
+		return []
+
+	@abstractmethod
+	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
+		"""
+		for now. might change.
+		"""
+		pass
+
+	@abstractmethod
+	def postResolveDependencies(self, project: Project) -> None:
+		"""
+		called once for a project, just after all dependencies were resolved (.getDependencies(...) and .resolveDependency(...) for all roots & dependencies)
+		"""
+		pass
+
+
+@dataclass
+class AnalyzeRootsAspectPart(ProjectAspectPart[_TProjectAspect], Generic[_TProjectAspect], ABC):
+
+	@abstractmethod
+	def analyzeRoot(self, root: Root, project: Project) -> None:
+		pass
+
+	@abstractmethod
+	def onRootRenamed(self, root: Root, oldName: str, newName: str) -> None:
+		pass
+
+	@abstractmethod
+	def onRootAdded(self, root: Root, project: Project) -> None:
+		pass
+
+	@abstractmethod
+	def onRootRemoved(self, root: Root, project: Project) -> None:
+		pass
+
+
+@dataclass
+class AnalyzeFilesAspectPart(ProjectAspectPart[_TProjectAspect], Generic[_TProjectAspect], ABC):
+
+	@abstractmethod
+	def analyzeFile(self, root: Root, fileEntry: FileEntry, pool: ArchiveFilePool) -> None:
+		pass
 
 
 @dataclass
 class ProjectAspect(Aspect, SerializableDataclass, ABC):
-	aspectFeatures: ClassVar[AspectFeatures]
 
-	def __init_subclass__(cls, *, features: AspectFeatures = None, **kwargs):
-		super().__init_subclass__(**kwargs)
-		if features is None:
-			# maybe use a warning here?
-			raise TypeError(f"ProjectAspect '{cls.__name__}' does not define its features. use the 'features' keyword argument to define the available features of a ProjectAspect:\n"
-							f"    class {cls.__name__}(ProjectAspect, features=AspectFeatures(analyzeProject=True, ...)):\n"
-							f"        ...")
-		cls.aspectFeatures = features
-
-	def preResolveDependencies(self, project: Project) -> None:
-		"""
-		called once for a project, just before all dependencies are resolved (.getDependencies(...) and .resolveDependency(...) for all roots & dependencies)
-		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
-		"""
-		pass
-
-	def getDependencies(self, root: Root, project: Project) -> list[DependencyDescr]:
-		"""
-		for now. might change.
-		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
-		"""
-		return []
-
-	def postResolveDependencies(self, project: Project) -> None:
-		"""
-		called once for a project, just after all dependencies were resolved (.getDependencies(...) and .resolveDependency(...) for all roots & dependencies)
-		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
-		"""
-		pass
-
-	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
-		"""
-		for now. might change.
-		enabled with: class MyAspect(Aspect, features=AspectFeatures(dependencies=True)): ...
-		"""
-		pass
-
-	def analyzeRoot(self, root: Root, project: Project) -> None:
-		"""
-		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeRoots=True)): ...
-		"""
-		pass
-
-	def onRootRenamed(self, root: Root, oldName: str, newName: str) -> None:
-		"""
-		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeRoots=True)): ...
-		"""
-		pass
-
-	def onRootAdded(self, root: Root, project: Project) -> None:
-		"""
-		enabled with: <always enabled>
-		"""
-		pass
-
-	def onRootRemoved(self, root: Root, project: Project) -> None:
-		"""
-		enabled with: <always enabled>
-		"""
-		pass
-
-	def analyzeFile(self, root: Root, fileEntry: FileEntry, pool: ArchiveFilePool) -> None:
-		"""
-		enabled with: class MyAspect(Aspect, features=AspectFeatures(analyzeFiles=True)): ...
-		"""
-		pass
+	dependenciesPart: Optional[DependenciesAspectPart] = field(default=None, init=False)
+	analyzeRootsPart: Optional[AnalyzeRootsAspectPart] = field(default=None, init=False)
+	analyzeFilesPart: Optional[AnalyzeFilesAspectPart] = field(default=None, init=False)
 
 	def onCloseProject(self, project: Project) -> None:
 		"""
@@ -169,7 +158,7 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 		return self.roots + self.deepDependencies
 
 	def resolveDependencies(self) -> None:
-		aspects = [a for a in self.aspects if a.aspectFeatures.dependencies]
+		aspects = [a.dependenciesPart for a in self.aspects if a.dependenciesPart is not None]
 		for aspect in aspects:
 			aspect.preResolveDependencies(self)
 		self.deepDependencies = resolveDependencies(self, aspects)
@@ -179,7 +168,8 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 	def insertRoot(self, idx: int, root: ProjectRoot) -> ProjectRoot:
 		self.roots.insert(idx, root)
 		for aspect in self.aspects:
-			aspect.onRootAdded(root, self)
+			if aspect.analyzeRootsPart is not None:
+				aspect.analyzeRootsPart.onRootAdded(root, self)
 		self.analyzeRoot(root)
 		return root
 
@@ -189,21 +179,22 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 	def removeRoot(self, root: ProjectRoot):
 		self.roots.remove(root)
 		for aspect in self.aspects:
-			aspect.onRootRemoved(root, self)
+			if aspect.analyzeRootsPart is not None:
+				aspect.analyzeRootsPart.onRootRemoved(root, self)
 
 	def analyzeRoots(self):
-		aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
+		aspects = [a.analyzeRootsPart for a in self.aspects if a.analyzeRootsPart is not None]
 		for projRoot in self.roots:
 			self.analyzeRoot(projRoot, aspects)
 
 	def analyzeDependencies(self):
-		aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
+		aspects = [a.analyzeRootsPart for a in self.aspects if a.analyzeRootsPart is not None]
 		for dependency in self.deepDependencies:
 			self.analyzeRoot(dependency, aspects)
 
-	def analyzeRoot(self, root: Root, aspects: list[ProjectAspect] = ...):
+	def analyzeRoot(self, root: Root, aspects: list[AnalyzeRootsAspectPart] = ...):
 		if aspects is ...:
-			aspects = [a for a in self.aspects if a.aspectFeatures.analyzeRoots]
+			aspects = [a.analyzeRootsPart for a in self.aspects if a.analyzeRootsPart is not None]
 		for idxBundle in root.indexBundles:
 			idxBundle.clear()
 		for a in aspects:
@@ -232,7 +223,7 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 			self.removeRoot(root)
 
 
-def resolveDependencies(project: Project, aspects: list[ProjectAspect]):
+def resolveDependencies(project: Project, aspects: list[DependenciesAspectPart]):
 	# just a cache:
 	dependencyDict: dict[str, Optional[Root]] = {rt.identifier: rt for rt in project.roots}
 	# seenDependencies: set[str] = set()
@@ -324,8 +315,8 @@ class Root(SerializableDataclass):
 		if oldName != newName:
 			from base.model.session import getSession
 			for aspect in getSession().project.aspects:
-				if aspect.aspectFeatures.analyzeRoots:
-					aspect.onRootRenamed(self, oldName, newName)
+				if aspect.analyzeRootsPart is not None:
+					aspect.analyzeRootsPart.onRootRenamed(self, oldName, newName)
 		self._name = newName
 
 	@property

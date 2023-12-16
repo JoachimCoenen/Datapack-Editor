@@ -10,7 +10,7 @@ from cat.utils.logging_ import logWarning
 from base.model.applicationSettings import getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.aspect import AspectType
-from base.model.project.project import AspectFeatures, Root, ProjectAspect, DependencyDescr, FileEntry, Project
+from base.model.project.project import AnalyzeFilesAspectPart, DependenciesAspectPart, Root, ProjectAspect, DependencyDescr, FileEntry, Project
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ArchiveFilePool, ZipFilePool, loadBinaryFile, normalizeDirSeparators
 from base.model.session import getSession
@@ -48,12 +48,16 @@ def _getFullMcDataFromRegisteredMinecraftVersion(version: str) -> FullMCData:
 
 
 @dataclass
-class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, analyzeRoots=False, analyzeFiles=True)):
+class DatapackAspect(ProjectAspect):
 
 	@classmethod
 	def getAspectType(cls) -> AspectType:
 		from .settings import DATAPACK_ASPECT_TYPE
 		return DATAPACK_ASPECT_TYPE
+
+	def __post_init__(self):
+		self.analyzeFilesPart = AnalyzeFilesDatapackAspectPart(self)
+		self.dependenciesPart = DependenciesDatapackAspectPart(self)
 
 	dpVersion: str = field(
 		default='18',
@@ -85,64 +89,6 @@ class DatapackAspect(ProjectAspect, features=AspectFeatures(dependencies=True, a
 	@property
 	def mcVersionData(self) -> FullMCData:
 		return _getFullMcDataFromRegisteredMinecraftVersion(self.minecraftVersion)
-
-	def getDependencies(self, root: Root, project: Project) -> list[DependencyDescr]:
-		fileName = 'dependencies.json'
-		rootPath = root.normalizedLocation
-		schema = GLOBAL_SCHEMA_STORE.get('dpe:dependencies', JSON_ID)
-
-		if rootPath.lower().endswith('.jar'):
-			# Minecraft does not need itself as a dependency.
-			return []
-
-		# dependencies = [Dependency(applicationSettings.minecraft.executable, mandatory=True)]
-		dependencies: list[DependencyDescr] = []  # TODO: DependencyDescr(applicationSettings.minecraft.executable, 'minecraft', mandatory=True)]
-
-		filePath = (rootPath, fileName)
-		node: Optional[JsonData]
-		try:
-			with ZipFilePool() as pool:
-				file = loadBinaryFile(filePath, pool)
-		except (OSError, KeyError) as e:
-			node, errors = None, [WrappedError(e)]
-		else:
-			node, errors, _ = parseNPrepare(file, filePath=filePath, language=JSON_ID, schema=schema)
-
-		if node is not None:
-			validateTree(node, file, errors)
-
-		if node is not None and not errors:
-			for element in node.data:
-				name = element.data['name'].value
-				dependencies.append(DependencyDescr(
-					name=name.data,
-					identifier=name.data,
-					mandatory=element.data['mandatory'].value.data,
-					span=name.span
-				))
-		if errors:
-			logWarning(f"Failed to read '{fileName}' for root '{rootPath}':")
-			for error in errors:
-				logWarning(str(error), indentLvl=1)
-
-		# minecraft dependency
-		registeredVersion = getRegisteredMinecraftVersion(self.minecraftVersion)
-		if registeredVersion is not None:
-			dependencies.append(DependencyDescr(
-				name=registeredVersion.minecraftExecutable,
-				identifier=registeredVersion.minecraftExecutable,
-				mandatory=True,
-				span=None
-			))
-
-		return dependencies
-
-	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
-		return resolveDependency(dependencyDescr)
-
-	def analyzeFile(self, root: Root, fileEntry: FileEntry, pool: ArchiveFilePool) -> None:
-		handlers = self.dpVersionData.structure
-		collectEntry(fileEntry.fullPath, handlers, root, pool)
 
 	def onCloseProject(self, project: Project) -> None:
 		_reloadDPVersion(self.dpVersion, None)
@@ -201,6 +147,78 @@ def _reloadMinecraftVersion(oldVersion: Optional[str], newVersion: Optional[str]
 	minecraftVersion = _getFullMcDataFromRegisteredMinecraftVersion(newVersion)
 	if minecraftVersion is not None:
 		minecraftVersion.activate()
+
+
+@dataclass
+class DependenciesDatapackAspectPart(DependenciesAspectPart[DatapackAspect]):
+
+	def preResolveDependencies(self, project: Project) -> None:
+		pass  # nothing to do here...
+
+	def getDependencies(self, root: Root, project: Project) -> list[DependencyDescr]:
+		fileName = 'dependencies.json'
+		rootPath = root.normalizedLocation
+		schema = GLOBAL_SCHEMA_STORE.get('dpe:dependencies', JSON_ID)
+
+		if rootPath.lower().endswith('.jar'):
+			# Minecraft does not need itself as a dependency.
+			return []
+
+		# dependencies = [Dependency(applicationSettings.minecraft.executable, mandatory=True)]
+		dependencies: list[DependencyDescr] = []  # TODO: DependencyDescr(applicationSettings.minecraft.executable, 'minecraft', mandatory=True)]
+
+		filePath = (rootPath, fileName)
+		node: Optional[JsonData]
+		try:
+			with ZipFilePool() as pool:
+				file = loadBinaryFile(filePath, pool)
+		except (OSError, KeyError) as e:
+			node, errors = None, [WrappedError(e)]
+		else:
+			node, errors, _ = parseNPrepare(file, filePath=filePath, language=JSON_ID, schema=schema)
+
+		if node is not None:
+			validateTree(node, file, errors)
+
+		if node is not None and not errors:
+			for element in node.data:
+				name = element.data['name'].value
+				dependencies.append(DependencyDescr(
+					name=name.data,
+					identifier=name.data,
+					mandatory=element.data['mandatory'].value.data,
+					span=name.span
+				))
+		if errors:
+			logWarning(f"Failed to read '{fileName}' for root '{rootPath}':")
+			for error in errors:
+				logWarning(str(error), indentLvl=1)
+
+		# minecraft dependency
+		registeredVersion = getRegisteredMinecraftVersion(self.aspect.minecraftVersion)
+		if registeredVersion is not None:
+			dependencies.append(DependencyDescr(
+				name=registeredVersion.minecraftExecutable,
+				identifier=registeredVersion.minecraftExecutable,
+				mandatory=True,
+				span=None
+			))
+
+		return dependencies
+
+	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
+		return resolveDependency(dependencyDescr)
+
+	def postResolveDependencies(self, project: Project) -> None:
+		pass  # nothing to do here...
+
+
+@dataclass
+class AnalyzeFilesDatapackAspectPart(AnalyzeFilesAspectPart[DatapackAspect]):
+
+	def analyzeFile(self, root: Root, fileEntry: FileEntry, pool: ArchiveFilePool) -> None:
+		handlers = self.aspect.dpVersionData.structure
+		collectEntry(fileEntry.fullPath, handlers, root, pool)
 
 
 DEPENDENCY_SEARCH_LOCATIONS: list[Callable[[], list[str]]] = []
