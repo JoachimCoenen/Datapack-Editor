@@ -6,6 +6,7 @@ import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from types import EllipsisType
 from typing import Optional, Iterable, TypeVar, Callable, Iterator, Collection, Generic, \
 	Sequence, Type
 
@@ -348,10 +349,10 @@ class DatapackEditorGUI(AutoGUI):
 			treeBuilder: TreeBuilderABC[_TT],
 			headerBuilder: Optional[TreeBuilderABC[_T2]] = None,
 			*,
-			headerVisible: bool | Ellipsis = ...,
+			headerVisible: bool | EllipsisType = ...,
 			loadDeferred: bool = True,
 			columnResizeModes: Optional[Iterable[ResizeMode]] = None,
-			stretchLastColumn: bool | Ellipsis = ...,
+			stretchLastColumn: bool | EllipsisType = ...,
 			**kwargs
 	) -> SearchableListContext[_TT]:
 		treeResult = self.tree(
@@ -390,10 +391,10 @@ class DatapackEditorGUI(AutoGUI):
 			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
 			filterFunc: Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
 			isRegex: bool = False,
-			headerVisible: bool | Ellipsis = ...,
+			headerVisible: bool | EllipsisType = ...,
 			loadDeferred: bool = True,
 			columnResizeModes: Optional[Iterable[ResizeMode]] = None,
-			stretchLastColumn: bool | Ellipsis = ...,
+			stretchLastColumn: bool | EllipsisType = ...,
 			cornerGUI: Callable[[], None] = None,
 			sandwichedGUI: Callable[[], None] = None,
 			**kwargs
