@@ -502,6 +502,7 @@ class DatapackEditorGUI(AutoGUI):
 		errorsTip = 'errors'
 		warningsTip = 'warnings'
 		hintsTip = 'hints'
+		kwargs.setdefault('hSizePolicy', SizePolicy.Fixed.value)
 
 		self.label(self.getErrorIcon('error'), tip=errorsTip, **kwargs)
 		self.label(f'{errorCounts.errors}', tip=errorsTip, **kwargs)

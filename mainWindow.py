@@ -1,36 +1,36 @@
 from __future__ import annotations
 import os
 from math import floor
-from operator import attrgetter
-from typing import Optional, Sequence, NewType
+from typing import Optional, NewType, TypeVar
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent, QIcon
 from PyQt5.QtWidgets import QMainWindow, QApplication
 
 from cat.GUI import CORNERS, NO_OVERLAP, SizePolicy, RoundedCorners
 from cat.GUI import pythonGUI
 from cat.GUI.components import Widgets, catWidgetMixins
-from cat.GUI.enums import TabPosition, MessageBoxStyle, MessageBoxButton, FileExtensionFilter
+from cat.GUI.enums import TAB_POSITION_NORTH_SOUTH, TabPosition, MessageBoxStyle, MessageBoxButton, FileExtensionFilter
 from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from cat.GUI.icons import iconCombiner, CompositionMode
-from cat.GUI.pythonGUI import TabOptions
 from gui.icons import icons, _Icons
 from base.gui.newProjectDialog import NewProjectDialog
 from base.gui.documentsViewEditor import DocumentsViewsContainerEditor
 from gui.profileParsingDialog import ProfileParsingDialog
 from base.model import theme
 from keySequences import KEY_SEQUENCES
-from base.model.utils import GeneralError
 from base.model.session import getSession, saveSessionToFile, GLOBAL_SIGNALS
-from base.model.documents import Document, DocumentTypeDescription, getDocumentTypes, getErrorCounts, getAllFileExtensionFilters, getDocumentTypeForDocument
+from base.model.documents import Document, DocumentTypeDescription, getDocumentTypes, getAllFileExtensionFilters, getDocumentTypeForDocument
 from base.gui.checkAllDialog import CheckAllDialog
 from base.gui.searchAllDialog import SearchAllDialog
 from base.gui.spotlightSearch import SpotlightSearchGui
 from gui.datapackEditorGUI import DatapackEditorGUI
-from base.plugin import PLUGIN_SERVICE, SideBarTabGUIFunc, ToolBtnFunc
+from base.plugin import PLUGIN_SERVICE, SideBarOptions
 from base.model.applicationSettings import applicationSettings
 from base.gui.settingsDialog import SettingsDialog
+
+
+_TT = TypeVar('_TT')
 
 
 class _DpeIcons:
@@ -95,7 +95,6 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	def __init__(self, id: WindowId):
 		super().__init__(GUICls=DatapackEditorGUI)
 
-		self._gitConsoleRefreshTimer: QTimer = QTimer(self) # for the git tab
 		self._gui._name = f'main Window GUI {id}'
 		self._id: WindowId = id
 		MainWindow.registerMainWindow(self, id)
@@ -168,33 +167,50 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			gui.label("this is a status bar.")
 
 	def OnSidebarGUI(self, gui: DatapackEditorGUI):
-		tabs: list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]] = []
+		tabs: list[SideBarOptions] = []
 		for plugin in PLUGIN_SERVICE.activePlugins:
 			tabs.extend(plugin.sideBarTabs())
-
-		with gui.hPanel(seamless=True, roundedCorners=CORNERS.RIGHT):
-			with gui.vPanel(seamless=True, windowPanel=True, hSizePolicy=SizePolicy.Fixed.value):
-				index = gui.tabBar(
-					[tab[0] for tab in tabs],
-					drawBase=False,
-					documentMode=True,
-					expanding=False,
-					position=TabPosition.West,
-					vSizePolicy=SizePolicy.Expanding.value
-				)
-			if tabs:
-				_, guiFunc, toolBtnFunc = tabs[index]
-
-				if toolBtnFunc is not None:
-					toolBtnFunc(gui)
-					gui.hSeparator()
-
-				subGui = gui.subGUI(type(gui), guiFunc, seamless=True)
-				subGui.redrawGUILater()
+		self.barGUI(gui, TabPosition.West, tabs)
 
 	def OnBottombarGUI(self, gui: DatapackEditorGUI):
-		bottomPanel = gui.subGUI(type(gui), lambda gui: self.bottomPanelGUI(gui), seamless=True)
-		bottomPanel.redrawGUI()
+		tabs: list[SideBarOptions] = []
+		for plugin in PLUGIN_SERVICE.activePlugins:
+			tabs.extend(plugin.bottomBarTabs())
+		self.barGUI(gui, TabPosition.South, tabs)
+
+	def barGUI(self, gui: DatapackEditorGUI, position: TabPosition, tabs: list[SideBarOptions]):
+		tabPosition     = _select(position, TabPosition.North,    TabPosition.West,     TabPosition.North,    TabPosition.West)
+		tabsHSizePolicy = _select(position, SizePolicy.Expanding, SizePolicy.Fixed,     SizePolicy.Expanding, SizePolicy.Fixed).value
+		tabsVSizePolicy = _select(position, SizePolicy.Fixed,     SizePolicy.Expanding, SizePolicy.Fixed,     SizePolicy.Expanding).value
+		oLayout         = _select(position, gui.vLayout1C,        gui.vLayout,          gui.vLayout1C,        gui.vLayout)
+		iLayout         = _select(position, gui.hLayout,          gui.vLayout,          gui.hLayout,          gui.vLayout)
+		separator       = _select(position, gui.hSeparator,       gui.vSeparator,       gui.hSeparator,       gui.vSeparator)
+
+		with oLayout(seamless=True):
+			with iLayout(seamless=True, isPrefix=True):  # , windowPanel=True):
+				index = gui.tabBar(
+					[tab.tabOptions for tab in tabs],
+					drawBase=True,
+					documentMode=True,
+					expanding=False,
+					position=tabPosition,
+					hSizePolicy=tabsHSizePolicy,
+					vSizePolicy=tabsVSizePolicy
+				)
+
+				if tabs:
+					toolBtnEditor = tabs[index].toolButtons
+					if toolBtnEditor is not None:
+						subGui = gui.editor(toolBtnEditor, model=None, seamless=True)
+						subGui.redrawLater()
+						separator()
+
+			with gui.stackedWidget(selectedView=index) as stacked:
+				for id_, sideBar in enumerate(tabs):
+					with stacked.addView(id_, seamless=True):
+						subGui = gui.editor(sideBar.content, model=None, seamless=True)
+						if id_ == index:
+							subGui.redrawLater()
 
 	def documentToolBarGUI(self, gui: DatapackEditorGUI, button, btnCorners, btnOverlap, btnMargins):
 		button = gui.framelessButton
@@ -308,59 +324,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			popup.addAction('profiling Enabled', setProfilingEnabled, icon=icons.stopwatch, checkable=True, checked=pythonGUI.PROFILING_ENABLED)
 			popup.addToggle('layout info as tool tip', pythonGUI.ADD_LAYOUT_INFO_AS_TOOL_TIP, setLayoutInfoAsToolTip)
 			popup.addToggle('debug layout', Widgets.DEBUG_LAYOUT, setDebugLayout)
-			popup.addToggle('debug paint event', catWidgetMixins.DO_DEBUG_PAINT_EVENT, setDebugPaintEvent)
-
-	def bottomPanelGUI(self, gui: DatapackEditorGUI):
-		document = self.selectedDocument
-
-		# connect to errorChanged Signal:
-		Document.onErrorsChanged.disconnectFromAllInstances(key='bottomPanelGUI')
-		if document is not None:
-			document.onErrorsChanged.connect('bottomPanelGUI', lambda d: gui.host.redrawLater('onErrorsChanged'))
-		getSession().documents.onSelectedDocumentChanged.reconnect('bottomPanelGUI', lambda: gui.host.redrawLater('onSelectedDocumentChanged'))
-
-		tabs = [
-			(TabOptions('Errors', icon=icons.error),     (
-				lambda *args, **kwargs: self._gitConsoleRefreshTimer.stop() or self.documentErrorsGUI(*args, **kwargs),
-				None
-			)),
-			(TabOptions('Console', icon=icons.terminal), (
-				lambda *args, **kwargs: None,
-				lambda *args, **kwargs: None,
-			)),
-		]
-		with gui.vLayout(seamless=True):
-			with gui.hLayout(seamless=True):  # , windowPanel=True):
-				index = gui.tabBar(
-					[tab[0] for tab in tabs],
-					drawBase=False,
-					documentMode=True,
-					expanding=False,
-					position=TabPosition.North,
-					hSizePolicy=SizePolicy.Expanding.value
-				)
-				guiFunc, toolBtnFunc = tabs[index][1]
-
-				if toolBtnFunc is not None:
-					toolBtnFunc(gui)
-					gui.hSeparator()
-				if document is not None:
-					gui.errorsSummaryGUI(getErrorCounts(document.errors))
-
-			with gui.vLayout(seamless=True):  # vSizePolicy=SizePolicy.Expanding.value, seamless=True, windowPanel=True):
-				guiFunc(gui)
-
-	def documentErrorsGUI(self, gui: DatapackEditorGUI) -> None:
-		document: Optional[Document] = self.selectedDocument
-		if document is not None:
-			errors: Sequence[GeneralError] = document.errors
-			errors = sorted(errors, key=attrgetter('position'))
-		else:
-			errors: Sequence[GeneralError] = []
-		gui.errorsList(
-			errors,
-			onDoubleClicked=lambda e: getSession().documents.selectDocument(document, e.span),  # or self._gui.redrawGUI(),
-		)
+			popup.addToggle('debug paint event', catWidgetMixins.DO_DEBUG_PAINT_EVENT, setDebugPaintEvent, enabled=not catWidgetMixins.NEVER_DO_DEBUG_PAINT_EVENT)
 
 	# Dialogs:
 
@@ -486,3 +450,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	@property
 	def selectedDocument(self) -> Optional[Document]:
 		return getSession().documents.currentView.selectedDocument
+
+
+def _select(pos: TabPosition, north: _TT, east: _TT, south: _TT, west: _TT) -> _TT:
+	if pos in TAB_POSITION_NORTH_SOUTH:
+		return north if pos is TabPosition.North else south
+	else:
+		return east if pos is TabPosition.East else west

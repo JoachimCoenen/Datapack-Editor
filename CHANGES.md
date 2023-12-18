@@ -1,6 +1,7 @@
 ## Next Version
 ### Fixes
  * Unsilenced several potential silent crashes.
+ * Fixed bottombar tabs defined by plugins being ignored.
 
 
 ## 0.7.0-alpha

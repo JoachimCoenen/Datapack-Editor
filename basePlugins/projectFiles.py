@@ -26,7 +26,7 @@ from base.model.project.project import AnalyzeRootsAspectPart, Project, ProjectR
 from base.model.session import getSession
 from base.model.utils import Span, formatMarkdown
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, SearchableListContext
-from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
+from base.plugin import PluginBase, SideBarOptions, PLUGIN_SERVICE
 
 
 def initPlugin():
@@ -41,15 +41,16 @@ class ProjectFilesPlugin(PluginBase):
 	def optionalDependencies(self) -> set[str]:
 		return {'ProjectPage'}  # ordering of gui elements
 
-	def sideBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
-		return [(TabOptions('Files', icon=icons.folder_open), projectFilesGUI, None)]
+	def sideBarTabs(self) -> list[SideBarOptions]:
+		return [SideBarOptions(TabOptions('Files', icon=icons.folder_open), ProjectFilesGUI)]
 
 	def projectAspects(self) -> list[Type[ProjectAspect]]:
 		return [FilesAspect]
 
 
-def projectFilesGUI(gui: DatapackEditorGUI):
-	gui.editor(ProjectFilesEditor, getSession().project, seamless=True)
+class ProjectFilesGUI(EditorBase[None]):
+	def OnGUI(self, gui: DatapackEditorGUI) -> None:
+		gui.editor(ProjectFilesEditor, getSession().project, seamless=True)
 
 
 @final

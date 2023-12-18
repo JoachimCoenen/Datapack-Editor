@@ -9,7 +9,7 @@ from recordclass import as_dataclass
 from base.model.searchUtils import filterComputedChoices
 from cat.GUI import SizePolicy, NO_MARGINS, MessageBoxStyle, propertyDecorators as pd
 from cat.GUI.components.treeBuilders import DataTreeBuilder
-from cat.GUI.pythonGUI import TabOptions
+from cat.GUI.pythonGUI import EditorBase, TabOptions
 from cat.Serializable.serializableDataclasses import getDecorators
 from gui.icons import icons
 from cat.utils import format_full_exc
@@ -18,7 +18,7 @@ from base.model.aspect import getAspectsForClass
 from base.model.project.project import Project, ProjectRoot, Root, DependencyDescr, ProjectAspect
 from base.model.session import getSession
 from gui.datapackEditorGUI import DatapackEditorGUI, SearchableListContext
-from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
+from base.plugin import PluginBase, SideBarOptions, PLUGIN_SERVICE
 
 
 def initPlugin():
@@ -30,8 +30,8 @@ class ProjectPagePlugin(PluginBase):
 	def dependencies(self) -> set[str]:
 		return set()
 
-	def sideBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
-		return [(TabOptions('Project', icon=icons.project), projectPanelGUI, None)]
+	def sideBarTabs(self) -> list[SideBarOptions]:
+		return [SideBarOptions(TabOptions('Project', icon=icons.project), ProjectPanelGUI)]
 
 
 def _addRoot(gui: DatapackEditorGUI, project: Project):
@@ -87,12 +87,13 @@ def _refreshRoots(project: Project):
 	project.analyzeDependencies()
 
 
-def projectPanelGUI(gui: DatapackEditorGUI):  # , *, roundedCorners: RoundedCorners, cornerRadius: float):
-	with gui.scrollBox(contentsMargins=(gui.panelMargins, gui.panelMargins, gui.panelMargins, gui.panelMargins), preventVStretch=False):  # , roundedCorners=roundedCorners, cornerRadius=cornerRadius):
-		project = getSession().project
-		basicsGUI(gui, project)
-		rootsAndDependenciesGUI(gui, project)
-		aspectsGUI(gui, project)
+class ProjectPanelGUI(EditorBase[None]):
+	def OnGUI(self, gui: DatapackEditorGUI) -> None:
+		with gui.scrollBox(contentsMargins=(gui.panelMargins, gui.panelMargins, gui.panelMargins, gui.panelMargins), preventVStretch=False):  # , roundedCorners=roundedCorners, cornerRadius=cornerRadius):
+			project = getSession().project
+			basicsGUI(gui, project)
+			rootsAndDependenciesGUI(gui, project)
+			aspectsGUI(gui, project)
 
 
 def basicsGUI(gui: DatapackEditorGUI, project: Project):

@@ -6,13 +6,13 @@ from typing import Optional, Any
 from PyQt5.QtGui import QIcon
 
 from cat.GUI.components.treeBuilders import DataTreeBuilder
-from cat.GUI.pythonGUI import TabOptions
+from cat.GUI.pythonGUI import EditorBase, TabOptions
 from gui.icons import icons
 from base.model.project.index import DeepIndex, Index, IndexBundle
 from base.model.project.project import Root
 from base.model.session import getSession
 from gui.datapackEditorGUI import DatapackEditorGUI
-from base.plugin import PluginBase, SideBarTabGUIFunc, PLUGIN_SERVICE, ToolBtnFunc
+from base.plugin import PluginBase, SideBarOptions, PLUGIN_SERVICE
 
 
 def initPlugin():
@@ -27,12 +27,13 @@ class PluginDebugPlugin(PluginBase):
 	def optionalDependencies(self) -> set[str]:
 		return {'ProjectFiles'}  # ordering of gui elements
 
-	def sideBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
-		return [(TabOptions('Index Bundles', icon=icons.folder_open), indexBundlesGUI, None)]
+	def sideBarTabs(self) -> list[SideBarOptions]:
+		return [SideBarOptions(TabOptions('Index Bundles', icon=icons.folder_open), IndexBundlesGUI, None)]
 
 
-def indexBundlesGUI(gui: DatapackEditorGUI):
-	filteredProjectsFilesTreeGUI(gui, getSession().project.allRoots)
+class IndexBundlesGUI(EditorBase[None]):
+	def OnGUI(self, gui: DatapackEditorGUI) -> None:
+		filteredProjectsFilesTreeGUI(gui, getSession().project.allRoots)
 
 
 def filteredProjectsFilesTreeGUI(

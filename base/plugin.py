@@ -5,12 +5,12 @@ import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Protocol, Iterable, TYPE_CHECKING, Optional, Type
+from typing import Iterable, TYPE_CHECKING, Optional, Type
 
 from PyQt5.Qsci import QsciLexerCustom
 
 from cat.GUI.components.codeEditor import CodeEditorLexer
-from cat.GUI.pythonGUI import TabOptions
+from cat.GUI.pythonGUI import EditorBase, TabOptions
 from cat.utils import getExePath
 from cat.utils.collections_ import AddToDictDecorator
 from cat.utils.graphs import getCycles, semiTopologicalSort2
@@ -30,9 +30,6 @@ from base.model.project.project import ProjectAspect, Project
 from base.model.project.projectCreator import ProjectCreator
 from base.model.utils import LanguageId
 from base.modules import loadAllModules, FolderAndFileFilter
-
-if TYPE_CHECKING:
-	from gui.datapackEditorGUI import DatapackEditorGUI
 
 
 @dataclass
@@ -157,14 +154,11 @@ def _formatPluginsOrder(plugins: list[str]) -> str:
 	return ' -> '.join(plugins)
 
 
-class SideBarTabGUIFunc(Protocol):
-	def __call__(self, gui: DatapackEditorGUI) -> None:
-		pass
-
-
-class ToolBtnFunc(Protocol):
-	def __call__(self, gui: DatapackEditorGUI):
-		pass
+@dataclass
+class SideBarOptions:
+	tabOptions: TabOptions
+	content: Type[EditorBase[None]]
+	toolButtons: Optional[Type[EditorBase[None]]] = None
 
 
 class PluginBase(ABC):
@@ -204,10 +198,10 @@ class PluginBase(ABC):
 	def optionalDependencies(self) -> set[str]:
 		return set()
 
-	def sideBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
+	def sideBarTabs(self) -> list[SideBarOptions]:
 		return []
 
-	def bottomBarTabs(self) -> list[tuple[TabOptions, SideBarTabGUIFunc, Optional[ToolBtnFunc]]]:
+	def bottomBarTabs(self) -> list[SideBarOptions]:
 		return []
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
