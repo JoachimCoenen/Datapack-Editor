@@ -1,3 +1,8 @@
+## Next Version
+### Fixes
+ * Unsilenced several potential silent crashes.
+
+
 ## 0.7.0-alpha
 ### Features
  * Added validation, parsing, etc. for following JsonArgumentTypes: `minecraft:score_holder`, `minecraft:objective`, `minecraft:target_selector`, `minecraft:block_pos`, `minecraft:color`, and `minecraft:uuid`.

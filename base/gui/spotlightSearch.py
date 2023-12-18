@@ -1,23 +1,23 @@
 from operator import attrgetter
 from typing import Optional
 
-from PyQt5.QtCore import QPoint, Qt, QSize
+from PyQt5.QtCore import QPoint, QSize, Qt
 from PyQt5.QtGui import QFocusEvent, QFont, QKeyEvent, QMoveEvent, QResizeEvent
-from PyQt5.QtWidgets import QWidget, QLayout
+from PyQt5.QtWidgets import QLayout, QWidget
 
 from base.model.applicationSettings import getApplicationSettings
-from base.model.project.project import Root, FileEntry
-from base.model.searchUtils import FuzzyMatch, getSearchTerms, SearchResults, SearchResult, getFuzzyMatch,\
-	performFuzzySearch, autocompleteFromList
+from base.model.project.project import FileEntry, Root
+from base.model.searchUtils import FuzzyMatch, SearchResult, SearchResults, autocompleteFromList, getFuzzyMatch, getSearchTerms, performFuzzySearch
 from base.model.session import getSession
 from basePlugins.projectFiles import FilesIndex
 from cat import utils
 from cat.GUI import SizePolicy
 from cat.GUI.components.Widgets import CatTextField
 from cat.GUI.components.catWidgetMixins import CORNERS, NO_MARGINS, NO_OVERLAP, Overlap, RoundedCorners
-from cat.GUI.pythonGUI import PythonGUIDialog, PythonGUI
-from cat.GUI.utilities import connect, CrashReportWrapped
+from cat.GUI.pythonGUI import PythonGUI, PythonGUIDialog
+from cat.GUI.utilities import connectSafe
 from cat.utils.profiling import ProfiledFunction, TimedMethod
+from cat.utils.utils import CrashReportWrapped
 from gui.datapackEditorGUI import ContextMenuEntries
 
 
@@ -33,14 +33,14 @@ class SpotlightSearchGui(CatTextField):
 
 		self.setRoundedCorners(CORNERS.ALL)
 
-		connect(self.textChanged, self.onTextChanged)
+		connectSafe(self.textChanged, self.onTextChanged)
 
 	@property
 	def isPopupVisible(self) -> bool:
 		return self._resultsPopup.isVisible()
 
-	@TimedMethod()
 	@CrashReportWrapped
+	@TimedMethod()
 	def focusInEvent(self, event: QFocusEvent) -> None:
 		super(SpotlightSearchGui, self).focusInEvent(event)
 		self.updateAllChoices()
@@ -251,7 +251,7 @@ class FileSearchPopup(PythonGUIDialog):
 			overlap=overlap,
 			roundedCorners=roundedCorners,
 			default=isSelected,
-			onCustomContextMenuRequested=lambda pos, fe=fe: onContextMenu(fe),
+			onCustomContextMenuRequested=lambda pos: onContextMenu(fe),
 			vSizePolicy=SizePolicy.Fixed.value
 		):
 			with gui.hLayout():

@@ -1,22 +1,22 @@
 from dataclasses import dataclass, field, fields
-from typing import Optional, cast, Sequence
+from typing import Optional, Sequence, cast
 
-from PyQt5.Qsci import QsciLexerCustom, QsciLexer, QsciScintilla
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QColor
+from PyQt5.Qsci import QsciLexer, QsciLexerCustom, QsciScintilla
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor, QFont
 
-from cat.GUI.components.codeEditor import CodeEditor, MyQsciAPIs, AutoCompletionTree, CallTipInfo, CEPosition
-from cat.GUI.utilities import CrashReportWrapped
-from cat.utils import override, HTMLStr
-from cat.utils.logging_ import logWarning
-from base.gui.styler import DEFAULT_STYLE_ID, getStyler, StyleId, StylerCtx
+from base.gui.styler import DEFAULT_STYLE_ID, StyleId, StylerCtx, getStyler
 from base.model import theme
-from base.model.theme import StyleFont, Style, GlobalStyles
+from base.model.documents import TextDocument
 from base.model.parsing.contextProvider import ContextProvider, getContextProvider
 from base.model.parsing.tree import Node
-from base.model.utils import addStyle, formatMarkdown, GeneralError, LanguageId, MDStr, Position, NULL_POSITION
-from base.model.documents import TextDocument
 from base.model.searchUtils import performFuzzyStrSearch
+from base.model.theme import GlobalStyles, Style, StyleFont
+from base.model.utils import GeneralError, LanguageId, MDStr, NULL_POSITION, Position, addStyle, formatMarkdown
+from cat.GUI.components.codeEditor import AutoCompletionTree, CEPosition, CallTipInfo, CodeEditor, MyQsciAPIs
+from cat.utils import HTMLStr, override
+from cat.utils.logging_ import logWarning
+from cat.utils.utils import CrashReportWrapped, runLaterSafe
 
 _SCI_STYLE_DEFAULT = StyleId(32)  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
 _SCI_STYLE_LINENUMBER = StyleId(33)  # This style sets the attributes of the text used to display line numbers in a line number margin. The background colour set for this style also sets the background colour for all margins that do not have any folding mask bits set. That is, any margin for which mask & SC_MASK_FOLDERS is 0. See SCI_SETMARGINMASKN for more about masks.
@@ -369,7 +369,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	@override
 	def postAutoCompletionSelected(self, selection: str) -> None:
-		QTimer.singleShot(0, CrashReportWrapped(lambda: (self._editor is not None) and (self._editor.showCallTips() or self._editor.myStartAutoCompletion())))
+		runLaterSafe(0, lambda: (self._editor is not None) and (self._editor.showCallTips() or self._editor.myStartAutoCompletion()))
 
 	@property
 	def autoCompletionTree(self) -> AutoCompletionTree:

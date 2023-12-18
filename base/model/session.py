@@ -1,21 +1,21 @@
 from __future__ import annotations
+
 import gc
 import os
 from dataclasses import dataclass, field
 from json import JSONDecodeError
 from typing import Callable, ClassVar, Optional, overload
 
-from PyQt5.QtCore import QTimer
-
-from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from cat.utils import format_full_exc, getExePath, openOrCreate, Singleton
-from cat.utils.logging_ import logError
-from cat.utils.signals import CatBoundSignal, CatSignal
+from base.model.documentHandling import DocumentsManager
 from base.model.documents import Document
 from base.model.pathUtils import FilePath, FilePathStr, FilePathTpl, unitePathTpl
 from base.model.project.project import Project
-from base.model.documentHandling import DocumentsManager
 from base.model.utils import Span
+from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils import Singleton, format_full_exc, getExePath, openOrCreate
+from cat.utils.logging_ import logError
+from cat.utils.signals import CatBoundSignal, CatSignal
+from cat.utils.utils import runLaterSafe
 
 
 @dataclass
@@ -67,7 +67,7 @@ class Session(SerializableDataclass):
 			except OSError as e:
 				getSession().showAndLogError(e)
 
-		QTimer.singleShot(250, safeOpenOrShowDocument)
+		runLaterSafe(250, safeOpenOrShowDocument)
 
 	def saveDocument(self, document: Document) -> bool:
 		try:

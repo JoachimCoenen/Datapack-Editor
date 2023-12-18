@@ -2,7 +2,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional, Type
 
-from PyQt5.QtCore import QEventLoop, QTimer, pyqtBoundSignal, pyqtSignal
+from PyQt5.QtCore import QEventLoop, pyqtBoundSignal, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QDialog, QWidget
 from timerit import Timer
 
@@ -11,9 +11,10 @@ from base.model.project.project import Root
 from base.model.session import getSession
 from basePlugins.projectFiles import FilesIndex
 from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
-from cat.GUI.utilities import CrashReportWrapped, connectOnlyOnce
+from cat.GUI.utilities import connectOnlyOnce
 from cat.utils import BusyIndicator
 from cat.utils.profiling import TimedMethod
+from cat.utils.utils import runLaterSafe
 from gui.datapackEditorGUI import DatapackEditorGUI
 
 
@@ -131,7 +132,7 @@ class OnProjectFilesDialogBase(CatFramelessWindowMixin, QDialog):
 
 	def run(self) -> None:
 		self.resetUserInterface()
-		QTimer.singleShot(1, self._run)
+		runLaterSafe(1, self._run)
 
 	@property
 	def resultSummaryUpdateInterval(self) -> int:
@@ -141,7 +142,6 @@ class OnProjectFilesDialogBase(CatFramelessWindowMixin, QDialog):
 	def resultSummaryUpdateMaxTimeDeltaSeconds(self) -> float:
 		return 0.5
 
-	@CrashReportWrapped
 	@BusyIndicator
 	@TimedMethod()
 	def _run(self) -> None:
@@ -164,4 +164,4 @@ class OnProjectFilesDialogBase(CatFramelessWindowMixin, QDialog):
 					self.processFile(filePath, pool, fromPrepareRun)
 		finally:
 			self.finishedRun(fromPrepareRun)
-			self._gui.redrawGUILater()
+			self._gui.redrawLater()

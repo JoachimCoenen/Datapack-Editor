@@ -1,30 +1,30 @@
 from __future__ import annotations
+
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Optional, Type, Sequence, Callable, TypeVar, Collection, Any, ClassVar
+from typing import Any, Callable, ClassVar, Collection, Optional, Sequence, Type, TypeVar
 
-from PyQt5.QtCore import QTimer
-from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileModifiedEvent, FileDeletedEvent, FileMovedEvent, FileClosedEvent
+from watchdog.events import FileClosedEvent, FileCreatedEvent, FileDeletedEvent, FileModifiedEvent, FileMovedEvent, FileSystemEventHandler
 
+from base.model import filesystemEvents
+from base.model.defaultSchemaProvider import getSchemaMapping
+from base.model.parsing.contextProvider import getContextProvider, parseNPrepare
+from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
+from base.model.parsing.tree import Node, Schema
+from base.model.pathUtils import ArchiveFilePool, FilePath, ZipFilePool, fileNameFromFilePath, loadTextFile, toDisplayPath, unitePath, unitePathTpl
+from base.model.utils import GeneralError, LanguageId, Position, WrappedError
 from cat import undoRedo
 from cat.GUI import propertyDecorators as pd
 from cat.GUI.components import codeEditor
 from cat.GUI.enums import FileExtensionFilter
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
-from cat.undoRedo import UndoRedoStack2, MakeMementoIfDiffFunc
+from cat.undoRedo import MakeMementoIfDiffFunc, UndoRedoStack2
 from cat.utils import utils
 from cat.utils.logging_ import logWarning
-from cat.utils.profiling import logInfo, logError, TimedMethod
-
+from cat.utils.profiling import TimedMethod, logError, logInfo
 from cat.utils.signals import CatSignal
-from base.model import filesystemEvents
-from base.model.defaultSchemaProvider import getSchemaMapping
-from base.model.parsing.contextProvider import parseNPrepare, getContextProvider
-from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
-from base.model.parsing.tree import Node, Schema
-from base.model.pathUtils import fileNameFromFilePath, FilePath, ZipFilePool, loadTextFile, ArchiveFilePool, unitePath, toDisplayPath, unitePathTpl
-from base.model.utils import GeneralError, Position, WrappedError, LanguageId
+from cat.utils.utils import runLaterSafe
 
 _TTarget = TypeVar("_TTarget")
 
@@ -419,7 +419,7 @@ class Document(SerializableDataclass):
 	def parserErrors(self, newVal: list[GeneralError]):
 		if newVal != self._parserErrors:
 			self._parserErrors = newVal
-			QTimer.singleShot(0, lambda s=self: s.onErrorsChanged.emit(s))
+			runLaterSafe(0, lambda s=self: s.onErrorsChanged.emit(s))
 
 	@property
 	def validationErrors(self) -> list[GeneralError]:
@@ -429,7 +429,7 @@ class Document(SerializableDataclass):
 	def validationErrors(self, newVal: list[GeneralError]):
 		if newVal != self._validationErrors:
 			self._validationErrors = newVal
-			QTimer.singleShot(0, lambda s=self: s.onErrorsChanged.emit(s))
+			runLaterSafe(0, lambda s=self: s.onErrorsChanged.emit(s))
 
 	@property
 	def errors(self) -> list[GeneralError]:
