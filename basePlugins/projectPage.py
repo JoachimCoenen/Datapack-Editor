@@ -417,6 +417,7 @@ def aspectOptionsGUI(gui: DatapackEditorGUI, aspect: ProjectAspect, allFields: l
 			f"Error while drawing GUI for ProjectAspect {aspect.getAspectType()} ({type(aspect).__qualname__}):",
 			format_full_exc(ex, indentLvl=1)
 		)
+		gui.helpBox(f"Error: \"{ex}\". For further details see logfile.log", style='error')
 
 
 def _removeAspectGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspect):

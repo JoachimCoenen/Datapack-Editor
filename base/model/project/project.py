@@ -8,6 +8,7 @@ from typing import Generic, Optional, TypeVar, final
 from recordclass import as_dataclass
 
 from base.model.searchUtils import SplitStrs, splitStringForSearch
+from cat.GUI import propertyDecorators as pd
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from cat.utils.logging_ import logWarning
@@ -98,9 +99,9 @@ class AnalyzeFilesAspectPart(ProjectAspectPart[_TProjectAspect], Generic[_TProje
 @dataclass
 class ProjectAspect(Aspect, SerializableDataclass, ABC):
 
-	dependenciesPart: Optional[DependenciesAspectPart] = field(default=None, init=False)
-	analyzeRootsPart: Optional[AnalyzeRootsAspectPart] = field(default=None, init=False)
-	analyzeFilesPart: Optional[AnalyzeFilesAspectPart] = field(default=None, init=False)
+	dependenciesPart: Optional[DependenciesAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
+	analyzeRootsPart: Optional[AnalyzeRootsAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
+	analyzeFilesPart: Optional[AnalyzeFilesAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
 
 	def onCloseProject(self, project: Project) -> None:
 		"""
