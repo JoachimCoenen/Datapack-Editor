@@ -3,19 +3,19 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Generic, Optional, TypeVar, final
+from typing import Generic, Optional, Sequence, TypeVar, final
 
 from recordclass import as_dataclass
 
+from base.model.aspect import Aspect, AspectDict, SerializableDataclassWithAspects
+from base.model.pathUtils import ArchiveFilePool, FilePathStr, FilePathTpl, normalizeDirSeparatorsStr
+from base.model.project.index import IndexBundle
 from base.model.searchUtils import SplitStrs, splitStringForSearch
+from base.model.utils import GeneralError, MDStr, NULL_SPAN, SemanticsError, Span
 from cat.GUI import propertyDecorators as pd
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from cat.utils.logging_ import logWarning
-from base.model.project.index import IndexBundle
-from base.model.pathUtils import FilePathTpl, FilePathStr, normalizeDirSeparatorsStr, ArchiveFilePool
-from base.model.aspect import AspectDict, Aspect, SerializableDataclassWithAspects
-from base.model.utils import Span, GeneralError, MDStr, SemanticsError, NULL_SPAN
 
 
 def _fillProjectAspects(aspectsDict: AspectDict):
@@ -97,11 +97,29 @@ class AnalyzeFilesAspectPart(ProjectAspectPart[_TProjectAspect], Generic[_TProje
 
 
 @dataclass
+class ProjectInfoAspectPart(ProjectAspectPart[_TProjectAspect], Generic[_TProjectAspect], ABC):
+
+	_errorsByType: dict[str, Sequence[GeneralError]] = field(default_factory=dict, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
+
+	def setErrors(self, type_: str, errors: Sequence[GeneralError]) -> None:
+		self._errorsByType[type_] = errors
+		from base.model.session import getSession
+		getSession().emitProjectErrorsChanged()
+
+	def getErrors(self, type_: str) -> Sequence[GeneralError]:
+		return self._errorsByType[type_]
+
+	def getCurrentErrors(self) -> Sequence[GeneralError]:
+		return [e for es in self._errorsByType.values() for e in es]
+
+
+@dataclass
 class ProjectAspect(Aspect, SerializableDataclass, ABC):
 
 	dependenciesPart: Optional[DependenciesAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
 	analyzeRootsPart: Optional[AnalyzeRootsAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
 	analyzeFilesPart: Optional[AnalyzeFilesAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
+	projectInfoPart: Optional[ProjectInfoAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
 
 	def onCloseProject(self, project: Project) -> None:
 		"""
@@ -127,6 +145,7 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 	deepDependencies: list[Root] = field(default_factory=list, metadata=catMeta(serialize=False))
 	"""all dependencies recursively, excluding all ProjectRoots."""
 	# projectSettings: ProjectSettings
+	dependencyProblems: list[GeneralError] = field(default_factory=list, metadata=catMeta(serialize=False))
 
 	@property
 	def path(self) -> FilePathStr:
@@ -158,11 +177,14 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 	def allRoots(self) -> list[Root]:
 		return self.roots + self.deepDependencies
 
+	def getAllProjectErrors(self) -> Sequence[GeneralError]:
+		return [e for a in self.aspects if a.projectInfoPart is not None for e in a.projectInfoPart.getCurrentErrors()] + self.dependencyProblems
+
 	def resolveDependencies(self) -> None:
 		aspects = [a.dependenciesPart for a in self.aspects if a.dependenciesPart is not None]
 		for aspect in aspects:
 			aspect.preResolveDependencies(self)
-		self.deepDependencies = resolveDependencies(self, aspects)
+		self.deepDependencies, self.dependencyProblems = resolveDependencies(self, aspects)
 		for aspect in aspects:
 			aspect.postResolveDependencies(self)
 
@@ -224,7 +246,7 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 			self.removeRoot(root)
 
 
-def resolveDependencies(project: Project, aspects: list[DependenciesAspectPart]):
+def resolveDependencies(project: Project, aspects: list[DependenciesAspectPart]) -> tuple[list[Root], list[GeneralError]]:
 	# just a cache:
 	dependencyDict: dict[str, Optional[Root]] = {rt.identifier: rt for rt in project.roots}
 	# seenDependencies: set[str] = set()
@@ -250,9 +272,9 @@ def resolveDependencies(project: Project, aspects: list[DependenciesAspectPart])
 					dependencyRoots.append(dep.resolved)
 				else:
 					errorsByRoot[root.name].append(
-						SemanticsError(MDStr(f"Missing mandatory dependency '{dep.name}'."), span=dep.span if dep.span is not None else NULL_SPAN)
+						SemanticsError(MDStr(f"Root '{root.name}': Missing mandatory dependency '{dep.name}'."), span=dep.span if dep.span is not None else NULL_SPAN)
 						if dep.mandatory else
-						SemanticsError(MDStr(f"Missing optional dependency '{dep.name}'."), span=dep.span if dep.span is not None else NULL_SPAN, style='info')
+						SemanticsError(MDStr(f"Root '{root.name}': Missing optional dependency '{dep.name}'."), span=dep.span if dep.span is not None else NULL_SPAN, style='info')
 					)
 		return dependencyRoots
 
@@ -270,7 +292,7 @@ def resolveDependencies(project: Project, aspects: list[DependenciesAspectPart])
 			for error in errors:
 				logWarning(str(error), indentLvl=1)
 
-	return deepDependencies
+	return deepDependencies, [e for es in errorsByRoot.values() for e in es]
 
 
 @dataclass(slots=True)

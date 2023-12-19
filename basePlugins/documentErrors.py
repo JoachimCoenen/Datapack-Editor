@@ -6,7 +6,7 @@ from typing import Optional, Sequence
 from PyQt5 import sip
 
 from base.model.documents import Document, ErrorCounts, getErrorCounts
-from base.model.session import getSession
+from base.model.session import GLOBAL_SIGNALS, getSession
 from base.model.utils import GeneralError
 from base.plugin import PLUGIN_SERVICE, PluginBase, SideBarOptions
 from cat.GUI.pythonGUI import EditorBase, TabOptions
@@ -29,6 +29,7 @@ class DocumentErrorsPlugin(PluginBase):
 	def bottomBarTabs(self) -> list[SideBarOptions]:
 		return [
 			SideBarOptions(TabOptions('Errors', icon=icons.error), DocumentErrorsGUI, DocumentErrorsSummaryGUI),
+			SideBarOptions(TabOptions('Project Errors', icon=icons.error), ProjectErrorsGUI),
 		]
 
 
@@ -67,3 +68,16 @@ def getAndConnectDocument(self: EditorBase[None]) -> Optional[Document]:
 		document.onErrorsChanged.connect(key, lambda d: self.redrawLater('onErrorsChanged') if not sip.isdeleted(self) else None)
 	getSession().documents.onSelectedDocumentChanged.reconnect(key, lambda: self.redrawLater('onSelectedDocumentChanged') if not sip.isdeleted(self) else None)
 	return document
+
+
+class ProjectErrorsGUI(EditorBase[None]):
+
+	def OnGUI(self, gui: DatapackEditorGUI) -> None:
+		key = type(self).__name__
+		GLOBAL_SIGNALS.onProjectErrorsChanged.reconnect(key, lambda: self.redrawLater('onErrorsChanged') if not sip.isdeleted(self) else None)
+
+		errors = sorted(getSession().project.getAllProjectErrors(), key=attrgetter('position'))
+		gui.errorsList(
+			errors,
+			onDoubleClicked=lambda e: None,  # getSession().documents.selectDocument(document, e.span),
+		)

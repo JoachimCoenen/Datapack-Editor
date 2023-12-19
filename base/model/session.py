@@ -15,7 +15,7 @@ from cat.Serializable.serializableDataclasses import SerializableDataclass, catM
 from cat.utils import Singleton, format_full_exc, getExePath, openOrCreate
 from cat.utils.logging_ import logError
 from cat.utils.signals import CatBoundSignal, CatSignal
-from cat.utils.utils import runLaterSafe
+from cat.utils.utils import DeferredCallOnceMethod, runLaterSafe
 
 
 @dataclass
@@ -51,6 +51,10 @@ class Session(SerializableDataclass):
 	def hasProjectConfigFile(self) -> bool:
 		return self.hasOpenedProject and os.path.exists(unitePathTpl(self.projectConfigPath))
 
+	@DeferredCallOnceMethod(delay=333)
+	def emitProjectErrorsChanged(self) -> None:
+		GLOBAL_SIGNALS.onProjectErrorsChanged.emit()
+
 	documents: DocumentsManager = field(default_factory=DocumentsManager)
 
 	def tryOpenOrSelectDocument(self, filePath: FilePath, selectedSpan: Optional[Span] = None):
@@ -83,12 +87,12 @@ class Session(SerializableDataclass):
 		except OSError as e:
 			getSession().showAndLogError(e)
 
-
 	def closeProject(self) -> None:
 		project = self.project
 		project.close()
 		self._projectPath = ''
 		self.project = Project()
+		self.emitProjectErrorsChanged()
 		# resetAllGlobalCaches()
 		gc.collect()
 
@@ -111,6 +115,7 @@ class Session(SerializableDataclass):
 			self.showAndLogError(e, "Unable to load project")
 			self._projectPath = ''
 			newProject = Project()
+			self.emitProjectErrorsChanged()
 
 		self.project = newProject
 		self.project.setup()
@@ -145,6 +150,9 @@ __session = Session()
 class _GlobalSignals(Singleton):
 	onError: ClassVar[CatBoundSignal[Session, Callable[[Exception, str], None]]] = CatSignal[Callable[[Exception, str], None]]('onError')
 	onWarning: ClassVar[CatBoundSignal[Session, Callable[[Exception | None, str], None]]] = CatSignal[Callable[[Exception | None, str], None]]('onWarning')
+
+	onProjectErrorsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onProjectErrorsChanged')  # not really satisfied with this location for this signal...
+	""" is emitted whenever project errors change. See also Project.getAllProjectErrors() and Session.emitProjectErrorsChanged(...)"""
 
 	def __hash__(self):
 		return hash((id(self), type(self)))

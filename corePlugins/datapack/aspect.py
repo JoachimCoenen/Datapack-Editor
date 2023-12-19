@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass, field
-from typing import Optional, Callable
+from typing import Optional, Callable, cast
 
 from cat.GUI import propertyDecorators as pd
 from cat.GUI.propertyDecorators import ValidatorResult
@@ -10,11 +10,11 @@ from cat.utils.logging_ import logWarning
 from base.model.applicationSettings import getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.aspect import AspectType
-from base.model.project.project import AnalyzeFilesAspectPart, DependenciesAspectPart, Root, ProjectAspect, DependencyDescr, FileEntry, Project
+from base.model.project.project import AnalyzeFilesAspectPart, DependenciesAspectPart, ProjectInfoAspectPart, Root, ProjectAspect, DependencyDescr, FileEntry, Project
 from base.model.parsing.contextProvider import parseNPrepare, validateTree
 from base.model.pathUtils import ArchiveFilePool, ZipFilePool, loadBinaryFile, normalizeDirSeparators
 from base.model.session import getSession
-from base.model.utils import WrappedError
+from base.model.utils import GeneralError, MDStr, NULL_SPAN, SemanticsError
 from .datapackContents import collectEntry
 from .dpVersions import getAllDPVersions, getDPVersion, DPVersion
 from corePlugins.json import JSON_ID
@@ -24,9 +24,16 @@ from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
 
 
 def minecraftVersionValidator(version: str) -> Optional[pd.ValidatorResult]:
-	versions = getApplicationSettings().aspects.get(MinecraftSettings).minecraftVersions
-	if not any(v.name == version for v in versions):
-		return ValidatorResult('No minecraft executable for this name configured. executables can be configured in settings -> minecraft.', 'warning')
+	versions = allRegisteredMinecraftVersions()
+	if version not in versions:
+		return ValidatorResult(f"No minecraft executable with name '{version}' configured. Executables can be configured in settings -> minecraft.", 'warning')
+	return None
+
+
+def datapackVersionValidator(version: str) -> Optional[pd.ValidatorResult]:
+	versions = getAllDPVersions()
+	if version not in versions:
+		return ValidatorResult(f"Datapack version '{version}' not supported by your current installation of {getApplicationSettings().applicationName}. You might need to update your installation or install a plugin.", 'warning')
 	return None
 
 
@@ -58,6 +65,7 @@ class DatapackAspect(ProjectAspect):
 	def __post_init__(self):
 		self.analyzeFilesPart = AnalyzeFilesDatapackAspectPart(self)
 		self.dependenciesPart = DependenciesDatapackAspectPart(self)
+		self.projectInfoPart = ProjectInfoAspectPart[DatapackAspect](self)
 
 	dpVersion: str = field(
 		default='18',
@@ -66,6 +74,7 @@ class DatapackAspect(ProjectAspect):
 			kwargs=dict(label='Datapack Version'),
 			decorators=[
 				pd.ComboBox(choices=property(lambda self: getAllDPVersions().keys()), editable=True),
+				pd.Validator(datapackVersionValidator),
 			]
 		)
 	)
@@ -91,12 +100,38 @@ class DatapackAspect(ProjectAspect):
 		return _getFullMcDataFromRegisteredMinecraftVersion(self.minecraftVersion)
 
 	def onCloseProject(self, project: Project) -> None:
-		_reloadDPVersion(self.dpVersion, None)
-		_reloadMinecraftVersion(self.minecraftVersion, None)
+		self._reloadDPVersion(self.dpVersion, None)
+		self._reloadMinecraftVersion(self.minecraftVersion, None)
 
 	def onProjectLoaded(self, project: Project) -> None:
-		_reloadDPVersion(None, self.dpVersion)
-		_reloadMinecraftVersion(None, self.minecraftVersion)
+		self._reloadDPVersion(None, self.dpVersion)
+		self._reloadMinecraftVersion(None, self.minecraftVersion)
+
+	def _reloadDPVersion(self, oldVersion: Optional[str], newVersion: Optional[str]):
+		dpVersion = getDPVersion(oldVersion)
+		if dpVersion is not None:
+			dpVersion.deactivate()
+		dpVersion = getDPVersion(newVersion)
+		if dpVersion is not None:
+			dpVersion.activate()
+		if newVersion is not None and (problem := datapackVersionValidator(newVersion)) is not None:
+			error = SemanticsError(MDStr(f"DatapackAspect: {problem.message}"), NULL_SPAN, problem.style)
+			self.projectInfoPart.setErrors('dpVersion', (error,))
+		else:
+			self.projectInfoPart.setErrors('dpVersion', ())
+
+	def _reloadMinecraftVersion(self, oldVersion: Optional[str], newVersion: Optional[str]):
+		minecraftVersion = _getFullMcDataFromRegisteredMinecraftVersion(oldVersion)
+		if minecraftVersion is not None:
+			minecraftVersion.deactivate()
+		minecraftVersion = _getFullMcDataFromRegisteredMinecraftVersion(newVersion)
+		if minecraftVersion is not None:
+			minecraftVersion.activate()
+		if newVersion is not None and (problem := minecraftVersionValidator(newVersion)) is not None:
+			error = SemanticsError(MDStr(f"DatapackAspect: {problem.message}"), NULL_SPAN, problem.style)
+			self.projectInfoPart.setErrors('minecraftVersion', (error,))
+		else:
+			self.projectInfoPart.setErrors('minecraftVersion', ())
 
 
 def _getDPVersion(self: DatapackAspect) -> str:
@@ -108,20 +143,12 @@ def _setDPVersion(self: DatapackAspect, newVal: str) -> None:
 	if project is not None and project.aspects.get(DatapackAspect) is self:
 		oldVal = getattr(self, '_dpVersion', None)
 		if True and newVal != oldVal:
-			_reloadDPVersion(oldVal, newVal)
+			self._reloadDPVersion(oldVal, newVal)
+
 	setattr(self, '_dpVersion',  newVal)
 
 
 DatapackAspect.dpVersion = property(_getDPVersion, _setDPVersion)
-
-
-def _reloadDPVersion(oldVersion: Optional[str], newVersion: Optional[str]):
-	dpVersion = getDPVersion(oldVersion)
-	if dpVersion is not None:
-		dpVersion.deactivate()
-	dpVersion = getDPVersion(newVersion)
-	if dpVersion is not None:
-		dpVersion.activate()
 
 
 def _getMinecraftVersion(self: DatapackAspect) -> str:
@@ -133,27 +160,22 @@ def _setMinecraftVersion(self: DatapackAspect, newVal: str) -> None:
 	if project is not None and project.aspects.get(DatapackAspect) is self:
 		oldVal = getattr(self, '_minecraftVersion', None)
 		if True and newVal != oldVal:
-			_reloadMinecraftVersion(oldVal, newVal)
+			self._reloadMinecraftVersion(oldVal, newVal)
+
 	setattr(self, '_minecraftVersion',  newVal)
 
 
 DatapackAspect.minecraftVersion = property(_getMinecraftVersion, _setMinecraftVersion)
 
 
-def _reloadMinecraftVersion(oldVersion: Optional[str], newVersion: Optional[str]):
-	minecraftVersion = _getFullMcDataFromRegisteredMinecraftVersion(oldVersion)
-	if minecraftVersion is not None:
-		minecraftVersion.deactivate()
-	minecraftVersion = _getFullMcDataFromRegisteredMinecraftVersion(newVersion)
-	if minecraftVersion is not None:
-		minecraftVersion.activate()
-
-
 @dataclass
 class DependenciesDatapackAspectPart(DependenciesAspectPart[DatapackAspect]):
 
 	def preResolveDependencies(self, project: Project) -> None:
-		pass  # nothing to do here...
+		self.aspect.projectInfoPart.setErrors('dependencies', [])
+
+	def _getErrorsList(self) -> list[GeneralError]:
+		return cast(list[GeneralError], self.aspect.projectInfoPart.getErrors('dependencies'))
 
 	def getDependencies(self, root: Root, project: Project) -> list[DependencyDescr]:
 		fileName = 'dependencies.json'
@@ -173,7 +195,7 @@ class DependenciesDatapackAspectPart(DependenciesAspectPart[DatapackAspect]):
 			with ZipFilePool() as pool:
 				file = loadBinaryFile(filePath, pool)
 		except (OSError, KeyError) as e:
-			node, errors = None, [WrappedError(e)]
+			node, errors = None, [SemanticsError(MDStr(f"Root '{root.name}' has no 'dependencies.json' file."), span=NULL_SPAN, style='info')]
 		else:
 			node, errors, _ = parseNPrepare(file, filePath=filePath, language=JSON_ID, schema=schema)
 
@@ -190,6 +212,7 @@ class DependenciesDatapackAspectPart(DependenciesAspectPart[DatapackAspect]):
 					span=name.span
 				))
 		if errors:
+			self._getErrorsList().append(errors[0])  # only append the first error!
 			logWarning(f"Failed to read '{fileName}' for root '{rootPath}':")
 			for error in errors:
 				logWarning(str(error), indentLvl=1)
@@ -206,8 +229,19 @@ class DependenciesDatapackAspectPart(DependenciesAspectPart[DatapackAspect]):
 
 		return dependencies
 
-	def resolveDependency(self, dependencyDescr: DependencyDescr) -> Optional[Root]:
-		return resolveDependency(dependencyDescr)
+	def resolveDependency(self, dep: DependencyDescr) -> Optional[Root]:
+		if '/' in dep.name and os.path.exists(dep.name):
+			return Root(dep.name, dep.name)
+		for dslProvider in DEPENDENCY_SEARCH_LOCATIONS:
+			dsls = dslProvider()
+			for dsl in dsls:
+				path = os.path.join(dsl, dep.name)
+				if os.path.exists(path):
+					return Root(_name=dep.name, _location=normalizeDirSeparators(path))
+				path = path + '.zip'
+				if os.path.exists(path):
+					return Root(_name=dep.name, _location=normalizeDirSeparators(path))
+		return None  # missing dependency error is logged by Project itself.
 
 	def postResolveDependencies(self, project: Project) -> None:
 		pass  # nothing to do here...
@@ -234,18 +268,3 @@ def defaultSearchLocations():
 
 
 DEPENDENCY_SEARCH_LOCATIONS.append(defaultSearchLocations)
-
-
-def resolveDependency(dep: DependencyDescr) -> Optional[Root]:
-	if '/' in dep.name and os.path.exists(dep.name):
-		return Root(dep.name, dep.name)
-	for dslProvider in DEPENDENCY_SEARCH_LOCATIONS:
-		dsls = dslProvider()
-		for dsl in dsls:
-			path = os.path.join(dsl, dep.name)
-			if os.path.exists(path):
-				return Root(_name=dep.name, _location=normalizeDirSeparators(path))
-			path = path + '.zip'
-			if os.path.exists(path):
-				return Root(_name=dep.name, _location=normalizeDirSeparators(path))
-	return None
