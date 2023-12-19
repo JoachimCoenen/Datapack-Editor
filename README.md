@@ -7,7 +7,12 @@
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FJoachimCoenen%2FDatapack-Editor&count_bg=%230072FF&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
 ![GitHub all releases](https://img.shields.io/github/downloads/JoachimCoenen/Datapack-Editor/total?color=0072FF)
 
-An advanced editor for Minecraft Datapacks for Minecraft 1.20.2+ (datapack version 18+). _Currently, runs only on Windows._
+<br />
+<p align="center">
+  <img src="icon/icon.png" width="150" >
+</p>
+An advanced creator & editor for Minecraft Datapacks for Minecraft 1.20.2+ (datapack version 18-23+).
+
 
 ![MainWindow1_IMG][MainWindow1_IMG]
 
@@ -65,8 +70,21 @@ If you have any questions, problems or suggestions, feel free to create an [Issu
 ## Screenshots 
 <table style="width:100%;border-spacing:0px">
   <tr style="padding:0px">
-    <td style="padding:0px"> <img src="screenshots/mainWindow.png" alt="Main Window" style="width:width;height:height;"> </td>
-    <td style="padding:0px"> <img src="screenshots/quickFind.png" alt="Quickly find and open a file" style="width:width;height:height;"> </td>
+    <td style="padding:0px"><table style="width:100%;border-spacing:0px">
+      <tr style="padding:0px">
+        <td style="padding:0px"> <img src="screenshots/mainWindow.png" alt="Main Window" style="width:width;height:height;"> </td>
+        <td style="padding:0px"> <img src="screenshots/quickFind.png" alt="Quickly find and open a file" style="width:width;height:height;"> </td>
+      </tr>
+    </table></td>
+  </tr>
+  <tr style="padding:0px">
+    <td style="padding:0px"><table style="width:100%;border-spacing:0px">
+      <tr style="padding:0px">
+        <td style="padding:0px"> <img src="screenshots/createNewProject.png" alt="Search Dialog" style="width:width;height:height;"> </td>
+        <td style="padding:0px"> <img src="screenshots/search.png" alt="Search Dialog" style="width:width;height:height;"> </td>
+        <td style="padding:0px"> <img src="screenshots/validateFiles.png" alt="Validate File" style="width:width;height:height;"> </td>
+      </tr>
+    </table></td>
   </tr>
 </table>
 
@@ -80,6 +98,9 @@ This program is not affiliated with Mojang Studios.
 
 [MainWindow1_IMG]:    screenshots/mainWindow.png    "Main Window"
 [QuickFind_IMG]:      screenshots/quickFind.png     "Quick Find"
+[NewProject_IMG]:     screenshots/createNewProject.png     "Create New Project Dialog"
+[Search_IMG]:         screenshots/search.png        "Search Dialog"
+[ValidateFiles_IMG]:  screenshots/validateFiles.png "Validate File"
 
 [MCWikiGeneralDisclaimer_LINK]:  https://minecraft.wiki/w/Minecraft_Wiki:General_disclaimer "Minecraft Wiki:General disclaimer"
 
