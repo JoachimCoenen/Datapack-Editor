@@ -12,6 +12,7 @@ pyinstaller --onefile ..\main.py ^
 --exclude-module javalang ^
 --exclude-module numpy.distutils ^
 --exclude-module distutils ^
+--icon=..\icon\icon.png ^
 --noconfirm
 
 cd dist
@@ -19,5 +20,3 @@ cd dist
 del DatapackEditor.exe
 ren "main.exe" "DatapackEditor.exe"
 @pause
-rem--exclude-module numpy.testing ^
-rem--hidden-import markdown ^

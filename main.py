@@ -3,6 +3,7 @@ import sys
 from dataclasses import fields
 
 from PyQt5 import QtWidgets
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDialog
 from qtpy import QtCore
 
@@ -182,6 +183,8 @@ def start(argv) -> QtWidgets.QApplication:
 		app.setApplicationDisplayName(getApplicationSettings().applicationName)
 		app.setApplicationVersion(getApplicationSettings().version)
 		app.setOrganizationName(getApplicationSettings().organization)
+		iconPath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icon/icon.png')
+		app.setWindowIcon(QIcon(iconPath))
 
 		applyStyle(app, Style({'QWidget': getStyles().hostWidgetStyle}))  # + styles.layoutingBorder))
 		catWidgetMixins.setGUIColors(catWidgetMixins.getGUIColors())

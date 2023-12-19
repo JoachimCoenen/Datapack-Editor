@@ -2,6 +2,10 @@
 ### Features
  * Added "Project Errors" tab. Missing dependencies and problems with project setup are listed here.
 
+### Improvements
+ * Added app icon (finally!)
+ * 
+
 ### Fixes
  * Unsilenced several potential silent crashes.
  * Fixed bottombar tabs defined by plugins being ignored.

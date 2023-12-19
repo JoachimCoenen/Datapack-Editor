@@ -11,13 +11,13 @@ from typing import final, Type, Optional
 
 from PyQt5.Qsci import QsciScintillaBase
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QFontDatabase
+from PyQt5.QtGui import QFont, QFontDatabase, QIcon
 
 from cat.GUI import getStyles, propertyDecorators as pd
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils import getExePath, override
 from cat.utils.profiling import logError
-from PyQt5.QtWidgets import QStyleFactory
+from PyQt5.QtWidgets import QApplication, QStyleFactory
 
 from base.model.aspect import AspectDict, Aspect, AspectType, SerializableDataclassWithAspects, getAspectsForClass
 from base.model import theme
@@ -168,7 +168,8 @@ class AboutQt:
 @dataclass()
 class AboutSettings(SerializableDataclass):
 
-	title: str = field(default="Datapack Editor", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', style=getStyles().title), decorators=[pd.ReadOnlyLabel()]))
+	title: str = field(default="Datapack Editor", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', style=property(lambda s: getStyles().title)), decorators=[pd.ReadOnlyLabel()]))
+	icon: QIcon = field(init=False, metadata=catMeta(serialize=False, kwargs=dict(label=' ', iconScale=4.0), decorators=[pd.ReadOnlyLabel()]))
 
 	version: str = field(default="""0.7.0-alpha""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()]))
 
@@ -192,6 +193,9 @@ class AboutSettings(SerializableDataclass):
 	affiliation: str = field(default="""<font>This program is not affiliated with Mojang Studios.</font>""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', textInteractionFlags=Qt.TextBrowserInteraction, openExternalLinks=True), decorators=[pd.ReadOnlyLabel()]))
 
 	aboutQt: AboutQt = field(default_factory=AboutQt, metadata=catMeta(serialize=False, kwargs=dict(label=' ')))
+
+
+AboutSettings.icon = property(lambda s: QApplication.instance().windowIcon(), lambda s, x: None)
 
 
 def _fillSettingsAspects(aspectsDict: AspectDict):
