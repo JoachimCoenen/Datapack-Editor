@@ -114,7 +114,7 @@ class ProjectInfoAspectPart(ProjectAspectPart[_TProjectAspect], Generic[_TProjec
 
 
 @dataclass
-class ProjectAspect(Aspect, SerializableDataclass, ABC):
+class ProjectAspect(Aspect['Project'], SerializableDataclass, ABC):
 
 	dependenciesPart: Optional[DependenciesAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
 	analyzeRootsPart: Optional[AnalyzeRootsAspectPart] = field(default=None, init=False, metadata=catMeta(serialize=False, decorators=[pd.NoUI()]))
@@ -318,7 +318,10 @@ class Root(SerializableDataclass):
 	_identifier: str = field(default='', metadata=catMeta(serializedName='identifier'))
 	"""Used for unique identification, of the root. Two DependencyDescr objects with the same identifier ALWAYS point o the same Root."""
 	dependencies: list[DependencyDescr] = field(default_factory=list, metadata=catMeta(serialize=False))
-	indexBundles: AspectDict[IndexBundleAspect] = field(default_factory=lambda: AspectDict(IndexBundleAspect), metadata=catMeta(serialize=False))
+	indexBundles: AspectDict[IndexBundleAspect] = field(init=False, metadata=catMeta(serialize=False))
+
+	def __post_init__(self):
+		self.indexBundles = AspectDict(self, IndexBundleAspect)
 
 	@property
 	def location(self) -> str:

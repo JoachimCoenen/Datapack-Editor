@@ -5,6 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import NewType, TypeVar, Generic, Type, Optional, Iterator, Any, Callable, cast, overload, Mapping
 
+from cat.GUI import propertyDecorators
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils.collections_ import getIfKeyIssubclass, AddToDictDecorator
 from cat.utils.formatters import formatVal
@@ -12,14 +13,25 @@ from cat.utils.logging_ import logFatal
 
 AspectType = NewType('AspectType', str)
 
+_TOwner = TypeVar('_TOwner')
+
 
 @dataclass
-class Aspect(ABC):
+class Aspect(Generic[_TOwner], ABC):
+
+	_owningDict: AspectDict[Any, _TOwner] = field(default=None, init=False, metadata=catMeta(decorators=[propertyDecorators.NoUI()]))
+
+	def __post_init__(self):
+		pass
 
 	@classmethod
 	@abstractmethod
 	def getAspectType(cls) -> AspectType:
 		pass
+
+	@property
+	def owner(self) -> _TOwner:
+		return self._owningDict._owner
 
 
 _TS = TypeVar('_TS')
@@ -28,7 +40,8 @@ _TAspect2 = TypeVar('_TAspect2', bound=Aspect)
 
 
 @dataclass
-class AspectDict(Generic[_TAspect]):
+class AspectDict(Generic[_TAspect, _TOwner]):
+	_owner: _TOwner
 	_type: Type[_TAspect]
 	_aspects: dict[AspectType, _TAspect] = field(default_factory=dict, init=False)
 
@@ -38,6 +51,9 @@ class AspectDict(Generic[_TAspect]):
 	def _set(self, aspect: _TAspect2) -> _TAspect2:
 		"""blindly sets an aspect, possibly overwriting another one. It checks the type tho"""
 		assert isinstance(aspect, getattr(self, '_type'))  # don't confuse the pycharm type checker
+		if aspect._owningDict is not None:
+			raise ValueError(f"Aspect {aspect!r} already has been added to an AspectDict.")
+		aspect._owningDict = self
 		self._aspects[aspect.getAspectType()] = aspect
 		return aspect
 
@@ -54,6 +70,8 @@ class AspectDict(Generic[_TAspect]):
 		return self._set(aspectCls)
 
 	def replace(self, aspect: _TAspect2) -> _TAspect2:
+		if (aspect := self._get(aspect.getAspectType())) is not None:
+			aspect._owningDict = None
 		return self._set(aspect)
 
 	def get(self, aspectCls: Type[_TAspect2]) -> Optional[_TAspect2]:
@@ -66,7 +84,14 @@ class AspectDict(Generic[_TAspect]):
 		return self._set(aspectCls())
 
 	def discard(self, aspectCls: Type[_TAspect2]) -> None:
-		self._aspects.pop(aspectCls.getAspectType(), None)
+		aspect = self._aspects.pop(aspectCls.getAspectType(), None)
+		if aspect is not None:
+			aspect._owningDict = None
+
+	def clear(self):
+		for aspect in self._aspects.values():
+			aspect._owningDict = None
+		self._aspects.clear()
 
 	def __getitem__(self, aspectCls: Type[_TAspect2]) -> _TAspect2:
 		if (aspect := self._get(aspectCls.getAspectType())) is not None:
@@ -104,8 +129,11 @@ def getAspectCls(parentCls: Type, aspectType: AspectType) -> Optional[Type[Aspec
 @dataclass
 class SerializableDataclassWithAspects(SerializableDataclass, Generic[_TAspect]):
 
-	aspects: AspectDict[_TAspect] = field(default_factory=lambda: AspectDict(Aspect), metadata=catMeta(serialize=False))
+	aspects: AspectDict[_TAspect] = field(init=False, metadata=catMeta(serialize=False))
 	unknownAspects: dict[str, Any] = field(default_factory=dict, metadata=catMeta(serialize=False))
+
+	def __post_init__(self):
+		self.aspects = AspectDict(self, Aspect)
 
 	def serializeJson(self, strict: bool, memo: dict, path: tuple[str | int, ...]) -> dict[str, Any]:
 		result = super(SerializableDataclassWithAspects, self).serializeJson(strict, memo, path)
@@ -118,7 +146,7 @@ class SerializableDataclassWithAspects(SerializableDataclass, Generic[_TAspect])
 		if isinstance(self, SerializableDataclassWithAspects):
 			assert isinstance(other, SerializableDataclassWithAspects)
 			oldSelfAspects: dict[AspectType, Aspect] = self.aspects._aspects.copy()
-			self.aspects._aspects.clear()
+			self.aspects.clear()
 			otherAspect: Aspect
 			for otherAspect in other.aspects._aspects.copy().values():
 				# isinstance(otherAspect, Aspect) check only added to not confuse the type checker.

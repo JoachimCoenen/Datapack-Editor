@@ -231,6 +231,7 @@ class ApplicationSettings(SerializableDataclassWithAspects[SettingsAspect]):
 	isUserSetupFinished: bool = field(default=False, metadata=catMeta(decorators=[pd.NoUI()]))
 
 	def __post_init__(self):
+		super().__post_init__()
 		for aspectCls in getAspectsForClass(type(self)).values():
 			self.aspects.add(aspectCls)
 
