@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 import cat.GUI.propertyDecorators as pd
 from cat.GUI import SizePolicy
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
+from cat.utils import last
 from cat.utils.utils import openOrCreate
 from base.model.pathUtils import joinFilePath, FilePathStr
 from base.model.project.project import Project, ProjectRoot
@@ -57,7 +58,7 @@ class DatapackProjectCreatorData(SerializableDataclass):
 	)
 
 	dpVersion: str = field(
-		default='18',
+		default_factory=lambda: last(sorted(getAllDPVersions().keys()), ''),  # by default selects the latest version
 		metadata=catMeta(
 			kwargs=dict(label='Datapack Version'),
 			decorators=[
@@ -67,7 +68,7 @@ class DatapackProjectCreatorData(SerializableDataclass):
 	)
 
 	minecraftVersion: str = field(
-		default='1.20.2',
+		default_factory=lambda: last(sorted(allRegisteredMinecraftVersions()), ''),  # by default selects the latest version
 		metadata=catMeta(
 			kwargs=dict(label='Minecraft Version'),
 			decorators=[

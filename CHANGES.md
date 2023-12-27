@@ -5,6 +5,7 @@
 
 ### Improvements
  * Added app icon (finally!)
+ * Latest Minecraft and datapack versions get selected by default when creating a new project or registering a new Minecraft version.
 
 ### Fixes
  * Unsilenced several potential silent crashes.

@@ -1,11 +1,11 @@
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Optional, Callable, cast
 
 from cat.GUI import propertyDecorators as pd
 from cat.GUI.propertyDecorators import ValidatorResult
 from cat.Serializable.serializableDataclasses import catMeta
-from cat.utils import first
+from cat.utils import first, last
 from cat.utils.logging_ import logWarning
 from base.model.applicationSettings import getApplicationSettings
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
@@ -68,7 +68,7 @@ class DatapackAspect(ProjectAspect):
 		self.projectInfoPart = ProjectInfoAspectPart[DatapackAspect](self)
 
 	dpVersion: str = field(
-		default='18',
+		default_factory=lambda: last(sorted(getAllDPVersions().keys()), ''),  # by default selects the latest version
 		metadata=catMeta(
 			deferLoading=True,
 			kwargs=dict(label='Datapack Version'),
@@ -80,7 +80,7 @@ class DatapackAspect(ProjectAspect):
 	)
 
 	minecraftVersion: str = field(
-		default='1.20.2',
+		default_factory=lambda: last(sorted(allRegisteredMinecraftVersions()), ''),  # by default selects the latest version
 		metadata=catMeta(
 			kwargs=dict(label='Minecraft Version'),
 			decorators=[
@@ -135,7 +135,11 @@ class DatapackAspect(ProjectAspect):
 
 
 def _getDPVersion(self: DatapackAspect) -> str:
-	return getattr(self, '_dpVersion', '') or 'Default'
+	try:
+		return getattr(self, '_dpVersion')
+	except AttributeError:
+		dpVersionField = first(f for f in fields(self) if f.name == 'dpVersion')
+		return dpVersionField.default_factory()
 
 
 def _setDPVersion(self: DatapackAspect, newVal: str) -> None:
@@ -152,7 +156,11 @@ DatapackAspect.dpVersion = property(_getDPVersion, _setDPVersion)
 
 
 def _getMinecraftVersion(self: DatapackAspect) -> str:
-	return getattr(self, '_minecraftVersion', '') or 'Default'
+	try:
+		return getattr(self, '_minecraftVersion')
+	except AttributeError:
+		minecraftVersionField = first(f for f in fields(self) if f.name == 'minecraftVersion')
+		return minecraftVersionField.default_factory()
 
 
 def _setMinecraftVersion(self: DatapackAspect, newVal: str) -> None:

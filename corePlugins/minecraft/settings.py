@@ -51,7 +51,7 @@ def minecraftVersionValidator(version: str) -> Optional[ValidatorResult]:
 @dataclass
 class MinecraftVersion(SerializableDataclass):
 	name: str = field(
-		default='1.20.2',
+		default_factory=lambda: getLatestFullMcData().name,  # by default selects the latest version
 		metadata=catMeta(
 			kwargs=dict(label='Name'),
 			decorators=[]
@@ -59,7 +59,7 @@ class MinecraftVersion(SerializableDataclass):
 	)
 
 	version: str = field(
-		default='',
+		default_factory=lambda: getLatestFullMcData().name,  # by default selects the latest version
 		metadata=catMeta(
 			kwargs=dict(label='Version'),
 			decorators=[
