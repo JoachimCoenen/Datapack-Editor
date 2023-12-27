@@ -14,6 +14,7 @@
  * Fixed bottombar tabs defined by plugins being ignored.
  * Fixed namespaces with hyphens (`-`) not being recognized properly.
  * Fixed some error messages not being escaped properly.
+ * Fixed erroneous error when using a player name as the name for a number provider of type `score`.
 
 
 ## 0.7.0-alpha

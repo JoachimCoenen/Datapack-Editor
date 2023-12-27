@@ -94,10 +94,6 @@
         }
       ]
     },
-    "%uuid": {
-      "$type": "string",
-      "type": "minecraft:uuid"
-    },
     "loot_context_killer": {
       "$type": "enum",
       "options": {
@@ -129,7 +125,7 @@
             "name": {
               "optional": false,
               "decidingProp": "type",
-              "values": { "fixed": { "$defRef": "%uuid" } },
+              "values": { "fixed": { "$type": "string" }},  // can also be an odinary player name..., "type": "minecraft:uuid" } },
               "optionalPrefixes": ["minecraft:"],
               "description": "Included only if type is set to `fixed`. Specifies the name of the player, or the entity's UUID (in hyphenated hexadecimal format) whose score to query."
             },
