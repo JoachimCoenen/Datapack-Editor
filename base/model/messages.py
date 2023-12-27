@@ -2,8 +2,8 @@ from base.model.utils import Message, MessageAdapter, wrapInMDCode
 
 INTERNAL_ERROR_MSG: MessageAdapter = MessageAdapter("Internal Error! {msg}", 0)
 
-EXPECTED_MSG_RAW: Message = Message("Expected {0}", 1, argumentTransformers=(wrapInMDCode,))
-EXPECTED_MSG: Message = Message("Expected {0}", 1)
+EXPECTED_MSG_RAW: Message = Message("Expected {0}", 1)
+EXPECTED_MSG: Message = Message("Expected {0}", 1, argumentTransformers=(wrapInMDCode,))
 EXPECTED_BUT_GOT_MSG_RAW: Message = Message("Expected {0} but got {1}", 2)
 EXPECTED_BUT_GOT_MSG: Message = Message("Expected {0} but got {1}", 2, argumentTransformers=(wrapInMDCode, wrapInMDCode))
 NUMBER_OUT_OF_BOUNDS_MSG = Message("Number out of bounds (min = {0}, max = {1})", 2)
