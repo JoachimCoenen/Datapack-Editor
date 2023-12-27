@@ -1,5 +1,5 @@
 """
-for Minecraft version 1.20.3
+for Minecraft version 1.20 - 1.20.4
 """
 from dataclasses import replace
 
@@ -536,4 +536,10 @@ _VERSION_1_20_3 = replace(
 )
 
 
-ALL_VERSIONS: list[CustomMCData] = [_VERSION_1_20_0, _VERSION_1_20_1, _VERSION_1_20_2, _VERSION_1_20_3]
+_VERSION_1_20_4 = replace(
+	_VERSION_1_20_3,
+	name='1.20.4'
+)
+
+
+ALL_VERSIONS: list[CustomMCData] = [_VERSION_1_20_0, _VERSION_1_20_1, _VERSION_1_20_2, _VERSION_1_20_3, _VERSION_1_20_4]

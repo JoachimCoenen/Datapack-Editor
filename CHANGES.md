@@ -1,10 +1,10 @@
 ## Next Version
 ### Features
+ * Added support for Minecraft versions 1.20.3 and 1.20.4.
  * Added "Project Errors" tab. Missing dependencies and problems with project setup are listed here.
 
 ### Improvements
  * Added app icon (finally!)
- * 
 
 ### Fixes
  * Unsilenced several potential silent crashes.
