@@ -7,6 +7,7 @@
  * Added app icon (finally!)
  * Latest Minecraft and datapack versions get selected by default when creating a new project or registering a new Minecraft version.
  * Added syntax highlighting, validation, and code completion for description field in Create new Project dialog. 
+ * When registering a new Minecraft version the correct minecraft.jar wil be selected automatically, whenever possible.
 
 ### Fixes
  * Unsilenced several potential silent crashes.

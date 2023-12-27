@@ -1,18 +1,21 @@
 import os
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Callable, Optional
 
 from PyQt5.QtGui import QIcon
 
 from base.model.searchUtils import filterComputedChoices
+from base.model.utils import addStyle, formatMarkdown, wrapInMDCode
 from cat.GUI import propertyDecorators as pd
 from cat.GUI.propertyDecorators import ValidatorResult
 from cat.GUI.components.treeBuilders import DataListBuilder, StringHeaderBuilder
+from cat.GUI.pythonGUI import WidgetDrawer
 from cat.Serializable.serializableDataclasses import catMeta, SerializableDataclass
 
 from base.model.applicationSettings import SettingsAspect
 from base.model.aspect import AspectType
-from corePlugins.minecraft_data.fullData import getAllFullMcDatas
+from cat.utils import PLATFORM_IS_WINDOWS, escapeForXmlTextContent
+from corePlugins.minecraft_data.fullData import getAllFullMcDatas, getLatestFullMcData
 from gui.datapackEditorGUI import EditableSerializableDataclassList, DatapackEditorGUI
 
 MINECRAFT_ASPECT_TYPE = AspectType('dpe:minecraft')
@@ -48,6 +51,14 @@ def minecraftVersionValidator(version: str) -> Optional[ValidatorResult]:
 	return None
 
 
+def getDefaultMcExecutablePath(versionName: str) -> str:
+	if PLATFORM_IS_WINDOWS:
+		return os.path.expanduser(f'~/AppData/Roaming/.minecraft/versions/{versionName}/{versionName}.jar').replace('\\', '/')
+	else:
+		import platform
+		raise ValueError(f"This operating system ({platform.system()}) is currently not supported.")  # TODO: add support for other operating systems
+
+
 @dataclass
 class MinecraftVersion(SerializableDataclass):
 	name: str = field(
@@ -70,7 +81,7 @@ class MinecraftVersion(SerializableDataclass):
 	)
 
 	minecraftExecutable: str = field(
-		default_factory=lambda: os.path.expanduser('~/AppData/Roaming/.minecraft/versions/1.20.2/1.20.2.jar').replace('\\', '/'),
+		default_factory=lambda: getDefaultMcExecutablePath(getLatestFullMcData().name),
 		metadata=catMeta(
 			kwargs=dict(label='Executable'),
 			decorators=[
@@ -81,18 +92,56 @@ class MinecraftVersion(SerializableDataclass):
 	)
 
 
-class MinecraftVersionsPD(pd.PropertyDecorator):
-	pass
+@WidgetDrawer(MinecraftVersion)
+def minecraftVersionDrawer(gui: DatapackEditorGUI, mcVersion: MinecraftVersion, **kwargs) -> MinecraftVersion:
+	gui.propertyField(mcVersion, 'name', **kwargs)
+
+	oldVersion = mcVersion.version
+	gui.propertyField(mcVersion, 'version', **kwargs)
+	newVersion = mcVersion.version
+
+	if oldVersion != newVersion:
+		if mcVersion.name == oldVersion or not mcVersion.name.strip():
+			mcVersion.name = newVersion
+		if mcVersion.minecraftExecutable == getDefaultMcExecutablePath(oldVersion):
+			mcVersion.minecraftExecutable = getDefaultMcExecutablePath(newVersion)
+
+	gui.propertyField(mcVersion, 'minecraftExecutable', **kwargs)
+
+	return mcVersion
 
 
-def _iconMaker(mv: MinecraftVersion, c: int) -> Optional[QIcon]:
-	if c != 0:
-		return None
+def _validateMcVersionAndCheckDuplicate(mv: MinecraftVersion, mcVersions: list[MinecraftVersion]) -> list[ValidatorResult]:
+	# TODO: Checking for duplicates only works properly when list is not filtered, because `mcVersions` only contains the filtered list of versions.
+	duplicatesExist = len([v for v in mcVersions if v.name.strip() == mv.name.strip()]) > 1
+
 	valResult = mv.validate()
-	if valResult:
-		maxErrorStyle = max(valResult, key=lambda r: {'info': 10, 'warning': 20, 'error': 30}.get(r.style, 40)).style
-		return DatapackEditorGUI.getErrorIcon(maxErrorStyle)
-	return None
+	if duplicatesExist:
+		valResult.append(ValidatorResult('There are multiple Minecraft versions registered with the same name.', 'warning'))
+	return valResult
+
+
+def _iconMakerMaker(mcVersions: list[MinecraftVersion]) -> Callable[[MinecraftVersion, int], Optional[QIcon]]:
+	def _iconMaker(mv: MinecraftVersion, c: int) -> Optional[QIcon]:
+		if c != 0:
+			return None
+		valResult = _validateMcVersionAndCheckDuplicate(mv, mcVersions)
+		if valResult:
+			maxErrorStyle = max(valResult, key=lambda r: {'info': 10, 'warning': 20, 'error': 30}.get(r.style, 40)).style
+			return DatapackEditorGUI.getErrorIcon(maxErrorStyle)
+		return None
+
+	return _iconMaker
+
+
+def _toolTipMakerMaker(mcVersions: list[MinecraftVersion]) -> Callable[[MinecraftVersion, int], Optional[str]]:
+	def _toolTipMaker(mv: MinecraftVersion, c: int=0) -> Optional[str]:
+		valResult = _validateMcVersionAndCheckDuplicate(mv, mcVersions)
+		tips = [f"<nobr>{formatMarkdown(wrapInMDCode(mv.minecraftExecutable))}</nobr>"]
+		tips += [f"<p>{addStyle(escapeForXmlTextContent(e.message), style=e.style)}</p>" for e in valResult]
+		return '\n'.join(tips)
+
+	return _toolTipMaker
 
 
 @dataclass()
@@ -108,11 +157,12 @@ class MinecraftSettings(SettingsAspect):
 			decorators=[
 				EditableSerializableDataclassList(
 					'minecraftVersions',
-					lambda data: DataListBuilder(
-						data,
+					lambda mcVersions: DataListBuilder(
+						mcVersions,
 						labelMaker=lambda mv, c: (mv.name, mv.version, mv.minecraftExecutable)[c],
-						iconMaker=_iconMaker,
-						toolTipMaker=lambda mv, c: mv.minecraftExecutable,
+						iconMaker=_iconMakerMaker(mcVersions),
+						toolTipMaker=_toolTipMakerMaker(mcVersions),
+						onCopy=_toolTipMakerMaker(mcVersions),
 						columnCount=3,
 						getId=id
 					),
