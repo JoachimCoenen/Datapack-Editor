@@ -136,7 +136,7 @@ def buildNbtMeta(filePath: FilePathTpl) -> NbtMeta:
 
 NAME_SPACE_VAR = '${namespace}'
 
-NAME_SPACE_CAPTURE_GROUP = r'(?P<namespace>\w+)'
+NAME_SPACE_CAPTURE_GROUP = r'(?P<namespace>[\w_.-]+)'
 """used to mark the namespace folder in EntryHandlerInfo.folder"""
 
 

@@ -12,6 +12,7 @@
 ### Fixes
  * Unsilenced several potential silent crashes.
  * Fixed bottombar tabs defined by plugins being ignored.
+ * Fixed namespaces with hyphens (`-`) not being recognized properly.
 
 
 ## 0.7.0-alpha
