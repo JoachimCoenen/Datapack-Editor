@@ -28,8 +28,8 @@ class DocumentErrorsPlugin(PluginBase):
 
 	def bottomBarTabs(self) -> list[SideBarOptions]:
 		return [
-			SideBarOptions(TabOptions('Errors', icon=icons.error), DocumentErrorsGUI, DocumentErrorsSummaryGUI),
-			SideBarOptions(TabOptions('Project Errors', icon=icons.error), ProjectErrorsGUI),
+			SideBarOptions(TabOptions('Project Errors', icon=icons.error), ProjectErrorsGUI),  # put project errors first, so people see when there are problems with their project setup.
+			SideBarOptions(TabOptions('File Errors', icon=icons.error), DocumentErrorsGUI, DocumentErrorsSummaryGUI),
 		]
 
 
