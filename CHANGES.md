@@ -1,4 +1,4 @@
-## Next Version
+## 0.8.0-alpha
 ### Features
  * Added support for Minecraft versions 1.20.3 and 1.20.4.
  * Added "Project Errors" tab. Missing dependencies and problems with project setup are listed here.

@@ -171,7 +171,7 @@ class AboutSettings(SerializableDataclass):
 	title: str = field(default="Datapack Editor", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label=' ', style=property(lambda s: getStyles().title)), decorators=[pd.ReadOnlyLabel()]))
 	icon: QIcon = field(init=False, metadata=catMeta(serialize=False, kwargs=dict(label=' ', iconScale=4.0), decorators=[pd.ReadOnlyLabel()]))
 
-	version: str = field(default="""0.7.0-alpha""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()]))
+	version: str = field(default="""0.8.0-alpha""", metadata=catMeta(serialize=False, kwargs=dict(wordWrap=False, label='Version'), decorators=[pd.ReadOnlyLabel()]))
 
 	# @pd.NoUI()
 	@property

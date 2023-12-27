@@ -11,7 +11,7 @@
 <p align="center">
   <img src="icon/icon.png" width="150" >
 </p>
-An advanced creator & editor for Minecraft Datapacks for Minecraft 1.20.2+ (datapack version 18-23+).
+An advanced creator & editor for Minecraft Datapacks for Minecraft 1.20.2 - 1.20.4+ (datapack version 18-23+).
 
 
 ![MainWindow1_IMG][MainWindow1_IMG]
