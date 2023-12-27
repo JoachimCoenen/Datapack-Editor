@@ -208,21 +208,21 @@ def wrapInMarkdownCode(text: str) -> MDStr:
 wrapInMDCode = wrapInMarkdownCode  # an alias
 
 
-def addStyle(message: str, /, style: str) -> MDStr:
+def addStyle(message: str, /, style: str) -> MDStr | HTMLStr:
 	from cat.GUI import PythonGUI
 	md = f'<div style="{PythonGUI.helpBoxStyles[style]}">{message}</div>'
 	return MDStr(md)
 
 
-def formatAsHint(message: str, /) -> MDStr:
+def formatAsHint(message: str, /) -> MDStr | HTMLStr:
 	return addStyle(message, "hint")
 
 
-def formatAsWarning(message: str, /) -> MDStr:
+def formatAsWarning(message: str, /) -> MDStr | HTMLStr:
 	return addStyle(message, "warning")
 
 
-def formatAsError(message: str, /) -> MDStr:
+def formatAsError(message: str, /) -> MDStr | HTMLStr:
 	return addStyle(message, "error")
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping, Optional, ClassVar
 
+from cat.utils import last
 from cat.utils.collections_ import FrozenDict
 from .customData import CustomMCData, Gamerule
 from .mcdAdapter import MCData, BlockStateType
@@ -115,5 +116,11 @@ def getAllFullMcDatas() -> Mapping[str, FullMCData]:
 	return _ALL_MC_VERSIONS
 
 
+def getLatestFullMcData() -> FullMCData:
+	"""The FullMCData for the latest Minecraft version we know about"""
+	return last(sorted(getAllFullMcDatas().values(), key=lambda data: data.name), FullMCData.EMPTY)
+
+
 def getCurrentFullMcData() -> FullMCData:
+	"""The currently selected FullMCData"""
 	return _CURRENT_MC_VERSION

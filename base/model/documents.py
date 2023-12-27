@@ -99,9 +99,11 @@ class DocumentTypeDescription:
 		kwArgs = {}
 		if self.encoding is not None:
 			kwArgs['encoding'] = self.encoding
+		doc = self.type(language=self.defaultLanguage, schemaId=self.defaultSchemaId, _observeFileSystem=observeFileSystem, **kwArgs)
 		if self.defaultContentFactory is not None:
-			kwArgs['content'] = self.defaultContentFactory()
-		return self.type(language=self.defaultLanguage, schemaId=self.defaultSchemaId, _observeFileSystem=observeFileSystem, **kwArgs)
+			doc.content = self.defaultContentFactory()
+
+		return doc
 
 	def __eq__(self, other):
 		return self is other
@@ -237,6 +239,21 @@ def loadDocument(filePath: FilePath, archiveFilePool: ArchiveFilePool = None, *,
 	return doc
 
 
+def createNewDocument(docType: DocumentTypeDescription, filePath: Optional[FilePath], *, observeFileSystem: bool = True) -> Document:
+	isUntitled = filePath is None
+	if isUntitled:
+		# find a new file name:
+		from base.model.session import getSession
+		filePath = getSession().documents._getNewUntitledFileName()
+	# create document:
+	doc = docType.newDocument()
+	if isUntitled:
+		doc.setUntitledFilePath(filePath)
+	else:
+		doc.filePath = filePath
+	return doc
+
+
 def getAllFileExtensionFilters(expanded: bool = False) -> Sequence[FileExtensionFilter]:
 	if expanded:
 		filters: list[FileExtensionFilter] = []
@@ -299,7 +316,7 @@ class Document(SerializableDataclass):
 	_filePath: FilePath = field(default='')
 	_isUntitled: bool = field(default=False, kw_only=True)
 	_observeFileSystem: bool = field(default=True, kw_only=True)
-	_fileChangedHandler: FileChangedHandler = field(default_factory=FileChangedHandler, repr=False, metadata=catMeta(serialize=False))
+	_fileChangedHandler: FileChangedHandler = field(default_factory=FileChangedHandler, repr=False, metadata=catMeta(serialize=False))  # has no reference to self!
 
 	@property
 	def filePath(self) -> FilePath:
@@ -685,7 +702,8 @@ class ParsedDocument(TextDocument):
 		try:
 			schema = self.schema
 			language = schema.language if schema is not None else self.language
-			return parseNPrepare(text, filePath=self.filePath, language=language, schema=schema, **self.parseKwArgs)[:2]
+			node, errors, parser = parseNPrepare(text, filePath=self.filePath, language=language, schema=schema, **self.parseKwArgs)
+			return node, errors
 		except Exception as e:
 			logError(e)
 			return None, [WrappedError(e, style='info')]

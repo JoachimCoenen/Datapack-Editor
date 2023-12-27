@@ -415,17 +415,7 @@ class DocumentsManager(SerializableDataclass):
 			view.removeDocument(doc)
 			doc.close()
 
-	def createNewDocument(self, docType: DocumentTypeDescription, filePath: Optional[FilePath]) -> Document:
-		isUntitled = filePath is None
-		if isUntitled:
-			# find a new file name:
-			filePath = self._getNewUntitledFileName()
-		# create document:
-		doc = docType.newDocument()
-		if isUntitled:
-			doc.setUntitledFilePath(filePath)
-		else:
-			doc.filePath = filePath
+	def insertInCurrentView(self, doc: Document) -> Document:
 		view = self.currentView
 		self._insertDocument(doc, view, None)
 		return doc

@@ -1,4 +1,3 @@
-import json
 import os
 from dataclasses import dataclass, field
 from typing import Optional
@@ -6,11 +5,14 @@ from typing import Optional
 from PyQt5.QtCore import Qt
 
 import cat.GUI.propertyDecorators as pd
+from base.gui.documentEditors import getDocumentEditor
+from base.model.documents import DocumentTypeDescription, ParsedDocument, createNewDocument
 from cat.GUI import SizePolicy
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils import last
+from cat.utils.formatters import indentMultilineStr
 from cat.utils.utils import openOrCreate
-from base.model.pathUtils import joinFilePath, FilePathStr
+from base.model.pathUtils import joinFilePath
 from base.model.project.project import Project, ProjectRoot
 from base.model.project.projectCreator import ProjectCreator
 from .aspect import DatapackAspect, allRegisteredMinecraftVersions, minecraftVersionValidator
@@ -18,6 +20,7 @@ from .datapackContents import NAME_SPACE_VAR
 from .dpVersions import getAllDPVersions
 from corePlugins.minecraft.resourceLocation import isNamespaceValid
 from gui.datapackEditorGUI import DatapackEditorGUI
+from ..json import JSON_ID
 
 
 def newProjDirectoryPathValidator(path: str) -> Optional[pd.ValidatorResult]:
@@ -39,6 +42,16 @@ def validateNamespace(namespace: str) -> Optional[pd.ValidatorResult]:
 	return None
 
 
+_DESCRIPTION_DOC_TYPE = DocumentTypeDescription(
+	type=ParsedDocument,
+	name='mcmeta',
+	extensions=['.mcmeta'],
+	defaultLanguage=JSON_ID,
+	defaultSchemaId='minecraft:raw_json_text',
+	defaultContentFactory=lambda: b'[\n  {"text": "new_datapack", "color": "white"},\n  {"text": "\\nCreated with", "color": "white"}, {"text":"Datapack Editor", "color":"yellow"}\n]'
+)
+
+
 @dataclass
 class DatapackProjectCreatorData(SerializableDataclass):
 
@@ -50,8 +63,8 @@ class DatapackProjectCreatorData(SerializableDataclass):
 		)
 	)
 
-	description: str = field(
-		default='[{"text": "new_datapack", "color":"white"}, {"text":"\\nCreated with","color":"white"}, {"text":"Data Pack Editor", "color":"yellow"}] ',
+	description: ParsedDocument = field(
+		default_factory=lambda: createNewDocument(_DESCRIPTION_DOC_TYPE, None, observeFileSystem=False),
 		metadata=catMeta(
 			kwargs=dict(label='Description', isMultiline=True),
 		)
@@ -78,24 +91,24 @@ class DatapackProjectCreatorData(SerializableDataclass):
 		)
 	)
 
-	generateDependenciesJson: bool = field(
+	shouldGenerateDependenciesJson: bool = field(
 		default=True,
 		metadata=catMeta(
 			kwargs=dict(label='Generate dependencies.json'),
 		)
 	)
 
-	generatePackMcMeta: bool = field(
+	shouldGeneratePackMcMeta: bool = field(
 		default=True,
 		metadata=catMeta(
 			kwargs=dict(label='Generate pack.mcmeta'),
 		)
 	)
 
-	generateSkeleton: bool = field(
+	shouldGenerateFolderStructure: bool = field(
 		default=True,
 		metadata=catMeta(
-			kwargs=dict(label='Generate Skeleton'),
+			kwargs=dict(label='Generate Folder Structure'),
 		)
 	)
 
@@ -111,12 +124,23 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 	def onGUI(self, gui: DatapackEditorGUI) -> None:
 		data = self.data
 		gui.propertyField(data, 'namespace')
-		gui.propertyField(data, 'description')
+		# gui.propertyField(data, 'description', enabled=data.shouldGeneratePackMcMeta)
+		# data.description = gui.advancedCodeField(data.description, label="Description", language='JSON', enabled=data.shouldGeneratePackMcMeta)
+		documentEditorCls = getDocumentEditor(type(data.description))
+		gui.editor(
+			documentEditorCls,
+			data.description,
+			label='Description',
+			seamless=True,
+			enabled=data.shouldGeneratePackMcMeta
+		)
+
 		gui.propertyField(data, 'dpVersion')
 		gui.propertyField(data, 'minecraftVersion')
-		gui.propertyField(data, 'generateDependenciesJson')
-		gui.propertyField(data, 'generatePackMcMeta')
-		gui.propertyField(data, 'generateSkeleton')
+		gui.helpBox("(Missing a version? you can always register more versions in Settings -> Minecraft)")
+		gui.propertyField(data, 'shouldGeneratePackMcMeta')
+		gui.propertyField(data, 'shouldGenerateDependenciesJson')
+		gui.propertyField(data, 'shouldGenerateFolderStructure')
 		gui.addVSpacer(0, SizePolicy.Expanding)  # preventVStretch
 
 	def initializeProject(self, gui: DatapackEditorGUI, project: Project) -> None:
@@ -128,12 +152,12 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 		# setup structure (roots, etc.)
 		newRoot = project.addRoot(ProjectRoot(project.name, project.path))
 		# setup files:
-		if data.generatePackMcMeta:
+		if data.shouldGeneratePackMcMeta:
 			self.generatePackMcMetaFile(newRoot)
-		if data.generateDependenciesJson:
+		if data.shouldGenerateDependenciesJson:
 			self.generateDependenciesFile(newRoot)
-		if data.generateSkeleton:
-			self.generateSkeleton(newRoot, project)
+		if data.shouldGenerateFolderStructure:
+			self.generateFolderStructure(newRoot, project)
 
 	def generatePackMcMetaFile(self, root: ProjectRoot):
 		data = self.data
@@ -145,14 +169,17 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 		except ValueError:
 			packFormat = 0  # not great
 
-		jsonData = {
-			"pack": {
-				"pack_format": packFormat,
-				"description": data.description
-				}
-			}
-
-		createJsonFileFormatted(path, jsonData)
+		description = indentMultilineStr(data.description.strContent, indent="\t\t", indentFirstLine=False).s
+		jsonData = (
+			'{\n'  # todo: get from settings. maybe even project settings?
+			'\t"pack": {\n'
+			f'\t\t"pack_format": {packFormat},\n'
+			f'\t\t"description": {description}\n'
+			'\t}\n'
+			'}'
+		)
+		with openOrCreate(path, 'w') as f:
+			f.write(jsonData)
 
 	@staticmethod
 	def generateDependenciesFile(root: ProjectRoot):
@@ -160,15 +187,15 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 
 		jsonData = (
 			'[\n'  # just some example data
-			'\t{"name": "DatapackUtilities_v3.4.1", "mandatory": False},\n'
-			'\t{"name": "another-dependency", "mandatory": False}\n'
+			'\t{"name": "DatapackUtilities_v3.4.1", "mandatory": false},\n'
+			'\t{"name": "another-dependency", "mandatory": false}\n'
 			']'
 		)
 
 		with openOrCreate(path, 'w') as f:
 			f.write(jsonData)
 
-	def generateSkeleton(self, root: ProjectRoot, project: Project):
+	def generateFolderStructure(self, root: ProjectRoot, project: Project):
 		datapackPath = root.normalizedLocation
 		data = self.data
 		dpAspect = project.aspects.get(DatapackAspect)
@@ -185,18 +212,3 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 					filePath = f"{datapackPath}/{folderPath}{file.name}"
 					with openOrCreate(filePath, 'w') as f:
 						f.write(file.contents.replace(NAME_SPACE_VAR, data.namespace))
-
-
-def createJsonFileFormatted(path: FilePathStr, jsonData: list | dict):
-	with openOrCreate(path, 'w') as f:
-		json.dump(
-			jsonData,
-			f,
-			skipkeys=False,
-			ensure_ascii=True,
-			check_circular=True,
-			allow_nan=True,
-			sort_keys=False,
-			indent='\t',  # todo: get from settings. maybe even project settings?
-			separators=None
-		)

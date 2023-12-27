@@ -404,7 +404,7 @@ def aspectPanelGUI(gui: DatapackEditorGUI, project: Project, aspect: ProjectAspe
 			if gui.toolButton(icon=icons.remove, tip='remove'):
 				_removeAspectGUI(gui, project, aspect)
 		if isOpen and allFields:
-			with gui.vPanel(), gui.indentation():
+			with gui.vPanel():
 				aspectOptionsGUI(gui, aspect, allFields)
 
 

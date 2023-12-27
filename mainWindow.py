@@ -20,7 +20,7 @@ from gui.profileParsingDialog import ProfileParsingDialog
 from base.model import theme
 from keySequences import KEY_SEQUENCES
 from base.model.session import getSession, saveSessionToFile, GLOBAL_SIGNALS
-from base.model.documents import Document, DocumentTypeDescription, getDocumentTypes, getAllFileExtensionFilters, getDocumentTypeForDocument
+from base.model.documents import Document, DocumentTypeDescription, createNewDocument, getDocumentTypes, getAllFileExtensionFilters, getDocumentTypeForDocument
 from base.gui.checkAllDialog import CheckAllDialog
 from base.gui.searchAllDialog import SearchAllDialog
 from base.gui.spotlightSearch import SpotlightSearchGui
@@ -407,7 +407,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		if docType is None:
 			return
 		# create document:
-		doc = getSession().documents.createNewDocument(docType, None)
+		doc = getSession().documents.insertInCurrentView(createNewDocument(docType, None))
 		getSession().documents.selectDocument(doc)
 		self.redraw()
 

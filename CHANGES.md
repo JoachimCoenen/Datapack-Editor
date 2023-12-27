@@ -6,6 +6,7 @@
 ### Improvements
  * Added app icon (finally!)
  * Latest Minecraft and datapack versions get selected by default when creating a new project or registering a new Minecraft version.
+ * Added syntax highlighting, validation, and code completion for description field in Create new Project dialog. 
 
 ### Fixes
  * Unsilenced several potential silent crashes.
