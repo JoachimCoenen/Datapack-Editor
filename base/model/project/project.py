@@ -8,7 +8,8 @@ from typing import Generic, Optional, Sequence, TypeVar, final
 from recordclass import as_dataclass
 
 from base.model.aspect import Aspect, AspectDict, SerializableDataclassWithAspects
-from base.model.pathUtils import ArchiveFilePool, FilePathStr, FilePathTpl, normalizeDirSeparatorsStr
+from base.model.pathUtils import ArchiveFilePool, FilePathStr, FilePathTpl, normalizeDirSeparatorsStr, \
+	getMTimeForFilePathTpl
 from base.model.project.index import IndexBundle
 from base.model.searchUtils import SplitStrs, splitStringForSearch
 from base.model.utils import GeneralError, MDStr, NULL_SPAN, SemanticsError, Span
@@ -359,6 +360,7 @@ class FileEntry:
 	fullPath: FilePathTpl
 	virtualPath: str  # = dataclasses.field(compare=False)
 	splitNameForSearch: SplitStrs
+	mTime: float
 	isFile: bool
 
 	@property
@@ -386,4 +388,6 @@ class FileEntry:
 def makeFileEntry(fullPath: FilePathTpl, root: Root, isFile: bool) -> FileEntry:
 	virtualPath = f'{root.name}/{fullPath[1]}'
 	splitNameForSearch = splitStringForSearch(virtualPath.rpartition('/')[2])
-	return FileEntry(fullPath, virtualPath, splitNameForSearch, isFile)
+	mTime = getMTimeForFilePathTpl(fullPath)
+
+	return FileEntry(fullPath, virtualPath, splitNameForSearch, mTime, isFile)

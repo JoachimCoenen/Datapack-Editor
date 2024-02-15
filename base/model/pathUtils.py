@@ -3,9 +3,10 @@ import os
 import re
 from io import BufferedIOBase
 from operator import itemgetter
-from typing import Callable, Literal, NamedTuple, Optional, Protocol, Union, TypeVar
-from zipfile import ZipFile, BadZipFile
+from typing import Callable, Literal, NamedTuple, Optional, Protocol, Union, AnyStr, TypeVar
+from zipfile import BadZipFile, ZipFile
 
+from cat.utils import PLATFORM_IS_WINDOWS
 from cat.processFiles import makeSearchPath, processRecursively
 from cat.utils.collections_ import Stack
 from cat.utils.profiling import logWarning
@@ -70,8 +71,7 @@ def splitPath(path: FilePathStr, projPath: str) -> Optional[FilePathTpl]:
 
 
 def unitePathTpl(path: FilePathTpl) -> FilePathStr:
-	chrs = r'\/'
-	return f"{path[0].rstrip(chrs)}/{path[1].lstrip(chrs)}"
+	return f"{path[0].rstrip('/')}/{path[1].lstrip('/')}"
 
 
 def unitePath(path: FilePath) -> FilePathStr:
@@ -110,6 +110,38 @@ def isExcludedDirectory(relDirPath: str, excludedDirs: tuple[str, ...]) -> bool:
 	return relDirPath.startswith(excludedDirs)
 
 
+if PLATFORM_IS_WINDOWS:
+	def _getShortPathName(long_name: AnyStr) -> AnyStr:
+		"""
+		Coerces windows into dealing with long paths.
+		"""
+		if isinstance(long_name, bytes):
+			long_name = long_name.replace(b'/', b'\\')
+			if not long_name.startswith('\\\\?\\'):
+				long_name = b'\\\\?\\' + os.path.abspath(long_name)
+		else:
+			long_name = long_name.replace('/', '\\')
+			if not long_name.startswith('\\\\?\\'):
+				long_name = '\\\\?\\' + os.path.abspath(long_name)
+		return long_name
+
+
+	def getSafeFileName(filename: AnyStr) -> AnyStr:
+		if len(filename) > 259:
+			shortName = _getShortPathName(filename)
+			return shortName
+		return filename
+
+	def getmtimeSafe(filename: AnyStr) -> float:
+		safeFilename = getSafeFileName(filename)
+		return os.path.getmtime(safeFilename)
+else:
+	def getSafeFileName(filename: AnyStr) -> AnyStr:
+		return filename
+
+	getmtimeSafe = os.path.getmtime
+
+
 def getAllFilesFromSearchPaths(
 		rootFolders: Union[str, list[str]],
 		folderFilter: SearchPath,
@@ -121,7 +153,7 @@ def getAllFilesFromSearchPaths(
 ) -> list[FilePath]:
 
 	if isinstance(rootFolders, str):
-		rootFolders = [rootFolders]
+		rootFolders = (rootFolders,)
 
 	filePaths: list[FilePath] = []
 	for rootFolder in rootFolders:
@@ -145,7 +177,46 @@ def getAllFilesFromSearchPath(
 	if os.path.isdir(rootFolder):
 		return _internalGetAllFilesFromFolder(rootFolder, folderFilter, extensions, excludes)
 	elif os.path.isfile(rootFolder):
-		return _internalGetAllFilesFromArchive(rootFolder, zipPathFilter, extensions, excludes, onError=onError)
+		return _internalGetAllFilesFoldersFromArchive(rootFolder, zipPathFilter, extensions, excludes, onError=onError)[0]
+	return []
+
+
+def getAllFilesAndTimestampsFromSearchPaths(
+		rootFolders: Union[str, list[str]],
+		folderFilter: SearchPath,
+		zipPathFilter: str,
+		extensions: Union[str, tuple[str, ...]],
+		excludes: Union[str, tuple[str, ...]] = None,
+		*,
+		onError: Optional[Callable[[OSError], None]] = logWarning
+) -> list[SimpleFileInfo]:
+
+	if isinstance(rootFolders, str):
+		rootFolders = (rootFolders,)
+
+	filePaths: list[SimpleFileInfo] = []
+	for rootFolder in rootFolders:
+		filePaths.extend(getAllFilesAndTimestampsFromSearchPath(rootFolder, folderFilter, zipPathFilter, extensions, excludes, onError=onError))
+
+	filePaths.sort()
+	return filePaths
+
+
+def getAllFilesAndTimestampsFromSearchPath(
+		rootFolder: str,
+		folderFilter: SearchPath,
+		zipPathFilter: str,
+		extensions: Union[str, tuple[str, ...]],
+		excludes: Union[str, tuple[str, ...]] = None,
+		*,
+		onError: Optional[Callable[[OSError], None]] = logWarning
+) -> list[SimpleFileInfo]:
+	if not os.path.exists(rootFolder):
+		return []
+	if os.path.isdir(rootFolder):
+		return _internalGetAllFilesAndTimestampsFromFolder(rootFolder, folderFilter, extensions, excludes, onError=onError)
+	elif os.path.isfile(rootFolder):
+		return _internalGetAllFilesAndTimestampsFromArchive(rootFolder, zipPathFilter, extensions, excludes, onError=onError)
 	return []
 
 
@@ -155,23 +226,6 @@ def getAllFilesFromFolder(rootFolder: str, folderFilter: SearchPath, extensions:
 	if os.path.exists(rootFolder) and os.path.isdir(rootFolder):
 		return _internalGetAllFilesFromFolder(rootFolder, folderFilter, extensions, excludes)
 	return []
-
-
-def _internalGetAllFilesFromFolder(rootFolder: str, folderFilter: SearchPath, extensions: Union[str, tuple[str, ...]], excludes: Union[str, tuple[str, ...]] = None) -> list[FilePathTpl]:
-	divider = folderFilter.divider
-
-	filePaths = []
-
-	def handleFile(filename: str):
-		nonlocal filePaths
-		if (not extensions or filename.endswith(extensions)) and (not excludes or not filename.endswith(excludes)):
-			filename = normalizeDirSeparatorsStr(filename)
-			prefix, div, suffix = filename.rpartition(divider)
-			filePaths.append((prefix + div, suffix,))
-
-	processRecursively(rootFolder, folderFilter.path, handleFile)
-	filePaths.sort()
-	return filePaths
 
 
 def getAllFilesFoldersFromFolder(rootFolder: str, divider: str, *, excludedDirs: tuple[str, ...]) -> tuple[list[FilePathTpl],  list[FilePathTpl]]:
@@ -195,10 +249,11 @@ def _internalGetAllFilesFoldersFromFolder(rootFolder: str, divider: str, exclude
 			scanner = scanners.pop()
 			entry: os.DirEntry
 			while (entry := next(scanner, None)) is not None:
-				prefix, div, suffix = normalizeDirSeparatorsStr(entry.path).rpartition(divider)
 				if entry.is_file():
+					prefix, div, suffix = normalizeDirSeparatorsStr(entry.path).rpartition(divider)
 					filePaths.append((prefix + div, suffix.lstrip('/'),))
 				elif entry.is_dir():
+					prefix, div, suffix = normalizeDirSeparatorsStr(entry.path).rpartition(divider)
 					if not isExcludedDirectory(suffix, excludedFolders):
 						folderPaths.append((prefix + div, suffix.lstrip('/') + '/',))
 						scanners.push(scanner)
@@ -217,41 +272,113 @@ def _internalGetAllFilesFoldersFromFolder(rootFolder: str, divider: str, exclude
 	return filePaths, folderPaths
 
 
-def getAllFilesFromArchive(
+def getAllFilesFoldersFromArchive(
 		rootFolder: str,
 		zipPathFilter: str,
 		extensions: Union[str, tuple[str, ...]],
 		excludes: Union[str, tuple[str, ...]] = None,
 		*,
 		onError: Optional[Callable[[OSError], None]] = logWarning
-) -> list[FilePathTpl]:
+) -> tuple[list[FilePathTpl],  list[FilePathTpl]]:
 	if os.path.exists(rootFolder) and os.path.isfile(rootFolder):
-		return _internalGetAllFilesFromArchive(rootFolder, zipPathFilter, extensions, excludes, onError=onError)
-	return []
+		return _internalGetAllFilesFoldersFromArchive(rootFolder, zipPathFilter, extensions, excludes, onError=onError)
+	return [], []
 
 
-def _internalGetAllFilesFromArchive(
+def _internalGetAllFilesFromFolder(rootFolder: str, folderFilter: SearchPath, extensions: Union[str, tuple[str, ...]], excludes: Union[str, tuple[str, ...]] = None) -> list[FilePathTpl]:
+	divider = folderFilter.divider
+
+	filePaths = []
+
+	def handleFile(filename: str):
+		nonlocal filePaths
+		if (not extensions or filename.endswith(extensions)) and (not excludes or not filename.endswith(excludes)):
+			filename = normalizeDirSeparatorsStr(filename)
+			prefix, div, suffix = filename.rpartition(divider)
+			filePaths.append((prefix + div, suffix,))
+
+	processRecursively(rootFolder, folderFilter.path, handleFile)
+	filePaths.sort()
+	return filePaths
+
+
+def _internalGetAllFilesFoldersFromArchive(
 		rootFolder: str,
 		zipPathFilter: str,
 		extensions: Union[str, tuple[str, ...]],
 		excludes: Union[str, tuple[str, ...]] = None,
 		*,
 		onError: Optional[Callable[[OSError], None]] = logWarning
-) -> list[FilePathTpl]:
+) -> tuple[list[FilePathTpl],  list[FilePathTpl]]:
 	filePaths = []
+	folderPaths = []
 
 	def handleFileZip(zipPath: str, filename: str):
 		nonlocal filePaths
 		if (not extensions or filename.endswith(extensions)) and (not excludes or not filename.endswith(excludes)):
 			filename = normalizeDirSeparatorsStr(filename)
-			filePaths.append((zipPath, filename,))
+			if filename.endswith('/'):
+				folderPaths.append((zipPath, filename,))
+			else:
+				filePaths.append((zipPath, filename,))
 
 	try:
 		_processZip(rootFolder, zipPathFilter, handleFileZip)
 	except OSError as e:
 		if onError is not None:
 			onError(e)
+	folderPaths.sort()
 	filePaths.sort()
+	return filePaths, folderPaths
+
+
+def _internalGetAllFilesAndTimestampsFromFolder(rootFolder: str, folderFilter: SearchPath, extensions: Union[str, tuple[str, ...]], excludes: Union[str, tuple[str, ...]] = None, *, onError: Optional[Callable[[OSError], None]] = logWarning) -> list[SimpleFileInfo]:
+	divider = folderFilter.divider
+	filePaths: list[SimpleFileInfo] = []
+
+	def handleFile(filename: str):
+		nonlocal filePaths
+		if (not extensions or filename.endswith(extensions)) and (not excludes or not filename.endswith(excludes)):
+			try:
+				filename = normalizeDirSeparatorsStr(filename)
+				prefix, div, suffix = filename.rpartition(divider)
+				filePathTpl = (prefix + div, suffix,)
+				timeStamp = getmtimeSafe(filename)
+				filePaths.append(SimpleFileInfo(filePathTpl, timeStamp))
+			except OSError as e:
+				if onError is not None:
+					onError(e)
+				else:
+					raise
+
+	processRecursively(rootFolder, folderFilter.path, handleFile)
+	filePaths.sort(key=itemgetter(0))
+	return filePaths
+
+
+def _internalGetAllFilesAndTimestampsFromArchive(
+		rootFolder: str,
+		zipPathFilter: str,
+		extensions: Union[str, tuple[str, ...]],
+		excludes: Union[str, tuple[str, ...]] = None,
+		*,
+		onError: Optional[Callable[[OSError], None]] = logWarning
+) -> list[SimpleFileInfo]:
+	timeStamp = getmtimeSafe(rootFolder)
+	filePaths: list[SimpleFileInfo] = []
+
+	def handleFileZip(zipPath: str, filename: str):
+		nonlocal filePaths
+		if (not extensions or filename.endswith(extensions)) and (not excludes or not filename.endswith(excludes)):
+			filename = normalizeDirSeparatorsStr(filename)
+			filePaths.append(SimpleFileInfo((zipPath, filename,), timeStamp))
+
+	try:
+		_processZip(rootFolder, zipPathFilter, handleFileZip)
+	except OSError as e:
+		if onError is not None:
+			onError(e)
+	filePaths.sort(key=itemgetter(0))
 	return filePaths
 
 
@@ -279,7 +406,7 @@ def getAllTimestampsFromSearchPath(
 		if filename.endswith(extensions) and (not excludes or not filename.endswith(excludes)):
 			try:
 				filename = normalizeDirSeparatorsStr(filename)
-				timeStamp = os.path.getmtime(filename)
+				timeStamp = getmtimeSafe(filename)
 				timeStamps[filename] = timeStamp
 			except OSError as e:
 				if onError is not None:
@@ -296,7 +423,7 @@ def getAllTimestampsFromSearchPath(
 		if os.path.isdir(rootFolder):
 			processRecursively(rootFolder, folderFilter, handleFile)
 		else:
-			timeStamps[rootFolder] = os.path.getmtime(rootFolder)
+			timeStamps[rootFolder] = getmtimeSafe(rootFolder)
 
 	return list(map(itemgetter(1), sorted(timeStamps.items(), key=itemgetter(0))))
 
@@ -352,12 +479,11 @@ class ArchiveFilePool:
 		raise NotImplementedError()
 
 	def _getOrOpenArchive(self, path: str, mode: _ZipFileMode) -> Archive:
-		absPath = os.path.abspath(path)
-		normPath = absPath
-		if normPath not in self._openedArchives:
+		safePath = getSafeFileName(os.path.abspath(path))
+		if safePath not in self._openedArchives:
 			os.makedirs(os.path.dirname(path), exist_ok=True)
-			self._openedArchives[normPath] = self._openArchive(normPath, mode)
-		return self._openedArchives[normPath]
+			self._openedArchives[safePath] = self._openArchive(safePath, mode)
+		return self._openedArchives[safePath]
 
 	def readFileInArchive(self, zipPath: str, relFilePath: str) -> BufferedIOBase:
 		archive = self._getOrOpenArchive(zipPath, 'r')
@@ -410,16 +536,15 @@ def loadBinaryFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> byte
 	contents = None
 	if isinstance(filePath, (str, bytes)):
 		# path is a normal file:
-		with open(filePath, 'rb') as f:  # open file
+		with open(getSafeFileName(filePath), 'rb') as f:  # open file
 			contents = f.read()
-	elif os.path.isdir(filePath[0]):
-		with open(f'{filePath[0]}/{filePath[1]}', 'rb') as f:  # open file
+	elif os.path.isdir(getSafeFileName(filePath[0])):
+		with open(getSafeFileName(f'{filePath[0]}/{filePath[1]}'), 'rb') as f:  # open file
 			contents = f.read()
 	else:
 		# path contains a .jar file:
-		zipPath = filePath[0]
+		zipPath = filePath[0]  # readFileInArchive(...) already uses getSafeFileName() so we don't need to do it here.
 		pathInZip = filePath[1]
-		filePath = f'{zipPath}/{pathInZip}'
 		with archiveFilePool.readFileInArchive(zipPath, pathInZip) as f:
 			contents = f.read()
 	return contents
@@ -430,17 +555,26 @@ class SearchPath(NamedTuple):
 	divider: str
 
 
+class SimpleFileInfo(NamedTuple):
+	path: FilePathTpl
+	timestamp: float
+
+
 def getMTimeForFilePath(filePath: FilePath) -> float:
 	if isinstance(filePath, (str, bytes)):
 		# path is a normal file:
-		fullFilePath = filePath
-	elif os.path.isdir(filePath[0]):
-		fullFilePath = f'{filePath[0]}/{filePath[1]}'
+		return getmtimeSafe(filePath)
 	else:
-		# path contains a .jar file:
-		fullFilePath = filePath[0]  # the zipPath
+		return getMTimeForFilePathTpl(filePath)
 
-	return os.path.getmtime(fullFilePath)
+
+def getMTimeForFilePathTpl(filePath: FilePathTpl) -> float:
+	safeDirPath = getSafeFileName(filePath[0])
+	if os.path.isdir(safeDirPath):
+		return getmtimeSafe(f'{filePath[0]}/{filePath[1]}')
+	else:
+		# path contains a .jar, .zip, etc file:
+		return os.path.getmtime(safeDirPath)  # the zipPath
 
 
 __all__ = [
@@ -463,12 +597,13 @@ __all__ = [
 	'toDisplayPath',
 	'fromDisplayPath',
 
-	'isExcludedDirectory',
 	'getAllFilesFromSearchPaths',
 	'getAllFilesFromSearchPath',
+	'getAllFilesAndTimestampsFromSearchPaths',
+	'getAllFilesAndTimestampsFromSearchPath',
 	'getAllFilesFromFolder',
 	'getAllFilesFoldersFromFolder',
-	'getAllFilesFromArchive',
+	'getAllFilesFoldersFromArchive',
 	'getAllTimestampsFromSearchPath',
 
 	'Archive',
@@ -477,5 +612,7 @@ __all__ = [
 	'loadTextFile',
 	'loadBinaryFile',
 	'SearchPath',
+	'SimpleFileInfo',
 	'getMTimeForFilePath',
+	'getMTimeForFilePathTpl',
 ]

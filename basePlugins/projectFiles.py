@@ -19,7 +19,7 @@ from cat.utils import DeferredCallOnceMethod, openOrCreate
 from base.model import filesystemEvents
 from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDirSeparators, splitPath, \
 	normalizeDirSeparatorsStr, unitePath, fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, \
-	getAllFilesFromArchive, isExcludedDirectory, ZipFilePool
+	getAllFilesFoldersFromArchive, isExcludedDirectory, ZipFilePool
 from base.model.aspect import AspectType
 from base.model.project.index import Index
 from base.model.project.project import AnalyzeRootsAspectPart, Project, ProjectRoot, ProjectAspect, Root, IndexBundleAspect, FileEntry, makeFileEntry
@@ -658,8 +658,7 @@ class AnalyzeRootsFilesAspectPart(AnalyzeRootsAspectPart[FilesAspect]):
 		if os.path.isdir(location):
 			rawLocalFiles, rawLocalFolders = getAllFilesFoldersFromFolder(location, pif.divider, excludedDirs=excludedDirs)
 		elif os.path.isfile(location):
-			rawLocalFiles = getAllFilesFromArchive(location, piz, (), ())
-			rawLocalFolders = []
+			rawLocalFiles, rawLocalFolders = getAllFilesFoldersFromArchive(location, piz, (), ())
 		else:
 			return
 		aspects = [a.analyzeFilesPart for a in project.aspects if a.analyzeFilesPart is not None]
