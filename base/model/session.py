@@ -143,6 +143,10 @@ class Session(SerializableDataclass):
 	def showAndLogWarning(e: Optional[Exception], title: str = 'Warning') -> None:
 		GLOBAL_SIGNALS.onWarning.emit(e, title)
 
+	@staticmethod
+	def resetAllGlobalCaches() -> None:
+		GLOBAL_SIGNALS.globalCacheReset.emit()
+
 
 __session = Session()
 
@@ -150,6 +154,7 @@ __session = Session()
 class _GlobalSignals(Singleton):
 	onError: ClassVar[CatBoundSignal[Session, Callable[[Exception, str], None]]] = CatSignal[Callable[[Exception, str], None]]('onError')
 	onWarning: ClassVar[CatBoundSignal[Session, Callable[[Exception | None, str], None]]] = CatSignal[Callable[[Exception | None, str], None]]('onWarning')
+	globalCacheReset: CatBoundSignal[Callable[[], None]] = CatSignal[Callable[[], None]]('globalCacheReset')
 
 	onProjectErrorsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onProjectErrorsChanged')  # not really satisfied with this location for this signal...
 	""" is emitted whenever project errors change. See also Project.getAllProjectErrors() and Session.emitProjectErrorsChanged(...)"""
