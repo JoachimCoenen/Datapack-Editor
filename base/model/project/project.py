@@ -319,7 +319,7 @@ class Root(SerializableDataclass):
 	_identifier: str = field(default='', metadata=catMeta(serializedName='identifier'))
 	"""Used for unique identification, of the root. Two DependencyDescr objects with the same identifier ALWAYS point o the same Root."""
 	dependencies: list[DependencyDescr] = field(default_factory=list, repr=False, compare=False, metadata=catMeta(serialize=False))
-	indexBundles: AspectDict[IndexBundleAspect] = field(default_factory=lambda: AspectDict(IndexBundleAspect), metadata=catMeta(serialize=False))
+	indexBundles: AspectDict[IndexBundleAspect] = field(default_factory=lambda: AspectDict(IndexBundleAspect), repr=False, compare=False, metadata=catMeta(serialize=False))
 
 	@property
 	def location(self) -> str:
