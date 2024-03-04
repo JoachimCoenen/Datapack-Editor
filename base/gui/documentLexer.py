@@ -277,10 +277,11 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		folder.add_folding(start, end - start)
 
 	def wordCharacters(self) -> str:
-		return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
+		return self._api.wordCharacters()
 
 	def autoCompletionWordSeparators(self) -> list[str]:
-		return ['.']  # ':', '#', '.']
+		return self._api.autoCompletionWordSeparators()
+		#return ['.']  # ':', '#', '.']
 
 
 @dataclass
@@ -484,3 +485,16 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		if (ctxProvider := self.contextProvider) is not None:
 			position = self.posFromCEPos(cePosition)
 			ctxProvider.onIndicatorClicked(position)
+
+	@override
+	def wordCharacters(self) -> str:
+		if (ctxProvider := self.contextProvider) is not None:
+			return ctxProvider.getWordCharacters(self.currentCursorPos)
+		return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
+		# return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+
+	@override
+	def autoCompletionWordSeparators(self) -> list[str]:
+		if (ctxProvider := self.contextProvider) is not None:
+			return ctxProvider.getAutoCompletionWordSeparators(self.currentCursorPos)
+		return []  # ['.']  # ':', '#', '.']
