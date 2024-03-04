@@ -17,53 +17,61 @@ ASCII_UPPERCASE = b'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 ASCII_UPPERCASE_RANGE = range(ASCII_UPPERCASE[0], ASCII_UPPERCASE[-1])
 
 ASCII_LETTERS = ASCII_LOWERCASE + ASCII_UPPERCASE
+ASCII_LETTERS_SET = set(ASCII_LETTERS)
+
 ASCII_LETTERS_UNDERSCORE = ASCII_LETTERS + b'_'
+ASCII_LETTERS_UNDERSCORE_SET = set(ASCII_LETTERS_UNDERSCORE)
 
 DIGITS = b'0123456789'
 DIGITS_RANGE = range(DIGITS[0], DIGITS[-1]+1)
 
+ALPHA_NUM = ASCII_LETTERS + DIGITS
+ALPHA_NUM_SET = set(ALPHA_NUM)
+
 # A character is a Java whitespace character if and only if it satisfies one of the following criteria:
-JAVA_WHITESPACES: set[bytes] = {bytes(__char, encoding='utf-8', errors='replace') for __char in [
+JAVA_WHITESPACES_STR: str = (''
 	# It is a Unicode space character (SPACE_SEPARATOR, LINE_SEPARATOR, or PARAGRAPH_SEPARATOR) but is not also a non-breaking space ('\u00A0', '\u2007', '\u202F'):
 	# SPACE_SEPARATORs:
-	'\u0020',  # Space
-	# '\u00A0', (excluded) # No-Break Space
-	'\u1680',  # Ogham Space Mark
-	'\u2000',  # En Quad
-	'\u2001',  # Em Quad
-	'\u2002',  # En Space
-	'\u2003',  # Em Space
-	'\u2004',  # Three-Per-Em Space
-	'\u2005',  # Four-Per-Em Space
-	'\u2006',  # Six-Per-Em Space
-	# '\u2007', (excluded)  # Figure Space
-	'\u2008',  # Punctuation Space
-	'\u2009',  # Thin Space
-	'\u200A',  # Hair Space
-	# '\u202F',  (excluded) # Narrow No-Break Space
-	'\u205F',  # Medium Mathematical Space
-	'\u3000',  # Ideographic Space
+	+ '\u0020'  # Space
+	# '\u00A0' (excluded) # No-Break Space
+	+ '\u1680'  # Ogham Space Mark
+	+ '\u2000'  # En Quad
+	+ '\u2001'  # Em Quad
+	+ '\u2002'  # En Space
+	+ '\u2003'  # Em Space
+	+ '\u2004'  # Three-Per-Em Space
+	+ '\u2005'  # Four-Per-Em Space
+	+ '\u2006'  # Six-Per-Em Space
+	# '\u2007' (excluded)  # Figure Space
+	+ '\u2008'  # Punctuation Space
+	+ '\u2009'  # Thin Space
+	+ '\u200A'  # Hair Space
+	# '\u202F'  (excluded) # Narrow No-Break Space
+	+ '\u205F'  # Medium Mathematical Space
+	+ '\u3000'  # Ideographic Space
 	# LINE_SEPARATORs:
-	'\u2028',  # Line Separator
+	+ '\u2028'  # Line Separator
 	# PARAGRAPH_SEPARATORs:
-	'\u2029',  # Paragraph Separator
+	+ '\u2029'  # Paragraph Separator
 	# Explicitly named Characters:
-	'\t',      # It is '\t', U+0009 HORIZONTAL TABULATION.
-	'\n',      # It is '\n', U+000A LINE FEED.
-	'\u000B',  # It is '\u000B', U+000B VERTICAL TABULATION.
-	'\f',      # It is '\f', U+000C FORM FEED.
-	'\r',      # It is '\r', U+000D CARRIAGE RETURN.
-	'\u001C',  # It is '\u001C', U+001C FILE SEPARATOR.
-	'\u001D',  # It is '\u001D', U+001D GROUP SEPARATOR.
-	'\u001E',  # It is '\u001E', U+001E RECORD SEPARATOR.
-	'\u001F',  # It is '\u001F', U+001F UNIT SEPARATOR.
-]}
+	+ '\t'      # It is '\t', U+0009 HORIZONTAL TABULATION.
+	+ '\n'      # It is '\n', U+000A LINE FEED.
+	+ '\u000B'  # It is '\u000B', U+000B VERTICAL TABULATION.
+	+ '\f'      # It is '\f', U+000C FORM FEED.
+	+ '\r'      # It is '\r', U+000D CARRIAGE RETURN.
+	+ '\u001C'  # It is '\u001C', U+001C FILE SEPARATOR.
+	+ '\u001D'  # It is '\u001D', U+001D GROUP SEPARATOR.
+	+ '\u001E'  # It is '\u001E', U+001E RECORD SEPARATOR.
+	+ '\u001F'  # It is '\u001F', U+001F UNIT SEPARATOR.
+)
 
-JAVA_WHITESPACES_SINGLE_BYTE: set[int] = {__char[0] for __char in JAVA_WHITESPACES if len(__char) == 1}
+JAVA_WHITESPACES_SET: set[bytes] = {bytes(__char, encoding='utf-8', errors='replace') for __char in JAVA_WHITESPACES_STR}
 
-JAVA_WHITESPACES_THREE_BYTES: set[bytes] = {__char for __char in JAVA_WHITESPACES if len(__char) == 3}
+JAVA_WHITESPACES_SINGLE_BYTE_SET: set[int] = {__char[0] for __char in JAVA_WHITESPACES_SET if len(__char) == 1}
 
-assert len(JAVA_WHITESPACES_SINGLE_BYTE) + len(JAVA_WHITESPACES_THREE_BYTES) == len(JAVA_WHITESPACES)
+JAVA_WHITESPACES_THREE_BYTES_SET: set[bytes] = {__char for __char in JAVA_WHITESPACES_SET if len(__char) == 3}
+
+assert len(JAVA_WHITESPACES_SINGLE_BYTE_SET) + len(JAVA_WHITESPACES_THREE_BYTES_SET) == len(JAVA_WHITESPACES_SET)
 
 # ordinal values dor common symbols ad chars:
 
@@ -162,4 +170,7 @@ ORD_BACK_TICK = ord(b"`")
 
 ORD_SPACE = ord(b' ')
 
-ORD_LF = ord(b'\n')
+ORD_TAB = ord(b'\t')  # tab
+ORD_FF = ord(b'\f')  # form feed
+ORD_CR = ord(b'\r')  # carriage return
+ORD_LF = ord(b'\n')  # line feed

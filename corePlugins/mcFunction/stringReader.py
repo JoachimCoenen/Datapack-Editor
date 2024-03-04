@@ -4,7 +4,7 @@ from typing import Optional, final
 
 from base.model.parsing.parser import _Base
 from cat.utils.collections_ import Stack
-from base.model.parsing.bytesUtils import DIGITS, ASCII_LETTERS, JAVA_WHITESPACES, JAVA_WHITESPACES_SINGLE_BYTE, JAVA_WHITESPACES_THREE_BYTES, DIGITS_RANGE, ORD_BACKSLASH, \
+from base.model.parsing.bytesUtils import DIGITS, ASCII_LETTERS, JAVA_WHITESPACES_SET, JAVA_WHITESPACES_SINGLE_BYTE_SET, JAVA_WHITESPACES_THREE_BYTES_SET, DIGITS_RANGE, ORD_BACKSLASH, \
 	ORD_DOT, ORD_MINUS, ORD_ROOF, ORD_SPACE, ORD_TILDE
 from base.model.utils import Span
 
@@ -17,7 +17,7 @@ QUOTES = set(b'\'"')
 UNQUOTED_STRING_CHARS = set(DIGITS + ASCII_LETTERS + b'_-.+')
 BOOLEAN_VALUES = {b'true', b'false'}
 
-NOT_JAVA_WHITESPACES_REGEX: bytes = b"(?:" + b'|'.join(JAVA_WHITESPACES) + b")*"
+NOT_JAVA_WHITESPACES_REGEX: bytes = b"(?:" + b'|'.join(JAVA_WHITESPACES_SET) + b")*"
 
 
 @final
@@ -61,9 +61,9 @@ class StringReader(_Base):
 		length: int = self.length
 		# beware of unicode utf-8:
 		while cursor < length:
-			if text[cursor] in JAVA_WHITESPACES_SINGLE_BYTE:
+			if text[cursor] in JAVA_WHITESPACES_SINGLE_BYTE_SET:
 				cursor += 1
-			elif cursor + 3 <= length and text[cursor:cursor + 3] in JAVA_WHITESPACES_THREE_BYTES:
+			elif cursor + 3 <= length and text[cursor:cursor + 3] in JAVA_WHITESPACES_THREE_BYTES_SET:
 				cursor += 3
 			else:
 				break
