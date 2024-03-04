@@ -67,7 +67,7 @@ def _labelMaker(data: TreeItem | Root, column: int) -> str:
 	if isinstance(data, Root):
 		return data.name if column == 0 else ""
 	else:
-		return data.name if column == 0 else (data.value if isinstance(data.value, str) else "")
+		return data.name if column == 0 else (str(data.value) if not isinstance(data.value, (Index, IndexBundle, DeepIndex)) else "")
 
 
 def _iconMaker(data: TreeItem | Root, column: int) -> Optional[QIcon]:
@@ -97,7 +97,7 @@ def _getId(data: TreeItem | Root) -> str:
 		return data.name
 
 
-def _childrenMaker(data: Root) -> list[TreeItem]:
+def _childrenMaker(data: Root | TreeItem) -> list[TreeItem]:
 	if isinstance(data, TreeItem):
 		data = data.value
 	if isinstance(data, list):
@@ -109,6 +109,6 @@ def _childrenMaker(data: Root) -> list[TreeItem]:
 	elif isinstance(data, DeepIndex):
 		return [TreeItem(name, index) for name, index in data.indices.items()]
 	elif isinstance(data, Index):
-		return [TreeItem(str(key), str(value)) for key, value in data.items()]
+		return [TreeItem(str(key), value) for key, value in data.items()]
 	else:
 		return []

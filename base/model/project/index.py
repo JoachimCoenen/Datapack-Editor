@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import Collection, Generic, TypeVar, Hashable, Iterator, Mapping
+from typing import Collection, Generic, TypeVar, Hashable, Iterator, Mapping, Optional
 
 from recordclass import as_dataclass
 
@@ -30,7 +30,8 @@ class IndexLike(Mapping[_TK, _TV], Generic[_TK, _TV], ABC):
 	def add(self, key: _TK, source: FilePathTpl, data: _TV) -> _TV:
 		...
 
-	def discard(self, key: _TK, source: FilePathTpl) -> None:
+	def discard(self, key: _TK, source: FilePathTpl) -> Optional[_TV]:
+		"""returns the value if it is still remaining in the index (i.e. if there are other sources still present.). Returns None if it was removed or never existed."""
 		...
 
 	def discardSource(self, source: FilePathTpl) -> None:
@@ -58,14 +59,12 @@ class Index(IndexLike[_TK, _TV], Generic[_TK, _TV]):
 			entry.data = data
 		entry.sources.add(source)
 		self.bySource[source][key] = entry
-		return entry.data
+		return data
 
-	def discard(self, key: _TK, source: FilePathTpl) -> None:
+	def discard(self, key: _TK, source: FilePathTpl) -> Optional[_TV]:
 		entry = self.byId.get(key)
-		if entry is not None:
-			entry.sources.discard(source)
-			if not entry.sources:
-				del self.byId[key]
+		if entry is None:
+			return None
 
 		fromSource = self.bySource.get(source)
 		if fromSource is not None:
@@ -74,24 +73,32 @@ class Index(IndexLike[_TK, _TV], Generic[_TK, _TV]):
 			if not fromSource:
 				del self.bySource[source]
 
+		entry.sources.discard(source)
+		if not entry.sources:
+			del self.byId[key]
+		else:
+			return entry.data
+
 	def discardSource(self, source: FilePathTpl) -> None:
 		fromSource = self.bySource.get(source)
 		if fromSource is not None:
 			fromSource = fromSource.copy()
 			for key in fromSource:
-				self.discard(key, source)
+				if (remaining := self.discard(key, source)) is not None and callable(discardSource := getattr(remaining, 'discardSource', None)):
+					discardSource(source)
 
-	def discardDirectory(self, source: FilePathTpl) -> None:
+	def discardDirectory(self, directory: FilePathTpl) -> None:
 		for src, entries in self.bySource.copy().items():
-			if src[0] == source[0] and src[1].startswith(source[1]):
+			if src[0] == directory[0] and src[1].startswith(directory[1]):
 				for key in entries.copy().keys():
-					self.discard(key, src)
+					if (remaining := self.discard(key, src)) is not None and callable(discardSource := getattr(remaining, 'discardSource', None)):
+						discardSource(src)
 
-	def clear(self):
+	def clear(self) -> None:
 		self.byId.clear()
 		self.bySource.clear()
 
-	def __len__(self):
+	def __len__(self) -> int:
 		return len(self.byId)
 
 	def __getitem__(self, key: _TK) -> _TV:
@@ -152,9 +159,10 @@ class DeepIndex(IndexLike[tuple[str, _TK], _TV], Generic[_TK, _TV]):
 	def add(self, key: tuple[str, _TK], source: FilePathTpl, data: _TV) -> _TV:
 		return self.indices[key[0]].add(key[1], source, data)
 
-	def discard(self, key: tuple[str, _TK], source: FilePathTpl) -> None:
+	def discard(self, key: tuple[str, _TK], source: FilePathTpl) -> Optional[_TV]:
 		if (index := self.indices.get(key[0])) is not None:
-			index.discard(key[1], source)
+			return index.discard(key[1], source)
+		return None
 
 	def discardSource(self, source: FilePathTpl) -> None:
 		for index in self.indices.values():
@@ -164,10 +172,10 @@ class DeepIndex(IndexLike[tuple[str, _TK], _TV], Generic[_TK, _TV]):
 		for index in self.indices.values():
 			index.discardDirectory(source)
 
-	def clear(self):
+	def clear(self) -> None:
 		self.indices.clear()
 
-	def __len__(self):
+	def __len__(self) -> int:
 		return sum(map(len, self.indices))
 
 	def __getitem__(self, key: tuple[str, _TK]) -> _TV:
@@ -209,10 +217,10 @@ class _ViewBase(Generic[_TT, _TCol]):
 	def __init__(self, impl: _TCol):
 		self._impl: _TCol = impl
 
-	def __len__(self):
+	def __len__(self) -> int:
 		return len(self._impl)
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return f'{self.__class__.__name__}({self._impl!r})'
 
 
@@ -224,7 +232,7 @@ class _IndexItemsView(_ViewBase[tuple[_TK_co, _TV_co], Index], Generic[_TK_co, _
 		return False
 
 	def __iter__(self) -> Iterator[tuple[_TK_co, _TV_co]]:
-		for key, entry in self._impl.byId.items():
+		for key, entry in self._impl.byId.copy().items():
 			yield key, entry.data
 
 
@@ -236,26 +244,26 @@ class _DeepIndexItemsView(_ViewBase[tuple[tuple[str, _TK_co], _TV_co], DeepIndex
 		return False
 
 	def __iter__(self) -> Iterator[tuple[tuple[str, _TK_co], _TV_co]]:
-		for path, index in self._impl.indices.items():
-			for key, entry in index.byId.items():
+		for path, index in self._impl.indices.copy().items():
+			for key, entry in index.byId.copy().items():
 				yield (path, key), entry.data
 
 
 class _IndexValuesView(_ViewBase[_TV_co, Index], Generic[_TV_co]):
 	def __contains__(self, value: _TV_co) -> bool:
-		for entry in self._impl.byId.values():
+		for entry in self._impl.byId.copy().values():
 			if entry.data == value:
 				return True
 		return False
 
 	def __iter__(self) -> Iterator[_TV_co]:
-		for entry in self._impl.byId.values():
+		for entry in self._impl.byId.copy().values():
 			yield entry.data
 
 
 class _DeepIndexValuesView(_ViewBase[_TV_co, DeepIndex], Generic[_TV_co]):
 	def __contains__(self, value: _TV_co) -> bool:
-		for index in self._impl.indices.values():
+		for index in self._impl.indices.copy().values():
 			if value in index.values():
 				return True
 		return False
