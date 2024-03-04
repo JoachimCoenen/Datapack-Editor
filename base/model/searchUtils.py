@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, cast, Collection, Generic, Iterable, Iterator, Mapping, Optional, overload, TypeVar
+from typing import Any, Callable, cast, Generic, Iterable, Iterator, Mapping, Optional, overload, TypeVar, \
+	Sequence
 
 from recordclass import as_dataclass
 
@@ -114,30 +115,30 @@ class FilterStr:
 					return any(f in choice for f in filters)
 				return search
 
-	def filter(self, collection: Collection[str]) -> tuple[int, int, Collection[str]]:
+	def filter(self, collection: Sequence[str]) -> tuple[int, int, Sequence[str]]:
 		if not self:
 			result = list(collection)
 		else:
 			result = list(filter(self.matcher, collection))
 		return len(collection), len(result), result
 
-	def filterValuesByKey(self, mapping: Mapping[str, _TT]) -> tuple[int, int, Collection[_TT]]:
+	def filterValuesByKey(self, mapping: Mapping[str, _TT]) -> tuple[int, int, Sequence[_TT]]:
 		if not self:
-			result = mapping.values()
+			result = list(mapping.values())
 		else:
 			search = self.matcher
 			result = [value for key, value in mapping.items() if search(key)]
 		return len(mapping), len(result), result
 
-	def filterItemsByKey(self, mapping: Mapping[str, _TT]) -> tuple[int, int, Collection[tuple[str, _TT]]]:
+	def filterItemsByKey(self, mapping: Mapping[str, _TT]) -> tuple[int, int, Sequence[tuple[str, _TT]]]:
 		if not self:
-			result = mapping.items()
+			result = list(mapping.items())
 		else:
 			search = self.matcher
 			result = [item for item in mapping.items() if search(item[0])]
 		return len(mapping), len(result), result
 
-	def filterByTransformed(self, collection: Collection[_TT], trafo: Callable[[_TT], str]) -> tuple[int, int, Collection[_TT]]:
+	def filterByTransformed(self, collection: Sequence[_TT], trafo: Callable[[_TT], str]) -> tuple[int, int, Sequence[_TT]]:
 		if not self:
 			result = list(collection)
 		else:
@@ -167,34 +168,31 @@ class FilterStr:
 		return any(self.__filters)
 
 
-def filterStrChoices(filterStr: FilterStr, allChoices: Collection[str]) -> tuple[int, int, Collection[str]]:
+def filterStrChoices(filterStr: FilterStr, allChoices: Sequence[str]) -> tuple[int, int, Sequence[str]]:
 	return filterStr.filter(allChoices)
 	# return [choice for choice in allChoices if filterStr.matches(choice)]
 	# return [choice[1] for choice in ((choice.lower(), choice) for choice in allChoices) if any(f in choice[0] for f in filterStr)]
 
 
-# def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> Collection[_TT]:
-# 	if not filterStr:
-# 		return list(allChoices.values())
-# 	return filterStr.filterValuesByKey(allChoices)
-# 	# return [value for key, value in allChoices.items() if filterStr.matches(key)]
-# 	# return [choice[1] for choice in ((key.lower(), value) for key, value in allChoices.items()) if any(f in choice[0] for f in filterStr)]
-#
-#
-# def filterDictItemChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> Collection[tuple[str, _TT]]:
+def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> tuple[int, int, Sequence[_TT]]:
+	return filterStr.filterValuesByKey(allChoices)
+	# return [value for key, value in allChoices.items() if filterStr.matches(key)]
+	# return [choice[1] for choice in ((key.lower(), value) for key, value in allChoices.items()) if any(f in choice[0] for f in filterStr)]
+
+# def filterDictItemChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> Sequence[tuple[str, _TT]]:
 # 	if not filterStr:
 # 		return list(allChoices.items())
 # 	return filterStr.filterItemsByKey(allChoices)
 
 
-def filterComputedChoices(getStr: Callable[[_TT], str]) -> Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TT]]]:
-	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[_TT]) -> tuple[int, int, Collection[_TT]]:
+def filterComputedChoices(getStr: Callable[[_TT], str]) -> Callable[[FilterStr, Sequence[_TT]], tuple[int, int, Sequence[_TT]]]:
+	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Sequence[_TT]) -> tuple[int, int, Sequence[_TT]]:
 		return filterStr.filterByTransformed(allChoices, getStr)
 	return innerFilterComputedChoices
 
 
-def filterAnyComputedChoices(getStrs: Callable[[_TT], tuple[str, ...]]) -> Callable[[FilterStr, Collection[_TT]], Collection[_TT]]:
-	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Collection[_TT]) -> Collection[_TT]:
+def filterAnyComputedChoices(getStrs: Callable[[_TT], tuple[str, ...]]) -> Callable[[FilterStr, Sequence[_TT]], Sequence[_TT]]:
+	def innerFilterComputedChoices(filterStr: FilterStr, allChoices: Sequence[_TT]) -> Sequence[_TT]:
 		if not filterStr:
 			return allChoices
 		return [

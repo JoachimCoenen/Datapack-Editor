@@ -177,7 +177,6 @@ class ContextProvider(Generic[_TNode], ABC):
 				return ctx.getDocumentation(match.hit, pos)
 		return MDStr('')
 
-	@abstractmethod
 	def getCallTips(self, pos: Position) -> list[str]:
 		match = self.getBestMatch(pos)
 		if match.hit is not None:
