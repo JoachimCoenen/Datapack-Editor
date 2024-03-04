@@ -57,10 +57,10 @@ class Session(SerializableDataclass):
 
 	documents: DocumentsManager = field(default_factory=DocumentsManager)
 
-	def tryOpenOrSelectDocument(self, filePath: FilePath, selectedSpan: Optional[Span] = None):
+	def tryOpenOrSelectDocument(self, filePath: Optional[FilePath], selectedSpan: Optional[Span] = None):
 		# find Document if is already open:
 		if filePath is None:
-			cd = getSession().documents.currentDocument
+			cd = self.documents.currentDocument
 			if cd is None:
 				return
 			filePath = cd.filePath

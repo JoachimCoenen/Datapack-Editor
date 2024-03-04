@@ -179,10 +179,9 @@ def filterDictChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> tu
 	# return [value for key, value in allChoices.items() if filterStr.matches(key)]
 	# return [choice[1] for choice in ((key.lower(), value) for key, value in allChoices.items()) if any(f in choice[0] for f in filterStr)]
 
-# def filterDictItemChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> Sequence[tuple[str, _TT]]:
-# 	if not filterStr:
-# 		return list(allChoices.items())
-# 	return filterStr.filterItemsByKey(allChoices)
+
+def filterDictItemChoices(filterStr: FilterStr, allChoices: Mapping[str, _TT]) -> tuple[int, int, Sequence[tuple[str, _TT]]]:
+	return filterStr.filterItemsByKey(allChoices)
 
 
 def filterComputedChoices(getStr: Callable[[_TT], str]) -> Callable[[FilterStr, Sequence[_TT]], tuple[int, int, Sequence[_TT]]]:
@@ -412,7 +411,8 @@ __all__ = [
 	'autocompleteFromList',
 	'FilterStr',
 	'filterStrChoices',
-	# 'filterDictChoices',
+	'filterDictChoices',
+	'filterDictItemChoices',
 	'filterComputedChoices',
 	'filterAnyComputedChoices',
 
