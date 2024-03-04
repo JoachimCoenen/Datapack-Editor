@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 from math import floor
-from typing import Optional, NewType, TypeVar
+from typing import Optional, NewType, TypeVar, cast
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent, QIcon
@@ -152,9 +152,22 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	def disableStatusbarMargins(self) -> bool:
 		return applicationSettings.appearance.useCompactLayout
 
+	def _updateApplicationDisplayName(self) -> None:
+		app = cast(QApplication, QApplication.instance())
+		displayName = applicationSettings.applicationName
+		if currentProjectName := getSession().project.name.strip():
+			displayName = f'{displayName} - {currentProjectName}'
+
+		if app.applicationDisplayName() != displayName:
+			app.setApplicationDisplayName(displayName)
+
+		if self.windowTitle() != displayName:
+			self.setWindowTitle(displayName)
+
 	# GUI:
 
 	def OnGUI(self, gui: DatapackEditorGUI):
+		self._updateApplicationDisplayName()
 		gui.editor(DocumentsViewsContainerEditor, getSession().documents.viewsC, seamless=True).redrawLater('MainWindow.OnGUI(...)')
 		self._saveSession()
 
