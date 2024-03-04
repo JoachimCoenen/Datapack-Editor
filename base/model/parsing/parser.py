@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar
 
+from base.model.parsing.bytesConstants import WHITESPACE_CHARS
+from base.model.parsing.bytesUtils import bytesToStr
 from cat.utils.collections_ import AddToDictDecorator
 from base.model.parsing.tree import Node, Schema, TokenLike, LanguageId2
 from base.model.pathUtils import FilePath
@@ -190,6 +192,10 @@ class IndexMapBuilder:
 		return IndexMapper(_markers=self._markers, _isIdentity=self._isIdentity)
 
 
+_WHITESPACE_CONSUMER: re.Pattern[bytes] = re.compile(rb'\S')
+_WHITESPACE_CONSUMER_NO_NL: re.Pattern[bytes] = re.compile(rb'\S|\n|\r')  # originally there was no '\r' in this regex. Why?
+
+
 @dataclass
 class _Base(ABC):
 	text: bytes
@@ -278,7 +284,7 @@ class _Base(ABC):
 		if (chars := self.tryConsumeAnyOfLiteral(options)) is not None:
 			return chars
 		else:
-			optionsStr = ', '.join(f'`{repr(chars)}`' for chars in options)
+			optionsStr = ', '.join(f'`{repr(bytesToStr(chars))}`' for chars in options)
 			self.error(MDStr(f"Expected any of ({optionsStr})"))
 			return None
 
@@ -297,6 +303,34 @@ class _Base(ABC):
 		text = match.group(0)
 		self.advanceLineCounterAndUpdatePos(self.cursor + len(text))
 		return text
+
+	def consumeWhitespace(self) -> bool:
+		"""
+		Consumes any whitespaces, including line-separators.
+		:return: true iff any whitespaces have been consumed.
+		"""
+		return self._consumeWhitespace(_WHITESPACE_CONSUMER)
+
+	def consumeWhitespaceNoNewLine(self) -> bool:
+		"""
+		Consumes any whitespaces, but NOT line-separators.
+		:return: true iff any whitespaces have been consumed.
+		"""
+		return self._consumeWhitespace(_WHITESPACE_CONSUMER_NO_NL)
+
+	def _consumeWhitespace(self, whitespaceConsumer: re.Pattern[bytes]) -> bool:
+		if self.cursor >= self.length:
+			return False
+		if self.text[self.cursor] not in WHITESPACE_CHARS:
+			return False
+		match = whitespaceConsumer.search(self.text, self.cursor)
+		if not match:
+			i = self.length
+		else:
+			i = match.start()
+		result = i > self.cursor
+		self.advanceLineCounterAndUpdatePos(i)
+		return result
 
 	@staticmethod
 	def createError(message: MDStr, span: Span, style: str) -> ParsingError:
