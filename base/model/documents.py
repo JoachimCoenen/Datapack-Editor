@@ -12,7 +12,8 @@ from base.model.defaultSchemaProvider import getSchemaMapping
 from base.model.parsing.contextProvider import getContextProvider, parseNPrepare
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Node, Schema
-from base.model.pathUtils import ArchiveFilePool, FilePath, ZipFilePool, fileNameFromFilePath, loadTextFile, toDisplayPath, unitePath, unitePathTpl
+from base.model.pathUtils import ArchiveFilePool, FilePath, ZipFilePool, fileNameFromFilePath, loadTextFile, \
+	toDisplayPath, unitePath, unitePathTpl, loadBinaryFile
 from base.model.utils import GeneralError, LanguageId, Position, WrappedError
 from cat import undoRedo
 from cat.GUI import propertyDecorators as pd
@@ -531,9 +532,12 @@ class Document(SerializableDataclass):
 	def asyncValidate(self) -> None:
 		self.validationErrors = self.validate()
 
+	def asyncParseNValidate(self) -> None:
+		self._asyncParseNValidate()
+
 	@utils.DeferredCallOnceMethod(delay=333)
 	@utils.BusyIndicator
-	def asyncParseNValidate(self) -> None:
+	def _asyncParseNValidate(self) -> None:
 		self.asyncParse.callNow()
 		self.asyncValidate.callNow()
 
@@ -542,21 +546,21 @@ class Document(SerializableDataclass):
 		# MUST be deferred with a delay > 0!
 		self.undoRedoStack.takeSnapshotIfChanged()
 
-	def toRepr(self):
+	def toRepr(self) -> bytes:
 		raise NotImplemented()
 
-	def fromRepr(self, string):
+	def fromRepr(self, string: bytes):
 		raise NotImplemented()
 
 	def saveToFile(self):
 		assert self.filePath
 		logInfo("saving File in:{}".format(self.filePath))
-		with open(self.unitedFilePath, 'w', encoding=self.encoding) as f:   # open file
+		with open(self.unitedFilePath, 'wb') as f:   # open file
 			f.write(self.toRepr())
 		self._resetDocumentChanged()
 		self._resetFileSystemChanged()
 
-	def loadFromText(self, text: str):
+	def loadFromText(self, text: bytes):
 		self._resetFileSystemChanged()
 		self._setDocumentChanged()
 		self.fromRepr(text)
@@ -568,9 +572,9 @@ class Document(SerializableDataclass):
 
 		if archiveFilePool is None:
 			with ZipFilePool() as zfp:
-				self.fromRepr(loadTextFile(self.filePath, zfp, encoding=self.encoding))
+				self.fromRepr(loadBinaryFile(self.filePath, zfp))
 		else:
-			self.fromRepr(loadTextFile(self.filePath, archiveFilePool, encoding=self.encoding))
+			self.fromRepr(loadBinaryFile(self.filePath, archiveFilePool))
 		self._resetDocumentChanged()
 		return
 
@@ -640,11 +644,11 @@ class TextDocument(Document):
 	def strContent(self, value: str):
 		self.content = bytes(value, encoding=self.encoding, errors='replace')
 
-	def toRepr(self) -> str:
-		return self.strContent
+	def toRepr(self) -> bytes:
+		return self.content
 
-	def fromRepr(self, string: str):
-		self.strContent = string
+	def fromRepr(self, string: bytes):
+		self.content = string
 
 	def __hash__(self):
 		return hash(id(self)) + 91537522

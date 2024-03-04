@@ -508,32 +508,15 @@ class ZipFilePool(ArchiveFilePool):
 
 
 def loadTextFile(filePath: FilePath, archiveFilePool: ArchiveFilePool, encoding: str = 'utf-8', errors: str = 'ignore') -> str:
-	text = None
-	if isinstance(filePath, (str, bytes)):
-		# path is a normal file:
-		with open(filePath, encoding=encoding, errors=errors) as f:  # open file
-			text = f.read()
-	elif os.path.isdir(filePath[0]):
-		with open(unitePathTpl(filePath), encoding=encoding, errors=errors) as f:  # open file
-			text = f.read()
+	contents = loadBinaryFile(filePath, archiveFilePool)
+	if isinstance(contents, bytes):
+		decodedText = contents.decode(encoding, errors=errors)
 	else:
-		# path contains a .jar file:
-		zipPath = filePath[0]
-		pathInZip = filePath[1]
-		filePath = f'{zipPath}/{pathInZip}'
-		with archiveFilePool.readFileInArchive(zipPath, pathInZip) as f:
-			text = f.read()
-
-	if isinstance(text, bytes):
-		decodedText = text.decode(encoding, errors=errors)
-	else:
-		decodedText = text
-
+		decodedText = contents
 	return decodedText
 
 
 def loadBinaryFile(filePath: FilePath, archiveFilePool: ArchiveFilePool) -> bytes:
-	contents = None
 	if isinstance(filePath, (str, bytes)):
 		# path is a normal file:
 		with open(getSafeFileName(filePath), 'rb') as f:  # open file
