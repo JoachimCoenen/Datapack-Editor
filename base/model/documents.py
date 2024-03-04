@@ -402,6 +402,11 @@ class Document(SerializableDataclass):
 	_originalContent: Optional[_TTarget] = field(default=None, metadata=catMeta(decorators=[pd.NoUI()]))
 
 	tree: Optional[Node] = field(default=None, repr=False, metadata=catMeta(serialize=False))
+	requiresParsing: bool = field(default=True, repr=True, compare=False, metadata=catMeta(serialize=False))
+
+	def invalidateParseTree(self) -> None:
+		# don't set tree to None, because it might still contain useful information / is better than nothing
+		self.requiresParsing = True
 
 	def contentOnSet(self, newVal: bytes, oldVal: Optional[bytes]) -> None:
 		if not self._undoRedoStackInitialized:
@@ -411,6 +416,7 @@ class Document(SerializableDataclass):
 
 		if newVal == oldVal:
 			return
+		self.invalidateParseTree()
 		self.asyncParse.callNow(newVal)
 		self.asyncValidate()
 		# self.asyncParseNValidate()
@@ -515,6 +521,7 @@ class Document(SerializableDataclass):
 		pass
 
 	def parse(self, text: bytes) -> tuple[Optional[Node], Sequence[GeneralError]]:
+		self.requiresParsing = False
 		return None, []
 
 	def validate(self) -> Sequence[GeneralError]:
@@ -703,6 +710,7 @@ class ParsedDocument(TextDocument):
 
 	@TimedMethod(enabled=True)
 	def parse(self, text: bytes) -> tuple[Optional[Node], Sequence[GeneralError]]:
+		self.requiresParsing = False
 		try:
 			schema = self.schema
 			language = schema.language if schema is not None else self.language

@@ -128,11 +128,11 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 	@override
 	def onSetModel(self, new: TextDocument, old: Optional[TextDocument]) -> None:
 		super(TextDocumentEditor, self).onSetModel(new, old)
-		if new.tree is None:
-			new.asyncParseNValidate()
+		self._ensureDocumentIsParsed()
 
 	@override
 	def documentGUI(self, gui: DatapackEditorGUI) -> None:
+		self._ensureDocumentIsParsed()
 		self.codeEditorForDoc(gui, self.model())
 		self.setFocusProxy(gui.lastTabWidget)
 
@@ -240,6 +240,11 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			menu.addItem(f"Indent Using Spaces", lambda t=i: setattr(document, 'indentationSettings', replace(indentation, useSpaces=not indentation.useSpaces)), checkable=True, checked=indentation.useSpaces)
 			menu.addSeparator()
 			menu.addItem(f"ConvertIndentation", lambda t=i: document.convertIndentationsToUseTabsSettings())
+
+	def _ensureDocumentIsParsed(self) -> None:
+		document = self.model()
+		if document.requiresParsing:
+			document.asyncParseNValidate()
 
 
 @dataclass
