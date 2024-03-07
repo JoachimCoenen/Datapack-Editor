@@ -58,7 +58,6 @@ An advanced creator & editor for Minecraft Datapacks for Minecraft 1.20.2 - 1.20
 
 ## Download & Install
 
-Warning: This Software is work in progress. Use it at your own risk. (bug reports are welcome!)
 
 [Current Version][DownloadLatest_LINK] <--  
 [Other Versions][Releases_LINK]
