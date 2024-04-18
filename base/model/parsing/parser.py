@@ -2,7 +2,7 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar
+from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar, NamedTuple, Callable
 
 from base.model.parsing.bytesConstants import WHITESPACE_CHARS
 from base.model.parsing.bytesUtils import bytesToStr
@@ -190,6 +190,39 @@ class IndexMapBuilder:
 	def completeIndexMapper(self, encPosLastChar: int, decPosLastChar: int) -> IndexMapper:
 		self.addMarker(encPosLastChar, decPosLastChar)
 		return IndexMapper(_markers=self._markers, _isIdentity=self._isIdentity)
+
+
+class Resolver(NamedTuple):
+	matcher: re.Pattern[bytes]
+	resolve: Callable[[bytes], bytes]
+
+
+def resolveReferences(value: bytes, resolver: Resolver, baseMap: Optional[IndexMapper], offset: Optional[int]) -> tuple[bytes, Optional[IndexMapper]]:
+	allUsagesInAttr = list(resolver.matcher.finditer(value))
+	if not allUsagesInAttr:
+		return value, baseMap
+
+	iMap = IndexMapBuilder(baseMap, offset) if baseMap is not None else None
+	result = b''
+	lastIdx = 0
+	for match in allUsagesInAttr:
+		paramReference = match.group(0)
+		replVal = resolver.resolve(paramReference)
+
+		encIdx1 = match.start()
+		encIdx2 = match.end()
+		result += value[lastIdx:encIdx1]
+		result += replVal
+		if iMap is not None:
+			decIdx2 = len(result)
+			decIdx1 = decIdx2 - len(replVal)
+			iMap.addMarker(encIdx1, decIdx1)
+			iMap.addMarker(encIdx2, decIdx2)
+		lastIdx = encIdx2
+	result += value[lastIdx:len(value)]
+	if iMap is not None:
+		baseMap = iMap.completeIndexMapper(len(value), len(result))
+	return result, baseMap
 
 
 _WHITESPACE_CONSUMER: re.Pattern[bytes] = re.compile(rb'\S')
@@ -410,6 +443,8 @@ def parse(
 __all__ = [
 	'IndexMapper',
 	'IndexMapBuilder',
+	'Resolver',
+	'resolveReferences',
 	'TokenizerBase',
 	'ParserBase',
 	'registerParser',
