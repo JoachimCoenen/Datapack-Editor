@@ -72,8 +72,13 @@ class JsonTokenizer(TokenizerBase[Token]):
 	def errorNextToken(self, msg: Message, *args, style: str = 'error') -> None:
 		self._errorsNextToken.append((msg, args, style))
 
-	def consumeWhitespace(self) -> None:
-		cursor: int = self.cursor
+	def consumeWhitespace(self) -> bool:
+		"""
+		Consumes any whitespaces, including line-separators and JSON comments.
+		Overrides _Base.consumeWhitespace()
+		:return: true iff any whitespaces have been consumed.
+		"""
+		cursor = self.cursor
 		source: bytes = self.text
 		length: int = self.length
 		while cursor < length:
@@ -94,7 +99,9 @@ class JsonTokenizer(TokenizerBase[Token]):
 					self.line += 1
 			else:
 				break
+		result = cursor > self.cursor
 		self.cursor = cursor
+		return result
 
 	def extract_string(self) -> Token:
 		"""Extracts a single string token from JSON string"""

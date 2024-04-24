@@ -361,7 +361,7 @@ def orRefSchema(schema: JsonSchema) -> JsonUnionSchema:
 			allowMultilineStr=False
 		),
 		PropertySchema(
-			name=Anything(),
+			name=Anything,
 			value=JSON_ANY_SCHEMA,
 			optional=False,
 			allowMultilineStr=None

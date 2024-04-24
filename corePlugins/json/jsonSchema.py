@@ -499,7 +499,7 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 			finishers.append(finisher)
 	if defaultProp is not None:
 		# 'default-property' might be a reference, so get the span from the raw (non-resolved ) value!
-		prop, finisher = propertyHandler(self, Anything(), defaultProp)
+		prop, finisher = propertyHandler(self, Anything, defaultProp)
 		schemaProps.append(prop.setSpan(node.n.data['default-property'].value.span, node.ctx.filePath))
 		finishers.append(finisher)
 
