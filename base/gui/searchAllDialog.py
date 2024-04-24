@@ -164,7 +164,7 @@ class SearchAllDialog(OnProjectFilesDialogBase):
 	def processFile(self, filePath: FilePathTpl, pool: ZipFilePool, searcher: Callable[[str], Iterator[IndexSpan]]):
 		try:
 			text = loadTextFile(filePath, pool)
-		except UnicodeDecodeError:
+		except (UnicodeDecodeError, OSError):
 			return
 
 		lastLineStart = 0

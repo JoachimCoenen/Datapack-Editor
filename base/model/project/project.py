@@ -389,5 +389,4 @@ def makeFileEntry(fullPath: FilePathTpl, root: Root, isFile: bool) -> FileEntry:
 	virtualPath = f'{root.name}/{fullPath[1]}'
 	splitNameForSearch = splitStringForSearch(virtualPath.rpartition('/')[2])
 	mTime = getMTimeForFilePathTpl(fullPath)
-
 	return FileEntry(fullPath, virtualPath, splitNameForSearch, mTime, isFile)

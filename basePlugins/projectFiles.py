@@ -481,7 +481,10 @@ class _FileSystemChangeHandler(FileSystemEventHandler):
 
 	def _addFileOrFolderEntry(self, index: Index[str, FileEntry], path: FilePathTpl, isFile: bool) -> Optional[FileEntry]:
 		if not isExcludedDirectory(path[1], self._project.aspects.get(FilesAspect).excludedDirectories):
-			return index.add(path[1], path, makeFileEntry(path, self._root, isFile))
+			try:
+				return index.add(path[1], path, makeFileEntry(path, self._root, isFile))
+			except OSError:
+				pass
 
 	def _analyzeFile(self, fileEntry: FileEntry) -> None:
 		with ZipFilePool() as pool:
