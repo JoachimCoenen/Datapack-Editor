@@ -139,7 +139,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 						docEditor = gui.editor(
 							documentEditorCls,
 							document,
-							onEditorFocusReceived=lambda fr: view.makeCurrent(),
+							onChildFocusReceived=lambda: view.makeCurrent(causedByUIFocusChange=True),
 							seamless=True
 						)
 						if document.filePathForDisplay == selectedDocumentId:
@@ -218,7 +218,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 
 		if selectedDocument in view.documents:
 			view.selectDocument(selectedDocument)
-			view.makeCurrent()
+			view.makeCurrent(causedByUIFocusChange=False)
 
 	@staticmethod
 	def __sizeForOpenedDocumentsPopup(gui: DatapackEditorGUI, documents: list[Document]) -> tuple[int, int]:
@@ -244,8 +244,9 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		# height = max(listHeight, height)
 		return width, height
 
-	def _forceFocus(self) -> None:
-		self._shouldForceFocus = self.model().isCurrent
+	def _forceFocus(self, causedByUIFocusChange: bool = False) -> None:
+		if not causedByUIFocusChange:
+			self._shouldForceFocus = self.model().isCurrent
 		self.redraw('DocumentsViewEditor._forceFocus(...)')
 
 

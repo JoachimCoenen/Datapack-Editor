@@ -7,9 +7,10 @@ from operator import itemgetter
 from typing import Callable, TypeVar, Generic, final, Optional, Type
 
 from PyQt5.Qsci import QsciLexer
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt
 
 from cat.GUI import SizePolicy, getStyles
+from cat.GUI.components.catWidgetMixins import CatChildrenFocusableMixin
 from cat.GUI.pythonGUI import EditorBase, MenuItemData
 from cat.GUI.components import codeEditor
 from cat.utils import format_full_exc, override
@@ -25,8 +26,7 @@ from base.model.applicationSettings import applicationSettings
 TDoc = TypeVar('TDoc', bound=Document)
 
 
-class DocumentEditorBase(EditorBase[TDoc], Generic[TDoc]):
-	editorFocusReceived = pyqtSignal(Qt.FocusReason)
+class DocumentEditorBase(CatChildrenFocusableMixin, EditorBase[TDoc], Generic[TDoc]):
 
 	def onSetModel(self, new: TDoc, old: Optional[TDoc]) -> None:
 		super(DocumentEditorBase, self).onSetModel(new, old)
@@ -195,7 +195,6 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			highlightErrors=document.highlightErrors,
 			onCursorPositionChanged=lambda a, b, d=document: _setCursorPos(a, b, d),
 			onSelectionChanged2=lambda a1, b1, a2, b2, d=document: _setSelection(a1, b1, a2, b2, d),
-			onFocusReceived=lambda fr: self.editorFocusReceived.emit(fr),
 			focusPolicy=Qt.StrongFocus,
 			autoIndent=autoIndent,
 			caretLineVisible=False,

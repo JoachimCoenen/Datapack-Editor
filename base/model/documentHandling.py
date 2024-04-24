@@ -78,7 +78,7 @@ class ViewContainer(ViewBase):
 	def insertNewView(self, pos: int) -> View:
 		view = View(self.manager)
 		self.insertView(view, pos)
-		view.makeCurrent()
+		view.makeCurrent(causedByUIFocusChange=False)
 		return view
 
 	def splitView(self, view: ViewBase, isVertical: bool) -> View:
@@ -145,11 +145,8 @@ class View(ViewBase):
 	selectedDocument: Optional[Document] = None
 
 	onDocumentsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onDocumentsChanged')
-	# onDocumentsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onDocumentsChanged')
-	onMadeCurrent: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onMadeCurrent')
-	# onMadeCurrent: CatBoundSignal[Callable[[], None]] = CatSignal('onMadeCurrent')
+	onMadeCurrent: ClassVar[CatSignal[Callable[[bool], None]]] = CatSignal('onMadeCurrent')  # argument is True if event is caused by UI Focus change.
 	onSelectedDocumentChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onSelectedDocumentChanged')
-	# onSelectedDocumentChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onSelectedDocumentChanged')
 
 	@property
 	def isCurrent(self) -> bool:
@@ -215,9 +212,9 @@ class View(ViewBase):
 			self.onSelectedDocumentChanged.emit()
 
 	# view related:
-	def makeCurrent(self) -> None:
+	def makeCurrent(self, causedByUIFocusChange: bool) -> None:
 		self._ensureManagerIsSet()
-		self.manager.selectView(self)
+		self.manager.selectView(self, causedByUIFocusChange=causedByUIFocusChange)
 
 	def splitView(self, isVertical: bool) -> View:
 		assert self.parent
@@ -286,7 +283,7 @@ class DocumentsManager(SerializableDataclass):
 		if view.parent is not None:
 			view.parent.forceRemove(view)
 		if self.currentView is view:
-			self.selectView(self._getFirstView())
+			self.selectView(self._getFirstView(), causedByUIFocusChange=False)
 
 	def safelyCloseView(self, view: View) -> None:
 		for doc in view.documents:
@@ -294,7 +291,7 @@ class DocumentsManager(SerializableDataclass):
 				return
 		self.forceCloseView(view)
 
-	def selectView(self, view: View) -> None:
+	def selectView(self, view: View, causedByUIFocusChange: bool) -> None:
 		# try:
 		# 	idx = self.views.index(view)
 		# except ValueError:
@@ -304,7 +301,7 @@ class DocumentsManager(SerializableDataclass):
 		if getattr(self, 'currentView', None) is not view:
 			logInfo(f"selecting View <{type(view).__qualname__} 0x{id(view):x}>.")
 			self.currentView = view
-			view.onMadeCurrent.emit()
+			view.onMadeCurrent.emit(causedByUIFocusChange)
 			self.onCurrentViewChanged.emit()
 			self.onSelectedDocumentChanged.emit()
 
@@ -333,7 +330,7 @@ class DocumentsManager(SerializableDataclass):
 			if cursor is not None:
 				doc.locatePosition(*cursor)
 			view.selectDocument(doc, forceUpdate=cursor is not None)
-			self.selectView(view)
+			self.selectView(view, causedByUIFocusChange=False)
 
 	def selectDocument(self, doc: Document, cursor: Span = None) -> None:
 		self.showDocument(doc, cursor)
