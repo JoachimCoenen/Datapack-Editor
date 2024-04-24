@@ -9,11 +9,12 @@ from watchdog.events import FileClosedEvent, FileCreatedEvent, FileDeletedEvent,
 
 from base.model import filesystemEvents
 from base.model.defaultSchemaProvider import getSchemaMapping
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes
 from base.model.parsing.contextProvider import getContextProvider, parseNPrepare
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Node, Schema
-from base.model.pathUtils import ArchiveFilePool, FilePath, ZipFilePool, fileNameFromFilePath, loadTextFile, \
-	toDisplayPath, unitePath, unitePathTpl, loadBinaryFile
+from base.model.pathUtils import ArchiveFilePool, FilePath, ZipFilePool, fileNameFromFilePath, toDisplayPath, unitePath, \
+	unitePathTpl, loadBinaryFile
 from base.model.utils import GeneralError, LanguageId, Position, WrappedError
 from cat import undoRedo
 from cat.GUI import propertyDecorators as pd
@@ -114,6 +115,7 @@ class DocumentTypeDescription:
 
 	def __hash__(self):
 		return id(self)
+
 
 _documentTypes: list[DocumentTypeDescription] = []
 _documentTypesByName: dict[str, DocumentTypeDescription] = {}
@@ -421,8 +423,6 @@ class Document(SerializableDataclass):
 		self.asyncValidate()
 		# self.asyncParseNValidate()
 
-		self._setDocumentChanged()
-
 		if self.undoRedoStack.isUndoingOrRedoing:
 			self._asyncTakeSnapshot.cancelPending()
 			return
@@ -514,11 +514,6 @@ class Document(SerializableDataclass):
 		if content is Document.__MISSING:
 			content = self.content
 		self._originalContent = content
-		# self.documentChanged = False
-
-	def _setDocumentChanged(self):
-		# self.documentChanged = True
-		pass
 
 	def parse(self, text: bytes) -> tuple[Optional[Node], Sequence[GeneralError]]:
 		self.requiresParsing = False
@@ -567,10 +562,9 @@ class Document(SerializableDataclass):
 		self._resetDocumentChanged()
 		self._resetFileSystemChanged()
 
-	def loadFromText(self, text: bytes):
-		self._resetFileSystemChanged()
-		self._setDocumentChanged()
-		self.fromRepr(text)
+	# def loadFromText(self, text: str):
+	# 	self._resetFileSystemChanged()
+	# 	self.fromRepr(text)
 
 	def loadFromFile(self, archiveFilePool: ArchiveFilePool = None):
 		assert self.filePath, "cannot load file from empty filePath"
@@ -579,15 +573,15 @@ class Document(SerializableDataclass):
 
 		if archiveFilePool is None:
 			with ZipFilePool() as zfp:
-				self.fromRepr(loadBinaryFile(self.filePath, zfp))
+				bytesData = loadBinaryFile(self.filePath, zfp)
 		else:
-			self.fromRepr(loadBinaryFile(self.filePath, archiveFilePool))
+			bytesData = loadBinaryFile(self.filePath, archiveFilePool)
+		self.fromRepr(bytesData)
 		self._resetDocumentChanged()
 		return
 
 	def discardFileSystemChanges(self):
 		self._resetFileSystemChanged()
-		self._setDocumentChanged()
 
 	# def open(self):
 	# 	self._rescheduleFileChangedHandler(self.filePath)
@@ -645,17 +639,19 @@ class TextDocument(Document):
 
 	@property
 	def strContent(self) -> str:
-		return str(self.content, encoding=self.encoding, errors='replace')
+		return bytesToStr(self.content)
 
 	@strContent.setter
-	def strContent(self, value: str):
-		self.content = bytes(value, encoding=self.encoding, errors='replace')
+	def strContent(self, string: str) -> None:
+		if not isinstance(string, str):
+			raise TypeError(f"expected 'str', but got '{type(string).__name__}'")
+		self.content = strToBytes(string)
 
 	def toRepr(self) -> bytes:
-		return self.content
+		return bytes(self.strContent, encoding=self.encoding, errors='replace')
 
-	def fromRepr(self, string: bytes):
-		self.content = string
+	def fromRepr(self, value: bytes) -> None:
+		self.strContent = str(value, encoding=self.encoding, errors='replace')
 
 	def __hash__(self):
 		return hash(id(self)) + 91537522
