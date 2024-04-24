@@ -71,8 +71,8 @@ If you have any questions, problems or suggestions, feel free to create an [Issu
   <tr style="padding:0px">
     <td style="padding:0px"><table style="width:100%;border-spacing:0px">
       <tr style="padding:0px">
-        <td style="padding:0px"> <img src="screenshots/mainWindow.png" alt="Main Window" style="width:width;height:height;"> </td>
-        <td style="padding:0px"> <img src="screenshots/quickFind.png" alt="Quickly find and open a file" style="width:width;height:height;"> </td>
+      <td style="padding:0px"> <img src="screenshots/mainWindow.png" alt="Main Window" style="width:width;height:height;"> </td>
+      <td style="padding:0px"> <img src="screenshots/quickFind.png" alt="Quickly find and open a file" style="width:width;height:height;"> </td>
       </tr>
     </table></td>
   </tr>

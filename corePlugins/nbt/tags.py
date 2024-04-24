@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import TypeVar, Generic, ClassVar, Optional, Collection
 
-from cat.utils.collections_ import OrderedDict
 from base.model.parsing.tree import Node, Schema
 from base.model.utils import LanguageId
 
@@ -133,9 +132,9 @@ class NBTProperty(NBTTag[tuple[StringTag, NBTTag]]):
 
 
 @dataclass
-class CompoundTag(NBTTag[OrderedDict[bytes, NBTProperty]]):
+class CompoundTag(NBTTag[dict[bytes, NBTProperty]]):
 	typeName: ClassVar[str] = 'compound_tag'
-	data: OrderedDict[str, NBTTag]
+	data: dict[str, NBTTag]
 
 	@property
 	def children(self) -> Collection[NBTTag]:

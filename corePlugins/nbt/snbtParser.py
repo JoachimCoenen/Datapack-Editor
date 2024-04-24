@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, Type, Union, Callable, NamedTuple, overload, TypeVar, ClassVar
 
-from cat.utils.collections_ import OrderedDict
 from base.model.messages import *
 from .snbtTokenizer import SNBTTokenizer, Token, TokenType
 from .tags import *
@@ -325,7 +324,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 		if not self._consumeToken(TokenType.Compound):
 			return None
 		openingToken = self._last
-		values = OrderedDict[str, NBTTag]()
+		values = {}
 
 		def parseProperty() -> bool:
 			tag = self.parsePropertyTag()

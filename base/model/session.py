@@ -4,7 +4,7 @@ import gc
 import os
 from dataclasses import dataclass, field
 from json import JSONDecodeError
-from typing import Callable, ClassVar, Optional, overload, TypeVar
+from typing import ClassVar, Optional, overload, TypeVar
 
 from base.model.documentHandling import DocumentsManager
 from base.model.documents import Document
@@ -156,15 +156,15 @@ __session = Session()
 
 
 class _GlobalSignals(Singleton):
-	onError: ClassVar[CatBoundSignal[Session, Callable[[Exception, str], None]]] = CatSignal[Callable[[Exception, str], None]]('onError')
-	onWarning: ClassVar[CatBoundSignal[Session, Callable[[Exception | None, str], None]]] = CatSignal[Callable[[Exception | None, str], None]]('onWarning')
-	globalCacheReset: CatBoundSignal[Callable[[], None]] = CatSignal[Callable[[], None]]('globalCacheReset')
+	onError: ClassVar[CatBoundSignal[Exception, str]] = CatSignal[Exception, str]('onError')
+	onWarning: ClassVar[CatBoundSignal[Exception | None, str]] = CatSignal[Exception | None, str]('onWarning')
+	globalCacheReset: CatBoundSignal[()] = CatSignal[()]('globalCacheReset')
 
 	def connectGlobalCacheReset(self, cache: _TGlobalCache) -> _TGlobalCache:
 		self.globalCacheReset.connect(cache.name, cache.clear, warnIfAlreadyConnected=True)
 		return cache
 
-	onProjectErrorsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onProjectErrorsChanged')  # not really satisfied with this location for this signal...
+	onProjectErrorsChanged: ClassVar[CatSignal[()]] = CatSignal('onProjectErrorsChanged')  # not really satisfied with this location for this signal...
 	""" is emitted whenever project errors change. See also Project.getAllProjectErrors() and Session.emitProjectErrorsChanged(...)"""
 
 	def __hash__(self):

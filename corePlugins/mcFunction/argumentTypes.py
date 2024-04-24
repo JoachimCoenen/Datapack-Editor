@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from cat.utils.collections_ import OrderedDict, AddToDictDecorator
+from cat.utils.collections_ import AddToDictDecorator
 from base.model.parsing.bytesUtils import bytesToStr
 
 
@@ -19,7 +19,7 @@ class ArgumentType:
 	jsonProperties: str = ''
 
 
-ALL_NAMED_ARGUMENT_TYPES: OrderedDict[str, ArgumentType] = OrderedDict()
+ALL_NAMED_ARGUMENT_TYPES: dict[str, ArgumentType] = {}
 _registerNamedArgumentType: AddToDictDecorator[str, ArgumentType] = AddToDictDecorator(ALL_NAMED_ARGUMENT_TYPES)
 
 

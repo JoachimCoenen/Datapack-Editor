@@ -37,7 +37,7 @@ class ViewContainer(ViewBase):
 
 	isVertical: bool = False
 	views: list[ViewBase] = field(default_factory=list, compare=True, metadata=catMeta(deferLoading=True))
-	onViewsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onViewsChanged')
+	onViewsChanged: ClassVar[CatSignal[()]] = CatSignal('onViewsChanged')
 	# onViewsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onViewsChanged')
 
 	@staticmethod
@@ -144,9 +144,9 @@ class View(ViewBase):
 	documents: list[Document] = field(default_factory=list, compare=False)
 	selectedDocument: Optional[Document] = None
 
-	onDocumentsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onDocumentsChanged')
-	onMadeCurrent: ClassVar[CatSignal[Callable[[bool], None]]] = CatSignal('onMadeCurrent')  # argument is True if event is caused by UI Focus change.
-	onSelectedDocumentChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onSelectedDocumentChanged')
+	onDocumentsChanged: ClassVar[CatSignal[()]] = CatSignal('onDocumentsChanged')
+	onMadeCurrent: ClassVar[CatSignal[bool]] = CatSignal('onMadeCurrent')
+	onSelectedDocumentChanged: ClassVar[CatSignal[()]] = CatSignal('onSelectedDocumentChanged')
 
 	@property
 	def isCurrent(self) -> bool:
@@ -272,9 +272,9 @@ class DocumentsManager(SerializableDataclass):
 
 	# callbacks (must be set externally, for prompting the user, etc...):
 	onCanCloseModifiedDocument: Callable[[Document], bool] = field(default=lambda d: True, metadata=catMeta(serialize=False))
-	onCurrentViewChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onCurrentViewChanged')
+	onCurrentViewChanged: ClassVar[CatSignal[()]] = CatSignal('onCurrentViewChanged')
 	# onCurrentViewChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onCurrentViewChanged')
-	onSelectedDocumentChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onSelectedDocumentChanged')
+	onSelectedDocumentChanged: ClassVar[CatSignal[()]] = CatSignal('onSelectedDocumentChanged')
 	# onSelectedDocumentChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onSelectedDocumentChanged')
 
 	# views:

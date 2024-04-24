@@ -179,6 +179,7 @@ def start(argv) -> QtWidgets.QApplication:
 		window = MainWindow(uuid.uuid4())
 		window.show()
 		window.resize(1280, 720)
+		window.resize(1334 + 26, 852 + 26)
 		window.redraw()
 
 		# from trials import iconsPreview

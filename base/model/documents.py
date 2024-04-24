@@ -430,7 +430,7 @@ class Document(SerializableDataclass):
 		self._asyncTakeSnapshot()
 
 	highlightErrors: bool = field(default=True)
-	onErrorsChanged: ClassVar[CatSignal[Callable[[Document], None]]] = CatSignal('onErrorsChanged')
+	onErrorsChanged: ClassVar[CatSignal[Document]] = CatSignal('onErrorsChanged')
 	_parserErrors: list[GeneralError] = field(default_factory=list, repr=False, metadata=catMeta(serialize=False))
 	_validationErrors: list[GeneralError] = field(default_factory=list, repr=False, metadata=catMeta(serialize=False))
 	# validationErrors: Sequence[GeneralError] = Serialized(getInitValue=lambda s: s.validate(), shouldSerialize=False)
