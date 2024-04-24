@@ -99,29 +99,6 @@ class ViewContainer(ViewBase):
 				self.onViewsChanged.emit()
 		return newView
 
-	def flatten(self) -> None:
-		newViews: list[ViewBase] = []
-		for view in self.views:
-			if isinstance(view, ViewContainer):
-				view.flatten()
-				if view.isVertical == self.isVertical or len(view.views) == 1:
-					newViews.extend(view.views)
-					view.views.clear()
-				elif view.views:
-					newViews.append(view)
-			else:
-				newViews.append(view)
-
-		if len(newViews) == 1:
-			if isinstance(newViews[0], ViewContainer):
-				self.isVertical = newViews[0].isVertical
-				newViews = newViews[0].views.copy()
-				newViews[0].views.clear()
-
-		for view in newViews:
-			self._setParentFor(view, self)
-		self.views = newViews
-
 	def flattenDown(self) -> None:
 		newViews: list[ViewBase] = []
 		oldViews: list[ViewBase] = self.views.copy()

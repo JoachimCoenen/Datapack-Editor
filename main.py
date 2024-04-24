@@ -121,32 +121,6 @@ def showSetupDialogIfNecessary() -> None:
 		saveApplicationSettings()
 
 
-# def loadBasePlugins():
-# 	from basePlugins import projectPage, projectFiles, pluginDebug
-#
-# 	projectPage.initPlugin()
-# 	projectFiles.initPlugin()
-# 	pluginDebug.initPlugin()
-
-
-# def loadCorePlugins():
-# 	from corePlugins import json
-# 	from corePlugins import nbt
-# 	from corePlugins import minecraft
-# 	from corePlugins import mcFunction
-# 	from corePlugins import mcFunctionSchemaTEMP
-# 	from corePlugins import datapack
-# 	from corePlugins import datapackSchemas
-#
-# 	json.initPlugin()
-# 	nbt.initPlugin()
-# 	minecraft.initPlugin()
-# 	mcFunction.initPlugin()
-# 	mcFunctionSchemaTEMP.initPlugin()
-# 	datapack.initPlugin()
-# 	datapackSchemas.initPlugin()
-
-
 def loadActualBasePlugins() -> None:
 	loadAllPlugins(*getBasePluginsDir())
 
