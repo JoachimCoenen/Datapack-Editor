@@ -3,9 +3,10 @@ open document, close document, select document, move to view, etc. ...
 """
 from __future__ import annotations
 
+import uuid
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import NewType, Optional, Callable, Iterator, cast, Sequence, ClassVar
+from typing import Optional, Callable, Iterator, cast, Sequence, ClassVar
 
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils import override
@@ -14,20 +15,14 @@ from cat.utils.profiling import logInfo
 from cat.utils.signals import CatSignal
 from base.model.utils import Span
 from base.model.pathUtils import FilePath, toDisplayPath
-from base.model.documents import Document, DocumentTypeDescription, loadDocument
-
-WindowId = NewType('WindowId', str)
-
-
-@dataclass(unsafe_hash=True, frozen=True)
-class ViewId:
-	window: WindowId
+from base.model.documents import Document, loadDocument
 
 
 @dataclass(repr=False, slots=True)
 class ViewBase(SerializableDataclass):
-	parent: Optional[ViewContainer] = field(default=None, init=False, metadata=catMeta(serialize=True))
-	manager: DocumentsManager
+	parent: Optional[ViewContainer] = field(default=None, init=False, repr=False, compare=False, metadata=catMeta(serialize=True))
+	manager: DocumentsManager = field(repr=False, compare=False)
+	uuid: uuid.UUID = field(default_factory=uuid.uuid4, init=False, repr=True, compare=True, metadata=catMeta(serialize=False))
 
 	@abstractmethod
 	def getViewForDocument(self, doc: Document) -> Optional[View]:
@@ -41,7 +36,7 @@ class ViewBase(SerializableDataclass):
 class ViewContainer(ViewBase):
 
 	isVertical: bool = False
-	views: list[ViewBase] = field(default_factory=list, metadata=catMeta(deferLoading=True))
+	views: list[ViewBase] = field(default_factory=list, compare=True, metadata=catMeta(deferLoading=True))
 	onViewsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onViewsChanged')
 	# onViewsChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onViewsChanged')
 
@@ -141,8 +136,8 @@ class ViewContainer(ViewBase):
 				newViews.append(view)
 
 		if len(newViews) == 1:
-			if isinstance(newViews[0], ViewContainer):
-				newViews0 = newViews[0]
+			newViews0 = newViews[0]
+			if isinstance(newViews0, ViewContainer):
 				self.isVertical = newViews0.isVertical
 				newViews = newViews0.views.copy()
 				newViews0.views.clear()
@@ -169,7 +164,7 @@ class ViewContainer(ViewBase):
 
 @dataclass(repr=False, slots=True)
 class View(ViewBase):
-	documents: list[Document] = field(default_factory=list)
+	documents: list[Document] = field(default_factory=list, compare=False)
 	selectedDocument: Optional[Document] = None
 
 	onDocumentsChanged: ClassVar[CatSignal[Callable[[], None]]] = CatSignal('onDocumentsChanged')
@@ -431,7 +426,7 @@ class DocumentsManager(SerializableDataclass):
 
 	def moveDocument(self, document: Document, newView: View, newPosition: Optional[int] = None) -> None:
 		oldView = self._getViewForDocument(document)
-		if oldView == newView:
+		if oldView is newView:
 			if newPosition is not None:
 				newView.moveDocument(document, newPosition)
 		else:

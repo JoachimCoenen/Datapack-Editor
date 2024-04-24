@@ -1,7 +1,8 @@
 from __future__ import annotations
 import os
+import uuid
 from math import floor
-from typing import Optional, NewType, TypeVar, cast
+from typing import Optional, TypeVar, cast, ClassVar
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent, QIcon
@@ -58,16 +59,13 @@ def frange(a: float, b: float, jump: float, *, includeLAst: bool = False):
 		yield a + jump * i
 
 
-WindowId = NewType('WindowId', str)
-
-
 class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	TIP_dataDir = 'Directory containing the raw data.'
 
-	__allMainWindows: dict[WindowId, MainWindow] = {}
+	__allMainWindows: ClassVar[dict[uuid.UUID, MainWindow]] = {}
 
 	@classmethod
-	def registerMainWindow(cls, window: MainWindow, id: WindowId):
+	def registerMainWindow(cls, window: MainWindow, windowId: uuid.UUID):
 		"""
 		this is to prevent a very strange bug, where a main window gets closed when:
 			- it is not stored in a python object and therefore can be garbage collected  AND
@@ -82,22 +80,22 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				- when the searchAllDialog is modal                    --> no crash
 				- when a t
 		:param window:
-		:param id:
+		:param windowId:
 		:return:
 		"""
-		cls.__allMainWindows[id] = window
-		window._id = id
+		cls.__allMainWindows[windowId] = window
+		window._uuid = windowId
 
 	@classmethod
-	def deregisterMainWindow(cls, id: WindowId):
-		cls.__allMainWindows.pop(id, None)
+	def deregisterMainWindow(cls, windowId: uuid.UUID):
+		cls.__allMainWindows.pop(windowId, None)
 
-	def __init__(self, id: WindowId):
+	def __init__(self, windowId: uuid.UUID):
 		super().__init__(GUICls=DatapackEditorGUI)
 
-		self._gui._name = f'main Window GUI {id}'
-		self._id: WindowId = id
-		MainWindow.registerMainWindow(self, id)
+		self._uuid: uuid.UUID = windowId
+		MainWindow.registerMainWindow(self, windowId)
+		self._gui._name = f'main Window GUI {windowId}'
 		self.disableContentMargins = True
 		self.disableSidebarMargins = True
 		self.disableBottombarMargins = True
@@ -125,12 +123,12 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		# TODO:		  lambda d=document, s=self: asdasdasdasdasd s._safelyCloseDocument(gui, d), Qt.WidgetWithChildrenShortcut)
 
 	@property
-	def id(self) -> WindowId:
-		return self._id
+	def uuid(self) -> uuid.UUID:
+		return self._uuid
 
 	def closeEvent(self, event: QCloseEvent):
 		self._saveSession()
-		MainWindow.deregisterMainWindow(self.id)
+		MainWindow.deregisterMainWindow(self._uuid)
 		event.accept()
 
 	def dragEnterEvent(self, e: QDragEnterEvent):

@@ -1,5 +1,6 @@
 import os
 import sys
+import uuid
 from dataclasses import fields
 
 from PyQt5 import QtWidgets
@@ -19,7 +20,7 @@ from base.model import filesystemEvents
 from base.model.session import loadSessionFromFile
 from base.plugin import PLUGIN_SERVICE, loadAllPlugins, getBasePluginsDir, getCorePluginsDir, getPluginsDir
 from gui.datapackEditorGUI import DatapackEditorGUI
-from mainWindow import MainWindow, WindowId
+from mainWindow import MainWindow
 from cat.utils.profiling import Timer
 from base.model.applicationSettings import saveApplicationSettings, loadApplicationSettings, resetApplicationSettings, \
 	getApplicationSettings
@@ -201,7 +202,7 @@ def start(argv) -> QtWidgets.QApplication:
 			loadSessionFromFile()
 		showSetupDialogIfNecessary()
 
-		window = MainWindow(WindowId('0'))
+		window = MainWindow(uuid.uuid4())
 		window.show()
 		window.resize(1280, 720)
 		window.redraw()
