@@ -32,5 +32,5 @@ class ProjectCreator(Generic[_T], ABC):
 		pass
 
 	@abstractmethod
-	def initializeProject(self, gui: DatapackEditorGUI, project: Project) -> None:
+	def initializeProject(self, project: Project) -> None:
 		pass

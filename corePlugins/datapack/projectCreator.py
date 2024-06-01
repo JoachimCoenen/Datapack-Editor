@@ -143,7 +143,7 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 		gui.propertyField(data, 'shouldGenerateFolderStructure')
 		gui.addVSpacer(0, SizePolicy.Expanding)  # preventVStretch
 
-	def initializeProject(self, gui: DatapackEditorGUI, project: Project) -> None:
+	def initializeProject(self, project: Project) -> None:
 		data = self.data
 		# setup aspect:
 		datapackAspect = project.aspects.get(DatapackAspect)

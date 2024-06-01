@@ -100,6 +100,9 @@ class Session(SerializableDataclass):
 		# resetAllGlobalCaches()
 		gc.collect()
 
+	def reloadProject(self) -> Project:
+		return self.openProject(self.projectPath)
+
 	def openProject(self, newProjectPath: FilePathStr) -> Project:
 		if not os.path.isdir(newProjectPath):
 			raise ValueError(f"Not a valid directory: '{newProjectPath}'")

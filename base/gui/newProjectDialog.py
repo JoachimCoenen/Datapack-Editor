@@ -239,7 +239,10 @@ class CreateNewDialogPage(DialogPage[CreateNewData]):
 		# 		project.aspects.add(aspectCls)
 
 		for creator in self.creators:
-			creator.initializeProject(gui, project)
+			creator.initializeProject(project)
+
+		getSession().saveProjectToFile()
+		getSession().reloadProject()
 
 
 @dataclass
