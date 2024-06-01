@@ -316,7 +316,7 @@ class IndexBundleAspect(Aspect, IndexBundle, ABC):
 class Root(SerializableDataclass):
 	_name: str = field(metadata=catMeta(serializedName='name'))
 	_location: str  # =FilePathStr  # maybe?
-	_identifier: str = field(default='', metadata=catMeta(serializedName='identifier'))
+	_identifier: str = field(metadata=catMeta(serializedName='identifier', deferLoading=True, ifMissing=lambda self: self._name))
 	"""Used for unique identification, of the root. Two DependencyDescr objects with the same identifier ALWAYS point o the same Root."""
 	dependencies: list[DependencyDescr] = field(default_factory=list, repr=False, compare=False, metadata=catMeta(serialize=False))
 	indexBundles: AspectDict[IndexBundleAspect] = field(default_factory=lambda: AspectDict(IndexBundleAspect), repr=False, compare=False, metadata=catMeta(serialize=False))

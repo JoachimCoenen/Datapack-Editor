@@ -1,3 +1,8 @@
+## Next Version
+### Fixes
+ * Fixed 'Required by' never being shown in Dependencies tree
+
+
 ## 0.8.0-alpha
 ### Features
  * Added support for Minecraft versions 1.20.3 and 1.20.4.

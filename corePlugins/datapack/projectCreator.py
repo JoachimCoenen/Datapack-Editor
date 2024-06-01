@@ -150,7 +150,7 @@ class DatapackProjectCreator(ProjectCreator[DatapackProjectCreatorData]):
 		datapackAspect.dpVersion = data.dpVersion
 		datapackAspect.minecraftVersion = data.minecraftVersion
 		# setup structure (roots, etc.)
-		newRoot = project.addRoot(ProjectRoot(project.name, project.path))
+		newRoot = project.addRoot(ProjectRoot(_name=project.name, _location=project.path, _identifier=project.name))
 		# setup files:
 		if data.shouldGeneratePackMcMeta:
 			self.generatePackMcMetaFile(newRoot)

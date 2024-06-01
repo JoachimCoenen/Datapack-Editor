@@ -239,16 +239,17 @@ class DependenciesDatapackAspectPart(DependenciesAspectPart[DatapackAspect]):
 
 	def resolveDependency(self, dep: DependencyDescr) -> Optional[Root]:
 		if '/' in dep.name and os.path.exists(dep.name):
-			return Root(dep.name, dep.name)
+			return Root(_name=dep.name, _location=dep.name, _identifier=dep.identifier)
 		for dslProvider in DEPENDENCY_SEARCH_LOCATIONS:
 			dsls = dslProvider()
 			for dsl in dsls:
 				path = os.path.join(dsl, dep.name)
+				path = normalizeDirSeparators(path)
 				if os.path.exists(path):
-					return Root(_name=dep.name, _location=normalizeDirSeparators(path))
+					return Root(_name=dep.name, _location=path, _identifier=dep.identifier)
 				path = path + '.zip'
 				if os.path.exists(path):
-					return Root(_name=dep.name, _location=normalizeDirSeparators(path))
+					return Root(_name=dep.name, _location=path, _identifier=dep.identifier)
 		return None  # missing dependency error is logged by Project itself.
 
 	def postResolveDependencies(self, project: Project) -> None:
