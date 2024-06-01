@@ -7,7 +7,7 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
 
-from cat.utils.logging_ import logInfo, logDebug
+from cat.utils.logging_ import logError, logInfo, logDebug
 
 
 class _Watches:
@@ -41,7 +41,15 @@ class _CombinedEventHandler(FileSystemEventHandler):
 		self._handlers: _Watches = handlers
 
 	def dispatch(self, event: FileSystemEvent):
-		handlers = self._handlers.getByPath(self._path)
+		try:
+			self._dispatchEvent(event, self._path)
+			self._dispatchEvent(event, event.src_path)
+		except Exception as ex:
+			logError(ex, f"{self._path=}", f"{event.src_path=}")
+			raise
+
+	def _dispatchEvent(self, event: FileSystemEvent, path: str):
+		handlers = self._handlers.getByPath(path)
 		if handlers is not None:
 			for handler in handlers.values():
 				handler.dispatch(event)

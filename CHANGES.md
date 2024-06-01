@@ -2,6 +2,7 @@
 ### Fixes
  * Fixed 'Required by' never being shown in Dependencies tree.
  * Fixed dependencies not loading after a project has just been created.
+ * Fixed FileSystemEvent being erroneously ignored.
 
 
 ## 0.8.0-alpha
