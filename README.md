@@ -67,26 +67,12 @@ Download the zip file, extract it to an empty folder and run the `start.cmd` fil
 If you have any questions, problems or suggestions, feel free to create an [Issue][NewIssue_LINK]. 
 
 ## Screenshots 
-<table style="width:100%;border-spacing:0px">
-  <tr style="padding:0px">
-    <td style="padding:0px"><table style="width:100%;border-spacing:0px">
-      <tr style="padding:0px">
-      <td style="padding:0px"> <img src="screenshots/mainWindow.png" alt="Main Window" style="width:width;height:height;"> </td>
-      <td style="padding:0px"> <img src="screenshots/quickFind.png" alt="Quickly find and open a file" style="width:width;height:height;"> </td>
-      </tr>
-    </table></td>
-  </tr>
-  <tr style="padding:0px">
-    <td style="padding:0px"><table style="width:100%;border-spacing:0px">
-      <tr style="padding:0px">
-        <td style="padding:0px"> <img src="screenshots/createNewProject.png" alt="Search Dialog" style="width:width;height:height;"> </td>
-        <td style="padding:0px"> <img src="screenshots/search.png" alt="Search Dialog" style="width:width;height:height;"> </td>
-        <td style="padding:0px"> <img src="screenshots/validateFiles.png" alt="Validate File" style="width:width;height:height;"> </td>
-      </tr>
-    </table></td>
-  </tr>
-</table>
+<img src="screenshots/mainWindow.png" alt="Main Window" width="49%"></img>
+<img src="screenshots/quickFind.png" alt="Quickly find and open a file" width="49%"></img>
 
+<img src="screenshots/createNewProject.png" alt="Create New Project Dialog" width="33%"></img>
+<img src="screenshots/search.png" alt="Search Dialog" width="32%"></img>
+<img src="screenshots/validateFiles.png" alt="Validate File" width="33%"></img>
 
 ## Disclaimer
 Some contents in the program are from the Minecraft Wiki (see [Minecraft Wiki:General disclaimer][MCWikiGeneralDisclaimer_LINK]).
