@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QDialog
 
 import cat.GUI.propertyDecorators as pd
-from cat.GUI.pythonGUI import PythonGUIDialog
+from cat.GUI.pythonGUI import PythonGUIDialog, ValidatedDialog
 from cat.GUI.components.catTabBar import TabOptions
 from cat.GUI.enums import *
 from cat.GUI.components.treeBuilders import DataListBuilder
@@ -124,10 +124,6 @@ class DialogPage(Generic[_T], ABC):
 		data = self.data
 		return data.validate()
 
-	def hasNoError(self) -> bool:
-		valRes = self.validate()
-		return not valRes or valRes[0].style != 'error'
-
 	@abstractmethod
 	def acceptAction(self, gui: DatapackEditorGUI) -> None:
 		pass
@@ -200,17 +196,10 @@ class CreateNewDialogPage(DialogPage[CreateNewData]):
 					if selectedCreator is not None:
 						selectedCreator.onGUI(gui)
 
-	@staticmethod
-	def _splitValidationResults(valResults: list[pd.ValidatorResult]) -> tuple[list[pd.ValidatorResult], list[pd.ValidatorResult]]:
-		errors = [valRes for valRes in valResults if valRes.style == 'error']
-		warnings = [valRes for valRes in valResults if valRes.style == 'warning']
-		return errors, warnings
-
 	def validate(self) -> list[pd.ValidatorResult]:
-		errors, warnings = self._splitValidationResults(super().validate())
-		for creator in self.creators:
-			errors[len(errors):len(errors)], warnings[len(warnings):len(warnings)] = self._splitValidationResults(creator.validate())
-		return errors + warnings
+		results1 = super().validate()
+		results2 = [vr for creator in self.creators for vr in creator.validate()]
+		return results1 + results2
 
 	def acceptAction(self, gui: DatapackEditorGUI) -> None:
 		data = self.data
@@ -259,7 +248,7 @@ class CreateFromExistingDialogPage(DialogPage[CreateFromExistingData]):
 		gui.showInformationDialog("Creating From Existing Project...", "Please stand by...")
 
 
-class NewProjectDialog(PythonGUIDialog):
+class NewProjectDialog(ValidatedDialog):
 
 	def __init__(
 			self,
@@ -308,19 +297,12 @@ class NewProjectDialog(PythonGUIDialog):
 
 		self.selectedPageId = tabs.selectedView
 
-	def OnStatusbarGUI(self, gui: DatapackEditorGUI):
-		with gui.vLayout():
-			gui.dialogButtons({
-				MessageBoxButton.Ok: (lambda b: self.accept(), dict(enabled=self.isOkEnabled())),
-				MessageBoxButton.Cancel: lambda b: self.reject(),
-			})
-
 	@property
 	def selectedPage(self) -> Optional[DialogPage]:
 		return self.guiPages.get(self.selectedPageId)
 
-	def isOkEnabled(self) -> bool:
-		return (page := self.selectedPage) is not None and page.hasNoError()
+	def validate(self) -> list[ValidatorResult]:
+		return page.validate() if (page := self.selectedPage) is not None else []
 
 	@classmethod
 	def showModal(
@@ -349,32 +331,11 @@ class NewProjectDialog(PythonGUIDialog):
 		# add kwArgs to dialog
 		dialog._gui.addkwArgsToItem(dialog, kwargs)
 
-		while True:
-			result = dialog.exec()
-			page = dialog.selectedPage
-			isOk = (result == QDialog.Accepted) and page is not None
-			if not isOk:
-				return None, False
+		result = dialog.exec()
+		page = dialog.selectedPage
 
-			valResults = page.validate()
-			if valResults:
-				if valResults[0].style == 'error':
-					dialog._gui.showErrorDialog(
-						"Some values are invalid:",
-						"\n".join(f" - {valRes.message}" for valRes in valResults if valRes.style == 'error') +
-						"\n\nPlease fix all indicated problems.",
-						textFormat=Qt.TextFormat.MarkdownText
-					)
-					continue
-				elif valResults[0].style == 'warning':
-					if dialog._gui.showMessageDialog(
-						"There are Warnings. Do you want to ignore them?",
-						"\n".join(f" - {valRes.message}" for valRes in valResults if valRes.style == 'warning'),
-						textFormat=Qt.TextFormat.MarkdownText,
-						style=MessageBoxStyle.Warning,
-						buttons=MessageBoxButtonPreset.IgnoreCancel
-					) is MessageBoxButton.Ignore:
-						return page, True
-					else:
-						continue
+		isOk = (result == QDialog.Accepted) and page is not None
+		if isOk:
 			return page, True
+		else:
+			return None, False
