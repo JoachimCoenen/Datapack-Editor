@@ -5,14 +5,15 @@ from typing import Callable, Optional
 from PyQt5.QtGui import QIcon
 
 from base.model.searchUtils import filterComputedChoices
+from base.model.settingsAspectSetup import SettingsAspectSetup
 from base.model.utils import addStyle, formatMarkdown, wrapInMDCode
 from cat.GUI import propertyDecorators as pd
 from cat.GUI.propertyDecorators import ValidatorResult
 from cat.GUI.components.treeBuilders import DataListBuilder, StringHeaderBuilder
 from cat.GUI.pythonGUI import WidgetDrawer
-from cat.Serializable.serializableDataclasses import catMeta, SerializableDataclass
+from cat.Serializable.serializableDataclasses import catMeta, SerializableDataclass, getField
 
-from base.model.applicationSettings import SettingsAspect
+from base.model.applicationSettings import ApplicationSettings, SettingsAspect
 from base.model.aspect import AspectType
 from cat.utils import PLATFORM_IS_WINDOWS, escapeForXmlTextContent
 from corePlugins.minecraft_data.fullData import getAllFullMcDatas, getLatestFullMcData
@@ -111,6 +112,15 @@ def minecraftVersionDrawer(gui: DatapackEditorGUI, mcVersion: MinecraftVersion, 
 	return mcVersion
 
 
+def _checkDuplicateMcVersions(mcVersions: list[MinecraftVersion]) -> ValidatorResult | None:
+	names = {v.name.strip() for v in mcVersions}
+	duplicatesExist = len(names) != len(mcVersions)
+
+	if duplicatesExist:
+		return ValidatorResult('There are multiple Minecraft versions registered with the same name.', 'warning')
+	return None
+
+
 def _validateMcVersionAndCheckDuplicate(mv: MinecraftVersion, mcVersions: list[MinecraftVersion]) -> list[ValidatorResult]:
 	# TODO: Checking for duplicates only works properly when list is not filtered, because `mcVersions` only contains the filtered list of versions.
 	duplicatesExist = len([v for v in mcVersions if v.name.strip() == mv.name.strip()]) > 1
@@ -144,6 +154,16 @@ def _toolTipMakerMaker(mcVersions: list[MinecraftVersion]) -> Callable[[Minecraf
 	return _toolTipMaker
 
 
+def _validateMinecraftVersions(versions: list[MinecraftVersion]) -> ValidatorResult | None:
+	if not versions:
+		return pd.ValidatorResult("At least one registered Minecraft version required.", 'error')
+	if (duplicates := _checkDuplicateMcVersions(versions)) is not None:
+		return duplicates
+
+	if any(vr for version in versions for vr in version.validate() if vr.style == 'error'):
+		return pd.ValidatorResult("At least one registered Minecraft version has errors.", 'warning')
+
+
 @dataclass()
 class MinecraftSettings(SettingsAspect):
 	@classmethod
@@ -153,7 +173,7 @@ class MinecraftSettings(SettingsAspect):
 	minecraftVersions: list[MinecraftVersion] = field(
 		default_factory=list,
 		metadata=catMeta(
-			kwargs=dict(label='Minecraft Versions'),
+			kwargs=dict(label=None, fullSize=True),  #, hasLabel=False),
 			decorators=[
 				EditableSerializableDataclassList(
 					'minecraftVersions',
@@ -171,6 +191,7 @@ class MinecraftSettings(SettingsAspect):
 					filterFunc=filterComputedChoices(lambda mv: mv.name),
 					dialogWidth=800
 				),
+				pd.Validator(_validateMinecraftVersions),
 				pd.Title("Minecraft Versions"),
 			]
 		)
@@ -196,3 +217,17 @@ class MinecraftSettings(SettingsAspect):
 #
 #
 # MinecraftSettings.minecraftVersion = property(_getMinecraftVersion, _setMinecraftVersion)
+
+
+class MinecraftSettingsSetup(SettingsAspectSetup[MinecraftSettings]):
+
+	@property
+	def title(self) -> str:
+		return "Minecraft"
+
+	def getSettingsAspect(self, settings: ApplicationSettings) -> MinecraftSettings:
+		return settings.aspects.get(MinecraftSettings)
+
+	def aspectGUI(self, gui: DatapackEditorGUI, aspect: MinecraftSettings) -> None:
+		with gui.vLayout():
+			gui.propertyField(aspect, getField(aspect, 'minecraftVersions'))

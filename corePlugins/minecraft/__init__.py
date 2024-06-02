@@ -4,6 +4,8 @@ from base.model.applicationSettings import SettingsAspect
 from base.model.parsing.contextProvider import ContextProvider
 from base.model.parsing.parser import ParserBase
 from base.model.parsing.tree import Node
+from base.model.project.projectCreator import ProjectCreator
+from base.model.settingsAspectSetup import SettingsAspectSetup
 from base.model.utils import LanguageId
 from base.plugin import PLUGIN_SERVICE, PluginBase
 
@@ -36,3 +38,7 @@ class MinecraftPlugin(PluginBase):
 	def settingsAspects(self) -> list[Type[SettingsAspect]]:
 		from corePlugins.minecraft.settings import MinecraftSettings
 		return [MinecraftSettings]
+
+	def settingsAspectSetups(self) -> list[Type[SettingsAspectSetup]]:
+		from corePlugins.minecraft.settings import MinecraftSettingsSetup
+		return [MinecraftSettingsSetup]

@@ -692,7 +692,13 @@ def drawList(gui_: DatapackEditorGUI, values_: list[_TT], type_: Optional[Type[l
 	if listContext is None:
 		listContext = SearchableListContext()
 
-	with gui_.vLayout(seamless=True):
+	with gui_.vLayout(
+		label=kwargs.get('label', None),
+		fullSize=kwargs.get('fullSize', False),
+		enabled=kwargs.get('enabled', True),
+		tip=kwargs.get('tip', ''),
+		seamless=True
+	):
 		selected, listContext = gui_.filteredTreeWithSearchField(
 			values_,
 			listContext,

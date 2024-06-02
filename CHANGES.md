@@ -1,4 +1,7 @@
 ## Next Version
+### Features
+ * Plugins can now add custom section to the setup dialog (issue #33).
+
 ### Fixes
  * Fixed 'Required by' never being shown in Dependencies tree.
  * Fixed dependencies not loading after a project has just been created.

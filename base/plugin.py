@@ -5,10 +5,11 @@ import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Iterable, TYPE_CHECKING, Optional, Type
+from typing import Iterable, Optional, Type
 
 from PyQt5.Qsci import QsciLexerCustom
 
+from base.model.settingsAspectSetup import SettingsSetup
 from cat.GUI.components.codeEditor import CodeEditorLexer
 from cat.GUI.pythonGUI import EditorBase, TabOptions
 from cat.utils import getExePath
@@ -232,6 +233,9 @@ class PluginBase(ABC):
 		return {}
 
 	def projectCreators(self) -> list[Type[ProjectCreator]]:
+		return []
+
+	def settingsAspectSetups(self) -> list[Type[SettingsSetup]]:
 		return []
 
 
