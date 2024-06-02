@@ -38,16 +38,6 @@ class WhitespaceVisibility(enum.IntEnum):
 
 @dataclass()
 class AppearanceSettings(SerializableDataclass):
-	applicationStyle: str = field(
-		default='Fusion',
-		metadata=catMeta(
-			kwargs=dict(label='Application Style'),
-			decorators=[
-				pd.ComboBox(choices=QStyleFactory.keys()),
-				pd.NoUI()
-			]
-		)
-	)
 
 	useCompactLayout: bool = field(
 		default=False,

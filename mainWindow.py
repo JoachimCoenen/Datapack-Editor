@@ -340,14 +340,8 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 	# Dialogs:
 
 	def _showSettingsDialog(self, gui: DatapackEditorGUI) -> None:
-		oldStyle = applicationSettings.appearance.applicationStyle
-
 		with gui.overlay():
 			self.settingsDialog.exec()
-
-		newStyle = applicationSettings.appearance.applicationStyle
-		if oldStyle != newStyle:
-			QApplication.setStyle(newStyle)
 
 	def _saveAsDialog(self, gui: DatapackEditorGUI, document: Document) -> str:
 		dt = getDocumentTypeForDocument(document)
