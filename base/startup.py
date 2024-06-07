@@ -1,6 +1,6 @@
 import os
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, Field
 from typing import Any, Callable
 
 from PyQt5 import QtWidgets
@@ -8,7 +8,7 @@ from PyQt5.QtGui import QIcon
 from qtpy import QtCore
 
 from base.model.settingsAspectSetup import SettingsAspectSetup, SettingsSetup
-from cat.GUI import _StyleProperty, setStyles, Style, Styles, MessageBoxButton, applyStyle, getStyles
+from cat.GUI import _StyleProperty, setStyles, Style, Styles, MessageBoxButton, applyStyle, getStyles, SizePolicy
 from cat.GUI.components import catWidgetMixins
 from cat.GUI.propertyDecorators import ValidatorResult
 from cat.GUI.pythonGUI import ValidatedDialog
@@ -63,12 +63,11 @@ class WelcomeSetup(SettingsSetup):
 	def validate(self, settings: ApplicationSettings) -> list[ValidatorResult]:
 		return []
 
-	def onGUI(self, gui: DatapackEditorGUI, settings: ApplicationSettings) -> None:
-		with gui.vLayout():
-			gui.label("We'll have to set up a few things before we can start. This shouldn't take long.")
-			with gui.hLayout(preventHStretch=True):
-				gui.label("You can always change these later under Settings ")
-				gui.label(icons.settings)
+	def onGUI(self, gui: DatapackEditorGUI, settings: ApplicationSettings, vSpacer: Callable[[DatapackEditorGUI], None]) -> None:
+		gui.label("We'll have to set up a few things before we can start. This shouldn't take long.")
+		with gui.hLayout(preventHStretch=True):
+			gui.label("You can always change these later under Settings ")
+			gui.label(icons.settings)
 
 
 class AppearanceSettingsSetup(SettingsAspectSetup[AppearanceSettings]):
@@ -80,18 +79,19 @@ class AppearanceSettingsSetup(SettingsAspectSetup[AppearanceSettings]):
 	def getSettingsAspect(self, settings: ApplicationSettings) -> AppearanceSettings:
 		return settings.appearance
 
-	def aspectGUI(self, gui: DatapackEditorGUI, aspect: AppearanceSettings) -> None:
-		gui.propertyField(aspect, getField(aspect, 'useCompactLayout'))
-		gui.propertyField(aspect, getField(aspect, 'fontSize'))
-		gui.propertyField(aspect, getField(aspect, 'colorScheme'))
-
-	def resetAspect(self, aspect: AppearanceSettings) -> None:
-		aspect.colorScheme = 'Default Dark'
+	def getAspectFields(self, aspect: AppearanceSettings) -> list[Field]:
+		return [
+			getField(aspect, 'useCompactLayout'),
+			getField(aspect, 'fontSize'),
+			getField(aspect, 'colorScheme'),
+		]
 
 
 class SetupDialog(ValidatedDialog):
 	def __init__(self, **kwargs) -> None:
 		super().__init__(GUICls=DatapackEditorGUI, **kwargs)
+		self.drawStatusbarBorder = False
+		self.statusbarIsWindowPanel = True
 		self.settingsSetups: list[SettingsSetup] = [
 			WelcomeSetup(),
 			AppearanceSettingsSetup(),
@@ -102,13 +102,11 @@ class SetupDialog(ValidatedDialog):
 			)
 		]
 
-		self.reset()
-
 	def reset(self) -> None:
 		resetApplicationSettings()
 		settings = getApplicationSettings()
 		for sas in self.settingsSetups:
-			sas.reset(settings)
+			sas.additionalReset(settings)
 
 	def validate(self) -> list[ValidatorResult]:
 		settings = getApplicationSettings()
@@ -126,13 +124,20 @@ class SetupDialog(ValidatedDialog):
 				if isinstance(child, QtWidgets.QWidget):
 					child.resize(QtCore.QSize(3, 3))  # force a proper redraw.
 
-		with gui.vLayout(preventVStretch=True, verticalSpacing=gui.spacing + gui.smallSpacing):
+		spacerSize = int(9 * gui.scale)
+
+		def vSpacer(gui2: DatapackEditorGUI) -> None:
+			gui2.addVSpacer(spacerSize, SizePolicy.Fixed)  # just a spacer
+
+		with gui.vLayout(preventVStretch=True):  # , verticalSpacing=gui.spacing + gui.smallSpacing):
 			settings = getApplicationSettings()
 			for sas in self.settingsSetups:
+				vSpacer(gui)
 				with gui.vLayout():
 					gui.title(sas.title, addSeparator=True)
 				with gui.indentation():
-					sas.onGUI(gui, settings)
+					vSpacer(gui)
+					sas.onGUI(gui, settings, vSpacer)
 
 
 def showSetupDialogIfNecessary() -> None:

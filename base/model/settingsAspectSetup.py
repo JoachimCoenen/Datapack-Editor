@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import override
+from dataclasses import Field
+from typing import override, Callable
 
-from base.model.applicationSettings import ApplicationSettings, SettingsAspect, getApplicationSettings
+from base.model.applicationSettings import ApplicationSettings, SettingsAspect
 from cat.GUI.propertyDecorators import ValidatorResult
 from gui.datapackEditorGUI import DatapackEditorGUI
 
@@ -22,10 +23,10 @@ class SettingsSetup(ABC):
 		pass
 
 	@abstractmethod
-	def onGUI(self, gui: DatapackEditorGUI, settings: ApplicationSettings) -> None:
+	def onGUI(self, gui: DatapackEditorGUI, settings: ApplicationSettings, vSpacer: Callable[[DatapackEditorGUI], None]) -> None:
 		pass
 
-	def reset(self, settings: ApplicationSettings) -> None:
+	def additionalReset(self, settings: ApplicationSettings) -> None:
 		pass
 
 
@@ -40,24 +41,38 @@ class SettingsAspectSetup[T: SettingsAspect](SettingsSetup, ABC):
 		pass
 
 	@abstractmethod
-	def aspectGUI(self, gui: DatapackEditorGUI, aspect: T) -> None:
+	def getAspectFields(self, aspect: T) -> list[Field]:
 		pass
 
-	@staticmethod
-	def validateAspect(aspect: T) -> list[ValidatorResult]:
-		return aspect.validate()
-
-	def resetAspect(self, aspect: T) -> None:
+	def additionalAspectReset(self, aspect: T) -> None:
 		pass
+
+	def validateAspect(self, aspect: T) -> list[ValidatorResult]:
+		fields = self.getAspectFields(aspect)
+		results = []
+		for f in fields:
+			results.extend(aspect.validateField(f))
+		return results
+
+	def aspectGUI(self, gui: DatapackEditorGUI, aspect: T, vSpacer: Callable[[DatapackEditorGUI], None]) -> None:
+		fields = self.getAspectFields(aspect)
+		if not fields:
+			return
+
+		fieldsIter = iter(fields)
+		gui.propertyField(aspect, next(fieldsIter))
+		for field in fieldsIter:
+			vSpacer(gui)
+			gui.propertyField(aspect, field)
 
 	@override
 	def validate(self, settings: ApplicationSettings) -> list[ValidatorResult]:
-		return self.validateAspect( self.getSettingsAspect(settings))
+		return self.validateAspect(self.getSettingsAspect(settings))
 
 	@override
-	def onGUI(self, gui: DatapackEditorGUI, settings: ApplicationSettings) -> None:
-		self.aspectGUI(gui, self.getSettingsAspect(settings))
+	def onGUI(self, gui: DatapackEditorGUI, settings: ApplicationSettings, vSpacer: Callable[[DatapackEditorGUI], None]) -> None:
+		self.aspectGUI(gui, self.getSettingsAspect(settings), vSpacer)
 
 	@override
-	def reset(self, settings: ApplicationSettings) -> None:
-		self.resetAspect(self.getSettingsAspect(settings))
+	def additionalReset(self, settings: ApplicationSettings) -> None:
+		self.additionalAspectReset(self.getSettingsAspect(settings))

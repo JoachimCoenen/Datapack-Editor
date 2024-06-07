@@ -109,7 +109,7 @@ class AppearanceSettings(SerializableDataclass):
 
 
 def _getColorScheme(self) -> str:
-	return getattr(self, '_colorScheme', '') or 'Default'
+	return getattr(self, '_colorScheme', '') or 'Default Dark'
 
 
 def _setColorScheme(self, newVal: str) -> None:

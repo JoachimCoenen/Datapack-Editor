@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, Field
 from typing import Callable, Optional
 
 from PyQt5.QtGui import QIcon
@@ -228,6 +228,5 @@ class MinecraftSettingsSetup(SettingsAspectSetup[MinecraftSettings]):
 	def getSettingsAspect(self, settings: ApplicationSettings) -> MinecraftSettings:
 		return settings.aspects.get(MinecraftSettings)
 
-	def aspectGUI(self, gui: DatapackEditorGUI, aspect: MinecraftSettings) -> None:
-		with gui.vLayout():
-			gui.propertyField(aspect, getField(aspect, 'minecraftVersions'))
+	def getAspectFields(self, aspect: MinecraftSettings) -> list[Field]:
+		return [getField(aspect, 'minecraftVersions')]
