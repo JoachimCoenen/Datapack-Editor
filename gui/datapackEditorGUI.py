@@ -33,8 +33,8 @@ from cat.Serializable.utils import PropertyDecorator, get_args
 from cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
 from gui.icons import icons
 
-inputBoxStyle = Style({'CatBox': Style({'background': '#FFF2CC'})})
-resultBoxStyle = Style({'CatBox': Style({'background': '#DAE8FC'})})
+inputBoxStyle = Style({'CatPanel': Style({'background': '#FFF2CC'})})
+resultBoxStyle = Style({'CatPanel': Style({'background': '#DAE8FC'})})
 
 
 _TT = TypeVar('_TT')
