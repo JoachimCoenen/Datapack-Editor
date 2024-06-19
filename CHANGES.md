@@ -1,6 +1,7 @@
 ## Next Version
 ### Features
  * Plugins can now add custom section to the setup dialog (issue #33).
+ * A SchemaMapping can now have multiple pathFilters per schemaId.
 
 ### Fixes
  * Fixed 'Required by' never being shown in Dependencies tree.

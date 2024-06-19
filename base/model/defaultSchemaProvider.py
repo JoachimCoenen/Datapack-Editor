@@ -16,7 +16,7 @@ _TSchema = TypeVar('_TSchema', bound=Schema)
 @dataclass
 class SchemaMapping:
 	schemaId: str
-	pathFilter: str
+	pathFilter: str | tuple[str, ...]
 	"""
 	A filter string.
 
@@ -49,7 +49,12 @@ class SchemaMapping:
 	""" pattern generated from SchemaMapping.pathFilter """
 
 	def __post_init__(self):
-		_, regexStr = makeSearchPath(self.pathFilter, '')
+		if isinstance(self.pathFilter, str):
+			_, regexStr = makeSearchPath(self.pathFilter, '')
+		else:
+			regexStr = '|'.join(
+				f'(?:{makeSearchPath(pathFilter, '')[1]})'
+				for pathFilter in self.pathFilter)
 		self.pattern = re.compile(regexStr)
 
 
