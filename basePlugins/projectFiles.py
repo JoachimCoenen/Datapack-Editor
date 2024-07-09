@@ -29,6 +29,11 @@ from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, Searcha
 from base.plugin import PluginBase, SideBarOptions, PLUGIN_SERVICE
 
 
+DEFAULT_EXCLUDED_DIRECTORIES: list[str] = [
+	"/.git/",
+]
+
+
 def initPlugin():
 	PLUGIN_SERVICE.registerPlugin('ProjectFiles', ProjectFilesPlugin())
 
@@ -613,7 +618,7 @@ class FilesAspect(ProjectAspect):
 	def __post_init__(self):
 		self.analyzeRootsPart = AnalyzeRootsFilesAspectPart(self)
 
-	_excludedDirectories: str = field(default='', metadata=catMeta(
+	_excludedDirectories: str = field(default_factory=lambda: '\n'.join(DEFAULT_EXCLUDED_DIRECTORIES), metadata=catMeta(
 		serializedName='excludedDirectories',
 		kwargs=dict(
 			isMultiline=True,
@@ -641,12 +646,12 @@ class AnalyzeRootsFilesAspectPart(AnalyzeRootsAspectPart[FilesAspect]):
 
 	def analyzeRoot(self, root: Root, project: Project) -> None:
 		location = root.normalizedLocation
-		if location.endswith('.jar'):  # we don't need '.class' files. This is not a Java IDE.
-			pathInFolder = 'data/**'
-			pathInZip = 'data/**'
-		else:
-			pathInFolder = '/**'
-			pathInZip = '/**'
+		# if location.endswith('.jar'):  # we don't need '.class' files. This is not a Java IDE.
+		# 	pathInFolder = 'data/**'
+		# 	pathInZip = 'data/**'
+		# else:
+		pathInFolder = '/**'
+		pathInZip = '/**'
 		pif = SearchPath(pathInFolder, location.rstrip('/'))
 		piz = pathInZip
 
