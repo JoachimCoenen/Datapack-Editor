@@ -6,7 +6,6 @@ from cat.GUI.pythonGUI import EditorBase, TabOptions
 from cat.GUI.components.catWidgetMixins import CatFramedWidgetMixin
 from cat.GUI.enums import TabPosition, SizePolicy
 from gui.icons import icons
-from cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
 from base.gui.documentEditors import getDocumentEditor
 from keySequences import KEY_SEQUENCES
@@ -38,20 +37,20 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 
 	def documentsTabBarGUI(self, gui: DatapackEditorGUI, position: TabPosition = TabPosition.North):
 		view = self.model()
-		tabs = OrderedMultiDict((
+		tabs = [
 			(document, TabOptions(document.fileName + (' *' if document.documentChanged else '   '), tip=document.filePathForDisplay, icon=icons.file_code))
 			for document in view.documents
-		))
+		]
 
 		try:
-			selectedTab = list(tabs.keys()).index(view.selectedDocument)
+			selectedTab = [t[0] for t in tabs].index(view.selectedDocument)
 		except ValueError:
 			selectedTab = None
 
 		if tabs:
 			with gui.hPanel(seamless=True, windowPanel=True):
 				index = gui.tabBar(
-					list(tabs.values()),
+					[t[1] for t in tabs],
 					selectedTab=selectedTab,
 					drawBase=False,
 					documentMode=True,
@@ -66,7 +65,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 
 			if index in range(len(tabs)):
 				if index != selectedTab:
-					view.manager.showDocument(list(tabs.keys())[index])
+					view.manager.showDocument([t[0] for t in tabs][index])
 			else:
 				view.selectDocument(None)
 		else:

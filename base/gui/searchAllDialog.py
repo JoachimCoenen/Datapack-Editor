@@ -4,6 +4,7 @@ from typing import Callable, Iterator, Optional, Sequence
 
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QWidget
+from better_orderedmultidict import OrderedMultiDict
 from recordclass import as_dataclass
 
 from base.gui.onProjectFilesDialogBase import OnProjectFilesDialogBase
@@ -14,7 +15,6 @@ from cat.GUI import CORNERS
 from cat.GUI.components.codeEditor import IndexSpan, SearchMode, SearchOptions
 from cat.GUI.components.treeBuilders import DataTreeBuilder
 from cat.utils import escapeForXml, override
-from cat.utils.collections_ import OrderedMultiDict
 from gui.datapackEditorGUI import ContextMenuEntries, DatapackEditorGUI, makeTextSearcher
 from gui.icons import icons
 
@@ -86,7 +86,7 @@ class SearchAllDialog(OnProjectFilesDialogBase):
 			if self._searchResult.error is not None:
 				gui.helpBox(f'error during search: {self._searchResult.error}', style='error')
 			else:
-				gui.label(f'found {len(self._searchResult.occurrences)} occurrences in {len(self._searchResult.occurrences.uniqueKeys())} files ({self.processedFilesCount} files searched total): (double-click to open)')
+				gui.label(f'found {len(self._searchResult.occurrences)} occurrences in {len(self._searchResult.occurrences.unique_keys())} files ({self.processedFilesCount} files searched total): (double-click to open)')
 
 	@override
 	def resultsGUI(self, gui: DatapackEditorGUI) -> None:
@@ -123,7 +123,7 @@ class SearchAllDialog(OnProjectFilesDialogBase):
 			if isinstance(x, Occurrence):
 				return tuple()
 			elif isinstance(x, SearchResult):
-				return list(x.occurrences.uniqueKeys())
+				return list(x.occurrences.unique_keys())
 			else:
 				return self._searchResult.occurrences.getall(x)
 

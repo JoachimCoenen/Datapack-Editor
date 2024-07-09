@@ -230,7 +230,7 @@ class CheckAllDialog(OnProjectFilesDialogBase):
 				return ()
 			elif isinstance(x, ErrorsResult):
 				return [Error(x.file, e) for e in x.errors]
-				# return [(fp, x.occurrences.getall(fp)) for fp in x.occurrences.uniqueKeys()]
+				# return [(fp, x.occurrences.getall(fp)) for fp in x.occurrences.unique_keys()]
 			else:
 				return [er for er in x.results if er.errors]
 
