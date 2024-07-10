@@ -8,7 +8,7 @@ from typing import ClassVar, Optional, overload, TypeVar, Callable
 
 from base.model.documentHandling import DocumentsManager
 from base.model.documents import Document
-from base.model.pathUtils import FilePath, FilePathStr, FilePathTpl, unitePathTpl
+from base.model.pathUtils import FilePath, FilePathStr, FilePathTpl, unitePathTpl, normalizeDirSeparatorsStr
 from base.model.project.project import Project
 from base.model.utils import Span
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
@@ -104,12 +104,23 @@ class Session(SerializableDataclass):
 		return self.openProject(self.projectPath)
 
 	def openProject(self, newProjectPath: FilePathStr) -> Project:
+		newProjectPath = normalizeDirSeparatorsStr(newProjectPath)
 		if not os.path.isdir(newProjectPath):
 			raise ValueError(f"Not a valid directory: '{newProjectPath}'")
 
 		self.closeProject()
 		self._projectPath = newProjectPath
 		projConfigPath = unitePathTpl(self.projectConfigPath)
+
+		if not os.path.isfile(projConfigPath):
+			if self.askUser(
+					"Project Config file could not be found.",
+					f"Do you want to create it?\n\n'{projConfigPath}'"):
+				try:
+					with open(projConfigPath, 'w') as outFile:
+						outFile.write('{"@class": "Project"}')
+				except OSError as e:
+					logError(e, "Unable to load project")
 
 		def _logError(ex, s):
 			logError(ex, s)

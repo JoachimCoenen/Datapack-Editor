@@ -17,7 +17,7 @@ from cat.utils import format_full_exc, override
 from cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclassOrEqual
 from cat.utils.formatters import indentMultilineStr
 from cat.utils.profiling import logError
-from base.model.documents import TextDocument, Document, ParsedDocument
+from base.model.documents import TextDocument, Document, ParsedDocument, convertIndentToUseTabsSettingsOfDocument
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.utils import LanguageId
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, drawCodeField
@@ -238,7 +238,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			menu.addSeparator()
 			menu.addItem(f"Indent Using Spaces", lambda t=i: setattr(document, 'indentationSettings', replace(indentation, useSpaces=not indentation.useSpaces)), checkable=True, checked=indentation.useSpaces)
 			menu.addSeparator()
-			menu.addItem(f"ConvertIndentation", lambda t=i: document.convertIndentationsToUseTabsSettings())
+			menu.addItem(f"ConvertIndentation", lambda t=i: convertIndentToUseTabsSettingsOfDocument(document))
 
 	def _ensureDocumentIsParsed(self) -> None:
 		document = self.model()

@@ -1,12 +1,16 @@
 ## Next Version
 ### Features
- * Plugins can now add custom section to the setup dialog (issue #33).
- * A SchemaMapping can now have multiple pathFilters per schemaId.
+ * Plugins can now add custom section to the setup dialog (issue #33). _[Plugin support]_
+ * A SchemaMapping can now have multiple pathFilters per schemaId. _[Plugin support]_
+ * Added ability to open a project without a `.dpeproj` file.
+ * Added support for the multiprocessing module. _[Plugin support]_
 
 ### Fixes
  * Fixed 'Required by' never being shown in Dependencies tree.
  * Fixed dependencies not loading after a project has just been created.
  * Fixed FileSystemEvent being erroneously ignored.
+ * Fixed CloseModifiedDocument dialog not being shown.
+ * Fixed save-button being enabled when no document is opened.
 
 
 ## 0.8.0-alpha

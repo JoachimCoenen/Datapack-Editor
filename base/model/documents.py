@@ -655,37 +655,37 @@ class TextDocument(Document):
 		self.strContent = str(value, encoding=self.encoding, errors='replace')
 
 
-	def convertIndentationsToUseTabsSettings(self):
-		lines = self.content.split(b'\n')
-		oldTab, newTab = b' '*self.indentationSettings.tabWidth, b'\t'
-		toTabs = oldTab, newTab
-		fromTabs = newTab, oldTab
-		useSpaces = self.indentationSettings.useSpaces
+def convertIndentToUseTabsSettingsOfDocument(document: TextDocument):
+	lines = document.content.split(b'\n')
+	oldTab, newTab = b' '*document.indentationSettings.tabWidth, b'\t'
+	toTabs = oldTab, newTab
+	fromTabs = newTab, oldTab
+	useSpaces = document.indentationSettings.useSpaces
 
-		pattern = re.compile(rb'^(\s*)(.*)')
-		pattern2 = re.compile(rb'[^\t]+\t')
-		newLines = []
-		for line in lines:
-			match = pattern.match(line)
-			indent, trailing = match.group(1, 2)
-			# indent = match.group(1)
-			# trailing = match.group(2)
+	pattern = re.compile(rb'^(\s*)(.*)')
+	pattern2 = re.compile(rb'[^\t]+\t')
+	newLines = []
+	for line in lines:
+		match = pattern.match(line)
+		indent, trailing = match.group(1, 2)
+		# indent = match.group(1)
+		# trailing = match.group(2)
 
-			# 1. convert everything to tabs
-			indent2 = indent.replace(*toTabs)
+		# 1. convert everything to tabs
+		indent2 = indent.replace(*toTabs)
 
-			# 2. Fix superfluous spaces
-			#    This ensures correct handling of too few spaces before a tab.
-			indent3 = pattern2.sub(b'\t', indent2)
+		# 2. Fix superfluous spaces
+		#    This ensures correct handling of too few spaces before a tab.
+		indent3 = pattern2.sub(b'\t', indent2)
 
-			# 3. convert back to spaces, if necessary.
-			if useSpaces:
-				indent3 = indent3.replace(*fromTabs)
+		# 3. convert back to spaces, if necessary.
+		if useSpaces:
+			indent3 = indent3.replace(*fromTabs)
 
-			newLines.append(indent3 + trailing)
+		newLines.append(indent3 + trailing)
 
-		text = b'\n'.join(newLines)
-		self.content = text
+	text = b'\n'.join(newLines)
+	document.content = text
 
 
 @dataclass(repr=False, slots=True)
