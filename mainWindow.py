@@ -236,8 +236,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				if filePath:
 					getSession().tryOpenOrSelectDocument(filePath)
 
-			isEnabled = True  # bool(document) and os.path.exists(document.filePathForDisplay)
-			if button(icon=icons.save, tip='Save File', **btnKwArgs, enabled=isEnabled, windowShortcut=QKeySequence.Save):
+			if button(icon=icons.save, tip='Save File', **btnKwArgs, enabled=bool(document), windowShortcut=QKeySequence.Save):
 				self._saveOrSaveAs(gui, document)
 
 			if button(icon=icons.saveAs, tip='Save As', **btnKwArgs, enabled=bool(document), windowShortcut=KEY_SEQUENCES.SAVE_AS):
