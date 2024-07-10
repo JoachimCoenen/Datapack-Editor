@@ -271,7 +271,6 @@ class DocumentsManager(SerializableDataclass):
 	currentView: View = field(init=False, metadata=catMeta(serialize=True))
 
 	# callbacks (must be set externally, for prompting the user, etc...):
-	onCanCloseModifiedDocument: Callable[[Document], bool] = field(default=lambda d: True, metadata=catMeta(serialize=False))
 	onCurrentViewChanged: ClassVar[CatSignal[()]] = CatSignal('onCurrentViewChanged')
 	# onCurrentViewChanged: CatBoundSignal[Callable[[], None]] = CatSignal('onCurrentViewChanged')
 	onSelectedDocumentChanged: ClassVar[CatSignal[()]] = CatSignal('onSelectedDocumentChanged')
@@ -368,8 +367,9 @@ class DocumentsManager(SerializableDataclass):
 			view.onDocumentsChanged.emit()
 
 	def safelyCloseDocument(self, doc: Document) -> bool:
+		from base.model.session import GLOBAL_SIGNALS
 		if doc.documentChanged:
-			cb: Callable[[Document], bool] = self.onCanCloseModifiedDocument
+			cb: Callable[[Document], bool] = GLOBAL_SIGNALS.onCanCloseModifiedDocument
 			if cb(doc):
 				self.forceCloseDocument(doc)
 				return True
@@ -389,7 +389,7 @@ class DocumentsManager(SerializableDataclass):
 		self._insertDocument(doc, view, None)
 		return doc
 
-	def _getNewUntitledFileName(self) -> str:
+	def getNewUntitledFileName(self) -> str:
 		existingDocNames = {doc.filePathForDisplay for view in self.views for doc in view.documents}
 		i: int = 0
 		while True:

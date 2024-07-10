@@ -4,7 +4,7 @@ import gc
 import os
 from dataclasses import dataclass, field
 from json import JSONDecodeError
-from typing import ClassVar, Optional, overload, TypeVar
+from typing import ClassVar, Optional, overload, TypeVar, Callable
 
 from base.model.documentHandling import DocumentsManager
 from base.model.documents import Document
@@ -151,6 +151,10 @@ class Session(SerializableDataclass):
 		GLOBAL_SIGNALS.onWarning.emit(e, title)
 
 	@staticmethod
+	def askUser(title: str, message: str) -> bool:
+		return GLOBAL_SIGNALS.onAskUser(title, message)
+
+	@staticmethod
 	def resetAllGlobalCaches() -> None:
 		GLOBAL_SIGNALS.globalCacheReset.emit()
 
@@ -158,10 +162,15 @@ class Session(SerializableDataclass):
 __session = Session()
 
 
+@dataclass
 class _GlobalSignals(Singleton):
 	onError: ClassVar[CatBoundSignal[Exception, str]] = CatSignal[Exception, str]('onError')
 	onWarning: ClassVar[CatBoundSignal[Exception | None, str]] = CatSignal[Exception | None, str]('onWarning')
-	globalCacheReset: CatBoundSignal[()] = CatSignal[()]('globalCacheReset')
+
+	onAskUser: Callable[[str, str], bool] | None = None
+	onCanCloseModifiedDocument: Callable[[Document], bool] = field(default=lambda d: True)
+
+	globalCacheReset: ClassVar[CatBoundSignal[()]] = CatSignal[()]('globalCacheReset')
 
 	def connectGlobalCacheReset(self, cache: _TGlobalCache) -> _TGlobalCache:
 		self.globalCacheReset.connect(cache.name, cache.clear, warnIfAlreadyConnected=True)

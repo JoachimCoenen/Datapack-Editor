@@ -115,9 +115,10 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 
 		self.setAcceptDrops(True)
 
-		getSession().documents.onCanCloseModifiedDocument = self._canCloseModifiedDocument
+		GLOBAL_SIGNALS.onCanCloseModifiedDocument = self._canCloseModifiedDocument
 		GLOBAL_SIGNALS.onError.reconnect('showError', lambda e, title: self._gui.showWarningDialog(title, str(e)))
 		GLOBAL_SIGNALS.onWarning.reconnect('showWarning', lambda e, title: self._gui.showWarningDialog(title, '' if e is None else str(e)))
+		GLOBAL_SIGNALS.onAskUser = lambda title, message: self._gui.askUser(title, message)
 
 		# close document as shortcut:
 		# self.closeDocumentShortcut = QShortcut(KEY_SEQUENCES.CLOSE_DOCUMENT, self, lambda d=document, s=self: self._safelyCloseDocument(gui, getSession().selectedDocument),

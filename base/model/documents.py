@@ -247,7 +247,7 @@ def createNewDocument(docType: DocumentTypeDescription, filePath: Optional[FileP
 	if isUntitled:
 		# find a new file name:
 		from base.model.session import getSession
-		filePath = getSession().documents._getNewUntitledFileName()
+		filePath = getSession().documents.getNewUntitledFileName()
 	# create document:
 	doc = docType.newDocument()
 	if isUntitled:
