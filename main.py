@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import sys
 
@@ -9,6 +10,8 @@ from cat.utils import HTMLStr
 
 
 def run() -> None:
+	if getattr(sys, 'frozen', False):
+		multiprocessing.freeze_support()
 	iconPath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icon/icon.png')
 	appOptions = AppInfo(
 		appName="Datapack Editor",
