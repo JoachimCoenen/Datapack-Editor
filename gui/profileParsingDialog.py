@@ -29,7 +29,8 @@ class ProfileParsingDialog(CatFramelessWindowMixin, QDialog):
 				labelMaker=lambda d, i: d.fileName,
 				iconMaker=None,
 				toolTipMaker=lambda d, i: d.filePathForDisplay,
-				columnCount=1
+				columnCount=1,
+				getId=lambda doc: doc.id
 			),
 		).selectedItem
 

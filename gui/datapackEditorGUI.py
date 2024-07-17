@@ -8,7 +8,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from types import EllipsisType
 from typing import Optional, Iterable, TypeVar, Callable, Iterator, Collection, Generic, \
-	Sequence, Type
+	Sequence, Type, Any
 
 from PyQt5.QtCore import Qt, QItemSelectionModel, QModelIndex
 from PyQt5.QtGui import QKeyEvent, QKeySequence, QIcon
@@ -115,14 +115,15 @@ class DatapackEditorGUI(AutoGUI):
 			value: _TT,
 			label: str,
 			allChoices: Iterable[_TT],
+			*,
 			getSearchStr: Optional[Callable[[_TT], str]],
 			labelMaker: Callable[[_TT, int], str],
 			iconMaker: Optional[Callable[[_TT, int], Optional[QIcon]]],
 			toolTipMaker: Optional[Callable[[_TT, int], Optional[str]]],
 			columnCount: int,
 			onContextMenu: Optional[Callable[[_TT, int], None]] = None,
+			getId: Optional[Callable[[_TT], Any]] = None,
 			reevaluateAllChoices: bool = False,
-			*,
 			width: int = None,
 			height: int = None,
 	):
@@ -230,6 +231,7 @@ class DatapackEditorGUI(AutoGUI):
 						columnCount=columnCount,
 						onDoubleClick=lambda x: gui.host.window().accept(),
 						onContextMenu=lambda v, c: (onContextMenu(v, c) and False) or gui.redrawGUI(),
+						getId=getId
 					),
 					roundedCorners=CORNERS.NONE,
 				)

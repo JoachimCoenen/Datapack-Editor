@@ -211,6 +211,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			columnCount=1,
 			onContextMenu=onContextMenu,
 			reevaluateAllChoices=True,
+			getId=lambda doc: doc.id,
 			width=width,
 			height=height,
 		)

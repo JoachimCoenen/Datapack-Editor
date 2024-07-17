@@ -592,8 +592,9 @@ class Document(SerializableDataclass):
 	def __del__(self):
 		self._unscheduleFileChangedHandler(self.filePath)
 
-	def __hash__(self):
-		return hash(id(self)) + 91537523
+	@property
+	def id(self) -> int:
+		return hash(id(self)) ^ -7011302190094436290
 
 
 @dataclass(frozen=True)
@@ -653,8 +654,6 @@ class TextDocument(Document):
 	def fromRepr(self, value: bytes) -> None:
 		self.strContent = str(value, encoding=self.encoding, errors='replace')
 
-	def __hash__(self):
-		return hash(id(self)) + 91537522
 
 	def convertIndentationsToUseTabsSettings(self):
 		lines = self.content.split(b'\n')
@@ -728,6 +727,3 @@ class ParsedDocument(TextDocument):
 		except Exception as e:
 			logError(e)
 			return [WrappedError(e, style='info')]
-
-	def __hash__(self):
-		return hash(id(self)) + 91537521
