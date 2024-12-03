@@ -2,11 +2,11 @@ from __future__ import annotations
 import os
 import uuid
 from math import floor
-from typing import Optional, TypeVar, cast, ClassVar
+from typing import Optional, TypeVar, ClassVar
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent, QIcon
-from PyQt5.QtWidgets import QMainWindow, QApplication
+from PyQt5.QtWidgets import QMainWindow
 
 from base.model.application import getApp
 from cat.GUI import CORNERS, NO_OVERLAP, SizePolicy, RoundedCorners
@@ -191,38 +191,19 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		self.barGUI(gui, TabPosition.South, tabs)
 
 	def barGUI(self, gui: DatapackEditorGUI, position: TabPosition, tabs: list[SideBarOptions]):
-		tabPosition     = _select(position, TabPosition.North,    TabPosition.West,     TabPosition.North,    TabPosition.West)
-		tabsHSizePolicy = _select(position, SizePolicy.Expanding, SizePolicy.Fixed,     SizePolicy.Expanding, SizePolicy.Fixed).value
-		tabsVSizePolicy = _select(position, SizePolicy.Fixed,     SizePolicy.Expanding, SizePolicy.Fixed,     SizePolicy.Expanding).value
-		oLayout         = _select(position, gui.vLayout1C,        gui.vLayout,          gui.vLayout1C,        gui.vLayout)
-		iLayout         = _select(position, gui.hLayout,          gui.vLayout,          gui.hLayout,          gui.vLayout)
-		separator       = _select(position, gui.hSeparator,       gui.vSeparator,       gui.hSeparator,       gui.vSeparator)
-
-		with oLayout(seamless=True):
-			with iLayout(seamless=True, isPrefix=True):  # , windowPanel=True):
-				index = gui.tabBar(
-					[tab.tabOptions for tab in tabs],
-					drawBase=True,
-					documentMode=True,
-					expanding=False,
-					position=tabPosition,
-					hSizePolicy=tabsHSizePolicy,
-					vSizePolicy=tabsVSizePolicy
-				)
-
-				if tabs:
-					toolBtnEditor = tabs[index].toolButtons
-					if toolBtnEditor is not None:
-						subGui = gui.editor(toolBtnEditor, model=None, seamless=True)
+		tabPosition = gui._select(position, TabPosition.North,    TabPosition.West,     TabPosition.North,    TabPosition.West)
+		with gui.tabWidget(
+			drawBase=True,
+			documentMode=True,
+			expanding=False,
+			position=tabPosition,
+			cornerGUI=lambda idx: gui.editor(tabs[idx].toolButtons, model=None, seamless=True) if idx in range(len(tabs)) and tabs[idx].toolButtons is not None else None,
+		) as tabWidget:
+			for id_, sideBar in enumerate(tabs):
+				with tabWidget.addView(sideBar.tabOptions, str(id_), seamless=True):
+					subGui = gui.editor(sideBar.content, model=None, seamless=True)
+					if id_ == tabWidget.selectedView:
 						subGui.redrawLater()
-						separator()
-
-			with gui.stackedWidget(selectedView=index) as stacked:
-				for id_, sideBar in enumerate(tabs):
-					with stacked.addView(id_, seamless=True):
-						subGui = gui.editor(sideBar.content, model=None, seamless=True)
-						if id_ == index:
-							subGui.redrawLater()
 
 	def documentToolBarGUI(self, gui: DatapackEditorGUI, button, btnCorners, btnOverlap, btnMargins):
 		button = gui.framelessButton
@@ -318,7 +299,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 				gui.hSeparator()
 
 	def devToolsDropDownGUI(self, gui: DatapackEditorGUI):
-		def setProfilingEnabled(checked):
+		def setProfilingEnabled(checked: bool) -> None:
 			pythonGUI.PROFILING_ENABLED = checked
 
 		def setLayoutInfoAsToolTip(checked):
@@ -332,7 +313,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 
 		with gui.popupMenu(atMousePosition=False) as popup:
 			popup.addAction('Profile Parsing', self.profileParsingDialog.show, icon=icons.stopwatch)
-			popup.addAction('profiling Enabled', setProfilingEnabled, icon=icons.stopwatch, checkable=True, checked=pythonGUI.PROFILING_ENABLED)
+			popup.addToggle('profiling Enabled', pythonGUI.PROFILING_ENABLED, setProfilingEnabled, icon=icons.stopwatch)
 			popup.addToggle('layout info as tool tip', pythonGUI.ADD_LAYOUT_INFO_AS_TOOL_TIP, setLayoutInfoAsToolTip)
 			popup.addToggle('debug layout', Widgets.DEBUG_LAYOUT, setDebugLayout)
 			popup.addToggle('debug paint event', catWidgetMixins.DO_DEBUG_PAINT_EVENT, setDebugPaintEvent, enabled=not catWidgetMixins.NEVER_DO_DEBUG_PAINT_EVENT)
