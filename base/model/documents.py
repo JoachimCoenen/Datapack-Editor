@@ -249,7 +249,7 @@ def createNewDocument(docType: DocumentTypeDescription, filePath: Optional[FileP
 		from base.model.session import getSession
 		filePath = getSession().documents.getNewUntitledFileName()
 	# create document:
-	doc = docType.newDocument()
+	doc = docType.newDocument(observeFileSystem=observeFileSystem)
 	if isUntitled:
 		doc.setUntitledFilePath(filePath)
 	else:
@@ -269,14 +269,15 @@ def getAllFileExtensionFilters(expanded: bool = False) -> Sequence[FileExtension
 
 
 class FileChangedHandler(FileSystemEventHandler):
-	def __init__(self):
+
+	HANDLER_ID: ClassVar[str] = "dpe:file_changed"
+
+	def __init__(self) -> None:
 		super(FileChangedHandler, self).__init__()
 		self.fileChanged: bool = False
+		self._currentListenerPath: Optional[str] = None  # the filepath this is currently registered under
 
-	def on_any_event(self, event):
-		pass
-
-	def on_moved(self, event: FileMovedEvent):
+	def on_moved(self, event: FileMovedEvent) -> None:
 		if event.is_directory:
 			pass
 		else:
@@ -298,23 +299,48 @@ class FileChangedHandler(FileSystemEventHandler):
 		else:
 			self.fileChanged = True
 
-	def on_modified(self, event: FileModifiedEvent):
+	def on_modified(self, event: FileModifiedEvent) -> None:
 		if event.is_directory:
 			pass
 		else:
 			self.fileChanged = True
 
-	def on_closed(self, event: FileClosedEvent):
+	def on_closed(self, event: FileClosedEvent) -> None:
 		pass
+
+	def rescheduleFileChangedHandler(self, newPath: Optional[FilePath]) -> None:
+		oldListenerPath = self._currentListenerPath
+
+		if newPath is not None:
+			newListenerPath = self._getListenerPath(newPath)
+			if oldListenerPath is not None:
+				filesystemEvents.FILESYSTEM_OBSERVER.reschedule(self.HANDLER_ID, oldListenerPath, newListenerPath, self)
+			else:
+				filesystemEvents.FILESYSTEM_OBSERVER.schedule(self.HANDLER_ID, newListenerPath, self)
+			self._currentListenerPath = newListenerPath
+		else:
+			if oldListenerPath is not None:
+				filesystemEvents.FILESYSTEM_OBSERVER.unschedule(self.HANDLER_ID, oldListenerPath)
+			self._currentListenerPath = None
+
+	@staticmethod
+	def _getListenerPath(path: FilePath) -> str:
+		if isinstance(path, str):
+			return path
+		elif os.path.isdir(path[0]):
+			return unitePathTpl(path)
+		else:
+			return path[0]
 
 
 @dataclass(repr=False, slots=True)
 class Document(SerializableDataclass):
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		self._initUndoRedoStack(undoRedo.makesSnapshotMementoIfDiff)
 		self.undoRedoStack: Optional[UndoRedoStack2] = None  # must be set with _initUndoRedoStack(...) in constructor of subclasses
-		self._resetDocumentChanged()
+		self._resetDocumentChanged()  # todo maybe use contents on disk to determine if file has changed.
+		self._updateFileChangedHandler()
 
 	_filePath: FilePath = field(default='')
 	_isUntitled: bool = field(default=False, kw_only=True)
@@ -335,11 +361,8 @@ class Document(SerializableDataclass):
 	def _setFilePath(self, filePath: FilePath, *, isUntitled: bool):
 		oldPath = self._filePath
 		self._filePath = filePath
-		if isUntitled:
-			self._unscheduleFileChangedHandler(oldPath)
-		else:
-			self._rescheduleFileChangedHandler(oldPath, filePath)
 		self._isUntitled = isUntitled
+		self._updateFileChangedHandler()
 
 		schemaMapping = getSchemaMapping(filePath, LanguageId(self.language))
 		if schemaMapping is not None:
@@ -354,25 +377,16 @@ class Document(SerializableDataclass):
 		"""
 		pass
 
-	def _rescheduleFileChangedHandler(self, oldPath: FilePath, newPath: FilePath):
+	def _updateFileChangedHandler(self) -> None:
 		if not self._observeFileSystem:
 			return
-		oldListenerPath = self._getListenerPath(oldPath)
-		newListenerPath = self._getListenerPath(newPath)
-		filesystemEvents.FILESYSTEM_OBSERVER.reschedule("dpe:file_changed", oldListenerPath, newListenerPath, self._fileChangedHandler)
-
-	def _unscheduleFileChangedHandler(self, oldPath: FilePath):
-		oldListenerPath = self._getListenerPath(oldPath)
-		filesystemEvents.FILESYSTEM_OBSERVER.unschedule("dpe:file_changed", oldListenerPath)
-
-	@staticmethod
-	def _getListenerPath(path: FilePath) -> str:
-		if isinstance(path, str):
-			return path
-		elif os.path.isdir(path[0]):
-			return unitePathTpl(path)
+		if self._isUntitled:
+			self._fileChangedHandler.rescheduleFileChangedHandler(None)
 		else:
-			return path[0]
+			self._fileChangedHandler.rescheduleFileChangedHandler(self._filePath)
+
+	def _unscheduleFileChangedHandler(self) -> None:
+		self._fileChangedHandler.rescheduleFileChangedHandler(None)
 
 	@property
 	def _languageChoices(self):
@@ -571,14 +585,18 @@ class Document(SerializableDataclass):
 		logInfo("loading File from:{}".format(self.filePath))
 		self._resetFileSystemChanged()
 
-		if archiveFilePool is None:
-			with ZipFilePool() as zfp:
-				bytesData = loadBinaryFile(self.filePath, zfp)
+		try:
+			if archiveFilePool is None:
+				with ZipFilePool() as zfp:
+					bytesData = loadBinaryFile(self.filePath, zfp)
+			else:
+				bytesData = loadBinaryFile(self.filePath, archiveFilePool)
+		except OSError as ex:
+			from base.model.session import getSession
+			getSession().showAndLogError(ex)
 		else:
-			bytesData = loadBinaryFile(self.filePath, archiveFilePool)
-		self.fromRepr(bytesData)
-		self._resetDocumentChanged()
-		return
+			self.fromRepr(bytesData)
+			self._resetDocumentChanged()
 
 	def discardFileSystemChanges(self):
 		self._resetFileSystemChanged()
@@ -586,11 +604,11 @@ class Document(SerializableDataclass):
 	# def open(self):
 	# 	self._rescheduleFileChangedHandler(self.filePath)
 
-	def close(self):
-		self._unscheduleFileChangedHandler(self.filePath)
+	def close(self) -> None:
+		self._unscheduleFileChangedHandler()
 
-	def __del__(self):
-		self._unscheduleFileChangedHandler(self.filePath)
+	def __del__(self) -> None:
+		self._unscheduleFileChangedHandler()
 
 	@property
 	def id(self) -> int:

@@ -7,7 +7,7 @@ from operator import itemgetter
 from typing import Callable, TypeVar, Generic, final, Optional, Type
 
 from PyQt5.Qsci import QsciLexer
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 from cat.GUI import SizePolicy, getStyles
 from cat.GUI.components.catWidgetMixins import CatChildrenFocusableMixin
@@ -103,7 +103,7 @@ class DocumentEditorBase(CatChildrenFocusableMixin, EditorBase[TDoc], Generic[TD
 					f"Do you want to reload it?"
 				)
 			if reloadFile:
-				document.loadFromFile()
+				QTimer.singleShot(0, lambda: document.loadFromFile())
 			else:
 				document.discardFileSystemChanges()
 
