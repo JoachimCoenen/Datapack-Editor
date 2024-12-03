@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, ClassVar, Collection, Optional, Sequence, Type, TypeVar
+from typing import AbstractSet, Any, Callable, ClassVar, Collection, Optional, Sequence, Type, TypeVar
 
 from watchdog.events import FileClosedEvent, FileCreatedEvent, FileDeletedEvent, FileModifiedEvent, FileMovedEvent, FileSystemEventHandler
 
@@ -87,7 +87,7 @@ class DocumentTypeDescription:
 	encoding: Optional[str] = None
 	defaultContentFactory: Optional[Callable[[], bytes]] = None
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		suffixes = self.suffixesForDocTypeMatching
 		if suffixes is None:
 			suffixes = self.extensions
@@ -107,13 +107,13 @@ class DocumentTypeDescription:
 
 		return doc
 
-	def __eq__(self, other):
+	def __eq__(self, other) -> bool:
 		return self is other
 
-	def __ne__(self, other):
+	def __ne__(self, other) -> bool:
 		return self is not other
 
-	def __hash__(self):
+	def __hash__(self) -> int:
 		return id(self)
 
 
@@ -133,7 +133,7 @@ class RegisterDocument:
 	tip: str = field(default=None, kw_only=True)
 	defaultContentFactory: Optional[Callable[[], bytes]] = field(default=None, kw_only=True)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		if self.suffixes is None:
 			self.suffixes = self.ext
 
@@ -283,7 +283,7 @@ class FileChangedHandler(FileSystemEventHandler):
 		else:
 			self.fileChanged = True
 
-	def on_created(self, event: FileCreatedEvent):
+	def on_created(self, event: FileCreatedEvent) -> None:
 		"""Called when a file or directory is created.
 
 		:param event:
@@ -293,7 +293,7 @@ class FileChangedHandler(FileSystemEventHandler):
 		"""
 		logWarning("Unexpected on_created event for existing file", event.src_path)
 
-	def on_deleted(self, event: FileDeletedEvent):
+	def on_deleted(self, event: FileDeletedEvent) -> None:
 		if event.is_directory:
 			pass
 		else:
@@ -389,8 +389,8 @@ class Document(SerializableDataclass):
 		self._fileChangedHandler.rescheduleFileChangedHandler(None)
 
 	@property
-	def _languageChoices(self):
-		return codeEditor.getAllLanguages
+	def _languageChoices(self) -> AbstractSet[str]:
+		return codeEditor.getAllLanguages()
 
 	language: LanguageId = field(
 		default='PlainText',
@@ -519,7 +519,7 @@ class Document(SerializableDataclass):
 		"""Whether the file has changed on disk (and may need to be reloaded)."""
 		return self._fileChangedHandler.fileChanged
 
-	def _resetFileSystemChanged(self):
+	def _resetFileSystemChanged(self) -> None:
 		self._fileChangedHandler.fileChanged = False
 
 	__MISSING = object()
@@ -568,7 +568,7 @@ class Document(SerializableDataclass):
 	def fromRepr(self, string: bytes):
 		raise NotImplemented()
 
-	def saveToFile(self):
+	def saveToFile(self) -> None:
 		assert self.filePath
 		logInfo("saving File in:{}".format(self.filePath))
 		with open(self.unitedFilePath, 'wb') as f:   # open file
@@ -598,7 +598,7 @@ class Document(SerializableDataclass):
 			self.fromRepr(bytesData)
 			self._resetDocumentChanged()
 
-	def discardFileSystemChanges(self):
+	def discardFileSystemChanges(self) -> None:
 		self._resetFileSystemChanged()
 
 	# def open(self):
@@ -625,7 +625,7 @@ class IndentationSettings(SerializableDataclass):
 @dataclass(repr=False, slots=True)
 class TextDocument(Document):
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		super(TextDocument, self).__post_init__()
 		self._initUndoRedoStack(undoRedo.makesSnapshotMementoIfDiff)
 
@@ -709,7 +709,7 @@ def convertIndentToUseTabsSettingsOfDocument(document: TextDocument):
 @dataclass(repr=False, slots=True)
 class ParsedDocument(TextDocument):
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		super(ParsedDocument, self).__post_init__()
 
 	@property
