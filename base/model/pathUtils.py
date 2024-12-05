@@ -560,6 +560,10 @@ def getMTimeForFilePathTpl(filePath: FilePathTpl) -> float:
 		return os.path.getmtime(safeDirPath)  # the zipPath
 
 
+def getMTimeForFilePathTplNoArchive(filePath: FilePathTpl) -> float:
+	return getmtimeSafe(f'{filePath[0]}/{filePath[1]}')
+
+
 __all__ = [
 	'FilePathStr',
 	'FilePathTpl',
@@ -598,4 +602,5 @@ __all__ = [
 	'SimpleFileInfo',
 	'getMTimeForFilePath',
 	'getMTimeForFilePathTpl',
+	'getMTimeForFilePathTplNoArchive',
 ]

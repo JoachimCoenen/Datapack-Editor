@@ -17,6 +17,7 @@ from cat.GUI import propertyDecorators as pd
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils.graphs import collectAndSemiTopolSortAllNodes
 from cat.utils.logging_ import logWarning
+from cat.utils.profiling import TimedMethod
 
 
 def _fillProjectAspects(aspectsDict: AspectDict):
@@ -181,7 +182,8 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 	def getAllProjectErrors(self) -> Sequence[GeneralError]:
 		return [e for a in self.aspects if a.projectInfoPart is not None for e in a.projectInfoPart.getCurrentErrors()] + self.dependencyProblems
 
-	def resolveDependencies(self) -> None:
+	@TimedMethod(doLog=True)
+	def _resolveDependencies(self) -> None:
 		aspects = [a.dependenciesPart for a in self.aspects if a.dependenciesPart is not None]
 		for aspect in aspects:
 			aspect.preResolveDependencies(self)
@@ -194,7 +196,7 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 		for aspect in self.aspects:
 			if aspect.analyzeRootsPart is not None:
 				aspect.analyzeRootsPart.onRootAdded(root, self)
-		self.analyzeRoot(root)
+		self._analyzeRoot(root)
 		return root
 
 	def addRoot(self, root: ProjectRoot) -> ProjectRoot:
@@ -206,38 +208,60 @@ class Project(SerializableDataclassWithAspects[ProjectAspect], ABC):
 			if aspect.analyzeRootsPart is not None:
 				aspect.analyzeRootsPart.onRootRemoved(root, self)
 
-	def analyzeRoots(self):
-		aspects = [a.analyzeRootsPart for a in self.aspects if a.analyzeRootsPart is not None]
+	def _getAnalyzeRootsAspectParts(self) -> list[AnalyzeRootsAspectPart]:
+		return [a.analyzeRootsPart for a in self.aspects if a.analyzeRootsPart is not None]
+
+	@TimedMethod(doLog=True)
+	def analyzeProjectRoots(self) -> None:
+		"""calls self.analyzeRoot() for all project roots."""
+		aspects = self._getAnalyzeRootsAspectParts()
 		for projRoot in self.roots:
-			self.analyzeRoot(projRoot, aspects)
+			self._analyzeRoot(projRoot, aspects)
 
-	def analyzeDependencies(self):
-		aspects = [a.analyzeRootsPart for a in self.aspects if a.analyzeRootsPart is not None]
+	@TimedMethod(doLog=True)
+	def analyzeDependencyRoots(self) -> None:
+		"""calls self.analyzeRoot() for all dependencies (but not for project roots)."""
+		aspects = self._getAnalyzeRootsAspectParts()
 		for dependency in self.deepDependencies:
-			self.analyzeRoot(dependency, aspects)
+			self._analyzeRoot(dependency, aspects)
 
-	def analyzeRoot(self, root: Root, aspects: list[AnalyzeRootsAspectPart] = ...):
+	@TimedMethod(doLog=True)
+	def analyzeAllRoots(self) -> None:
+		""" analyzes all project roots & dependencies."""
+		aspects = self._getAnalyzeRootsAspectParts()
+		for dependency in self.allRoots:
+			self._analyzeRoot(dependency, aspects)
+
+	def _analyzeRoot(self, root: Root, aspects: list[AnalyzeRootsAspectPart] = ...):
 		if aspects is ...:
-			aspects = [a.analyzeRootsPart for a in self.aspects if a.analyzeRootsPart is not None]
+			aspects = self._getAnalyzeRootsAspectParts()
 		for idxBundle in root.indexBundles:
 			idxBundle.clear()
 		for a in aspects:
 			a.analyzeRoot(root, self)
 
-	def setup(self):
+	def refreshDependencies(self) -> None:
+		self._resolveDependencies()
+		self.analyzeDependencyRoots()
+
+	@TimedMethod(doLog=True)
+	def setup(self) -> None:
 		""" only call once!"""
 		_fillProjectAspects(self.aspects)
-		roots = self.roots
-		self.roots = []
-		for root in roots:
-			self.addRoot(root)
-		self.resolveDependencies()
-		self.analyzeDependencies()
+		self._addLoadedRoots()
+		self.refreshDependencies()
 
 		for aspect in self.aspects:
 			aspect.onProjectLoaded(self)
 
-	def close(self):
+	@TimedMethod(doLog=True)
+	def _addLoadedRoots(self) -> None:
+		roots = self.roots
+		self.roots = []
+		for root in roots:
+			self.addRoot(root)
+
+	def close(self) -> None:
 		""" only call once!"""
 		for aspect in self.aspects:
 			aspect.onCloseProject(self)
@@ -371,17 +395,17 @@ class FileEntry:
 	def projectName(self) -> str:
 		return self.virtualPath.partition('/')[0]
 
-	def __eq__(self, other):
+	def __eq__(self, other) -> bool:
 		if type(other) is not FileEntry:
 			return False
 		return self.virtualPath == other.virtualPath and self.fullPath == other.fullPath and self.isFile == other.isFile
 
-	def __ne__(self, other):
+	def __ne__(self, other) -> bool:
 		if type(other) is not FileEntry:
 			return True
 		return self.virtualPath != other.virtualPath or self.fullPath != other.fullPath or self.isFile != other.isFile
 
-	def __hash__(self):
+	def __hash__(self) -> int:
 		return hash((56783265, self.fullPath))
 
 

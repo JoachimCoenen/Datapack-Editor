@@ -4,7 +4,7 @@ import gc
 import os
 from dataclasses import dataclass, field
 from json import JSONDecodeError
-from typing import ClassVar, Optional, overload, TypeVar, Callable
+from typing import ClassVar, Optional, overload, Callable, NoReturn
 
 from base.model.documentHandling import DocumentsManager
 from base.model.documents import Document
@@ -15,11 +15,9 @@ from cat.Serializable.serializableDataclasses import SerializableDataclass, catM
 from cat.utils import Singleton, format_full_exc, getExePath, openOrCreate
 from cat.utils.caches import PGlobalCache
 from cat.utils.logging_ import logError
-from cat.utils.signals import CatBoundSignal, CatSignal
+from cat.utils.profiling import TimedMethod
+from cat.utils.signals import CatSignal
 from cat.utils.utils import DeferredCallOnceMethod, runLaterSafe
-
-
-_TGlobalCache = TypeVar('_TGlobalCache', bound=PGlobalCache)
 
 
 @dataclass
@@ -103,6 +101,7 @@ class Session(SerializableDataclass):
 	def reloadProject(self) -> Project:
 		return self.openProject(self.projectPath)
 
+	@TimedMethod(doLog=True, details=lambda self, newProjectPath: newProjectPath)
 	def openProject(self, newProjectPath: FilePathStr) -> Project:
 		newProjectPath = normalizeDirSeparatorsStr(newProjectPath)
 		if not os.path.isdir(newProjectPath):
@@ -112,6 +111,12 @@ class Session(SerializableDataclass):
 		self._projectPath = newProjectPath
 		projConfigPath = unitePathTpl(self.projectConfigPath)
 
+		self._createProjectConfigIfNotFound(projConfigPath)
+		self.project = self._loadProjectConfig(projConfigPath)
+		self.project.setup()
+		return self.project
+
+	def _createProjectConfigIfNotFound(self, projConfigPath: FilePathStr) -> None:
 		if not os.path.isfile(projConfigPath):
 			if self.askUser(
 					"Project Config file could not be found.",
@@ -122,8 +127,10 @@ class Session(SerializableDataclass):
 				except OSError as e:
 					logError(e, "Unable to load project")
 
-		def _logError(ex, s):
-			logError(ex, s)
+	@TimedMethod(doLog=True, details=lambda self, projConfigPath: projConfigPath)
+	def _loadProjectConfig(self, projConfigPath: FilePathStr) -> Project:
+		def _logError(ex: Exception, msg: str) -> NoReturn:
+			logError(ex, msg)
 			raise ex
 
 		try:
@@ -134,10 +141,7 @@ class Session(SerializableDataclass):
 			self._projectPath = ''
 			newProject = Project()
 			self.emitProjectErrorsChanged()
-
-		self.project = newProject
-		self.project.setup()
-		return self.project
+		return newProject
 
 	def saveProjectToFile(self) -> None:
 		if self.hasProjectConfigFile:
@@ -175,15 +179,15 @@ __session = Session()
 
 @dataclass
 class _GlobalSignals(Singleton):
-	onError: ClassVar[CatBoundSignal[Exception, str]] = CatSignal[Exception, str]('onError')
-	onWarning: ClassVar[CatBoundSignal[Exception | None, str]] = CatSignal[Exception | None, str]('onWarning')
+	onError: ClassVar[CatSignal[Exception, str]] = CatSignal[Exception, str]('onError')
+	onWarning: ClassVar[CatSignal[Exception | None, str]] = CatSignal[Exception | None, str]('onWarning')
 
 	onAskUser: Callable[[str, str], bool] | None = None
 	onCanCloseModifiedDocument: Callable[[Document], bool] = field(default=lambda d: True)
 
-	globalCacheReset: ClassVar[CatBoundSignal[()]] = CatSignal[()]('globalCacheReset')
+	globalCacheReset: ClassVar[CatSignal[()]] = CatSignal[()]('globalCacheReset')
 
-	def connectGlobalCacheReset(self, cache: _TGlobalCache) -> _TGlobalCache:
+	def connectGlobalCacheReset[_T: PGlobalCache](self, cache: _T) -> _T:
 		self.globalCacheReset.connect(cache.name, cache.clear, warnIfAlreadyConnected=True)
 		return cache
 

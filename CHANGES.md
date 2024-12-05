@@ -4,6 +4,9 @@
  * A SchemaMapping can now have multiple pathFilters per schemaId. _[Plugin support]_
  * Added ability to open a project without a `.dpeproj` file.
  * Added support for the multiprocessing module. _[Plugin support]_
+ * 
+### Improvements
+ * Faster loading of larger projects with many files.
 
 ### Fixes
  * Fixed 'Required by' never being shown in Dependencies tree.

@@ -82,9 +82,8 @@ def _editRoot(gui: DatapackEditorGUI, root: ProjectRoot):
 		root.name = newName
 
 
-def _refreshRoots(project: Project):
-	project.resolveDependencies()
-	project.analyzeDependencies()
+def _refreshDependencies(project: Project):
+	project.refreshDependencies()
 
 
 class ProjectPanelGUI(EditorBase[None]):
@@ -290,7 +289,7 @@ class _DependenciesNS:
 
 		with gui.hPanel(contentsMargins=NO_MARGINS, seamless=True):
 			if gui.toolButton(icon=icons.refresh, tip="refresh dependencies", enabled=True):
-				_refreshRoots(project)
+				_refreshDependencies(project)
 			gui.addHSpacer(0, SizePolicy.Expanding)
 			if gui.toolButton(icon=icons.edit, tip='Edit', enabled=False):
 				_editRoot(gui, selected)
@@ -369,16 +368,16 @@ class _RootsNS:
 			canMoveDown = isProjectRoot and project.roots and project.roots[-1] is not selected
 			canMoveUp = isProjectRoot and project.roots and project.roots[0] is not selected
 			if gui.toolButton(icon=icons.refresh, tip="refresh dependencies", enabled=True):
-				_refreshRoots(project)
+				_refreshDependencies(project)
 			gui.addHSpacer(0, SizePolicy.Expanding)
 			if gui.toolButton(icon=icons.edit, tip='Edit', enabled=isProjectRoot):
-				_editRoot(gui, selected)
+				_editRoot(gui, cast(ProjectRoot, selected))
 			if gui.toolButton(icon=icons.up, tip='Move up', enabled=canMoveUp):
-				_moveRootUp(project, selected)
+				_moveRootUp(project, cast(ProjectRoot, selected))
 			if gui.toolButton(icon=icons.down, tip='Move down', enabled=canMoveDown):
-				_moveRootDown(project, selected)
+				_moveRootDown(project, cast(ProjectRoot, selected))
 			if gui.toolButton(icon=icons.remove, tip='Remove selected from project', enabled=isProjectRoot):
-				_removeRoot(gui, project, selected)
+				_removeRoot(gui, project, cast(ProjectRoot, selected))
 			if gui.toolButton(icon=icons.add, tip='Add'):
 				_addRoot(gui, project)
 

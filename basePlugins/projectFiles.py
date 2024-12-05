@@ -164,7 +164,7 @@ class ProjectFilesEditor(EditorBase[Project]):
 			with gui.hPanel(seamless=True):
 				gui.addHSpacer(5, SizePolicy.Expanding)
 				if gui.toolButton(icon=icons.refresh, tip="refresh"):
-					self._refreshDependencies()
+					self._analyzeDependencies()
 
 	def _openFunc(self, filePath: FilePath, selectedSpan: Optional[Span] = None):
 		getSession().tryOpenOrSelectDocument(filePath, selectedSpan)
@@ -242,9 +242,8 @@ class ProjectFilesEditor(EditorBase[Project]):
 			getSession().showAndLogError(e)
 		self.redraw('ProjectFilesEditor._deleteFileFunc(...)')
 
-	def _refreshDependencies(self) -> None:
-		self.model().analyzeRoots()
-		self.model().analyzeDependencies()
+	def _analyzeDependencies(self) -> None:
+		self.model().analyzeAllRoots()
 
 	def _onContextMenu(self, data: FilesTreeItem, column: int):
 		isMutableDict = dict(enabled=not data.isImmutable)
