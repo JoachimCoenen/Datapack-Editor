@@ -19,7 +19,8 @@ from cat.utils import DeferredCallOnceMethod, openOrCreate
 from base.model import filesystemEvents
 from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDirSeparators, splitPath, \
 	normalizeDirSeparatorsStr, unitePath, fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, \
-	getAllFilesFoldersFromArchive, isExcludedDirectory, ZipFilePool
+	getAllFilesFoldersFromArchive, isExcludedDirectory, ZipFilePool, getMTimeForFilePath, \
+	getMTimeForFilePathTplNoArchive, getMTimeForFilePathTpl
 from base.model.aspect import AspectType
 from base.model.project.index import Index
 from base.model.project.project import AnalyzeRootsAspectPart, Project, ProjectRoot, ProjectAspect, Root, IndexBundleAspect, FileEntry, makeFileEntry
@@ -486,7 +487,9 @@ class _FileSystemChangeHandler(FileSystemEventHandler):
 	def _addFileOrFolderEntry(self, index: Index[str, FileEntry], path: FilePathTpl, isFile: bool) -> Optional[FileEntry]:
 		if not isExcludedDirectory(path[1], self._project.aspects.get(FilesAspect).excludedDirectories):
 			try:
-				return index.add(path[1], path, makeFileEntry(path, self._root, isFile))
+				# makeFileEntry expects the file to either NOT be inside an archive OR the mTime be provided manually.
+				# the paths we get here are never inside an archive.
+				return index.add(path[1], path, makeFileEntry(path, self._root, isFile, getMTimeForFilePathTplNoArchive(path)))
 			except OSError:
 				pass
 
@@ -664,22 +667,26 @@ class AnalyzeRootsFilesAspectPart(AnalyzeRootsAspectPart[FilesAspect]):
 			return
 		if os.path.isdir(location):
 			rawLocalFiles, rawLocalFolders = getAllFilesFoldersFromFolder(location, pif.divider, excludedDirs=excludedDirs)
+			mTimeOverride = ...
 		elif os.path.isfile(location):
 			rawLocalFiles, rawLocalFolders = getAllFilesFoldersFromArchive(location, piz, (), ())
+			mTimeOverride = getMTimeForFilePath(location)
 		else:
 			return
+
 		aspects = [a.analyzeFilesPart for a in project.aspects if a.analyzeFilesPart is not None]
 		idx = root.indexBundles.setdefault(FilesIndex).files
 		with ZipFilePool() as pool:
 			for jf in rawLocalFiles:
-				fileEntry = makeFileEntry(jf, root, True)
+				mTime = getMTimeForFilePathTpl(jf) if mTimeOverride is ... else mTimeOverride
+				fileEntry = makeFileEntry(jf, root, True, mTime)
 				for aspect in aspects:
 					aspect.analyzeFile(root, fileEntry, pool)
 				idx.add(jf[1], jf, fileEntry)
 
 		idx = root.indexBundles.get(FilesIndex).folders
 		for jf in rawLocalFolders:
-			idx.add(jf[1], jf, makeFileEntry(jf, root, False))
+			idx.add(jf[1], jf, makeFileEntry(jf, root, False, mTimeOverride))
 
 	def onRootRenamed(self, root: Root, oldName: str, newName: str) -> None:
 		indexBundle = root.indexBundles.get(FilesIndex)

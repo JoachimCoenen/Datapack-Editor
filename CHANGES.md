@@ -7,6 +7,7 @@
  * 
 ### Improvements
  * Faster loading of larger projects with many files.
+ * Faster loading of large dependencies contained in a zip archive
 
 ### Fixes
  * Fixed 'Required by' never being shown in Dependencies tree.
