@@ -1,17 +1,20 @@
 import copy
-from dataclasses import fields
+from dataclasses import fields, Field
 from typing import NamedTuple, Optional, Type
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDialog, QWidget, QApplication
 
+from base.model.aspect import SerializableDataclassWithAspects
+from base.model.utils import formatMarkdown
 from cat.GUI.autoGUI import AutoGUI
 from cat.GUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
 from cat.GUI import CORNERS, propertyDecorators as pd
 from cat.GUI.components.treeBuilders import DataTreeBuilder
 from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMixin
 from cat.GUI.pythonGUI import MessageBoxButton, SizePolicy, PythonGUI, WidgetDrawer
-from cat.Serializable.serializableDataclasses import SerializableDataclass, getDecorators, getKWArg
+from cat.Serializable.serializableDataclasses import SerializableDataclass, getKWArg, hasNoUI, findDecorator
 from gui.icons import icons
 from cat.utils import showInFileSystem
 from base.model import theme
@@ -65,16 +68,33 @@ class _Field(NamedTuple):
 def _childrenMaker(data: _Field) -> list[_Field]:
 	value = data.value
 	children = [
-		_Field(value=v, label=getKWArg(prop, 'label', prop.name), toolTip=getKWArg(prop, 'tip', None))
+		_getFieldFromProp(prop, v)
 		for prop, v in ((f, getattr(value, f.name)) for f in fields(value))
 		if isinstance(v, SerializableDataclass)
 	]
-	if isinstance(value, ApplicationSettings):
+	if isinstance(value, SerializableDataclassWithAspects):
 		children += [
 			_Field(value=aspect, label=aspect.getAspectType(), toolTip=None)
 			for aspect in value.aspects
+			if isinstance(aspect, SerializableDataclass)
 		]
 	return children
+
+
+def _getFieldFromProp(prop: Field, v: SerializableDataclass) -> _Field:
+	label = getKWArg(prop, 'label', prop.name)
+	toolTip = getTipForTree(prop)
+	return _Field(value=v, label=label, toolTip=toolTip)
+
+
+def getTipForTree(prop: Field) -> str | None:
+	toolTip = getKWArg(prop, 'tip', None)
+	if toolTip is None:
+		if (descr := findDecorator(prop, pd.Description | pd.DescriptionAbove)) is not None:
+			toolTip = descr.description
+			if descr.kwargs.get('textFormat') == Qt.MarkdownText:
+				toolTip = formatMarkdown(toolTip)
+	return toolTip
 
 
 class SettingsDialog(CatFramelessWindowMixin, QDialog):
@@ -105,7 +125,7 @@ class SettingsDialog(CatFramelessWindowMixin, QDialog):
 				gui.helpBox('Please select a category.')
 			else:
 				for field in fields(self._selectedPage):
-					if any(isinstance(d, pd.NoUI) for d in getDecorators(field)):
+					if hasNoUI(field):
 						continue
 					gui.propertyField(self._selectedPage, field, True, enabled=True)
 					gui.addVSpacer(gui.spacing, SizePolicy.Fixed)  # just a spacer
