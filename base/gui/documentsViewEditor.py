@@ -52,7 +52,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 				index = gui.tabBar(
 					[t[1] for t in tabs],
 					selectedTab=selectedTab,
-					drawBase=False,
+					drawBase=True,
 					documentMode=True,
 					expanding=False,
 					position=position,
@@ -156,13 +156,11 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 
 	def _noDocumentOrProjectOpenedGUI(self, gui: DatapackEditorGUI) -> None:
 		mg = gui.margin
-		with gui.vLayout(contentsMargins=(mg, mg, mg, mg)):
-			gui.addVSpacer(int(50 * gui.scale), SizePolicy.Expanding)
+		with gui.vCentered2(contentsMargins=(mg, mg, mg, mg), preferredSpacerSize=int(50 * gui.scale)):
 			if not getSession().hasOpenedProject:
 				self._noProjectOpenedGUI(gui)
 			else:
 				self._noDocumentOpenedGUI(gui)
-			gui.addVSpacer(int(50 * gui.scale), SizePolicy.Expanding)
 
 	def _noDocumentOpenedGUI(self, gui: DatapackEditorGUI) -> None:
 		gui.label('No Document Opened.', wordWrap=False, alignment=Qt.AlignCenter)
@@ -170,11 +168,9 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		gui.label(f"Press '<font style=\"font-weight: 500\">{KEY_SEQUENCES.GO_TO_FILE.toString()}</font>' to search for a file.", wordWrap=False, alignment=Qt.AlignCenter)
 		gui.label(f"Press '<font style=\"font-weight: 500\">{KEY_SEQUENCES.NEW.toString()}</font>' to create a new file.", wordWrap=False, alignment=Qt.AlignCenter)
 		gui.addVSpacer(int(50 * gui.scale), SizePolicy.Fixed)
-		with gui.hLayout():
-			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
+		with gui.hCentered2(preferredSpacerSize=int(20 * gui.scale)):
 			if gui.button("close View", icon=icons.close, hSizePolicy=SizePolicy.Fixed.value):
 				self.model().manager.safelyCloseView(self.model())
-			gui.addHSpacer(int(20 * gui.scale), SizePolicy.Expanding)
 
 	def _noProjectOpenedGUI(self, gui: DatapackEditorGUI) -> None:
 		gui.label('No project loaded.', wordWrap=False, alignment=Qt.AlignCenter)
