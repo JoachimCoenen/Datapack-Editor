@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent, QKeySequence, QDragEnterEvent, QDropEvent, QIcon
 from PyQt5.QtWidgets import QMainWindow, QApplication
 
+from base.model.application import getApp
 from cat.GUI import CORNERS, NO_OVERLAP, SizePolicy, RoundedCorners
 from cat.GUI import pythonGUI
 from cat.GUI.components import Widgets, catWidgetMixins
@@ -151,13 +152,12 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 		return applicationSettings.appearance.useCompactLayout
 
 	def _updateApplicationDisplayName(self) -> None:
-		app = cast(QApplication, QApplication.instance())
-		displayName = applicationSettings.applicationName
+		displayName = getApp().info.appDisplayName
 		if currentProjectName := getSession().project.name.strip():
 			displayName = f'{displayName} - {currentProjectName}'
 
-		if app.applicationDisplayName() != displayName:
-			app.setApplicationDisplayName(displayName)
+		if getApp().qApp.applicationDisplayName() != displayName:
+			getApp().qApp.setApplicationDisplayName(displayName)
 
 		if self.windowTitle() != displayName:
 			self.setWindowTitle(displayName)

@@ -1,12 +1,12 @@
 import os
 import uuid
-from dataclasses import dataclass, Field
+from dataclasses import Field
 from typing import Any, Callable
 
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QIcon
 from qtpy import QtCore
 
+from base.model.application import AppInfo, instantiateApp, App
 from base.model.settingsAspectSetup import SettingsAspectSetup, SettingsSetup
 from cat.GUI import _StyleProperty, setStyles, Style, Styles, MessageBoxButton, applyStyle, getStyles, SizePolicy
 from cat.GUI.components import catWidgetMixins
@@ -168,16 +168,7 @@ def loadColorSchemes() -> None:
 	loadAllColorSchemes()
 
 
-@dataclass
-class AppOptions:
-	appName: str
-	appDisplayName: str
-	appVersion: str
-	organization: str
-	windowIcon: Callable[[], QIcon] | None
-
-
-def _startInternal(argv: list[str], appOptions: AppOptions) -> QtWidgets.QApplication:
+def _startInternal(argv: list[str], appInfo: AppInfo) -> App:
 
 	os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '0'
 
@@ -186,21 +177,18 @@ def _startInternal(argv: list[str], appOptions: AppOptions) -> QtWidgets.QApplic
 		QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
 		QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_DisableHighDpiScaling, False)
 		QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseStyleSheetPropagationInWidgetStyles, True)
-		app = QtWidgets.QApplication(argv)
 
-		app.setApplicationName(appOptions.appName)
-		app.setApplicationDisplayName(appOptions.appName)
-		app.setApplicationVersion(appOptions.appVersion)
-		app.setOrganizationName(appOptions.organization)
-		if appOptions.windowIcon is not None:
-			app.setWindowIcon(appOptions.windowIcon())
+		app = instantiateApp(argv, appInfo)
 
 		loadColorSchemes()
 		loadApplicationSettings()
 
 		QtWidgets.QApplication.setStyle('Fusion')
-		applyStyle(app, Style({'QWidget': getStyles().hostWidgetStyle}))  # + styles.layoutingBorder))
+		applyStyle(app.qApp, Style({'QWidget': getStyles().hostWidgetStyle}))  # + styles.layoutingBorder))
 		catWidgetMixins.setGUIColors(catWidgetMixins.getGUIColors())
+
+		# we need to create the main window so early, because its gui is responsible for showing errors, warnings, and questions.
+		window = MainWindow(uuid.uuid4())
 
 		with loggingIndentInfo("Collecting & Loading all plugins..."):
 			loadActualBasePlugins()
@@ -214,7 +202,6 @@ def _startInternal(argv: list[str], appOptions: AppOptions) -> QtWidgets.QApplic
 			loadSessionFromFile()
 		showSetupDialogIfNecessary()
 
-		window = MainWindow(uuid.uuid4())
 		window.show()
 		window.resize(1280, 720)
 		window.resize(1334 + 26, 852 + 26)
@@ -224,9 +211,9 @@ def _startInternal(argv: list[str], appOptions: AppOptions) -> QtWidgets.QApplic
 	return app
 
 
-def start(argv: list[str], appOptions: AppOptions) -> None:
+def start(argv: list[str], appInfo: AppInfo) -> None:
 	with open(os.path.join(os.path.dirname(getExePath()), 'logfile.log'), 'w', encoding='utf-8') as logFile:
 		logging_.setLoggingStream(FW(logFile))
 		with filesystemEvents.FILESYSTEM_OBSERVER:
-			app = _startInternal(argv=argv, appOptions=appOptions)
-			app.exec_()
+			app = _startInternal(argv=argv, appInfo=appInfo)
+			app.exec()
