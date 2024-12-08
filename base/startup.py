@@ -4,7 +4,7 @@ from dataclasses import Field
 from typing import Any, Callable
 
 from PyQt5 import QtWidgets
-from qtpy import QtCore
+from PyQt5 import QtCore
 
 from base.model.application import AppInfo, instantiateApp, App
 from base.model.settingsAspectSetup import SettingsAspectSetup, SettingsSetup

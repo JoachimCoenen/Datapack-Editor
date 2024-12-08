@@ -51,7 +51,7 @@ def _addRoot(gui: DatapackEditorGUI, project: Project):
 		guiFUnc
 	)
 	if isOk:
-		project.addRoot(ProjectRoot(namePath.name, namePath.path))
+		project.addRoot(ProjectRoot(namePath.name, namePath.path, namePath.name))
 
 
 def _removeRoot(gui: DatapackEditorGUI, project: Project, root: ProjectRoot):

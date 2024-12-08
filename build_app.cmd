@@ -1,4 +1,4 @@
-pip install PyQt5 QScintilla QtAwesome recordclass timerit watchdog markdown minecraft_data nbtlib
+pip install PyQt5 QScintilla QtAwesome recordclass timerit watchdog markdown nbtlib
 mkdir build
 cd build
 rem DANGER!:
@@ -11,7 +11,9 @@ pyinstaller --onefile ..\main.py ^
 --exclude-module cat.utils.bprofileCustom ^
 --exclude-module javalang ^
 --exclude-module numpy.distutils ^
---exclude-module distutils ^
+--exclude-module setuptools._distutils ^
+--exclude-module markdown.extensions.codehilite ^
+--exclude-module PIL ^
 --icon=..\icon\icon.png ^
 --noconfirm
 

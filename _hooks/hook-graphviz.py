@@ -19,7 +19,7 @@ import glob
 import os
 import shutil
 
-from PyInstaller.compat import is_darwin, is_win
+from PyInstaller.compat import is_darwin, is_win, is_linux
 from PyInstaller.depend.bindepend import findLibrary
 
 binaries = []
@@ -52,9 +52,14 @@ if is_win:
     for data in glob.glob("c:/Program Files/Graphviz*/bin/config*"):
         datas.append((data, "."))
 else:
-    # The dot binary in PATH is typically a symlink, handle that.
-    # graphviz_bindir is e.g. /usr/local/Cellar/graphviz/2.46.0/bin
-    graphviz_bindir = os.path.dirname(os.path.realpath(shutil.which("dot")))
+    if is_linux:
+        # see: https://stackoverflow.com/questions/78014447/pyinstaller-unable-to-find-usr-sbin-neato-when-adding-binary-and-data-files
+        graphviz_bindir = '/usr/bin'
+    else:
+        # The dot binary in PATH is typically a symlink, handle that.
+        # graphviz_bindir is e.g. /usr/local/Cellar/graphviz/2.46.0/bin
+        graphviz_bindir = os.path.dirname(os.path.realpath(shutil.which("dot")))
+
     for binary in progs:
         binaries.append((graphviz_bindir + "/" + binary, "."))
     if is_darwin:

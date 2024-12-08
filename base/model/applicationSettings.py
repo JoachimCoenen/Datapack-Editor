@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontDatabase, QIcon
 
 from base.model.application import getApp
+from cat import utils
 from cat.GUI import getStyles, propertyDecorators as pd
 from cat.Serializable.serializableDataclasses import SerializableDataclass, catMeta
 from cat.utils import getExePath, override
@@ -35,6 +36,9 @@ class WhitespaceVisibility(enum.IntEnum):
 	VisibleAfterIndent = QsciScintillaBase.SCWS_VISIBLEAFTERINDENT
 	VisibleOnlyInIndent = QsciScintillaBase.SCWS_VISIBLEONLYININDENT
 
+
+DEFAULT_FONT = 'Segoe UI' if utils.PLATFORM_IS_WINDOWS else 'Noto Sans'
+DEFAULT_MONOSPACE_FONT = 'Consolas' if utils.PLATFORM_IS_WINDOWS else 'Noto Mono'
 
 @dataclass
 class AppearanceSettings(SerializableDataclass):
@@ -59,7 +63,7 @@ class AppearanceSettings(SerializableDataclass):
 	)
 
 	fontFamily: str = field(
-		default='Segoe UI',
+		default=DEFAULT_FONT,
 		metadata=catMeta(
 			kwargs=dict(label='Font'),
 			decorators=[pd.FontFamily(QFontDatabase.Latin, smoothlyScalable=True)],
@@ -81,7 +85,7 @@ class AppearanceSettings(SerializableDataclass):
 	)
 
 	monospaceFontFamily: str = field(
-		default='Consolas',
+		default=DEFAULT_MONOSPACE_FONT,
 		metadata=catMeta(
 			kwargs=dict(label='Monospace Font'),
 			decorators=[

@@ -9,7 +9,7 @@ from typing import Optional, Callable, Iterable, NamedTuple
 from cat.processFiles import processRecursively
 from cat.utils import openOrCreate, format_full_exc
 from cat.utils.logging_ import logError, logInfo, loggingIndent, loggingIndentInfo
-from cat.utils.profiling import TimedFunction
+from cat.utils.profiling import TimedFunction, TimedAction
 from base.model.pathUtils import FilePathStr, normalizeDirSeparatorsStr
 from base.model.utils import Message
 
@@ -133,4 +133,5 @@ def loadAllModules(
 		if initMethodName:
 			with loggingIndentInfo(f"calling {initMethodName}() for {baseModuleName} modules..."):
 				callModuleMethod(baseModuleName, pluginModules, initMethodName)
+		TimedAction.logNPrint(f"{len(pluginModules)} modules encountered", True, True)
 		return pluginModules

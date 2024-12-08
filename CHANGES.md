@@ -1,10 +1,11 @@
 ## Next Version
 ### Features
+ * Added Linux support (debian).
  * Plugins can now add custom section to the setup dialog (issue #33). _[Plugin support]_
  * A SchemaMapping can now have multiple pathFilters per schemaId. _[Plugin support]_
  * Added ability to open a project without a `.dpeproj` file.
  * Added support for the multiprocessing module. _[Plugin support]_
- * 
+
 ### Improvements
  * Faster loading of larger projects with many files.
  * Faster loading of large dependencies contained in a zip archive

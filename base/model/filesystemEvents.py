@@ -93,10 +93,10 @@ class FilesystemObserver:
 
 	def _schedule(self, handlerId: str, path: str, handler: FileSystemEventHandler):
 		self._handlers.set(handlerId, path, handler)
-		if not self.__observer._handlers.get(ObservedWatch(path, True), None):
+		if not self.__observer._handlers.get(ObservedWatch(path, recursive=True), None):
 			try:
 				event_handler = _CombinedEventHandler(path, self._handlers)
-				self.__observer.schedule(event_handler, path, True)
+				self.__observer.schedule(event_handler, path, recursive=True)
 			except FileNotFoundError as e:
 				logDebug(e)
 			except OSError as e:
@@ -106,7 +106,7 @@ class FilesystemObserver:
 		handler = self._handlers.pop(handlerId, path)
 		if handler is not None:
 			if not self._handlers.getByPath(path):
-				observedWatch = ObservedWatch(path, True)
+				observedWatch = ObservedWatch(path, recursive=True)
 				if observedWatch in self.__observer._emitter_for_watch:
 					self.__observer.unschedule(observedWatch)
 				self.__observer._handlers.pop(observedWatch, None)  # safety net, necessary when path was invalid while scheduling.

@@ -15,7 +15,7 @@ from cat.Serializable.serializableDataclasses import catMeta, SerializableDatacl
 
 from base.model.applicationSettings import ApplicationSettings, SettingsAspect
 from base.model.aspect import AspectType
-from cat.utils import PLATFORM_IS_WINDOWS, escapeForXmlTextContent
+from cat.utils import PLATFORM_IS_WINDOWS, escapeForXmlTextContent, PLATFORM_IS_DARWIN, PLATFORM_IS_LINUX
 from corePlugins.minecraft_data.fullData import getAllFullMcDatas, getLatestFullMcData
 from gui.datapackEditorGUI import EditableSerializableDataclassList, DatapackEditorGUI
 
@@ -55,9 +55,13 @@ def minecraftVersionValidator(version: str) -> Optional[ValidatorResult]:
 def getDefaultMcExecutablePath(versionName: str) -> str:
 	if PLATFORM_IS_WINDOWS:
 		return os.path.expanduser(f'~/AppData/Roaming/.minecraft/versions/{versionName}/{versionName}.jar').replace('\\', '/')
+	elif PLATFORM_IS_DARWIN:
+		return os.path.expanduser(f'~/Library/Application Support/minecraft/versions/{versionName}/{versionName}.jar')
+	elif PLATFORM_IS_LINUX:
+		return os.path.expanduser(f'~/.minecraft/versions/{versionName}/{versionName}.jar')
 	else:
 		import platform
-		raise ValueError(f"This operating system ({platform.system()}) is currently not supported.")  # TODO: add support for other operating systems
+		raise ValueError(f"This operating system ({platform.system()}) is currently not supported.")
 
 
 @dataclass

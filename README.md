@@ -12,6 +12,7 @@
   <img src="icon/icon.png" width="150" >
 </p>
 An advanced creator & editor for Minecraft Datapacks for Minecraft 1.20.2 - 1.20.4+ (datapack version 18-23+).
+For Windows and Linux (Debian)
 
 
 ![MainWindow1_IMG][MainWindow1_IMG]
@@ -62,7 +63,10 @@ An advanced creator & editor for Minecraft Datapacks for Minecraft 1.20.2 - 1.20
 [Current Version][DownloadLatest_LINK] <--  
 [Other Versions][Releases_LINK]
 
-Download the zip file, extract it to an empty folder and run the `start.cmd` file.
+* Windows
+  * Download the zip file, extract it to an empty folder and run the `start.cmd` file.
+* Linux
+  * Download the zip file, extract it to an empty folder and run the `Datakack Editor` file.
 
 If you have any questions, problems or suggestions, feel free to create an [Issue][NewIssue_LINK]. 
 
