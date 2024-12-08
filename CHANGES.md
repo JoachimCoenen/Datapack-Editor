@@ -1,4 +1,4 @@
-## Next Version
+## 0.8.5-alpha
 ### Features
  * Added Linux support (debian).
  * Plugins can now add custom section to the setup dialog (issue #33). _[Plugin support]_

@@ -16,10 +16,10 @@ def run() -> None:
 	appOptions = AppInfo(
 		appName="Datapack Editor",
 		appDisplayName="Datapack Editor",
-		appVersion="0.8.0-alpha",
+		appVersion="0.8.5-alpha",
 		organization="Joachim Coenen",
 		windowIcon=lambda: QIcon(iconPath),
-		copyright=HTMLStr("© 2023 Joachim Coenen. All Rights Reserved"),
+		copyright=HTMLStr("© 2024 Joachim Coenen. All Rights Reserved"),
 		about=HTMLStr("""Written and maintained by <a href="https://www.github.com/JoachimCoenen">Joachim Coenen</a>.\n<br/>""" +
 					  """If you have any questions, bugs or improvements, please share them on GitHub.\n<br/>"""),
 		homepageLink="https://www.github.com/JoachimCoenen/Datapack-Editor",
