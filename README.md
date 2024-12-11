@@ -63,7 +63,7 @@ For Windows and Linux (Debian)
 [Other Versions][Releases_LINK]
 
 * Windows
-  * multiple virus scanners label the windows executable as malware See issue [#51](https://github.com/JoachimCoenen/Datapack-Editor/issues/51). 
+  * some virus scanners might label the windows executable as malware See issue [#51](https://github.com/JoachimCoenen/Datapack-Editor/issues/51).  
     This is a **false positive** caused by the way this application has been packaged. [pyinstaler issue #5854](https://github.com/pyinstaller/pyinstaller/issues/5854)
   * Download the zip file, extract it to an empty folder and run the `start.cmd` file.
 * Linux

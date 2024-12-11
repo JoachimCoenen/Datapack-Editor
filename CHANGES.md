@@ -1,6 +1,7 @@
 ## Next Version
 ### Fixes
  * Fixed crash when attempting to highlight `execute if block ~ ~ ~`. (issue #52)
+ * Reduced the number of virus scanners that report the Windows executable as malware. (issue #51)
 
 
 ## 0.8.5-alpha

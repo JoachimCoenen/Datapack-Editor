@@ -4,7 +4,7 @@ cd build
 rem DANGER!:
 rmdir /s /q ".\build\"
 
-pyinstaller --onefile ..\main.py ^
+pyinstaller --onedir ..\main.py ^
 --additional-hooks-dir ..\_hooks ^
 --hidden-import PyQt5.QtPrintSupport ^
 --exclude-module bprofile ^
@@ -19,6 +19,9 @@ pyinstaller --onefile ..\main.py ^
 
 cd dist
 
-del DatapackEditor.exe
+rmdir /s /q DatapackEditor_win64
+ren "main" "DatapackEditor_win64"
+cd DatapackEditor_win64
 ren "main.exe" "DatapackEditor.exe"
+cd ..
 @pause
