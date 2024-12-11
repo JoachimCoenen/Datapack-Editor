@@ -16,7 +16,7 @@ def run() -> None:
 	appOptions = AppInfo(
 		appName="Datapack Editor",
 		appDisplayName="Datapack Editor",
-		appVersion="0.8.5-alpha",
+		appVersion="0.8.6-alpha",
 		organization="Joachim Coenen",
 		windowIcon=lambda: QIcon(iconPath),
 		copyright=HTMLStr("© 2024 Joachim Coenen. All Rights Reserved"),
