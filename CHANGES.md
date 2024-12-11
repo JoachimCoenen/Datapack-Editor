@@ -1,3 +1,8 @@
+## Next Version
+### Fixes
+ * Fixed crash when attempting to highlight `execute if block ~ ~ ~`. (issue #52)
+
+
 ## 0.8.5-alpha
 ### Features
  * Added Linux support (debian).

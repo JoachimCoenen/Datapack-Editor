@@ -114,7 +114,8 @@ class BlockStateHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		# block_id[block_states]{data_tags}
 		blockID = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
-
+		if blockID is None:
+			return None
 		# block states:
 		states = None
 		if sr.tryPeek() == ord('['):
