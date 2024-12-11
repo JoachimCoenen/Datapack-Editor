@@ -58,15 +58,13 @@ For Windows and Linux (Debian)
 
 
 ## Download & Install
-**!WARNING!**
- [virustotal](https://www.virustotal.com/gui/file/ea9aafffbacdc5235cf3a46a4abbf7a9a64ec103956c97f5a8fb717b065add0a) detects malware in the Windows exe of the latest version (0.8.5).
-Also Windows Defender reports it as a virus. See issue [#51](https://github.com/JoachimCoenen/Datapack-Editor/issues/51). 
-
 
 [Current Version][DownloadLatest_LINK] <--  
 [Other Versions][Releases_LINK]
 
 * Windows
+  * multiple virus scanners label the windows executable as malware See issue [#51](https://github.com/JoachimCoenen/Datapack-Editor/issues/51). 
+    This is a **false positive** caused by the way this application has been packaged. [pyinstaler issue #5854](https://github.com/pyinstaller/pyinstaller/issues/5854)
   * Download the zip file, extract it to an empty folder and run the `start.cmd` file.
 * Linux
   * Download the zip file, extract it to an empty folder and run the `Datakack Editor` file.
