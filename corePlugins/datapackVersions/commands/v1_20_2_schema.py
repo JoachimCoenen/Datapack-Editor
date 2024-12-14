@@ -2158,6 +2158,7 @@ def build_gamerule_args(mcdata: FullMCData) -> list[CommandPartSchema]:
 				ArgumentSchema(
 					name='value',
 					type=ALL_NAMED_ARGUMENT_TYPES[gr.type],
+					args=gr.args
 				),
 			])
 		) for gr in mcdata.gamerules.values()

@@ -1,8 +1,8 @@
 from __future__ import annotations
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import ModuleType
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, Any
 
 from base.model.parsing.bytesUtils import strToBytes
 from cat.utils.collections_ import FrozenDict
@@ -16,6 +16,7 @@ class Gamerule:
 	description: str
 	type: str
 	defaultValue: str
+	args: None | dict[str, Any | None] = field(default=None)
 
 
 def buildGamerulesDict(gamerules: list[Gamerule]) -> FrozenDict[bytes, Gamerule]:
