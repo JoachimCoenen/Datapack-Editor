@@ -16,9 +16,11 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_20_5 = getFullMcData('1.20.5')
 	schema_v29 = COMMANDS_V29.buildSchema(version1_20_5)
 	schema_v30 = COMMANDS_V30.buildSchema(version1_20_5)
+	schema_v31 = COMMANDS_V31.buildSchema(version1_20_5)
 	return {
 		'Minecraft 24w04a': schema_v29,
 		'Minecraft 24w05b': schema_v30,
+		'Minecraft 24w06a': schema_v31,
 	}
 
 
@@ -76,3 +78,6 @@ def build_transfer_args(_: FullMCData, args: list[CommandPartSchema]) -> list[Co
 	# Potion effect amplifiers are now restricted between 0 and 127.
 	amplifierSchema.args.update(dict(min=0, max=127))
 	return args
+
+
+COMMANDS_V31: CommandsCreator = copy.deepcopy(COMMANDS_V29)  # reverts changes in v30 (limiting of Potion effect amplifiers to 127)
