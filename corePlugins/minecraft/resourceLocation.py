@@ -15,6 +15,7 @@ from base.model.pathUtils import FilePath, FilePathTpl
 from base.model.project.project import Root
 from base.model.session import getSession
 from base.model.utils import Span, Position, GeneralError, SemanticsError, MDStr, LanguageId
+from cat.utils.logging_ import logError
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData, FullMCData
 from corePlugins.minecraft_data.resourceLocation import isNamespaceValid, ResourceLocation, RESOURCE_LOCATION_PATTERN
 from base.model.messages import *
@@ -103,7 +104,10 @@ class ResourceLocationCtxProvider(ContextProvider[ResourceLocationNode]):
 	def getContext(self, node: ResourceLocationNode) -> Optional[Context]:
 		schema = node.schema
 		if isinstance(schema, ResourceLocationSchema):
-			return getResourceLocationContext(schema.name)
+			ctx = getResourceLocationContext(schema.name)
+			if ctx is None:
+				logError(f"no ResourceLocationSchema for schema '{schema.name}' found.")
+			return ctx
 		return None
 
 	def prepareTree(self, filePath: FilePath, errorsIO: list[GeneralError]) -> None:
