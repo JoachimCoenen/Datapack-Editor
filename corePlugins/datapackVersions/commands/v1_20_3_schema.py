@@ -24,7 +24,8 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 		'Minecraft 23w44a': schema_v23,
 		'Minecraft 23w46a': schema_v25,
 		'Minecraft 1.20.3-rc1': schema_v26,
-		'Minecraft 1.20.3': schema_v26
+		'Minecraft 1.20.3': schema_v26,
+		'Minecraft 1.20.4': schema_v26
 	}
 
 
