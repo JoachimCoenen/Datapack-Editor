@@ -546,6 +546,8 @@ _VERSION_1_20_5 = replace(
 	_VERSION_1_20_4,
 	name='1.20.5',
 	# compiled from the Minecraft wiki:
+	slots=_VERSION_1_20_4.slots + {b'armor.body': 105} - {b'horse.armor': 401},
+	# compiled from the Minecraft wiki:
 	gamerules=_VERSION_1_20_4.gamerules | buildGamerulesDict([
 		Gamerule(  # 24w03a
 			name='spawnChunkRadius',
