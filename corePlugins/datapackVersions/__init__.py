@@ -101,8 +101,10 @@ class DatapackVersionsPlugin(PluginBase):
 
 		from corePlugins.datapackVersions.commands.v1_20_2_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_2
 		from corePlugins.datapackVersions.commands.v1_20_3_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_3
+		from corePlugins.datapackVersions.commands.v1_20_5_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_5
 
 		schemas |= buildMCFunctionSchemas_1_20_2()  # legacy way of doing it.
 		schemas |= buildMCFunctionSchemas_1_20_3()  # legacy way of doing it.
+		schemas |= buildMCFunctionSchemas_1_20_5()  # legacy way of doing it.
 		return schemas
 

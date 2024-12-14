@@ -698,5 +698,12 @@ class StDpeDataPackHandler(ArgumentContext):
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 
 
+
+@argumentContext(ST_DPE_HOSTNAME.name)
+class StDpeHostnameHandler(ArgumentContext):
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
+
+
 # make sure there's an ArgumentContext for every registered named ArgumentType:
 checkArgumentContextsForRegisteredArgumentTypes()

@@ -678,6 +678,16 @@ ST_DPE_DATAPACK = ArgumentType(
 	jsonProperties="""""",
 )
 
+ST_DPE_HOSTNAME = ArgumentType(
+	name='dpe:hostname',
+	description="{{Arg desc|je=string}}",
+	description2="""A (server) hostname.""",
+	examples="""
+	* {{cd|localhost}}""",
+	jsonProperties="""""",
+)
+
+
 __all__ = [
 	'CHAT_COLORS',
 	'TEAM_COLORS',
@@ -732,5 +742,7 @@ __all__ = [
 	'DPE_ADVANCEMENT',
 	'DPE_COMPARE_OPERATION',
 	'DPE_BIOME_ID',
+
 	'ST_DPE_DATAPACK',
+	'ST_DPE_HOSTNAME',
 ]

@@ -1,5 +1,5 @@
 """
-for Minecraft version 1.20 - 1.20.4
+for Minecraft version 1.20 - 1.20.5 (incomplete)
 """
 from dataclasses import replace
 
@@ -542,4 +542,22 @@ _VERSION_1_20_4 = replace(
 )
 
 
-ALL_VERSIONS: list[CustomMCData] = [_VERSION_1_20_0, _VERSION_1_20_1, _VERSION_1_20_2, _VERSION_1_20_3, _VERSION_1_20_4]
+_VERSION_1_20_5 = replace(
+	_VERSION_1_20_4,
+	name='1.20.5',
+	# compiled from the Minecraft wiki:
+	gamerules=_VERSION_1_20_4.gamerules | buildGamerulesDict([
+		Gamerule(  # 24w03a
+			name='spawnChunkRadius',
+			description="The size of the spawn chunks.\n" +
+						"- Possible values are `0` to `32`, where 0 completely disables the spawn chunks and `10` is equivalent to the spawnChunkRadius before 1.20.5." +
+						"- Default value is `2`, equivalent to 3x3 entity ticking chunks.",
+			type='brigadier:integer',
+			defaultValue='2',
+			args=dict(min=0, max=32)
+		),
+	])
+)
+
+
+ALL_VERSIONS: list[CustomMCData] = [_VERSION_1_20_0, _VERSION_1_20_1, _VERSION_1_20_2, _VERSION_1_20_3, _VERSION_1_20_4, _VERSION_1_20_5]
