@@ -34,6 +34,7 @@ def parseFromStringReader(sr: StringReader, filePath: FilePath, language: Langua
 		cursor=sr.cursor,
 		cursorOffset=sr.cursorOffset,
 		indexMapper=sr.indexMapper,
+		fullSource=sr.fullSource,
 		**kwargs
 	)
 
@@ -69,23 +70,16 @@ class ParsingHandler(ArgumentContext, ABC):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		validateTree(node.value, node.source, errorsIO)
 
-	def getErsatzNodeForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
-		"""override in subclasses if you wnt to provide an ersatz node."""
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		"""override in subclasses if you wnt to provide an ersatz node for when nothing has been parsed yet."""
 		return None
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		"""
-		:param ai:
-		:param node:
-		:param pos: cursor position
-		:param replaceCtx: the string that will be replaced
-		:return:
-		"""
 		if node is not None:
 			value = node.value
 			source = node.source
 		else:
-			value = self.getErsatzNodeForSuggestions(ai, pos, replaceCtx)
+			value = self.getEmptyValueForSuggestions(ai, pos, replaceCtx)
 			source = b''
 
 		return getSuggestions(value, source, pos, replaceCtx)

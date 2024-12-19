@@ -1,19 +1,24 @@
 import re
 from math import inf
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Optional, ClassVar
+
+from better_orderedmultidict import OrderedMultiDict
 
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.contextProvider import Suggestions, errorMsg, getClickableRanges, getSuggestions, onIndicatorClicked, validateTree
+from base.model.parsing.contextProvider import Suggestions, errorMsg
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
-from base.model.parsing.tree import Schema
+from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError, LanguageId, Message, Position, Span
 from cat.utils.collections_ import FrozenDict
 from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
 from corePlugins.mcFunction.argumentTypes import makeLiteralsArgumentType
-from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, FALLBACK_FILTER_ARGUMENT_INFO, FilterArgumentInfo, ParsedArgument
-from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
+from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, ParsedArgument
+from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, \
+	missingArgumentParser, StructuredArgumentContext
+from corePlugins.mcFunction.filterArgs import FilterArgOptions, parseFilterArgsLike, FALLBACK_FILTER_ARGUMENT_INFO, \
+	FilterArgumentInfo, NegationStyle
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
@@ -23,7 +28,6 @@ from corePlugins.nbt.tags import NBTTagSchema
 from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag
 from .argumentTypes import *
 from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector
-from .filterArgs import FilterArgOptions, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, parseFilterArgsLike, suggestionsForFilterArgs, validateFilterArgs
 from .targetSelector import TARGET_SELECTOR_ARG_OPTIONS
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
@@ -55,7 +59,7 @@ class ResourceLocationLikeHandler(ParsingHandler):
 	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
 		return dict(ignoreTrailingChars=True)
 
-	def getErsatzNodeForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
 		return ResourceLocationNode.fromString(b'', Span(pos), self.getSchema(ai))
 
 
@@ -79,7 +83,7 @@ class ResourceLocationHandler(ParsingHandler):
 	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
 		return dict(ignoreTrailingChars=True)
 
-	def getErsatzNodeForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
 		return ResourceLocationNode.fromString(b'', Span(pos), self.getSchema(ai))
 
 
@@ -91,7 +95,7 @@ class AngleHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_BLOCK_STATE.name, rlcSchema=ResourceLocationSchema('', 'block', allowTags=False))
 @argumentContext(MINECRAFT_BLOCK_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'block', allowTags=True))
-class BlockStateHandler(ArgumentContext):
+class BlockStateHandler(StructuredArgumentContext[BlockState]):
 	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()
 		self.rlcSchema: ResourceLocationSchema = rlcSchema
@@ -104,11 +108,14 @@ class BlockStateHandler(ArgumentContext):
 		return FilterArgOptions(
 			opening=b'[',
 			closing=b']',
+			allowTrailingComma=True,
+			negationStyle=NegationStyle.VALUE_NEGATION,
 			keySchema=ArgumentSchema(
 				name='key',
 				type=makeLiteralsArgumentType(list(blockStates.keys())),
 			),
-			getArgsInfo=lambda key: blockStates.get(key.content, FALLBACK_FILTER_ARGUMENT_INFO)
+			getArgsInfo=lambda key: blockStates.get(key.content, FALLBACK_FILTER_ARGUMENT_INFO),
+			description=""
 		)  # todo: improve performance!
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
@@ -125,7 +132,9 @@ class BlockStateHandler(ArgumentContext):
 			if states is not None:
 				sr.mergeLastSave()
 		if states is None:
-			states = FilterArguments()
+			currentPos = sr.currentPos
+			blockStatesOptions = self._getBlockStatesArgOptions({})
+			states = FilterArguments(Span(currentPos), blockStatesOptions, sr.fullSource, OrderedMultiDict())
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
@@ -138,66 +147,8 @@ class BlockStateHandler(ArgumentContext):
 		blockPredicate = BlockState(blockId=blockID, states=states, nbt=nbt)
 		return makeParsedArgument(sr, ai, value=blockPredicate)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		blockState: BlockState = node.value
-		if not isinstance(blockState, BlockState):
-			errorMsg(INTERNAL_ERROR_MSG, EXPECTED_BUT_GOT_MSG, 'BlockState', type(blockState).__name__, span=node.span, errorsIO=errorsIO)
-			return
-
-		validateTree(blockState.blockId, node.source, errorsIO)
-		validateFilterArgs(blockState.states, errorsIO)
-
-		if blockState.nbt is not None:
-			validateTree(blockState.nbt, node.source, errorsIO)
-
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		if node is None:
-			blockID = ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
-			return getSuggestions(blockID, b'', pos, replaceCtx)
-		blockState: BlockState = node.value
-		if not isinstance(blockState, BlockState):
-			return []
-
-		suggestions: Suggestions = []
-
-		blockID = blockState.blockId
-		argsStart = blockID.span.end
-
-		if pos.index >= argsStart.index and not (blockState.nbt is not None and blockState.nbt.span.__contains__(pos)) and (blockStatesDict := self._getBlockStatesDict(blockID)):
-			contextStr = node.source[argsStart.index:node.end.index]
-			relCursorPos = pos.index - argsStart.index
-			blockStatesOptions = self._getBlockStatesArgOptions(blockStatesDict)
-			suggestions += suggestionsForFilterArgs(blockState.states, contextStr, relCursorPos, pos, replaceCtx, blockStatesOptions)
-
-		if blockID.span.__contains__(pos):
-			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
-
-		if blockState.nbt is not None and blockState.nbt.span.__contains__(pos):
-			suggestions += getSuggestions(blockState.nbt, node.source, pos, replaceCtx)
-
-		return suggestions
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		blockState: BlockState = node.value
-		if not isinstance(blockState, BlockState):
-			return None
-
-		ranges = []
-		ranges += getClickableRanges(blockState.blockId, node.source, node.span)
-		ranges += clickableRangesForFilterArgs(blockState.states)
-		if blockState.nbt is not None:
-			ranges += getClickableRanges(blockState.nbt, node.source, node.span)
-
-		return ranges
-
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
-		blockState: BlockState = node.value
-		if blockState.blockId.span.__contains__(position):
-			onIndicatorClicked(blockState.blockId, node.source, position)
-		elif blockState.nbt is not None and blockState.nbt.span.__contains__(position):
-			onIndicatorClicked(blockState.nbt, node.source, position)
-		else:
-			onIndicatorClickedForFilterArgs(blockState.states, position)
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
 
 
 @argumentContext(MINECRAFT_COLUMN_POS.name)
@@ -219,7 +170,7 @@ class ComponentHandler(ParsingHandler):
 
 
 @argumentContext(MINECRAFT_ENTITY.name)
-class EntityHandler(ArgumentContext):
+class EntityHandler(StructuredArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		# Must be a player name, a target selector or a UUID.
 		locator = sr.tryReadString()
@@ -231,36 +182,25 @@ class EntityHandler(ArgumentContext):
 			variable = bytesToStr(variable)
 			arguments = parseFilterArgsLike(sr, TARGET_SELECTOR_ARG_OPTIONS, filePath, errorsIO=errorsIO)
 			if arguments is None:
-				arguments = FilterArguments()
+				currentPos = sr.currentPos
+				blockStatesOptions = TARGET_SELECTOR_ARG_OPTIONS
+				arguments = FilterArguments(Span(currentPos), blockStatesOptions, sr.fullSource, OrderedMultiDict())
 			else:
 				sr.mergeLastSave()
 			locator = TargetSelector(variable=variable, arguments=arguments)
 
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		targetSelector: TargetSelector = node.value
-		if not isinstance(targetSelector, TargetSelector):
-			return
-		validateFilterArgs(targetSelector.arguments, errorsIO)
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		return None  # not needed
+
+	SELECTOR_SUGGESTIONS : ClassVar[Suggestions] = ['@a', '@e', '@s', '@p', '@r', ]
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		if node is None or pos.index - node.span.start.index < 2:
-			return ['@a', '@e', '@s', '@p', '@r', ]
-		targetSelector: TargetSelector = node.value
-		if not isinstance(targetSelector, TargetSelector):
-			return []
-		return suggestionsForFilterArgs(targetSelector.arguments, node.content[2:], pos.index - node.span.start.index - 2, pos, replaceCtx, TARGET_SELECTOR_ARG_OPTIONS)
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		targetSelector: TargetSelector = node.value
-		if not isinstance(targetSelector, TargetSelector):
-			return None
-		ranges = clickableRangesForFilterArgs(targetSelector.arguments)
-		return ranges
-
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
-		onIndicatorClickedForFilterArgs(node.value.arguments, position)
+			return self.SELECTOR_SUGGESTIONS
+		else:
+			return super().getSuggestions2(ai, node, pos, replaceCtx)
 
 
 _INTEGER_REGEX = r'-?[0-9]+'
@@ -344,7 +284,7 @@ class NumberRangeHandler(ArgumentContext):
 
 		def addSuggestions(maxStr: str):
 			if noLowerBound:
-				suggestions.setdefault(f'...{maxStr}')
+				suggestions.setdefault(f'..{maxStr}')
 			if includeMinVal:
 				addSuggestion(minStr=f'{minVal}', maxStr=maxStr)
 			if includeMinZero:
@@ -385,7 +325,7 @@ class ItemSlotHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=False))
 @argumentContext(MINECRAFT_ITEM_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=True))
-class ItemStackHandler(ArgumentContext):
+class ItemStackHandler(StructuredArgumentContext[ItemStack]):
 	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()
 		self.rlcSchema: ResourceLocationSchema = rlcSchema
@@ -397,65 +337,18 @@ class ItemStackHandler(ArgumentContext):
 			return None
 
 		# data tags:
-		if sr.tryConsumeByte(ord('{')):
-			sr.cursor -= 1
+		if sr.tryPeek() == ord('{'):
 			nbt = tryReadNBTCompoundTag(sr, ai, filePath, errorsIO=errorsIO)
+			if nbt is not None:
+				sr.mergeLastSave()
 		else:
 			nbt = None
-		if nbt is not None:
-			sr.mergeLastSave()
 
-		itemStack = ItemStack(itemId=itemID, nbt=nbt)
+		itemStack = ItemStack(itemId=itemID, nbt=nbt, components=FilterArguments(Span(sr.currentPos), None, sr.fullSource, OrderedMultiDict()))
 		return makeParsedArgument(sr, ai, value=itemStack)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		itemStack: ItemStack = node.value
-		if not isinstance(itemStack, ItemStack):
-			errorMsg(INTERNAL_ERROR_MSG, EXPECTED_BUT_GOT_MSG, 'ItemStack', type(itemStack).__name__, span=node.span, errorsIO=errorsIO)
-			return
-
-		validateTree(itemStack.itemId, node.source, errorsIO)
-		if itemStack.nbt is not None:
-			validateTree(itemStack.nbt, node.source, errorsIO)
-		return None
-
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		# return result
-		if node is None:
-			itemId = ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
-			return getSuggestions(itemId, b'', pos, replaceCtx)
-		itemStack: ItemStack = node.value
-		if not isinstance(itemStack, ItemStack):
-			return []
-
-		suggestions = []
-		if itemStack.itemId.span.__contains__(pos):
-			suggestions += getSuggestions(itemStack.itemId, node.source, pos, replaceCtx)
-
-		if itemStack.nbt is not None and itemStack.nbt.span.__contains__(pos):
-			suggestions += getSuggestions(itemStack.nbt, node.source, pos, replaceCtx)
-
-		return suggestions
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		itemStack: ItemStack = node.value
-		if not isinstance(itemStack, ItemStack):
-			return None
-
-		ranges = []
-		ranges += getClickableRanges(itemStack.itemId, node.source)
-
-		if itemStack.nbt is not None:
-			ranges += getClickableRanges(itemStack.nbt, node.source)
-
-		return ranges
-
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
-		itemStack: ItemStack = node.value
-		if itemStack.itemId.span.__contains__(position):
-			onIndicatorClicked(itemStack.itemId, node.source, position)
-		elif itemStack.nbt is not None and itemStack.nbt.span.__contains__(position):
-			onIndicatorClicked(itemStack.nbt, node.source, position)
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
 
 
 @argumentContext(MINECRAFT_MESSAGE.name)

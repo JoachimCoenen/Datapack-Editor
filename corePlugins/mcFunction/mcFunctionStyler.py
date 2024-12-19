@@ -7,9 +7,11 @@ from typing import Type, Optional, ClassVar
 from cat.utils import Decorator
 from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StyleId
+from . import MC_FUNCTION_ID
 from .argumentTypes import *
 from .command import CommandSchema, MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
 from base.model.utils import LanguageId
+from .filterArgs import FilterArgNode, FilterArgument
 
 
 class StyleIds(StyleIdEnum):
@@ -140,14 +142,14 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		argument: ParsedArgument
 		span = argument.span.slice
 		schema = argument.schema
+
 		if isinstance(schema, KeywordSchema):
 			style = StyleIds.Keyword
 		elif isinstance(schema, ArgumentSchema):
 			if isinstance(schema.type, LiteralsArgumentType):
 				style = StyleIds.Constant
 			else:
-				typeName = schema.typeName
-				# style = _allArgumentTypeStyles.get(typeName, StyleIds.Error)
+				typeName = schema.type.name
 				styler = self.argumentStylers.get(typeName, None)
 				if styler is None:
 					style = StyleIds.Error
@@ -193,3 +195,26 @@ addSimpleArgumentStyler(StyleIds.Number, forArgTypes=[
 addSimpleArgumentStyler(StyleIds.String, forArgTypes=[
 	BRIGADIER_STRING,
 ])
+
+
+class FilterArgumentsStyleIds(StyleIdEnum):
+	Default = DEFAULT_STYLE_ID
+
+
+@dataclass
+class FilterArgumentsStyler(CatStyler[FilterArgNode]):
+
+	@property
+	def styleIdEnum(self) -> Type[StyleIdEnum]:
+		return StyleIds
+
+	@classmethod
+	def localInnerLanguages(cls) -> list[LanguageId]:
+		return [MC_FUNCTION_ID]
+
+	def styleNode(self, node: FilterArgNode) -> int:
+		if node.typeName == FilterArgument.typeName:
+			return self.styleStructuredNodeForeignNodes(node, DEFAULT_STYLE_ID)  # StyleIds.TargetSelector)
+		else:
+			return self.styleStructuredNodeChildNodes(node, DEFAULT_STYLE_ID)  # StyleIds.TargetSelector)
+

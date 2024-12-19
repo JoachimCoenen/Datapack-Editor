@@ -55,6 +55,7 @@ class JsonParser(ParserBase[JsonNode, JsonSchema]):
 			self.cursor,
 			self.cursorOffset,
 			self.indexMapper,
+			self.fullSource,
 			allowMultilineStr
 		)
 		self._tokens, self._eofToken = self.tokenize()

@@ -12,12 +12,12 @@ from corePlugins.json.jsonContext import ParsingJsonCtx, jsonStringContext, orRe
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
 from corePlugins.mcFunction.argumentTypes import ArgumentType
 from corePlugins.mcFunction.command import ArgumentSchema
+from corePlugins.mcFunction.commandContext import getArgumentContext
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocationSchema, getAllKnownResourceLocationContexts
 from corePlugins.nbt.tags import NBTTagSchema
 from .argTypes import *
 from .commands.argumentTypes import *
-from ..mcFunction.commandContext import getArgumentContext
 
 
 @jsonStringContext(MINECRAFT_RESOURCE_LOCATION.name)
@@ -156,4 +156,3 @@ class McFunctionArgumentContextAdaptor(ParsingJsonCtx, ABC):
 
 			if parsedArg is not None:
 				context.prepare(parsedArg, cast(CtxInfo, info), errorsIO=errorsIO)
-

@@ -3,7 +3,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Iterable, Optional, Sequence, cast
 
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.contextProvider import AddContextToDictDecorator, Context, ContextProvider, Match, Suggestions
+from base.model.parsing.contextProvider import AddContextToDictDecorator, Context, ContextProvider, Match, Suggestions, \
+	StructuredNodeValue, StructuredContext, getSuggestions
+from base.model.parsing.tree import Node
 from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError, MDStr, ParsingError, Position, Span, formatAsError
 from cat.utils import Decorator, escapeForXml
@@ -67,7 +69,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			return [cmd.name + ' ' for cmd in schema.commands.values()]
 		return []
 
-	def _getNextKeywords(self, nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position, replaceCtx: str) -> list[str]:
+	def getSuggestionsForNext(self, nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position, replaceCtx: str) -> list[str]:
 		result = []
 		for nx in nexts:
 			if isinstance(nx, KeywordSchema):
@@ -86,7 +88,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 		if hit is not None:
 			before = hit.prev
 		if before is not None:
-			return self._getNextKeywords(getNextSchemas(before), hit, pos, replaceCtx)
+			return self.getSuggestionsForNext(getNextSchemas(before), hit, pos, replaceCtx)
 		elif hit is not None and isinstance(hit, ParsedArgument) and isinstance(hit.schema, ArgumentSchema):
 			if (ctx := getArgumentContext(hit.schema.type)) is not None:
 				return ctx.getSuggestions2(hit.schema, hit, pos, replaceCtx)
@@ -187,6 +189,32 @@ class ArgumentContext(Context[ParsedArgument], ABC):
 		pass
 
 
+class StructuredArgumentContext[T: StructuredNodeValue](StructuredContext[ParsedArgument], ABC):
+	""" ArgumentContext implementation that does the repetitive work for you. `T` is the type of self.parse(...).value."""
+	@abstractmethod
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
+
+	@abstractmethod
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		"""override in subclasses if you wnt to provide an ersatz node for when nothing has been parsed yet."""
+		return None
+
+	def getEmptySuggestions(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+		value = self.getEmptyValueForSuggestions(ai, pos, replaceCtx)
+		source = b''
+		return getSuggestions(value, source, pos, replaceCtx)
+
+	def getSuggestions(self, node: ParsedArgument, pos: Position, replaceCtx: str) -> Suggestions:
+		return self.getSuggestions2(node.schema, node, pos, replaceCtx)
+
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], position: Position, replaceCtx: str) -> Suggestions:
+		if node is None:
+			return self.getEmptySuggestions(ai, node, position, replaceCtx)
+		else:
+			return StructuredContext.getSuggestions(self, node, position, replaceCtx)
+
+
 class KeywordContext(ArgumentContext, ABC):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)  # parsing is KeywordArguments is handled by the parser itself.
@@ -232,17 +260,17 @@ def defaultDocumentationProvider(argument: CommandPart) -> MDStr:
 
 
 def missingArgumentContext(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-	errorMsg = MDStr(f"missing ArgumentContext for type `{escapeForXml(ai.typeName)}`")
+	errorMsg = MDStr(f"missing ArgumentContext for type `{escapeForXml(ai.type.name)}`")
 	logError(errorMsg)
 
 	sr.readUntilEndOrWhitespace()
 	errorsIO.append(ParsingError(errorMsg, sr.currentSpan, style='info'))
-	sr.rollback()
+	sr.rollback()  # todo investigate is that rollback correct?
 	return None
 
 
 def missingArgumentParser(sr: StringReader, ai: ArgumentSchema, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-	errorMsg = MDStr(f"missing parse(...) implementation in ArgumentContext for type `{escapeForXml(ai.typeName)}`")
+	errorMsg = MDStr(f"missing parse(...) implementation in ArgumentContext for type `{escapeForXml(ai.type.name)}`")
 	logError(errorMsg)
 
 	sr.readUntilEndOrWhitespace()

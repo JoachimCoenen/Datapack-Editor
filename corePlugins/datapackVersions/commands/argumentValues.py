@@ -1,21 +1,10 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Collection
 
-from cat.utils.collections_ import OrderedMultiDict
+from base.model.parsing.tree import Node
+from corePlugins.mcFunction.filterArgs import FilterArguments
 from corePlugins.minecraft.resourceLocation import ResourceLocationNode
-from corePlugins.mcFunction.command import ParsedArgument, CommandPart
 from corePlugins.nbt.tags import CompoundTag
-
-
-@dataclass
-class FilterArgument:
-	key: CommandPart
-	value: Optional[ParsedArgument]
-	isNegated: bool
-
-
-class FilterArguments(OrderedMultiDict[bytes, FilterArgument]):
-	__slots__ = ()
 
 
 @dataclass
@@ -24,14 +13,24 @@ class BlockState:
 	states: FilterArguments
 	nbt: Optional[CompoundTag]
 
+	def getForeignNodes(self) -> Collection[Node | None]:
+		return self.blockId, self.states, self.nbt
+
 
 @dataclass
 class ItemStack:
 	itemId: ResourceLocationNode
 	nbt: Optional[CompoundTag]
+	components: FilterArguments
+
+	def getForeignNodes(self) -> Collection[Node | None]:
+		return self.itemId, self.nbt, self.components
 
 
 @dataclass
 class TargetSelector:
 	variable: str
 	arguments: FilterArguments
+
+	def getForeignNodes(self) -> Collection[Node | None]:
+		return self.arguments,

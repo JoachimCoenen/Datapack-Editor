@@ -81,12 +81,7 @@ class JsonStyler(CatStyler[JsonNode]):
 
 	@_Styler(JsonArray.typeName)
 	def styleArray(self, data: JsonArray) -> int:
-		lastPos = data.span.start.index
-		for element in data.data:
-			self.setStyling(slice(lastPos, element.span.start.index), self.DEFAULT_STYLE)
-			lastPos = self.styleNode(element)
-		self.setStyling(slice(lastPos, data.span.end.index), self.DEFAULT_STYLE)
-		return data.span.end.index
+		return self.styleStructuredNodeChildNodes(data, self.DEFAULT_STYLE)
 
 	def styleKey(self, data: JsonString) -> int:
 		self.setStyling(data.span.slice, self.KEY_STYLE)
