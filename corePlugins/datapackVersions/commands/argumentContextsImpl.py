@@ -28,6 +28,7 @@ from corePlugins.nbt.tags import NBTTagSchema
 from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag
 from .argumentTypes import *
 from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector
+from .itemComponents import ITEM_COMPONENT_ARG_OPTIONS
 from .targetSelector import TARGET_SELECTOR_ARG_OPTIONS
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
@@ -336,6 +337,7 @@ class ItemStackHandler(StructuredArgumentContext[ItemStack]):
 		if itemID is None:
 			return None
 
+		# until 1.20.5 (excl.): todo add version check
 		# data tags:
 		if sr.tryPeek() == ord('{'):
 			nbt = tryReadNBTCompoundTag(sr, ai, filePath, errorsIO=errorsIO)
@@ -344,7 +346,17 @@ class ItemStackHandler(StructuredArgumentContext[ItemStack]):
 		else:
 			nbt = None
 
-		itemStack = ItemStack(itemId=itemID, nbt=nbt, components=FilterArguments(Span(sr.currentPos), None, sr.fullSource, OrderedMultiDict()))
+		# since 1.20.5 (incl.): todo add version check
+		# item Components:
+		itemComponents = parseFilterArgsLike(sr, ITEM_COMPONENT_ARG_OPTIONS, filePath, errorsIO=errorsIO)
+		if itemComponents is None:
+			currentPos = sr.currentPos
+			blockStatesOptions = ITEM_COMPONENT_ARG_OPTIONS
+			itemComponents = FilterArguments(Span(currentPos, currentPos), blockStatesOptions, sr.fullSource, OrderedMultiDict())
+		else:
+			sr.mergeLastSave()
+
+		itemStack = ItemStack(itemId=itemID, nbt=nbt, components=itemComponents)
 		return makeParsedArgument(sr, ai, value=itemStack)
 
 	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:

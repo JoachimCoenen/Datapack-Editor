@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, NamedTuple, Optional, TypeAlias
 
 from base.model.parsing.bytesUtils import strToBytes
+from cat.utils import first
 from cat.utils.collections_ import AddToDictDecorator, ChainedList, FrozenDict
 from corePlugins.datapack.datapackContents import RESOURCES
 from corePlugins.mcFunction.argumentTypes import *
@@ -228,6 +229,13 @@ class CommandsCreator:
 		return MCFunctionSchema('', commands=basicCmdInfo)
 
 
+def getArgOptions(args: list[CommandPartSchema], name1: str, *names: str) -> CommandPartSchema:
+	keywordArg = first(arg for arg in args if arg.name == name1)
+	for name in names:
+		keywordArg = first(arg for arg in keywordArg.next.all if arg.name == name)
+	return keywordArg
+
+
 COMMANDS: CommandsCreator = CommandsCreator()
 
 
@@ -376,7 +384,7 @@ def build_attribute_args(_: FullMCData) -> list[CommandPartSchema]:
 															type=BRIGADIER_DOUBLE,
 															next=Options([
 																ArgumentSchema(
-																	name='uuid',
+																	name='operation',
 																	type=makeLiteralsArgumentType([b'add', b'multiply', b'multiply_base']),
 																),
 															])

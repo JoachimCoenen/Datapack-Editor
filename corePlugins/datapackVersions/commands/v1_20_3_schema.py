@@ -4,7 +4,6 @@ currently at minecraft version 1.20.3 (1.20.3-rc1)
 
 import copy
 
-from cat.utils import first
 from cat.utils.collections_ import ChainedList
 from corePlugins.datapack.datapackContents import RESOURCES
 from corePlugins.mcFunction.argumentTypes import *
@@ -12,7 +11,7 @@ from corePlugins.mcFunction.command import ArgumentSchema, COMMANDS_ROOT, Comman
 from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
 from . import v1_20_2_schema
 from .argumentTypes import *
-from .v1_20_2_schema import CommandsCreator
+from .v1_20_2_schema import CommandsCreator, getArgOptions
 
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
@@ -27,13 +26,6 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 		'Minecraft 1.20.3': schema_v26,
 		'Minecraft 1.20.4': schema_v26
 	}
-
-
-def getArgOptions(args: list[CommandPartSchema], name1: str, *names: str) -> CommandPartSchema:
-	keywordArg = first(arg for arg in args if arg.name == name1)
-	for name in names:
-		keywordArg = first(arg for arg in keywordArg.next.all if arg.name == name)
-	return keywordArg
 
 
 COMMANDS_V23: CommandsCreator = copy.deepcopy(v1_20_2_schema.COMMANDS)

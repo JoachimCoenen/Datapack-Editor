@@ -9,7 +9,7 @@ from corePlugins.mcFunction.command import ArgumentSchema, CommandPartSchema, MC
 from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
 from . import v1_20_3_schema
 from .argumentTypes import *
-from .v1_20_2_schema import CommandsCreator
+from .v1_20_2_schema import CommandsCreator, getArgOptions
 
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
@@ -17,10 +17,12 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	schema_v29 = COMMANDS_V29.buildSchema(version1_20_5)
 	schema_v30 = COMMANDS_V30.buildSchema(version1_20_5)
 	schema_v31 = COMMANDS_V31.buildSchema(version1_20_5)
+	schema_v33 = COMMANDS_V33.buildSchema(version1_20_5)
 	return {
 		'Minecraft 24w04a': schema_v29,
 		'Minecraft 24w05b': schema_v30,
 		'Minecraft 24w06a': schema_v31,
+		'Minecraft 24w09a': schema_v33,
 	}
 
 
@@ -67,17 +69,28 @@ COMMANDS_V30: CommandsCreator = copy.deepcopy(COMMANDS_V29)
 
 
 @COMMANDS_V30.modify(name='effect')
-def build_transfer_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
-	amplifierSchema = (
-		args[0]       # give
-		.next.all[0]  # targets
-		.next.all[0]  # effect
-		.next.all[1]  # duration
-		.next.all[1]  # amplifier
-	)
+def modify_effect_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
+	amplifierSchema = getArgOptions(args, 'give', 'targets', 'effect', 'DURATION', 'amplifier')
 	# Potion effect amplifiers are now restricted between 0 and 127.
 	amplifierSchema.args.update(dict(min=0, max=127))
 	return args
 
 
 COMMANDS_V31: CommandsCreator = copy.deepcopy(COMMANDS_V29)  # reverts changes in v30 (limiting of Potion effect amplifiers to 127)
+
+
+COMMANDS_V33: CommandsCreator = copy.deepcopy(COMMANDS_V31)
+
+
+@COMMANDS_V33.modify(name='playsound')
+def modify_playsound_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
+	getArgOptions(args, 'sound', 'source').next.all.insert(0, TERMINAL)
+	getArgOptions(args, 'sound').next.all.insert(0, TERMINAL)
+	return args
+
+
+@COMMANDS_V33.modify(name='attribute')
+def modify_attribute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
+	operationSchema = getArgOptions(args, 'target', 'attribute', 'modifier', 'add', 'uuid', 'name', 'value', 'operation')
+	operationSchema.type = makeLiteralsArgumentType([b'add_value', b'add_multiplied_total', b'add_multiplied_base'])
+	return args
