@@ -52,13 +52,23 @@ class Node(Generic[_TNode, _TSchema], ABC):
 	@abstractmethod
 	def children(self) -> Collection[_TNode]:
 		"""
+		The child Nodes in order of appearance.
 		:return: a collection of its children
 		"""
 		return ()
 
 	def walkTree(self) -> Iterator[_TNode]:
+		""" Walk over this node and all its children, in Depth First Order. """
 		yield self
 		yield from _walkTree(self.children)
+
+	@property
+	def foreignNodes(self) -> Collection[Node | None]:
+		"""
+		The foreign Nodes in order of appearance. Can be used to simplify the implementation of syntax highlighting,
+		validation, code suggestions, etc. Override if necessary.
+		"""
+		return ()
 
 
 @dataclass

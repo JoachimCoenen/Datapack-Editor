@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Mapping, TYPE_CHECKING, TypeVar, NewType, Protocol, Generic, Type, Optional
+from typing import Mapping, TYPE_CHECKING, TypeVar, NewType, Protocol, Generic, Type, Optional, Callable, Collection
 
 from cat.utils import CachedProperty
 from cat.utils.collections_ import AddToDictDecorator
@@ -75,6 +75,24 @@ class CatStyler(Generic[_TNode], ABC):
 				self.setStyling(slice(result, node.span.end.index), styler.offset)
 			return node.span.end.index
 		return node.span.start.index
+
+	def styleStructuredNodeChildNodes(self, node: Node, baseStyle: StyleId) -> int:
+		return self.styleStructuredNode(node, node.children, baseStyle, self.styleNode)
+
+	def styleStructuredNodeForeignNodes(self, node: Node, baseStyle: StyleId) -> int:
+		return self.styleStructuredNode(node, node.foreignNodes, baseStyle, self.styleForeignNode)
+
+	def styleStructuredNode(self, node: Node, children: Collection[Node], baseStyle: StyleId, styleChildFunc: Callable[[Node], int]) -> int:
+		if not children:
+			self.setStyling(node.span.slice, baseStyle)
+		else:
+			lastIdx = node.span.start.index
+			for child in children:
+				if child is not None:
+					self.setStyling(slice(lastIdx, child.span.start.index), baseStyle)
+					lastIdx = styleChildFunc(child)
+			self.setStyling(slice(lastIdx, node.span.end.index), baseStyle)
+		return node.span.end.index
 
 	@CachedProperty
 	def localStyles(self) -> dict[str, StyleId]:

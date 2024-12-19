@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
-from typing import Generic, Protocol, TypeVar, Iterable, Optional, Type, final
+from typing import Generic, Protocol, TypeVar, Iterable, Optional, Type, final, Collection
 
 from cat.utils import Decorator
 from cat.utils.collections_ import AddToDictDecorator
@@ -83,6 +83,60 @@ class Context(Generic[_TNode]):
 			logWarning(f"checkCorrectNodeType() failed", f"expectedNodeType={expectedNodeType}", f"received type was {type(node)}" )
 			return False
 		return True
+
+
+class StructuredNodeValue(Protocol):
+	def getForeignNodes(self) -> Collection[Node | None]:
+		...
+
+
+class StructuredContext[TNode: Node](Context, ABC):
+	""" Context implementation that does the repetitive work for you."""
+
+	def getForeignNodes(self, node: TNode) -> Collection[Node | None]:
+		return node.foreignNodes
+
+	def validate(self, node: TNode, errorsIO: list[GeneralError]) -> None:
+		for foreignNode in self.getForeignNodes(node):
+			if foreignNode is not None:
+				validateTree(foreignNode, b'', errorsIO)
+
+	def getSuggestions(self, node: _TNode, position: Position, replaceCtx: str) -> Suggestions:
+		suggestions = []
+		for foreignNode in self.getForeignNodes(node):
+			if foreignNode is not None and foreignNode.span.__contains__(position):
+				suggestions += getSuggestions(foreignNode, b'', position, replaceCtx)
+		return suggestions
+
+	def getDocumentation(self, node: TNode, position: Position) -> MDStr:
+		doc: MDStr = MDStr("")
+		for foreignNode in self.getForeignNodes(node):
+			if foreignNode is not None and foreignNode.span.__contains__(position):
+				doc = getDocumentation(foreignNode, b'', position)
+				break
+
+		defaultDoc = defaultDocumentationProvider(node)
+
+		if doc and defaultDoc:
+			return MDStr(f"{defaultDoc}  \n\n{doc}")
+		else:
+			return doc or defaultDoc
+
+	def getClickableRanges(self, node: TNode) -> Optional[Iterable[Span]]:
+		ranges = []
+		for foreignNode in self.getForeignNodes(node):
+			if foreignNode is not None:
+				ranges += getClickableRanges(foreignNode, b'')
+		return ranges
+
+	def onIndicatorClicked(self, node: TNode, position: Position) -> None:
+		for foreignNode in self.getForeignNodes(node):
+			if foreignNode is not None and foreignNode.span.__contains__(position):
+				onIndicatorClicked(foreignNode, b'', position)
+				return
+
+
+DEFAULT_STRUCTURED_CONTEXT: StructuredContext = StructuredContext()
 
 
 def defaultDocumentationProvider(argument: Node) -> MDStr:
@@ -261,6 +315,7 @@ def parseNPrepare(
 		cursor: int = 0,
 		cursorOffset: int = 0,
 		indexMapper: IndexMapper = None,
+		fullSource: bytes | None = None,
 		**kwargs
 ) -> tuple[Optional[Node], list[GeneralError], Optional[ParserBase]]:
 	node, errors, parser = parse(
@@ -273,6 +328,7 @@ def parseNPrepare(
 		cursor=cursor,
 		cursorOffset=cursorOffset,
 		indexMapper=indexMapper,
+		fullSource=fullSource,
 		**kwargs
 	)
 	if node is not None:
@@ -340,6 +396,9 @@ __all__ = [
 	'Suggestions',
 	'CtxInfo',
 	'Context',
+	'StructuredNodeValue',
+	'StructuredContext',
+	'DEFAULT_STRUCTURED_CONTEXT',
 	'AddContextToDictDecorator',
 	'Match',
 	'ContextProvider',
