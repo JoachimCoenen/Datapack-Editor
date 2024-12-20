@@ -32,7 +32,7 @@ class FullMCData:
 	pointOfInterestTypes: frozenset[ResourceLocation]
 	damageTypes: frozenset[ResourceLocation]
 
-	slots: FrozenDict[bytes, Optional[int]]
+	slots: FrozenDict[bytes, frozenset[bytes]]
 	blockStates: FrozenDict[ResourceLocation, list[BlockStateType]]
 	gamerules: FrozenDict[bytes, Gamerule]
 

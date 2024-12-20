@@ -5,13 +5,14 @@ from typing import Any, Callable, Optional, ClassVar
 from better_orderedmultidict import OrderedMultiDict
 
 from base.model.messages import *
-from base.model.parsing.bytesUtils import bytesToStr, strToBytes
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes, bytesOptToStr
 from base.model.parsing.contextProvider import Suggestions, errorMsg
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError, LanguageId, Message, Position, Span
 from cat.utils.collections_ import FrozenDict
+from cat.utils.logging_ import logError
 from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
 from corePlugins.mcFunction.argumentTypes import makeLiteralsArgumentType
 from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, ParsedArgument
@@ -27,7 +28,7 @@ from corePlugins.nbt.path import NBTPathSchema, SNBT_PATH_ID
 from corePlugins.nbt.tags import NBTTagSchema
 from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag
 from .argumentTypes import *
-from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector
+from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector, ItemSlot
 from .itemComponents import ITEM_COMPONENT_ARG_OPTIONS
 from .targetSelector import TARGET_SELECTOR_ARG_OPTIONS
 
@@ -310,18 +311,24 @@ class GameProfileHandler(ArgumentContext):
 @argumentContext(MINECRAFT_ITEM_SLOT.name)
 class ItemSlotHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)?'))
+		slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)*\.?'))
 		if slot is None:
 			return None
-		return makeParsedArgument(sr, ai, value=slot)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		slot: str = node.value
-		if slot not in getCurrentFullMcData().slots:
-			errorMsg(UNKNOWN_MSG, "item slot",  slot, span=node.span, style='error', errorsIO=errorsIO)
+		slots = getCurrentFullMcData().slots
+		if slot not in slots:
+			slotType, _, slotNumber = slot.rpartition(b'.')
+		else:
+			slotType, slotNumber = slot, None
+
+		if not (slotType in slots and slotNumber in slots[slotType]):
+			errorMsg(UNKNOWN_MSG, "item slot", bytesToStr(slot), span=sr.currentSpan, style='error', errorsIO=errorsIO)
+
+		return makeParsedArgument(sr, ai, value=ItemSlot(bytesToStr(slotType), bytesOptToStr(slotNumber)))
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		return [bytesToStr(slot) for slot in getCurrentFullMcData().slots.keys()]
+		slots = getCurrentFullMcData().slots
+		return [bytesToStr(slotType if not slotNumber else slotType + b'.' + slotNumber) for slotType, slotNumbers in slots.items() for slotNumber in slotNumbers]
 
 
 @argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=False))
@@ -513,6 +520,9 @@ class TimeHandler(ArgumentContext):
 				ticks = number * 20
 			case b'd':
 				ticks = number * 24_000  # 24 thousand
+			case _:
+				logError(f"cannot validate a {MINECRAFT_TIME.name} with unknown unit '{bytesOptToStr(unit)}'")
+				return
 
 		args = node.schema.args or FrozenDict.EMPTY
 		minVal = args.get('min', -inf)

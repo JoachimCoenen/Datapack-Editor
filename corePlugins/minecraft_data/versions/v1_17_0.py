@@ -119,22 +119,14 @@ _VERSION_1_17_0 = CustomMCData(
 	pointOfInterestTypes=frozenset(),  # empty. because support for 1.18 will be dropped soon.
 	# compiled from the Minecraft wiki:
 	slots=FrozenDict({
-		b'armor.chest':     102,
-		b'armor.feet':      100,
-		b'armor.head':      103,
-		b'armor.legs':      101,
-		b'weapon':           98,
-		b'weapon.mainhand':  98,
-		b'weapon.offhand':   99,
-		**{b'container.' + strToBytes(f'{sn}'):    0 + sn for sn in range(0, 53 + 1)},  # 0-53 	0-53
-		**{b'enderchest.' + strToBytes(f'{sn}'): 200 + sn for sn in range(0, 26 + 1)},  # 0-26 	200-226
-		**{b'hotbar.' + strToBytes(f'{sn}'):       0 + sn for sn in range(0, 8 + 1)},   # 0-8 	0-8
-		**{b'inventory.' + strToBytes(f'{sn}'):    9 + sn for sn in range(0, 26 + 1)},  # 0-26 	9-35
-		b'horse.saddle':    400,
-		b'horse.chest':     499,
-		b'horse.armor':     401,
-		**{b'horse.' + strToBytes(f'{sn}'):      500 + sn for sn in range(0, 14 + 1)},  # 0-14 	500-514
-		**{b'villager.' + strToBytes(f'{sn}'):   300 + sn for sn in range(0, 7 + 1)},   # 0-7 	300-307
+		b'armor': frozenset({b'chest', b'feet', b'head', b'legs'}),
+		b'weapon': frozenset({None, b'mainhand', b'offhand'}),
+		b'container': frozenset({strToBytes(f'{sn}')  for sn in range(0, 53 + 1)}),  # 0-53 	0-53
+		b'enderchest': frozenset({strToBytes(f'{sn}') for sn in range(0, 26 + 1)}),  # 0-26 	200-226
+		b'hotbar': frozenset({strToBytes(f'{sn}')     for sn in range(0, 8 + 1)}),   # 0-8 	    0-8
+		b'inventory': frozenset({strToBytes(f'{sn}')  for sn in range(0, 26 + 1)}),  # 0-26 	9-35
+		b'horse': frozenset({b'saddle', b'chest', b'armor'} | {strToBytes(f'{sn}') for sn in range(0, 14 + 1)}),  # 0-14 	500-514
+		b'villager': frozenset({strToBytes(f'{sn}') for sn in range(0, 7 + 1)}),   # 0-7 	300-307
 	}),
 	gamerules=buildGamerulesDict([
 		Gamerule(

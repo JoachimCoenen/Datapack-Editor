@@ -37,7 +37,7 @@ class CustomMCData:
 	pointOfInterestTypes: frozenset[ResourceLocation]
 	damageTypes: frozenset[ResourceLocation]
 
-	slots: FrozenDict[bytes, Optional[int]]
+	slots: FrozenDict[bytes, frozenset[bytes | None]]
 	gamerules: FrozenDict[bytes, Gamerule]
 
 	EMPTY: ClassVar[CustomMCData]

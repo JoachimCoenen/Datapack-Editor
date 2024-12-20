@@ -28,6 +28,12 @@ class ItemStack:
 
 
 @dataclass
+class ItemSlot:
+	slotType: str
+	slotNumber: Optional[str]
+
+
+@dataclass
 class TargetSelector:
 	variable: str
 	arguments: FilterArguments
