@@ -330,7 +330,10 @@ class ItemSlotHandler(ArgumentContext):
 		else:
 			slotType, slotNumber = slot, None
 
-		isValid = slotType in slots and (slotNumber in slots[slotType] or (self.allowWildcard and slotNumber == b'*'))
+		isValid = slotType in slots and (slotNumber in slots[slotType] or (
+				self.allowWildcard and slotNumber == b'*')
+				and slots[slotType] and not (len(slots[slotType]) == 1 and None in slots[slotType])  # exclude those that do not have a slotNumber.
+		)
 		if not isValid:
 			errorMsg(UNKNOWN_MSG, "item slot", bytesToStr(slot), span=sr.currentSpan, style='error', errorsIO=errorsIO)
 

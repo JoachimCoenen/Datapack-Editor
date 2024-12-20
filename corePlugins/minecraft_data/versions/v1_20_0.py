@@ -609,6 +609,7 @@ _VERSION_1_20_5 = replace(
 	slots=_VERSION_1_20_4.slots + {
 		b'armor': _VERSION_1_20_4.slots[b'armor'] | {b'body'},
 		b'horse': _VERSION_1_20_4.slots[b'horse'] - {b'armor'},
+		b'contents': frozenset({None}),
 
 	},
 	# compiled from the Minecraft wiki:
