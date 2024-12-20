@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 import os
 from dataclasses import dataclass, field
 from types import ModuleType
-from typing import ClassVar, Optional, Any
+from typing import ClassVar, Any
 
 from base.model.parsing.bytesUtils import strToBytes
-from cat.utils.collections_ import FrozenDict
 from base.modules import loadAllModules, FolderAndFileFilter
+from cat.utils.collections_ import FrozenDict
 from .resourceLocation import ResourceLocation
 
 
@@ -36,6 +37,7 @@ class CustomMCData:
 	structures: frozenset[ResourceLocation]
 	pointOfInterestTypes: frozenset[ResourceLocation]
 	damageTypes: frozenset[ResourceLocation]
+	itemComponents: frozenset[ResourceLocation]
 
 	slots: FrozenDict[bytes, frozenset[bytes | None]]
 	gamerules: FrozenDict[bytes, Gamerule]
@@ -54,6 +56,7 @@ CustomMCData.EMPTY = CustomMCData(
 	structures=frozenset(),
 	pointOfInterestTypes=frozenset(),
 	damageTypes=frozenset(),
+	itemComponents=frozenset(),
 	slots=FrozenDict(),
 	gamerules=FrozenDict(),
 )

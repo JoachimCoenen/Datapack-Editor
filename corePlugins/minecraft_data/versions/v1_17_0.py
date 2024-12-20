@@ -3,11 +3,10 @@ for Minecraft version 1.17
 """
 from dataclasses import replace
 
+from base.model.parsing.bytesUtils import strToBytes
 from cat.utils.collections_ import FrozenDict
 from corePlugins.minecraft_data.customData import CustomMCData, Gamerule, buildGamerulesDict
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
-from base.model.parsing.bytesUtils import strToBytes
-
 
 _VERSION_1_17_0 = CustomMCData(
 	name='1.17',
@@ -114,9 +113,10 @@ _VERSION_1_17_0 = CustomMCData(
 		ResourceLocation.fromString('ocean_ruin'),
 		ResourceLocation.fromString('mineshaft'),
 	}),
+	pointOfInterestTypes=frozenset(),  # empty. because support for 1.18 will be dropped soon.
 	damageTypes=frozenset(),  # empty. because support for 1.18 will be dropped soon.
 	# compiled from the 1.20.2.jar using this command "javap -constants -c  buj.class":
-	pointOfInterestTypes=frozenset(),  # empty. because support for 1.18 will be dropped soon.
+	itemComponents=frozenset(),  # empty. because introduced in 1.20.5.
 	# compiled from the Minecraft wiki:
 	slots=FrozenDict({
 		b'armor': frozenset({b'chest', b'feet', b'head', b'legs'}),

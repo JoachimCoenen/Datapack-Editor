@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Mapping, Optional, ClassVar
 
@@ -31,6 +32,7 @@ class FullMCData:
 	structures: frozenset[ResourceLocation]
 	pointOfInterestTypes: frozenset[ResourceLocation]
 	damageTypes: frozenset[ResourceLocation]
+	itemComponents: frozenset[ResourceLocation]
 
 	slots: FrozenDict[bytes, frozenset[bytes]]
 	blockStates: FrozenDict[ResourceLocation, list[BlockStateType]]
@@ -77,6 +79,7 @@ def buildFullMCData(name: str, mcData: Optional[MCData], cuData: Optional[Custom
 		structures=cuData.structures,
 		pointOfInterestTypes=cuData.pointOfInterestTypes,
 		damageTypes=cuData.damageTypes,
+		itemComponents=cuData.itemComponents,
 		slots=cuData.slots,
 		blockStates=mcData.blockStates,
 		gamerules=cuData.gamerules,

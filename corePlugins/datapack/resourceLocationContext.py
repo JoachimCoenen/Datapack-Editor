@@ -537,6 +537,12 @@ class DamageTypeContext(SimpleResourceLocationContext1):
 		return mc.damageTypes
 
 
+@resourceLocationContext('item_components', _indexPath=None, _tagsIndexPath=None)
+class ItemComponentContext(SimpleResourceLocationContext1):
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
+		return mc.itemComponents
+
+
 @resourceLocationContext('any', name='resource_location')
 class AnyContext(ResourceLocationContext):
 

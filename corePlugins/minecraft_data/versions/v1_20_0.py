@@ -3,10 +3,10 @@ for Minecraft version 1.20 - 1.20.5 (incomplete)
 """
 from dataclasses import replace
 
+from base.model.parsing.bytesUtils import strToBytes
 from cat.utils.collections_ import FrozenDict
 from corePlugins.minecraft_data.customData import CustomMCData, Gamerule, buildGamerulesDict
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
-from base.model.parsing.bytesUtils import strToBytes
 from . import v1_18_0
 
 
@@ -537,6 +537,74 @@ _VERSION_1_20_4 = replace(
 _VERSION_1_20_5 = replace(
 	_VERSION_1_20_4,
 	name='1.20.5',
+	# compiled from the Minecraft wiki:
+	itemComponents=frozenset({
+		ResourceLocation.fromString('attribute_modifiers'),
+		ResourceLocation.fromString('banner_patterns'),
+		ResourceLocation.fromString('base_color'),
+		ResourceLocation.fromString('bees'),
+		ResourceLocation.fromString('block_entity_data'),
+		ResourceLocation.fromString('block_state'),
+		ResourceLocation.fromString('bucket_entity_data'),
+		ResourceLocation.fromString('bundle_contents'),
+		ResourceLocation.fromString('can_break'),
+		ResourceLocation.fromString('can_place_on'),
+		ResourceLocation.fromString('charged_projectiles'),
+		ResourceLocation.fromString('consumable'),
+		ResourceLocation.fromString('container'),
+		ResourceLocation.fromString('container_loot'),
+		ResourceLocation.fromString('custom_data'),
+		ResourceLocation.fromString('custom_model_data'),
+		ResourceLocation.fromString('custom_name'),
+		ResourceLocation.fromString('damage'),
+		ResourceLocation.fromString('damage_resistant'),
+		ResourceLocation.fromString('debug_stick_state'),
+		ResourceLocation.fromString('death_protection'),
+		ResourceLocation.fromString('dyed_color'),
+		ResourceLocation.fromString('enchantable'),
+		ResourceLocation.fromString('enchantment_glint_override'),
+		ResourceLocation.fromString('enchantments'),
+		ResourceLocation.fromString('entity_data'),
+		ResourceLocation.fromString('equippable'),
+		ResourceLocation.fromString('firework_explosion'),
+		ResourceLocation.fromString('fireworks'),
+		ResourceLocation.fromString('food'),
+		ResourceLocation.fromString('glider'),
+		ResourceLocation.fromString('hide_additional_tooltip'),
+		ResourceLocation.fromString('hide_tooltip'),
+		ResourceLocation.fromString('instrument'),
+		ResourceLocation.fromString('intangible_projectile'),
+		ResourceLocation.fromString('item_model'),
+		ResourceLocation.fromString('item_name'),
+		ResourceLocation.fromString('jukebox_playable'),
+		ResourceLocation.fromString('lock'),
+		ResourceLocation.fromString('lodestone_tracker'),
+		ResourceLocation.fromString('lore'),
+		ResourceLocation.fromString('map_color'),
+		ResourceLocation.fromString('map_decorations'),
+		ResourceLocation.fromString('map_id'),
+		ResourceLocation.fromString('max_damage'),
+		ResourceLocation.fromString('max_stack_size'),
+		ResourceLocation.fromString('note_block_sound'),
+		ResourceLocation.fromString('ominous_bottle_amplifier'),
+		ResourceLocation.fromString('pot_decorations'),
+		ResourceLocation.fromString('potion_contents'),
+		ResourceLocation.fromString('profile'),
+		ResourceLocation.fromString('rarity'),
+		ResourceLocation.fromString('recipes'),
+		ResourceLocation.fromString('repairable'),
+		ResourceLocation.fromString('repair_cost'),
+		ResourceLocation.fromString('stored_enchantments'),
+		ResourceLocation.fromString('suspicious_stew_effects'),
+		ResourceLocation.fromString('tool'),
+		ResourceLocation.fromString('tooltip_style'),
+		ResourceLocation.fromString('trim'),
+		ResourceLocation.fromString('unbreakable'),
+		ResourceLocation.fromString('use_cooldown'),
+		ResourceLocation.fromString('use_remainder'),
+		ResourceLocation.fromString('writable_book_content'),
+		ResourceLocation.fromString('written_book_content'),
+	}),
 	# compiled from the Minecraft wiki:
 	slots=_VERSION_1_20_4.slots + {
 		b'armor': _VERSION_1_20_4.slots[b'armor'] | {b'body'},

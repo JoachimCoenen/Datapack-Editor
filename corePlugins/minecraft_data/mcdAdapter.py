@@ -41,7 +41,7 @@ def faiForBS(bs: BlockStateType) -> FilterArgumentInfo:
 		argType = ALL_NAMED_ARGUMENT_TYPES[bs.type]
 
 	return FilterArgumentInfo(
-		keySchema=KeywordSchema(bs.name),
+		name=bs.name,
 		valueSchema=ArgumentSchema(name=bs.name, type=argType),
 		description=""
 	)

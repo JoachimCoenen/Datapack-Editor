@@ -56,7 +56,7 @@ class FilterArgNode[TSchema: FilterArgSchemaBase](Node['FilterArgNode', TSchema]
 
 @dataclass
 class FilterArgumentInfo(FilterArgSchemaBase):
-	keySchema: CommandPartSchema = field(default=None, kw_only=True)
+	name: str = field(default=None, kw_only=True)
 	valueSchema: ArgumentSchema = field(default=None, kw_only=True)
 	multipleAllowed: bool = field(default=False, kw_only=True)  # overrides multipleAllowedIfNegated field
 	multipleAllowedIfNegated: bool = field(default=False, kw_only=True)
@@ -66,8 +66,6 @@ class FilterArgumentInfo(FilterArgSchemaBase):
 	defaultValue: Any = field(default=Nothing, kw_only=True)
 
 	def __post_init__(self):
-		# if self.keySchema is None:
-		# 	self.keySchema = KeywordSchema(self.name)
 		if self.multipleAllowed and self.multipleAllowedIfNegated:
 			warn("Both `multipleAllowed` and `multipleAllowedIfNegated` are set to True. This is probably not intentional.", RuntimeWarning, 3)
 		if self.multipleAllowedIfNegated and not self.isNegatable:
@@ -140,7 +138,7 @@ class FilterArguments(FilterArgNode[FilterArgOptions]):
 
 
 FALLBACK_FILTER_ARGUMENT_INFO = FilterArgumentInfo(
-	keySchema=KeywordSchema('_fallback'),
+	name='_fallback',
 	valueSchema=ArgumentSchema(
 		name='_fallback',
 		type=BRIGADIER_STRING,
