@@ -274,6 +274,16 @@ MINECRAFT_ITEM_SLOT = ArgumentType(
 	* {{cd|weapon}}""",
 )
 
+MINECRAFT_ITEM_SLOTS = ArgumentType(
+	name='minecraft:item_slots',
+	description="Must be a string notation that refer to certain slots in the inventory.",
+	description2="""""",
+	examples="""
+	* {{cd|container.*}}
+	* {{cd|container.5}}
+	* {{cd|weapon}}""",
+)
+
 MINECRAFT_ITEM_STACK = ArgumentType(
 	name='minecraft:item_stack',
 	description="",
@@ -619,6 +629,7 @@ __all__ = [
 	'MINECRAFT_ITEM_ENCHANTMENT',
 	'MINECRAFT_ITEM_PREDICATE',
 	'MINECRAFT_ITEM_SLOT',
+	'MINECRAFT_ITEM_SLOTS',
 	'MINECRAFT_ITEM_STACK',
 	'MINECRAFT_LOOT_TABLE',
 	'MINECRAFT_MESSAGE',

@@ -308,10 +308,19 @@ class GameProfileHandler(ArgumentContext):
 		return EntityHandler().parse(sr, ai, filePath, errorsIO=errorsIO)
 
 
-@argumentContext(MINECRAFT_ITEM_SLOT.name)
+@argumentContext(MINECRAFT_ITEM_SLOT.name, allowWildcard=False)
+@argumentContext(MINECRAFT_ITEM_SLOTS.name, allowWildcard=True)
 class ItemSlotHandler(ArgumentContext):
+	def __init__(self, allowWildcard: bool):
+		super().__init__()
+		self.allowWildcard: bool = allowWildcard
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)*\.?'))
+		if self.allowWildcard:
+			slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)*(?:\.\*?)?'))
+		else:
+			slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)*\.?'))
+
 		if slot is None:
 			return None
 
@@ -321,14 +330,22 @@ class ItemSlotHandler(ArgumentContext):
 		else:
 			slotType, slotNumber = slot, None
 
-		if not (slotType in slots and slotNumber in slots[slotType]):
+		isValid = slotType in slots and (slotNumber in slots[slotType] or (self.allowWildcard and slotNumber == b'*'))
+		if not isValid:
 			errorMsg(UNKNOWN_MSG, "item slot", bytesToStr(slot), span=sr.currentSpan, style='error', errorsIO=errorsIO)
 
 		return makeParsedArgument(sr, ai, value=ItemSlot(bytesToStr(slotType), bytesOptToStr(slotNumber)))
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		slots = getCurrentFullMcData().slots
-		return [bytesToStr(slotType if not slotNumber else slotType + b'.' + slotNumber) for slotType, slotNumbers in slots.items() for slotNumber in slotNumbers]
+		suggestions = [bytesToStr(slotType if not slotNumber else slotType + b'.' + slotNumber) for slotType, slotNumbers in slots.items() for slotNumber in slotNumbers]
+		if self.allowWildcard:
+			suggestions += [
+				bytesToStr(slotType + b'.*')
+				for slotType, slotNumbers in slots.items()
+				if slotNumbers and not (len(slotNumbers) == 1 and None in slotNumbers)  # exclude those that do not have a slotNumber.
+			]
+		return suggestions
 
 
 @argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=False))

@@ -4,8 +4,10 @@ currently at minecraft version 1.20.3 (1.20.3-rc1)
 
 import copy
 
+from cat.utils.collections_ import ChainedList
 from corePlugins.mcFunction.argumentTypes import *
-from corePlugins.mcFunction.command import ArgumentSchema, CommandPartSchema, MCFunctionSchema, Options, TERMINAL
+from corePlugins.mcFunction.command import ArgumentSchema, CommandPartSchema, MCFunctionSchema, Options, TERMINAL, \
+	KeywordSchema, SwitchSchema
 from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
 from . import v1_20_3_schema
 from .argumentTypes import *
@@ -18,11 +20,13 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	schema_v30 = COMMANDS_V30.buildSchema(version1_20_5)
 	schema_v31 = COMMANDS_V31.buildSchema(version1_20_5)
 	schema_v33 = COMMANDS_V33.buildSchema(version1_20_5)
+	schema_v34 = COMMANDS_V34.buildSchema(version1_20_5)
 	return {
 		'Minecraft 24w04a': schema_v29,
 		'Minecraft 24w05b': schema_v30,
 		'Minecraft 24w06a': schema_v31,
 		'Minecraft 24w09a': schema_v33,
+		'Minecraft 24w10a': schema_v34,
 	}
 
 
@@ -93,4 +97,63 @@ def modify_playsound_args(_: FullMCData, args: list[CommandPartSchema]) -> list[
 def modify_attribute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	operationSchema = getArgOptions(args, 'target', 'attribute', 'modifier', 'add', 'uuid', 'name', 'value', 'operation')
 	operationSchema.type = makeLiteralsArgumentType([b'add_value', b'add_multiplied_total', b'add_multiplied_base'])
+	return args
+
+
+COMMANDS_V34: CommandsCreator = copy.deepcopy(COMMANDS_V33)
+
+
+@COMMANDS_V34.modify(name='execute')
+def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
+	EXECUTE_INSTRUCTIONS: list[CommandPartSchema] = args
+	EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS = Options(ChainedList([TERMINAL], EXECUTE_INSTRUCTIONS))
+	ifArg = getArgOptions(args, 'if')
+	# items <source> <slots> <item_predicate>
+
+	ITEM_SOURCE = [
+		KeywordSchema(
+			name='block',
+			next=Options([
+				ArgumentSchema(
+					name='sourcePos',
+					type=MINECRAFT_BLOCK_POS,
+				),
+			])
+		),
+		KeywordSchema(
+			name='entity',
+			next=Options([
+				ArgumentSchema(
+					name='source',
+					type=MINECRAFT_ENTITY,
+				),
+			])
+		),
+	]
+	ifArg.next.all.append(KeywordSchema(
+		name='items',
+		description="Checks for a matching item in the provided inventory slots.",
+		next=Options([
+			SwitchSchema(
+				name='TARGET',
+				options=Options(ITEM_SOURCE),
+				next=Options([
+					ArgumentSchema(
+						name='slots',
+						type=MINECRAFT_ITEM_SLOTS,
+						next=Options([
+							ArgumentSchema(
+								name='item_predicate',
+								type=MINECRAFT_ITEM_PREDICATE,
+								next=EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS
+
+							)
+						])
+
+					)
+				])
+			)
+
+		])
+	))
 	return args
