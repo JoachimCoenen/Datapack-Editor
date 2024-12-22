@@ -1,6 +1,8 @@
 from typing import Optional, cast
 
 from base.model.parsing.bytesUtils import ORD_SPACE
+from corePlugins.datapackVersions import PREDICATE_ARGS_ID
+from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgOptions, PredicateArgs
 from corePlugins.mcFunction.argumentContextsImpl import parseFromStringReader
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
 from corePlugins.mcFunction.commandContext import makeParsedArgument
@@ -43,15 +45,19 @@ def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: boo
 	return makeParsedArgument(sr, ai, value=tuple(vec))
 
 
-def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
-	tag = cast(NBTTag, parseFromStringReader(
+def tryReadNBTTag(sr: StringReader, schema: NBTTagSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
+	return cast(NBTTag, parseFromStringReader(
 		sr,
 		filePath=filePath,
 		language=SNBT_ID,
-		schema=NBTTagSchema(''),
+		schema=schema,
 		errorsIO=errorsIO,
 		ignoreTrailingChars=True
 	))
+
+
+def tryReadNBTCompoundTag(sr: StringReader, schema: NBTTagSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
+	tag = tryReadNBTTag(sr, schema, filePath, errorsIO=errorsIO)
 	if tag is None:
 		return None
 
@@ -60,6 +66,16 @@ def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePa
 	else:
 		sr.rollback()
 		return None
+
+
+def readPredicateArgs(sr: StringReader, schema: PredicateArgOptions, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[PredicateArgs]:
+	return cast(PredicateArgs, parseFromStringReader(
+		sr,
+		filePath=filePath,
+		language=PREDICATE_ARGS_ID,
+		schema=schema,
+		errorsIO=errorsIO,
+	))
 
 
 def _readResourceLocation(sr: StringReader, filePath: FilePath, schema: ResourceLocationSchema, *, errorsIO: list[GeneralError]) -> Optional[ResourceLocationNode]:

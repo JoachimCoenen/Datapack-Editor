@@ -605,6 +605,22 @@ _VERSION_1_20_5 = replace(
 		ResourceLocation.fromString('writable_book_content'),
 		ResourceLocation.fromString('written_book_content'),
 	}),
+	itemSubPredicates=frozenset({
+		ResourceLocation.fromString('attribute_modifiers'),
+		ResourceLocation.fromString('bundle_contents'),
+		ResourceLocation.fromString('container'),
+		ResourceLocation.fromString('custom_data'),
+		ResourceLocation.fromString('damage'),
+		ResourceLocation.fromString('enchantments'),
+		ResourceLocation.fromString('firework_explosion'),
+		ResourceLocation.fromString('fireworks'),
+		ResourceLocation.fromString('jukebox_playable'),
+		ResourceLocation.fromString('potion_contents'),
+		ResourceLocation.fromString('stored_enchantments'),
+		ResourceLocation.fromString('trim'),
+		ResourceLocation.fromString('writable_book_content'),
+		ResourceLocation.fromString('written_book_content'),
+	}),
 	# compiled from the Minecraft wiki:
 	slots=_VERSION_1_20_4.slots + {
 		b'armor': _VERSION_1_20_4.slots[b'armor'] | {b'body'},

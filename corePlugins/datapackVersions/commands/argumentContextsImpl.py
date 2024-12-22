@@ -19,18 +19,19 @@ from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, ParsedAr
 from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, \
 	missingArgumentParser, StructuredArgumentContext
 from corePlugins.mcFunction.filterArgs import FilterArgOptions, parseFilterArgsLike, FALLBACK_FILTER_ARGUMENT_INFO, \
-	FilterArgumentInfo, NegationStyle
+	FilterArgumentInfo
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
 from corePlugins.nbt import SNBT_ID
 from corePlugins.nbt.path import NBTPathSchema, SNBT_PATH_ID
 from corePlugins.nbt.tags import NBTTagSchema
-from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag
+from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag, tryReadNBTTag, readPredicateArgs
 from .argumentTypes import *
-from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector, ItemSlot
+from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector, ItemSlot, ResourceLocationOrInlineNBT
 from .itemComponents import ITEM_COMPONENT_ARG_OPTIONS
 from .targetSelector import TARGET_SELECTOR_ARG_OPTIONS
+from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgs
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
 
@@ -42,8 +43,6 @@ OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be
 @argumentContext(MINECRAFT_ITEM_ENCHANTMENT.name, rlcSchema=ResourceLocationSchema('', 'enchantment', allowTags=False))
 @argumentContext(MINECRAFT_MOB_EFFECT.name, rlcSchema=ResourceLocationSchema('', 'mob_effect', allowTags=False))
 @argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle', allowTags=False))
-@argumentContext(MINECRAFT_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'predicate', allowTags=False))
-@argumentContext(MINECRAFT_LOOT_TABLE.name, rlcSchema=ResourceLocationSchema('', 'loot_table', allowTags=False))
 @argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))  # TODO: add validation for objective_criteria
 @argumentContext(DPE_ADVANCEMENT.name, rlcSchema=ResourceLocationSchema('', 'advancement', allowTags=False))
 @argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome', allowTags=False))  # outdated. TODO: remove
@@ -89,6 +88,34 @@ class ResourceLocationHandler(ParsingHandler):
 		return ResourceLocationNode.fromString(b'', Span(pos), self.getSchema(ai))
 
 
+@argumentContext(MINECRAFT_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'predicate', allowTags=False), nbtSchema='minecraft:predicate')
+@argumentContext(MINECRAFT_LOOT_TABLE.name, rlcSchema=ResourceLocationSchema('', 'loot_table', allowTags=False), nbtSchema='minecraft:loot_table')
+@argumentContext(MINECRAFT_LOOT_MODIFIER.name, rlcSchema=ResourceLocationSchema('', 'item_modifier', allowTags=False), nbtSchema='minecraft:item_modifier')
+class ResourceLocationOrSNBTHandler(StructuredArgumentContext):
+	def __init__(self, rlcSchema: ResourceLocationSchema, nbtSchema: str):
+		super().__init__()
+		self.rlcSchema: ResourceLocationSchema = rlcSchema
+		self.nbtSchema: str = nbtSchema
+
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		resLoc = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
+		if resLoc is not None:
+			value = ResourceLocationOrInlineNBT(resLoc=resLoc, nbt=None)
+			return makeParsedArgument(sr, ai, value=value)
+
+		nbtTagSchema = GLOBAL_SCHEMA_STORE.get(self.nbtSchema, LanguageId('SNBT'))
+		if nbtTagSchema is None:
+			nbtTagSchema = NBTTagSchema('')
+		nbt = tryReadNBTTag(sr, nbtTagSchema, filePath, errorsIO=errorsIO)
+		if nbt is not None:
+			value = ResourceLocationOrInlineNBT(resLoc=None, nbt=nbt)
+			return makeParsedArgument(sr, ai, value=value)
+		return None
+
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
+
+
 @argumentContext(MINECRAFT_ANGLE.name)
 class AngleHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
@@ -110,8 +137,6 @@ class BlockStateHandler(StructuredArgumentContext[BlockState]):
 		return FilterArgOptions(
 			opening=b'[',
 			closing=b']',
-			allowTrailingComma=True,
-			negationStyle=NegationStyle.VALUE_NEGATION,
 			keySchema=ArgumentSchema(
 				name='key',
 				type=makeLiteralsArgumentType(list(blockStates.keys())),
@@ -140,7 +165,7 @@ class BlockStateHandler(StructuredArgumentContext[BlockState]):
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
-			nbt = tryReadNBTCompoundTag(sr, ai, filePath, errorsIO=errorsIO)
+			nbt = tryReadNBTCompoundTag(sr, NBTTagSchema(''), filePath, errorsIO=errorsIO)
 		else:
 			nbt = None
 		if nbt is not None:
@@ -351,37 +376,44 @@ class ItemSlotHandler(ArgumentContext):
 		return suggestions
 
 
-@argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=False))
-@argumentContext(MINECRAFT_ITEM_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=True))
+@argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=False), allowWildcard=False)
+@argumentContext(MINECRAFT_ITEM_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=True), allowWildcard=True)
 class ItemStackHandler(StructuredArgumentContext[ItemStack]):
-	def __init__(self, rlcSchema: ResourceLocationSchema):
+	def __init__(self, rlcSchema: ResourceLocationSchema, allowWildcard: bool):
 		super().__init__()
 		self.rlcSchema: ResourceLocationSchema = rlcSchema
+		self.allowWildcard: bool = allowWildcard
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		# item_id{data_tags}
 		itemID = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
+		if itemID is None and self.allowWildcard and getCurrentFullMcData().name >= '1.20.5' and sr.tryPeek() == ord('*'):
+			sr.save()
+			sr.skip()
+			itemID = '*'
 		if itemID is None:
 			return None
 
-		# until 1.20.5 (excl.): todo add version check
-		# data tags:
-		if sr.tryPeek() == ord('{'):
-			nbt = tryReadNBTCompoundTag(sr, ai, filePath, errorsIO=errorsIO)
-			if nbt is not None:
+		if getCurrentFullMcData().name < '1.20.5':
+			# until 1.20.5 (excl.):
+			# data tags:
+			if sr.tryPeek() == ord('{'):
+				nbt = tryReadNBTCompoundTag(sr, NBTTagSchema(''), filePath, errorsIO=errorsIO)
+				if nbt is not None:
+					sr.mergeLastSave()
+			else:
+				nbt = None
+			itemComponents = None
+		else:
+			# since 1.20.5 (incl.):
+			# item Components:
+			itemComponents = readPredicateArgs(sr, ITEM_COMPONENT_ARG_OPTIONS, filePath, errorsIO=errorsIO)
+			if itemComponents is None:
+				currentPos = sr.currentPos
+				blockStatesOptions = ITEM_COMPONENT_ARG_OPTIONS
+				itemComponents = PredicateArgs(Span(currentPos), blockStatesOptions, [])
+			else:
 				sr.mergeLastSave()
-		else:
 			nbt = None
-
-		# since 1.20.5 (incl.): todo add version check
-		# item Components:
-		itemComponents = parseFilterArgsLike(sr, ITEM_COMPONENT_ARG_OPTIONS, filePath, errorsIO=errorsIO)
-		if itemComponents is None:
-			currentPos = sr.currentPos
-			blockStatesOptions = ITEM_COMPONENT_ARG_OPTIONS
-			itemComponents = FilterArguments(Span(currentPos, currentPos), blockStatesOptions, sr.fullSource, OrderedMultiDict())
-		else:
-			sr.mergeLastSave()
 
 		itemStack = ItemStack(itemId=itemID, nbt=nbt, components=itemComponents)
 		return makeParsedArgument(sr, ai, value=itemStack)

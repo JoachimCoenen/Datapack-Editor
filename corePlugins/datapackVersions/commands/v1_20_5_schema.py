@@ -21,12 +21,14 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	schema_v31 = COMMANDS_V31.buildSchema(version1_20_5)
 	schema_v33 = COMMANDS_V33.buildSchema(version1_20_5)
 	schema_v34 = COMMANDS_V34.buildSchema(version1_20_5)
+	schema_v36 = COMMANDS_V36.buildSchema(version1_20_5)
 	return {
 		'Minecraft 24w04a': schema_v29,
 		'Minecraft 24w05b': schema_v30,
 		'Minecraft 24w06a': schema_v31,
 		'Minecraft 24w09a': schema_v33,
 		'Minecraft 24w10a': schema_v34,
+		'Minecraft 24w12a': schema_v36,
 	}
 
 
@@ -157,3 +159,90 @@ def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[Co
 		])
 	))
 	return args
+
+
+COMMANDS_V36: CommandsCreator = copy.deepcopy(COMMANDS_V34)
+
+
+@COMMANDS_V36.modify(name='particle')
+def modify_particle_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
+	# particle <name> [<pos>] [<delta> <speed> <count> [force|normal] [<viewers>]]
+	PARTICLE_ARGUMENT_OPTIONS = Options([
+		TERMINAL,
+		ArgumentSchema(
+			name='pos',
+			type=MINECRAFT_VEC3,
+			next=Options([
+				TERMINAL,
+				ArgumentSchema(
+					name='delta',
+					type=MINECRAFT_VEC3,
+					next=Options([
+						ArgumentSchema(
+							name='speed',
+							type=BRIGADIER_FLOAT,
+							next=Options([
+								ArgumentSchema(
+									name='count',
+									type=BRIGADIER_INTEGER,
+									next=Options([
+										TERMINAL,
+										ArgumentSchema(
+											name='display_mode',
+											type=makeLiteralsArgumentType([b'force', b'normal']),
+											next=Options([
+												TERMINAL,
+												ArgumentSchema(
+													name='viewers',
+													type=MINECRAFT_ENTITY
+												),
+											])
+										),
+									])
+								),
+							])
+						),
+					])
+				),
+			])
+		),
+	])
+	_SPECIAL_PARTICLES_LIST = [
+		KeywordSchema(
+			name='entity_effect',
+			next=Options([
+				ArgumentSchema(
+					name='red',
+					type=BRIGADIER_FLOAT,
+					next=Options([
+						ArgumentSchema(
+							name='green',
+							type=BRIGADIER_FLOAT,
+							next=Options([
+								ArgumentSchema(
+									name='blue',
+									type=BRIGADIER_FLOAT,
+									next=Options([
+										ArgumentSchema(
+											name='alpha',
+											type=BRIGADIER_FLOAT,
+											next=PARTICLE_ARGUMENT_OPTIONS
+										),
+									])
+								),
+							])
+						),
+					])
+				),
+			])
+		),
+	]
+	_SPECIAL_PARTICLES = []
+	for particle in _SPECIAL_PARTICLES_LIST:
+		_SPECIAL_PARTICLES.append(particle)
+		particle = copy.copy(particle)
+		particle.name = f'minecraft:{particle.name}'
+		_SPECIAL_PARTICLES.append(particle)
+	del _SPECIAL_PARTICLES_LIST
+
+	return _SPECIAL_PARTICLES + args

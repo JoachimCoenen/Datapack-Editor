@@ -298,10 +298,17 @@ MINECRAFT_ITEM_STACK = ArgumentType(
 	* <code>stick{foo:bar}</code>""",
 )
 
+MINECRAFT_LOOT_MODIFIER = ArgumentType(
+	name='minecraft:loot_modifier',
+	description="",
+	description2="""Specifies a item modifier with a resource location or in SNBT format. Must be a valid item modifier definition in SNBT format, or a resource location of an existing item modifier (an entry in `minecraft:item_modifier` registry). For NBT tag, if it is a string tag, the tag is also parsed into a resource location and resolved into an existing item modifier; otherwise, the tag is parsed as a new item modifier definition.""",
+	examples="""""",
+)
+
 MINECRAFT_LOOT_TABLE = ArgumentType(
 	name='minecraft:loot_table',
-	description="{{Arg desc|je=resource_location}}",
-	description2="""resource location of a loot table.""",
+	description="",
+	description2="""Specifies a loot table with a resource location or in SNBT format. Must be a valid loot table definition in SNBT format, or a resource location of an existing loot table (an entry in `minecraft:loot_table` registry). For NBT tag, if it is a string tag, the tag is also parsed into a resource location and resolved into an existing loot table; otherwise, the tag is parsed as a new loot table definition.""",
 	examples="""""",
 )
 
@@ -415,7 +422,7 @@ MINECRAFT_PARTICLE = ArgumentType(
 MINECRAFT_PREDICATE = ArgumentType(
 	name='minecraft:predicate',
 	description="{{Arg desc|je=resource_location}}",
-	description2="""resource location of a predicate.""",
+	description2="""Specifies a predicate with a resource location or in SNBT format. Must be a valid predicate definition in SNBT format, or a resource location of an existing predicate (an entry in `minecraft:predicate` registry). For NBT tag, if it is a string tag, the tag is also parsed into a resource location and resolved into an existing predicate; otherwise, the tag is parsed as a new predicate definition.""",
 	examples="""""",
 )
 
@@ -631,6 +638,7 @@ __all__ = [
 	'MINECRAFT_ITEM_SLOT',
 	'MINECRAFT_ITEM_SLOTS',
 	'MINECRAFT_ITEM_STACK',
+	'MINECRAFT_LOOT_MODIFIER',
 	'MINECRAFT_LOOT_TABLE',
 	'MINECRAFT_MESSAGE',
 	'MINECRAFT_MOB_EFFECT',

@@ -37,6 +37,8 @@ _allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
 	MINECRAFT_ITEM_SLOT.name:          StyleIds.Constant,
 	MINECRAFT_ITEM_SLOTS.name:         StyleIds.Constant,
 	MINECRAFT_ITEM_STACK.name:         StyleIds.Complex,
+	MINECRAFT_LOOT_MODIFIER.name:      StyleIds.String,
+	MINECRAFT_LOOT_TABLE.name:         StyleIds.String,
 	MINECRAFT_MESSAGE.name:            StyleIds.String,
 	MINECRAFT_MOB_EFFECT.name:         StyleIds.String,
 	MINECRAFT_NBT_COMPOUND_TAG.name:   StyleIds.Complex,
@@ -116,7 +118,6 @@ addSimpleArgumentStyler(StyleIds.String, forArgTypes=[
 	MINECRAFT_MOB_EFFECT,
 	MINECRAFT_OBJECTIVE,
 	MINECRAFT_OBJECTIVE_CRITERIA,
-	MINECRAFT_PREDICATE,
 	MINECRAFT_RESOURCE_LOCATION,
 	MINECRAFT_UUID,
 	DPE_ADVANCEMENT,
@@ -165,7 +166,7 @@ class SNBTStyler(ArgumentStyler):
 class ItemStackStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT'), LanguageId('FilterArg')]
+		return [LanguageId('SNBT'), LanguageId('PredicateArgs')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.Complex)
@@ -204,3 +205,15 @@ class TargetSelectorScoresStyler(ArgumentStyler):
 
 	def style(self, argument: ParsedArgument) -> None:
 		styleForeignNode2(self, argument.value, argument.span)
+
+
+@argumentStyler(MINECRAFT_PREDICATE.name, forceOverride=True)
+@argumentStyler(MINECRAFT_LOOT_TABLE.name, forceOverride=True)
+@argumentStyler(MINECRAFT_LOOT_MODIFIER.name, forceOverride=True)
+class StructuredNodeStyler(ArgumentStyler):
+	@classmethod
+	def localLanguages(cls) -> list[LanguageId]:
+		return []
+
+	def style(self, argument: ParsedArgument) -> None:
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.Complex)

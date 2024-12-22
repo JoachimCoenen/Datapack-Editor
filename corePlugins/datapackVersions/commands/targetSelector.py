@@ -7,8 +7,7 @@ from corePlugins.mcFunction.command import ArgumentSchema
 from corePlugins.mcFunction.commandContext import argumentContext
 from .argumentTypes import *
 from base.model.parsing.bytesUtils import strToBytes
-from corePlugins.mcFunction.filterArgs import FilterArgOptions, FALLBACK_FILTER_ARGUMENT_INFO, FilterArgumentInfo, \
-	NegationStyle
+from corePlugins.mcFunction.filterArgs import FilterArgOptions, FALLBACK_FILTER_ARGUMENT_INFO, FilterArgumentInfo
 from corePlugins.mcFunction import FILTER_ARGS_ID
 from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler
 
@@ -283,8 +282,6 @@ OBJECTIVE_RANGE_INFO = FilterArgumentInfo(
 TARGET_SELECTOR_ARG_OPTIONS: FilterArgOptions = FilterArgOptions(
 	opening=b'[',
 	closing=b']',
-	allowTrailingComma=True,
-	negationStyle=NegationStyle.VALUE_NEGATION,
 	keySchema=ArgumentSchema(
 		name='key',
 		type=makeLiteralsArgumentType(list(TARGET_SELECTOR_ARGUMENTS_DICT.keys())),
@@ -300,8 +297,6 @@ TARGET_SELECTOR_ARG_OPTIONS: FilterArgOptions = FilterArgOptions(
 _TARGET_SELECTOR_SCORES_OPTIONS = FilterArgOptions(
 	opening=b'{',
 	closing=b'}',
-	allowTrailingComma=True,
-	negationStyle=NegationStyle.VALUE_NEGATION,
 	keySchema=OBJECTIVE_RANGE_KEY_SCHEMA,
 	getArgsInfo=lambda key: OBJECTIVE_RANGE_INFO,
 	description=""
@@ -329,8 +324,6 @@ ADVANCEMENTS_CRITERION_VALUE_INFO = FilterArgumentInfo(
 _TARGET_SELECTOR_ADVANCEMENTS_CRITERION_OPTIONS = FilterArgOptions(
 	opening=b'{',
 	closing=b'}',
-	allowTrailingComma=True,
-	negationStyle=NegationStyle.VALUE_NEGATION,
 	keySchema=ADVANCEMENTS_CRITERION_KEY_SCHEMA,
 	getArgsInfo=lambda key: ADVANCEMENTS_CRITERION_VALUE_INFO,
 	minCount=1,
@@ -363,8 +356,6 @@ ADVANCEMENTS_VALUE_INFO = FilterArgumentInfo(
 _TARGET_SELECTOR_ADVANCEMENTS_OPTIONS = FilterArgOptions(
 	opening=b'{',
 	closing=b'}',
-	allowTrailingComma=True,
-	negationStyle=NegationStyle.VALUE_NEGATION,
 	keySchema=ADVANCEMENTS_KEY_SCHEMA,
 	getArgsInfo=lambda key: ADVANCEMENTS_VALUE_INFO,
 	minCount=1,

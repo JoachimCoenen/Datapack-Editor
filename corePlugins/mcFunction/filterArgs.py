@@ -4,7 +4,6 @@ They are either block states ot target selector arguments
 """
 from __future__ import annotations
 
-import enum
 import re
 from _warnings import warn
 from dataclasses import dataclass, field
@@ -16,7 +15,7 @@ from base.model.parsing.parser import ParserBase
 from cat.utils import Nothing
 from . import FILTER_ARGS_ID
 from .argumentTypes import BRIGADIER_STRING
-from .command import ArgumentSchema, CommandPartSchema, ParsedArgument, CommandPart, KeywordSchema
+from .command import ArgumentSchema, CommandPartSchema, ParsedArgument, CommandPart
 from .commandContext import getArgumentContext, missingArgumentParser, makeParsedArgument, CommandCtxProvider
 from .stringReader import StringReader
 from base.model.messages import *
@@ -61,7 +60,6 @@ class FilterArgumentInfo(FilterArgSchemaBase):
 	multipleAllowed: bool = field(default=False, kw_only=True)  # overrides multipleAllowedIfNegated field
 	multipleAllowedIfNegated: bool = field(default=False, kw_only=True)
 	isNegatable: bool = field(default=False, kw_only=True)  # '!' after the '='.
-	isPreNegatable: bool = field(default=False, kw_only=True)  # '!' before the key
 	canBeEmpty: bool = field(default=False, kw_only=True)
 	defaultValue: Any = field(default=Nothing, kw_only=True)
 
@@ -92,17 +90,10 @@ class FilterArgument(FilterArgNode[FilterArgumentInfo]):
 		return self.key, self.value
 
 
-class NegationStyle(enum.Enum):
-	VALUE_NEGATION = 1
-	KEY_NEGATION = 2
-
-
 @dataclass
 class FilterArgOptions(FilterArgSchemaBase):
 	opening: bytes
 	closing: bytes
-	allowTrailingComma: bool
-	negationStyle: NegationStyle
 	keySchema: ArgumentSchema
 	getArgsInfo: Callable[[ParsedArgument], FilterArgumentInfo]
 	maxCount: int = _INT_MAX
@@ -169,20 +160,19 @@ def parseFilterArgsLike(
 		while not sr.tryConsumeByte(options.closingOrd) and not sr.hasReachedEnd:
 			sr.save()
 			# key, keyNode, tsai = options.keyParser(sr, argsInfo, filePath, errorsIO)
-			keyNode, tsai, isPreNegated = parseKey(sr, options, filePath, errorsIO)
+			keyNode, tsai = parseKey(sr, options, filePath, errorsIO)
 			key = keyNode.content
 
 			sr.tryConsumeWhitespace()
 			if not sr.tryConsumeByte(ord('=')):
 				errorsIO.append(ParsingError(MDStr(f"Expected '`=`'."), Span(sr.currentPos), style='error'))
-				isNegated = isPreNegated
 				sr.readUntilEndOrRegex(options.gotoNextArgPattern)
 				sr.mergeLastSave()
 				valueNode = None
+				isNegated = False
 			else:
 				sr.tryConsumeWhitespace()
 				isNegated, valueNode = parseValue(sr, filePath, tsai, key, options, errorsIO)
-				isNegated |= isPreNegated
 
 			# duplicate?:
 			checkDuplicate(arguments, isNegated, key, tsai, sr, errorsIO)
@@ -214,10 +204,7 @@ def checkAndConsumeComma(options: FilterArgOptions, sr: StringReader, errorsIO: 
 		whitespaceAfterComma = sr.tryConsumeWhitespace()
 		isTrailingComma = sr.tryPeek() == options.closingOrd
 		if isTrailingComma:
-			if not options.allowTrailingComma:  # for item components
-				msg = MDStr(f"No trailing comma allowed.")
-				errorsIO.append(ParsingError(msg, Span(p1 - 1, p1), style='error'))
-			elif whitespaceAfterComma:
+			if whitespaceAfterComma:
 				msg = MDStr(f"No space after trailing comma allowed.")
 				p2 = sr.currentPos
 				errorsIO.append(ParsingError(msg, Span(p1, p2), style='error'))
@@ -257,11 +244,8 @@ def checkMinArgumentCount(arguments: OrderedMultiDict[bytes, FilterArgument], op
 
 def parseValue(sr: StringReader, filePath, tsai: FilterArgumentInfo, key: bytes, options: FilterArgOptions, errorsIO: list[GeneralError]) -> tuple[bool, ParsedArgument | None]:
 	isNegated = sr.tryConsumeByte(ord('!'))
-	if not tsai.isNegatable:
-		if isNegated:
+	if not tsai.isNegatable and isNegated:
 			errorsIO.append(ParsingError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be negated."), sr.currentSpan, style='error'))
-	elif isNegated and not options.negationStyle is NegationStyle.VALUE_NEGATION:
-		errorsIO.append(ParsingError(MDStr(f"Values cannot be negated. negate the key (`!{bytesToStr(key)}`) instead."), sr.currentSpan, style='error'))
 
 	valueSchema = tsai.valueSchema
 	handler = getArgumentContext(valueSchema.type)
@@ -283,15 +267,9 @@ def parseValue(sr: StringReader, filePath, tsai: FilterArgumentInfo, key: bytes,
 	return isNegated, valueNode
 
 
-def parseKey(sr: StringReader, options: FilterArgOptions, filePath: FilePath, errorsIO: list[GeneralError]) -> tuple[CommandPart, FilterArgumentInfo, bool]:
+def parseKey(sr: StringReader, options: FilterArgOptions, filePath: FilePath, errorsIO: list[GeneralError]) -> tuple[CommandPart, FilterArgumentInfo]:
 	keySchema = options.keySchema
 	handler = getArgumentContext(keySchema.type)
-
-	if options.negationStyle is NegationStyle.KEY_NEGATION:
-		isNegated = sr.tryConsumeByte(ord(b'!'))
-		sr.tryConsumeWhitespace()
-	else:
-		isNegated = False
 
 	if (keyNode := handler.parse(sr, keySchema, filePath, errorsIO=errorsIO)) is not None:
 		if (tsai := options.getArgsInfo(keyNode)) is None:
@@ -305,7 +283,7 @@ def parseKey(sr: StringReader, options: FilterArgOptions, filePath: FilePath, er
 		errorsIO.append(ParsingError(MDStr(f"Unknown argument '`{bytesToStr(key)}`'."), sr.currentSpan, style='error'))
 
 	sr.mergeLastSave()
-	return keyNode, tsai, isNegated
+	return keyNode, tsai
 
 
 @dataclass
@@ -478,7 +456,6 @@ def _getKeySuggestions(options: FilterArgOptions, node: Optional[ParsedArgument]
 __all__ = [
 	'FilterArgumentInfo',
 	'FilterArgument',
-	'NegationStyle',
 	'FilterArgOptions',
 	'FilterArgNode',
 	'FilterArguments',

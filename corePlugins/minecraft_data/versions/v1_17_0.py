@@ -117,6 +117,7 @@ _VERSION_1_17_0 = CustomMCData(
 	damageTypes=frozenset(),  # empty. because support for 1.18 will be dropped soon.
 	# compiled from the 1.20.2.jar using this command "javap -constants -c  buj.class":
 	itemComponents=frozenset(),  # empty. because introduced in 1.20.5.
+	itemSubPredicates=frozenset(),  # empty. because introduced in 1.20.5.
 	# compiled from the Minecraft wiki:
 	slots=FrozenDict({
 		b'armor': frozenset({b'chest', b'feet', b'head', b'legs'}),

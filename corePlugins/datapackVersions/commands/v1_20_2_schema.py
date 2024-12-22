@@ -2258,7 +2258,7 @@ def build_item_args(_: FullMCData) -> list[CommandPartSchema]:
 	ITEM_MODIFIER = [
 		ArgumentSchema(
 			name='modifier',
-			type=MINECRAFT_RESOURCE_LOCATION,
+			type=MINECRAFT_LOOT_MODIFIER
 		),
 	]
 	return [

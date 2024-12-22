@@ -33,6 +33,7 @@ class FullMCData:
 	pointOfInterestTypes: frozenset[ResourceLocation]
 	damageTypes: frozenset[ResourceLocation]
 	itemComponents: frozenset[ResourceLocation]
+	itemSubPredicates: frozenset[ResourceLocation]
 
 	slots: FrozenDict[bytes, frozenset[bytes]]
 	blockStates: FrozenDict[ResourceLocation, list[BlockStateType]]
@@ -80,6 +81,7 @@ def buildFullMCData(name: str, mcData: Optional[MCData], cuData: Optional[Custom
 		pointOfInterestTypes=cuData.pointOfInterestTypes,
 		damageTypes=cuData.damageTypes,
 		itemComponents=cuData.itemComponents,
+		itemSubPredicates=cuData.itemSubPredicates,
 		slots=cuData.slots,
 		blockStates=mcData.blockStates,
 		gamerules=cuData.gamerules,

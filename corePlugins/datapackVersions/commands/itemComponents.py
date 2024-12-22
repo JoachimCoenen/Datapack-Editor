@@ -1,41 +1,34 @@
-from corePlugins.mcFunction.command import ArgumentSchema
-from corePlugins.mcFunction.filterArgs import FilterArgOptions, FilterArgumentInfo, NegationStyle
+from corePlugins.minecraft.resourceLocation import ResourceLocationSchema
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
-from .argumentTypes import *
+from .predicateArgs import PredicateArgOptions, PredicateArgInfo
 
 
-def getItemComponentArgInfo(resLoc: ResourceLocation) -> FilterArgumentInfo:
+def getItemComponentArgInfo(resLoc: ResourceLocation) -> PredicateArgInfo:
 	if resLoc in getCurrentFullMcData().itemComponents:
-		schema = f'{resLoc.actualNamespace}:item_components/{resLoc.path}'
+		valueSchema = f'{resLoc.actualNamespace}:item_components/{resLoc.path}'
 	else:
-		schema = None
+		valueSchema = None
+	if resLoc in getCurrentFullMcData().itemSubPredicates:
+		subPredicateSchema = f'{resLoc.actualNamespace}:item_sub_predicates/{resLoc.path}'
+	else:
+		subPredicateSchema = None
 
-	return FilterArgumentInfo(
+	if valueSchema is None and subPredicateSchema is None:
+		valueSchema = 'dpe:anything'
+		subPredicateSchema = 'dpe:anything'
+
+	return PredicateArgInfo(
 		name=resLoc.asQualifiedString,
-		valueSchema=ArgumentSchema(
-			name=resLoc.asQualifiedString,
-			type=MINECRAFT_NBT_TAG,
-			args=dict(schema=schema)
-		),
-		multipleAllowed=False,
-		isNegatable=True,
-		canBeEmpty=True,
+		valueSchema=valueSchema,
+		subPredicateSchema=subPredicateSchema,
 		description=""
 	)
 
 
-ITEM_COMPONENT_ARG_OPTIONS: FilterArgOptions = FilterArgOptions(
-	opening=b'[',
-	closing=b']',
-	allowTrailingComma=False,
-	negationStyle=NegationStyle.KEY_NEGATION,
-	keySchema=ArgumentSchema(
-		name='key',
-		type=MINECRAFT_RESOURCE_LOCATION,
-		args=dict(schema='item_components'),
-	),
-	getArgsInfo=lambda key: getItemComponentArgInfo(key.value),
+ITEM_COMPONENT_ARG_OPTIONS: PredicateArgOptions = PredicateArgOptions(
+	keySchema=ResourceLocationSchema('', 'item_components', allowTags=False),
+	getArgsInfo=lambda key: getItemComponentArgInfo(key),
 	description=""
 )
 

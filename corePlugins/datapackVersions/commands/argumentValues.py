@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Optional, Collection
+from typing import Optional, Collection, Literal
 
 from base.model.parsing.tree import Node
+from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgs
 from corePlugins.mcFunction.filterArgs import FilterArguments
 from corePlugins.minecraft.resourceLocation import ResourceLocationNode
-from corePlugins.nbt.tags import CompoundTag
+from corePlugins.nbt.tags import CompoundTag, NBTTag
 
 
 @dataclass
@@ -19,12 +20,15 @@ class BlockState:
 
 @dataclass
 class ItemStack:
-	itemId: ResourceLocationNode
+	itemId: ResourceLocationNode | Literal['*']
 	nbt: Optional[CompoundTag]
-	components: FilterArguments
+	components: PredicateArgs
 
 	def getForeignNodes(self) -> Collection[Node | None]:
-		return self.itemId, self.nbt, self.components
+		if self.itemId == '*':
+			return self.nbt, self.components
+		else:
+			return self.itemId, self.nbt, self.components
 
 
 @dataclass
@@ -40,3 +44,12 @@ class TargetSelector:
 
 	def getForeignNodes(self) -> Collection[Node | None]:
 		return self.arguments,
+
+
+@dataclass
+class ResourceLocationOrInlineNBT:
+	resLoc: Optional[ResourceLocationNode]
+	nbt: Optional[NBTTag]
+
+	def getForeignNodes(self) -> Collection[Node | None]:
+		return self.resLoc, self.nbt
