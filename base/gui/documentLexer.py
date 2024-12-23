@@ -15,7 +15,7 @@ from base.model.theme import GlobalStyles, Style, StyleFont
 from base.model.utils import GeneralError, LanguageId, MDStr, NULL_POSITION, Position, addStyle, formatMarkdown
 from cat.GUI.components.codeEditor import AutoCompletionTree, CEPosition, CallTipInfo, CodeEditor, MyQsciAPIs
 from cat.utils import HTMLStr, override
-from cat.utils.logging_ import logWarning
+from cat.utils.logging_ import logWarning, logError
 from cat.utils.utils import CrashReportWrapped, runLaterSafe
 
 _SCI_STYLE_DEFAULT = StyleId(32)  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
@@ -456,12 +456,17 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		may be empty if the user has just entered a word separator.
 		"""
 		self.updateDocumentTree()
-		if (ctxProvider := self.contextProvider) is not None:
-			replaceCtx = context[-1] if context else ''
-			position = self.currentCursorPos
-			suggestions = ctxProvider.getSuggestions(position, replaceCtx)
-			suggestions2 = performFuzzyStrSearch(suggestions, replaceCtx)
-			return [sr.fe for sr in suggestions2.results]
+
+		try:
+			if (ctxProvider := self.contextProvider) is not None:
+				replaceCtx = context[-1] if context else ''
+				position = self.currentCursorPos
+				suggestions = ctxProvider.getSuggestions(position, replaceCtx)
+				suggestions2 = performFuzzyStrSearch(suggestions, replaceCtx)
+				return [sr.fe for sr in suggestions2.results]
+		except Exception as e:
+			logError(e)
+			return [f"<>ERROR: {e}! see logfile<>"]
 
 		return super().updateAutoCompletionList(context, aList)
 
