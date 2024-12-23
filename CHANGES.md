@@ -2,6 +2,7 @@
 ### Fixes
  * Fixed crash when attempting to load project with a datapack version that is not supported.
  * Files with multiple periods in their name no longer indexed incorrectly.
+ * Fixed crash when styling a language with an inner language that has no styler associated.
 
 
 ## 0.8.6-alpha

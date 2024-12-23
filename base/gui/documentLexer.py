@@ -123,6 +123,8 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 
 		for innerLanguage, styler in styler.innerStylers.items():
 			innerStyles = styles.getInnerLanguageStyles(innerLanguage)
+			if innerStyles is None:
+				continue
 			for name, styleId in styler.localStyles.items():
 				style = innerStyles.get(name)
 				if style is None:
