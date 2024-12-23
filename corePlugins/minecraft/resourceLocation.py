@@ -76,8 +76,9 @@ class ResourceLocationParser(ParserBase[ResourceLocationNode, ResourceLocationSc
 			self.advanceLineCounterAndUpdatePos(self.length)
 			p3 = self.currentPos
 			self.errorMsg(TRAILING_NOT_ALLOWED_MSG, "characters", span=Span(p2, p3))
-
-		return ResourceLocationNode.fromString(location, Span(p1, p2), self.schema)
+		if location:
+			return ResourceLocationNode.fromString(location, Span(p1, p2), self.schema)
+		return None
 
 
 @dataclass
