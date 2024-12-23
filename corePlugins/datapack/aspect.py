@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass, field, fields
 from typing import Optional, Callable, cast
 
+from base.model.application import getApp
 from cat.GUI import propertyDecorators as pd
 from cat.GUI.propertyDecorators import ValidatorResult
 from cat.Serializable.serializableDataclasses import catMeta
@@ -33,7 +34,7 @@ def minecraftVersionValidator(version: str) -> Optional[pd.ValidatorResult]:
 def datapackVersionValidator(version: str) -> Optional[pd.ValidatorResult]:
 	versions = getAllDPVersions()
 	if version not in versions:
-		return ValidatorResult(f"Datapack version '{version}' not supported by your current installation of {getApplicationSettings().applicationName}. You might need to update your installation or install a plugin.", 'warning')
+		return ValidatorResult(f"Datapack version '{version}' not supported by your current installation of {getApp().info.appName}. You might need to update your installation or install a plugin.", 'warning')
 	return None
 
 

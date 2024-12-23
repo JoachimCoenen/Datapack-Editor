@@ -1,3 +1,8 @@
+## Next Version
+### Fixes
+ * Fixed crash when attempting to load project with a datapack version that is not supported.
+
+
 ## 0.8.6-alpha
 ### Fixes
  * Fixed crash when attempting to highlight `execute if block ~ ~ ~`. (issue #52)
