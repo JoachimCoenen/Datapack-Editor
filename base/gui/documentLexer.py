@@ -3,7 +3,7 @@ from typing import Optional, Sequence, cast
 
 from PyQt5.Qsci import QsciLexer, QsciLexerCustom, QsciScintilla
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor, QFont, QGuiApplication
 
 from base.gui.styler import DEFAULT_STYLE_ID, StyleId, StylerCtx, getStyler
 from base.model import theme
@@ -486,7 +486,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	@override
 	def indicatorClicked(self, cePosition: CEPosition, state: Qt.KeyboardModifiers) -> None:
-		if state != Qt.ControlModifier:
+		if QGuiApplication.keyboardModifiers() != Qt.ControlModifier:  # 'state' is broken on Wayland
 			return
 
 		if (ctxProvider := self.contextProvider) is not None:

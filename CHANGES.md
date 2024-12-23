@@ -1,11 +1,12 @@
 ## Next Version
 ### Improvements
- * Exceptions when collecting suggestions for auto completion no longer crash the entire application.
+ * Exceptions when collecting suggestions for autocompletion no longer crash the entire application.
 
 ### Fixes
  * Fixed crash when attempting to load project with a datapack version that is not supported.
  * Files with multiple periods in their name no longer indexed incorrectly.
  * Fixed crash when styling a language with an inner language that has no styler associated.
+ * Fixed `Ctrl-Click` in documents not working on Wayland.
 
 
 ## 0.8.6-alpha
