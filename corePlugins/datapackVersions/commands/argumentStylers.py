@@ -207,9 +207,10 @@ class TargetSelectorScoresStyler(ArgumentStyler):
 		styleForeignNode2(self, argument.value, argument.span)
 
 
-@argumentStyler(MINECRAFT_PREDICATE.name, forceOverride=True)
 @argumentStyler(MINECRAFT_LOOT_TABLE.name, forceOverride=True)
 @argumentStyler(MINECRAFT_LOOT_MODIFIER.name, forceOverride=True)
+@argumentStyler(MINECRAFT_PARTICLE.name, forceOverride=True)
+@argumentStyler(MINECRAFT_PREDICATE.name, forceOverride=True)
 class StructuredNodeStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:

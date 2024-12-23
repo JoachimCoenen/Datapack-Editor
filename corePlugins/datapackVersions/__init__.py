@@ -22,7 +22,9 @@ class DatapackVersionsPlugin(PluginBase):
 		from . import providers
 		from . import contexts
 		from . import version23
+		from . import version41
 		version23.initVersion()
+		version41.initVersion()
 		from .commands import argumentContextsImpl
 		from .commands import argumentStylers
 

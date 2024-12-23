@@ -224,12 +224,12 @@ JSON_SCHEMAS = loadJsonSchemas()
 
 
 def buildVersion23() -> DPVersion:
-	from .commands.v1_20_3_schema import COMMANDS_V25
+	from .commands.v1_20_3_schema import COMMANDS_V26
 	return DPVersion(
 		name='23',
 		structure=buildEntryHandlers(DATAPACK_CONTENTS),
 		jsonSchemas=JSON_SCHEMAS,  # todo add schemata here, so they are synced to datapack version.
-		mcFunctionSchema=COMMANDS_V25.buildSchema(getFullMcData('1.20.3'))
+		mcFunctionSchema=COMMANDS_V26.buildSchema(getFullMcData('1.20.3'))
 	)
 
 

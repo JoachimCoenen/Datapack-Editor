@@ -13,7 +13,7 @@ from cat.utils.collections_ import FrozenDict
 from base.model.utils import MDStr
 from .resourceLocation import ResourceLocation
 from corePlugins.mcFunction.argumentTypes import ALL_NAMED_ARGUMENT_TYPES, makeLiteralsArgumentType
-from corePlugins.mcFunction.command import KeywordSchema, ArgumentSchema
+from corePlugins.mcFunction.command import ArgumentSchema
 from corePlugins.mcFunction.filterArgs import FilterArgumentInfo
 
 _MINECRAFT_DATA_REL_PATH: str = 'data/data/'

@@ -2,8 +2,6 @@ import re
 from math import inf
 from typing import Any, Callable, Optional, ClassVar
 
-from better_orderedmultidict import OrderedMultiDict
-
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes, bytesOptToStr
 from base.model.parsing.contextProvider import Suggestions, errorMsg
@@ -18,8 +16,8 @@ from corePlugins.mcFunction.argumentTypes import makeLiteralsArgumentType
 from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, ParsedArgument
 from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, \
 	missingArgumentParser, StructuredArgumentContext
-from corePlugins.mcFunction.filterArgs import FilterArgOptions, parseFilterArgsLike, FALLBACK_FILTER_ARGUMENT_INFO, \
-	FilterArgumentInfo
+from corePlugins.mcFunction.filterArgs import FilterArgOptions, parseFilterArgsLike, FilterArgumentInfo, \
+	FALLBACK_FILTER_ARGUMENT_INFO
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
@@ -28,12 +26,13 @@ from corePlugins.nbt.path import NBTPathSchema, SNBT_PATH_ID
 from corePlugins.nbt.tags import NBTTagSchema
 from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag, tryReadNBTTag, readPredicateArgs
 from .argumentTypes import *
-from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector, ItemSlot, ResourceLocationOrInlineNBT
+from .argumentValues import BlockState, ItemStack, TargetSelector, ItemSlot, ResourceLocationOrInlineNBT, Particle
 from .itemComponents import ITEM_COMPONENT_ARG_OPTIONS
 from .targetSelector import TARGET_SELECTOR_ARG_OPTIONS
 from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgs
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
+MISSING_PARTICLE_CONFIGURATION_TAGS_MSG = Message("Missing particle configuration tags for particle`{0}`", 1)
 
 
 @argumentContext(MINECRAFT_DIMENSION.name, rlcSchema=ResourceLocationSchema('', 'dimension', allowTags=False))
@@ -42,7 +41,6 @@ OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be
 @argumentContext(MINECRAFT_FUNCTION.name, rlcSchema=ResourceLocationSchema('', 'functions', allowTags=True))
 @argumentContext(MINECRAFT_ITEM_ENCHANTMENT.name, rlcSchema=ResourceLocationSchema('', 'enchantment', allowTags=False))
 @argumentContext(MINECRAFT_MOB_EFFECT.name, rlcSchema=ResourceLocationSchema('', 'mob_effect', allowTags=False))
-@argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle', allowTags=False))
 @argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))  # TODO: add validation for objective_criteria
 @argumentContext(DPE_ADVANCEMENT.name, rlcSchema=ResourceLocationSchema('', 'advancement', allowTags=False))
 @argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome', allowTags=False))  # outdated. TODO: remove
@@ -151,17 +149,15 @@ class BlockStateHandler(StructuredArgumentContext[BlockState]):
 		if blockID is None:
 			return None
 		# block states:
-		states = None
 		if sr.tryPeek() == ord('['):
 			blockStatesDict = self._getBlockStatesDict(blockID)
 			blockStatesOptions = self._getBlockStatesArgOptions(blockStatesDict)
-			states: Optional[FilterArguments] = parseFilterArgsLike(sr, blockStatesOptions, filePath, errorsIO=errorsIO)
-			if states is not None:
-				sr.mergeLastSave()
-		if states is None:
-			currentPos = sr.currentPos
+		else:
 			blockStatesOptions = self._getBlockStatesArgOptions({})
-			states = FilterArguments(Span(currentPos), blockStatesOptions, sr.fullSource, OrderedMultiDict())
+
+		states = parseFilterArgsLike(sr, blockStatesOptions, filePath, errorsIO=errorsIO)
+		sr.mergeLastSave()
+
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
@@ -207,13 +203,10 @@ class EntityHandler(StructuredArgumentContext):
 			if variable is None:
 				return None
 			variable = bytesToStr(variable)
+
 			arguments = parseFilterArgsLike(sr, TARGET_SELECTOR_ARG_OPTIONS, filePath, errorsIO=errorsIO)
-			if arguments is None:
-				currentPos = sr.currentPos
-				blockStatesOptions = TARGET_SELECTOR_ARG_OPTIONS
-				arguments = FilterArguments(Span(currentPos), blockStatesOptions, sr.fullSource, OrderedMultiDict())
-			else:
-				sr.mergeLastSave()
+			sr.mergeLastSave()
+
 			locator = TargetSelector(variable=variable, arguments=arguments)
 
 		return makeParsedArgument(sr, ai, value=locator)
@@ -221,7 +214,7 @@ class EntityHandler(StructuredArgumentContext):
 	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
 		return None  # not needed
 
-	SELECTOR_SUGGESTIONS : ClassVar[Suggestions] = ['@a', '@e', '@s', '@p', '@r', ]
+	SELECTOR_SUGGESTIONS: ClassVar[Suggestions] = ['@a', '@e', '@s', '@p', '@r', ]
 
 	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
 		if node is None or pos.index - node.span.start.index < 2:
@@ -470,6 +463,44 @@ class ObjectiveHandler(ArgumentContext):
 			errorMsg(OBJECTIVE_NAME_LONGER_THAN_16_MSG, span=node.span, style='error', errorsIO=errorsIO)
 
 
+@argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle', allowTags=False))
+class ParticleHandler(StructuredArgumentContext[Particle]):
+	def __init__(self, rlcSchema: ResourceLocationSchema):
+		super().__init__()
+		self.rlcSchema: ResourceLocationSchema = rlcSchema
+
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		# particle_id{configuration_tags}
+		particleId = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
+		if particleId is None:
+			return None
+
+		if getCurrentFullMcData().name >= '1.20.5':
+			# configuration tags:
+			nbtTagSchemaName = f'{particleId.actualNamespace}:particle_configuration_tags/{particleId.path}'
+			nbtTagSchema = GLOBAL_SCHEMA_STORE.get(nbtTagSchemaName, LanguageId('SNBT'))
+
+			if sr.tryPeek() == ord('{'):
+				if nbtTagSchema is None:
+					nbtTagSchema = NBTTagSchema('')
+
+				configurationTags = tryReadNBTCompoundTag(sr, nbtTagSchema, filePath, errorsIO=errorsIO)
+				if configurationTags is not None:
+					sr.mergeLastSave()
+			else:
+				if nbtTagSchema is not None:
+					errorMsg(MISSING_PARTICLE_CONFIGURATION_TAGS_MSG, span=particleId.span, errorsIO=errorsIO)
+				configurationTags = None
+		else:
+			configurationTags = None
+
+		particle = Particle(particleId=particleId, configurationTags=configurationTags)
+		return makeParsedArgument(sr, ai, value=particle)
+
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
+
+
 @argumentContext(MINECRAFT_ROTATION.name)
 class RotationHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
@@ -663,7 +694,6 @@ class Vec3Handler(ArgumentContext):
 class StDpeDataPackHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
-
 
 
 @argumentContext(ST_DPE_HOSTNAME.name)

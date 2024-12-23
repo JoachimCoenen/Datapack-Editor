@@ -416,7 +416,7 @@ MINECRAFT_PARTICLE = ArgumentType(
 	examples="""
 	* {{cd|foo}}
 	* {{cd|foo:bar}}
-	* {{cd|particle with options}}""",
+	* {{cd|dust{color:[1.0, 0.0, 0.0], scale:2.0}}}""",
 )
 
 MINECRAFT_PREDICATE = ArgumentType(

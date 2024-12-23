@@ -63,7 +63,7 @@ class FilterArgumentInfo(FilterArgSchemaBase):
 	canBeEmpty: bool = field(default=False, kw_only=True)
 	defaultValue: Any = field(default=Nothing, kw_only=True)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		if self.multipleAllowed and self.multipleAllowedIfNegated:
 			warn("Both `multipleAllowed` and `multipleAllowedIfNegated` are set to True. This is probably not intentional.", RuntimeWarning, 3)
 		if self.multipleAllowedIfNegated and not self.isNegatable:
@@ -104,7 +104,7 @@ class FilterArgOptions(FilterArgSchemaBase):
 	openingStr: str = field(init=False, repr=False)
 	closingStr: str = field(init=False, repr=False)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		if self.gotoNextArgPattern is None:
 			self.gotoNextArgPattern = re.compile(rb'[' + self.closing + b',=]')  # somehow works, even if self.closing == b']'
 		self.openingOrd = ord(self.opening)
@@ -147,12 +147,10 @@ def parseFilterArgsLike(
 		options: FilterArgOptions,
 		filePath: FilePath,
 		*, errorsIO: list[GeneralError]
-) -> Optional[FilterArguments]:
+) -> FilterArguments:
+	arguments: OrderedMultiDict[bytes, FilterArgument] = OrderedMultiDict()
 	sr.save()
 	if sr.tryConsumeByte(options.openingOrd):
-		# filter args
-		arguments: OrderedMultiDict[bytes, FilterArgument] = OrderedMultiDict()
-
 		sr.tryConsumeWhitespace()
 		if sr.hasReachedEnd:
 			errorsIO.append(ParsingError(EXPECTED_MSG_RAW.format(f"key or `{options.closingStr}`"), Span(sr.currentPos), style='error'))
@@ -185,17 +183,16 @@ def parseFilterArgsLike(
 			continue
 
 		checkMaxArgumentCount(arguments, options, sr, errorsIO)
-		checkMinArgumentCount(arguments, options, sr, errorsIO)
 
-		argsSpan = sr.currentSpan
-		startC = argsSpan.start.column
-		endC = argsSpan.end.column
-		if startC != endC:
-			assert sr.text[startC] == options.openingOrd, f"start mismatch: {sr.text[startC:endC]=!r}, {chr(options.openingOrd)=!r}"
-		return FilterArguments(argsSpan, options, sr.fullSource, arguments)
-	else:
-		sr.mergeLastSave()
-		return None
+	checkMinArgumentCount(arguments, options, sr, errorsIO)
+
+	argsSpan = sr.currentSpan
+	startC = argsSpan.start.column
+	endC = argsSpan.end.column
+	if startC != endC:  # if we have filter args specified:
+		assert sr.text[startC] == options.openingOrd, f"start mismatch: {sr.text[startC:endC]=!r}, {chr(options.openingOrd)=!r}"
+
+	return FilterArguments(argsSpan, options, sr.fullSource, arguments)
 
 
 def checkAndConsumeComma(options: FilterArgOptions, sr: StringReader, errorsIO: list[GeneralError]):
@@ -245,7 +242,7 @@ def checkMinArgumentCount(arguments: OrderedMultiDict[bytes, FilterArgument], op
 def parseValue(sr: StringReader, filePath, tsai: FilterArgumentInfo, key: bytes, options: FilterArgOptions, errorsIO: list[GeneralError]) -> tuple[bool, ParsedArgument | None]:
 	isNegated = sr.tryConsumeByte(ord('!'))
 	if not tsai.isNegatable and isNegated:
-			errorsIO.append(ParsingError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be negated."), sr.currentSpan, style='error'))
+		errorsIO.append(ParsingError(MDStr(f"Argument '`{bytesToStr(key)}`' cannot be negated."), sr.currentSpan, style='error'))
 
 	valueSchema = tsai.valueSchema
 	handler = getArgumentContext(valueSchema.type)
@@ -276,7 +273,6 @@ def parseKey(sr: StringReader, options: FilterArgOptions, filePath: FilePath, er
 			errorsIO.append(ParsingError(MDStr(f"Unknown argument '`{bytesToStr(keyNode.content)}`'."), sr.currentSpan, style='error'))
 			tsai = FALLBACK_FILTER_ARGUMENT_INFO
 	else:
-		# errorsIO.append(ParsingError(EXPECTED_MSG.format(keySchema.type.name), Span(sr.currentPos), style='error'))
 		key = sr.readUntilEndOrRegex(options.gotoNextArgPattern)
 		keyNode = makeArgument(sr, keySchema, key, key)  # or maybe makeArgument(sr, keySchema, key, None). not really sure...
 		tsai = FALLBACK_FILTER_ARGUMENT_INFO

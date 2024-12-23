@@ -47,6 +47,15 @@ class TargetSelector:
 
 
 @dataclass
+class Particle:
+	particleId: ResourceLocationNode
+	configurationTags: Optional[CompoundTag]
+
+	def getForeignNodes(self) -> Collection[Node | None]:
+		return self.particleId, self.configurationTags
+
+
+@dataclass
 class ResourceLocationOrInlineNBT:
 	resLoc: Optional[ResourceLocationNode]
 	nbt: Optional[NBTTag]

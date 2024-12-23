@@ -22,6 +22,8 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	schema_v33 = COMMANDS_V33.buildSchema(version1_20_5)
 	schema_v34 = COMMANDS_V34.buildSchema(version1_20_5)
 	schema_v36 = COMMANDS_V36.buildSchema(version1_20_5)
+	schema_v39 = COMMANDS_V39.buildSchema(version1_20_5)
+	schema_v41 = COMMANDS_V41.buildSchema(version1_20_5)
 	return {
 		'Minecraft 24w04a': schema_v29,
 		'Minecraft 24w05b': schema_v30,
@@ -29,6 +31,9 @@ def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 		'Minecraft 24w09a': schema_v33,
 		'Minecraft 24w10a': schema_v34,
 		'Minecraft 24w12a': schema_v36,
+		'Minecraft 1.20.5-pre1': schema_v39,
+		'Minecraft 1.20.5': schema_v41,
+		'Minecraft 1.20.6': schema_v41
 	}
 
 
@@ -246,3 +251,63 @@ def modify_particle_args(_: FullMCData, args: list[CommandPartSchema]) -> list[C
 	del _SPECIAL_PARTICLES_LIST
 
 	return _SPECIAL_PARTICLES + args
+
+
+COMMANDS_V39: CommandsCreator = copy.deepcopy(COMMANDS_V36)
+
+
+@COMMANDS_V39.modify(name='particle')
+def modify_particle_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
+	# particle <name> [<pos>] [<delta> <speed> <count> [force|normal] [<viewers>]]
+	# no special cases for some particles anymore.
+	return [
+		ArgumentSchema(
+			name='particle',
+			type=MINECRAFT_PARTICLE,
+			next=Options([
+				TERMINAL,
+				ArgumentSchema(
+					name='pos',
+					type=MINECRAFT_VEC3,
+					next=Options([
+						TERMINAL,
+						ArgumentSchema(
+							name='delta',
+							type=MINECRAFT_VEC3,
+							next=Options([
+								ArgumentSchema(
+									name='speed',
+									type=BRIGADIER_FLOAT,
+									args=dict(min=0),
+									next=Options([
+										ArgumentSchema(
+											name='count',
+											type=BRIGADIER_INTEGER,
+											args=dict(min=0),
+											next=Options([
+												TERMINAL,
+												ArgumentSchema(
+													name='display_mode',
+													type=makeLiteralsArgumentType([b'force', b'normal']),
+													next=Options([
+														TERMINAL,
+														ArgumentSchema(
+															name='viewers',
+															type=MINECRAFT_ENTITY
+														),
+													])
+												),
+											])
+										),
+									])
+								),
+							])
+						),
+					])
+				),
+			])
+		),
+	]
+
+
+COMMANDS_V41: CommandsCreator = copy.deepcopy(COMMANDS_V39)
