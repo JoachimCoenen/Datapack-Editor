@@ -1,6 +1,7 @@
 ## Next Version
 ### Fixes
  * Fixed crash when attempting to load project with a datapack version that is not supported.
+ * Files with multiple periods in their name no longer indexed incorrectly.
 
 
 ## 0.8.6-alpha
