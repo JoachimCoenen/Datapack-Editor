@@ -46,11 +46,12 @@ class Context(Generic[_TNode]):
 		pass
 
 	@abstractmethod
-	def getSuggestions(self, node: _TNode, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: _TNode, pos: Position, replaceCtx: str, info: CtxInfo[_TNode]) -> Suggestions:
 		"""
 		:param node:
 		:param pos: cursor position in contextStr
 		:param replaceCtx: the string that will be replaced
+		:param info:
 		:return:
 		"""
 		return []
@@ -101,11 +102,11 @@ class StructuredContext[TNode: Node](Context, ABC):
 			if foreignNode is not None:
 				validateTree(foreignNode, b'', errorsIO)
 
-	def getSuggestions(self, node: _TNode, position: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: TNode, position: Position, replaceCtx: str, info: CtxInfo[TNode]) -> Suggestions:
 		suggestions = []
 		for foreignNode in self.getForeignNodes(node):
 			if foreignNode is not None and foreignNode.span.__contains__(position):
-				suggestions += getSuggestions(foreignNode, b'', position, replaceCtx)
+				suggestions += getSuggestions(foreignNode, info.ctxProvider.text, position, replaceCtx)
 		return suggestions
 
 	def getDocumentation(self, node: TNode, position: Position) -> MDStr:
@@ -221,7 +222,7 @@ class ContextProvider(Generic[_TNode], ABC):
 		match = self.getBestMatch(pos)
 		if match.hit is not None:
 			if (ctx := self.getContext(match.hit)) is not None:
-				return ctx.getSuggestions(match.hit, pos, replaceCtx)
+				return ctx.getSuggestions(match.hit, pos, replaceCtx, CtxInfo(self, ''))
 		return []
 
 	def getDocumentation(self, pos: Position) -> MDStr:
