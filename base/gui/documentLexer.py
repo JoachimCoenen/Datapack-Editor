@@ -262,6 +262,13 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
 	# @ProfiledFunction()
 	def actuallyStyleText(self, start: int, end: int):
+		documentText = self.getText()
+		lengthOfDocumentText = len(documentText) if documentText is not None else None
+		if self.editor().length() != lengthOfDocumentText:
+			# no need to style anything if the document text does not match the current text in the editor. This avoids unnecessary parsing.
+			# This also prevents this assertion failing when editing text at the very end of a document:
+			# Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= style.Length())] failed at ../../tmpym18yovx/QScintilla2/QScintilla_src-2.14.1/scintilla/src/CellBuffer.cpp 635
+			return
 		tree = self.getTree()
 		if tree is None:
 			return
