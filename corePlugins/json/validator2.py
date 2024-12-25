@@ -16,6 +16,8 @@ DEPRECATED_PROPERTY_MSG = Message("Deprecated property `'{0}'`", 1)
 REQUIRES_PROPERTY_TO_BE_SET_MSG = Message("Requires property `'{0}'`. Will be ignored if  `'{0}'` is not present", 1)
 INCOMPATIBLE_PROPERTY_MSG = Message("Is incompatible with properties `'{0}'`", 1)
 MISSING_MANDATORY_PROPERTY_MSG = Message("Missing mandatory property `'{0}'`", 1)
+TOO_MANY_ELEMENTS_MSG = Message("Too many elements. At most {0} are allowed.", 1)
+TOO_FEW_ELEMENTS_MSG = Message("Too few elements. At least {0} are required.", 1)
 
 
 def wrongTypeError(expected: JsonSchema, got: JsonData):
@@ -103,6 +105,19 @@ def validateJsonArray(data: JsonData, schema: JsonArraySchema, *, errorsIO: list
 		return
 	for element in data.data:
 		validateJson(element, errorsIO)
+
+	if schema.minElemCount is not None and schema.minElemCount > len(data.data):
+		msg = TOO_FEW_ELEMENTS_MSG.format(str(schema.minElemCount))
+		end = data.span.end
+		start = end - 1
+		errorsIO.append(SemanticsError(msg, Span(start, end)))
+
+	if schema.maxElemCount is not None and schema.maxElemCount < len(data.data):
+		msg = TOO_MANY_ELEMENTS_MSG.format(str(schema.maxElemCount))
+		firstViolator = data.data[schema.maxElemCount]
+		end = data.span.end
+		start = firstViolator.span.start
+		errorsIO.append(SemanticsError(msg, Span(start, end)))
 
 
 @schemaValidator(JsonObjectSchema.typeName)
@@ -201,11 +216,6 @@ def validateJsonUnion(data: JsonData, schema: JsonUnionSchema, *, errorsIO: list
 
 	for errors in minErrors:
 		errorsIO.extend(errors)
-
-
-
-
-
 
 
 class TypeCheckerFunc(Protocol):

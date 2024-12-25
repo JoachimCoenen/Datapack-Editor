@@ -214,6 +214,30 @@
 						"array": { "$defRef": "schemaOrRef" }
 					}
 				},
+				"minCount": {
+					"decidingProp": "$type",
+					"values": {
+						"array": {
+							"$type": "union",
+							"options": [
+								{ "$type": "null"},
+								{ "$type": "integer", "min": 0 }
+							]
+						}
+					}
+				},
+				"maxCount": {
+					"decidingProp": "$type",
+					"values": {
+						"array": {
+							"$type": "union",
+							"options": [
+								{ "$type": "null"},
+								{ "$type": "integer", "min": 0 }
+							]
+						}
+					}
+				},
 				"options": {
 					"decidingProp": "$type",
 					"values": {

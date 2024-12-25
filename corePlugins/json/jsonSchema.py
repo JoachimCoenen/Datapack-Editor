@@ -519,9 +519,13 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 def arrayHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 	description, deprecated, allowMultilineStr = readCommonValues(self.reader, node)
 	element = self.reader.reqObject(node, 'element')
+	minElemCount = self.reader.optNumberVal(node, 'minCount', None)
+	maxElemCount = self.reader.optNumberVal(node, 'maxCount', None)
 	objectSchema = JsonArraySchema(
 		description=description,
 		element=cast(JsonSchema, None),  # will be set later.
+		minElemCount=minElemCount,
+		maxElemCount=maxElemCount,
 		deprecated=deprecated,
 		allowMultilineStr=allowMultilineStr
 	)
@@ -714,6 +718,10 @@ def readOptionalPrefixes(reader: JsonReader, node: JObject) -> tuple[list[str], 
 	prefixes = reader.optArrayVal2(node, OPTIONAL_PREFIXES_PROP, JsonString) if prefixesNode is not None else []
 	return [''] + [prefix.data for prefix in prefixes], (prefixesNode and prefixesNode.span)
 
+
+############################################################################################
+# might be removable:
+############################################################################################
 
 # class ComplexEncoder(json.JSONEncoder):
 # 	def default(self, obj):

@@ -400,11 +400,17 @@ class JsonStringOptionsSchema(JsonStringSchema):
 class JsonArraySchema(JsonDataSchema):
 	DATA_TYPE: ClassVar[Type[JsonData]] = JsonArray
 	typeName: ClassVar[str] = 'array'
-	_fields: ClassVar[FieldsMeta] = dict(element=(..., Nothing))
+	_fields: ClassVar[FieldsMeta] = dict(
+		element=(..., Nothing),
+		minElemCount=('minCount', None),
+		maxElemCount=('maxCount', None),
+	)
 
-	def __init__(self, *, description: MDStr = '', element: JsonSchema, deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = '', element: JsonSchema, minElemCount: int | None, maxElemCount: int | None, deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		super(JsonArraySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.element: JsonSchema = element
+		self.minElemCount: int | None = minElemCount
+		self.maxElemCount: int | None = maxElemCount
 
 
 class JsonKeySchema(JsonStringSchema):
