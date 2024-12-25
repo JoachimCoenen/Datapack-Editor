@@ -92,6 +92,7 @@
 				"options": [
 					{ "$ref": "#type" },
 					{ "$type": "object",
+						"defining-properties": ["$ref"],
 						"properties": {
 							"$ref": { "$type": "string", "type": "dpe:tmpl_ref" }
 						},
@@ -131,6 +132,7 @@
 	"$definitions": {
 		"%schema": {
 			"$type": "object",
+			"defining-properties": ["$type"],
 			"properties": {
 				"$type": {
 					"value": { "$ref": "orRef", "type": {
@@ -196,6 +198,14 @@
 					"values": {
 						"object": { "$defRef": "propertyOrSchemaOrRef" }
 					}
+				},
+				"defining-properties": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"object": { "$defRef": "arrayOfStringOrRef" }
+					},
+					"description": "Used to help select the correct choice from a UnionSchema of ObjectSchemas. If any of the defining properties are given, then THIS must be the correct choice from the union.\n\nA defining property is not necessarily mandatory and missing defining properties do have no effect on the selected choice."
 				},
 				"properties": {
 					"description": "properties of the object",
@@ -366,6 +376,7 @@
 			 "options": [
 				{ "$defRef": "%schema" },
 				{ "$type": "object",
+					"defining-properties": ["$defRef"],
 					"properties": {
 						"$defRef": { "$type": "string", "type": "dpe:def_ref" }
 					}

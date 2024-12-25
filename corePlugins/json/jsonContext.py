@@ -367,7 +367,7 @@ def orRefSchema(schema: JsonSchema) -> JsonUnionSchema:
 			allowMultilineStr=None
 		),
 	]
-	schema2 = JsonObjectSchema(properties=refProperties, allowMultilineStr=None).finish()
+	schema2 = JsonObjectSchema(properties=refProperties, allowMultilineStr=None, definingProps=frozenset({'$ref'})).finish()
 
 	return JsonUnionSchema(options=[schema, schema2], allowMultilineStr=None)
 

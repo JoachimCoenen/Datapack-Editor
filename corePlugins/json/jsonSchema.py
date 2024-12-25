@@ -358,7 +358,7 @@ def decodeDecidingProp(decidingProp: Optional[str]) -> Optional[DecidingPropRef]
 	return DecidingPropRef(lookback, decidingProp[lookback * 3:])
 
 
-def propertyHandler(self: SchemaBuilder, name: str, node: JObject) -> tuple[PropertySchema, Finisher]:
+def propertyHandler(self: SchemaBuilder, name: str | Anything, node: JObject) -> tuple[PropertySchema, Finisher]:
 	reader = self.reader
 	type_ = reader.optStrVal(node, '$type') or reader.optStrVal(node, DEF_REF_PROP)
 	if type_ is not None:
@@ -480,8 +480,15 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[JsonSchema]:
 
 	inherits = reader.optArrayVal2(node, 'inherits', JsonObject)
 
+	definingProps = reader.optArrayVal2(node, 'defining-properties', JsonString)
+	if definingProps is not None:
+		definingProps = frozenset({definingProp.data for definingProp in definingProps})
+	else:
+		definingProps = frozenset()
+
 	objectSchema = JsonObjectSchema(
 		description=description,
+		definingProps=definingProps,
 		properties=[],
 		inherits=[],
 		deprecated=deprecated,

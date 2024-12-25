@@ -5,8 +5,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from math import inf
 from types import EllipsisType
-from typing import Generic, TypeVar, Sequence, Optional, Union, Mapping, ClassVar, Type, Any, Collection, Iterator, \
-	Callable, overload, TypeAlias
+from typing import Generic, TypeVar, Sequence, Optional, Mapping, ClassVar, Type, Any, Collection, Iterator, Callable, \
+	overload, TypeAlias, AbstractSet
 from weakref import ref, ReferenceType
 
 from recordclass import as_dataclass
@@ -184,8 +184,8 @@ class JsonBool(JsonData[bool]):
 
 
 @dataclass(unsafe_hash=True, order=True)
-class JsonNumber(JsonData[Union[int, float]]):
-	data: Union[int, float]
+class JsonNumber(JsonData[int | float]):
+	data: int | float
 	typeName: ClassVar[str] = 'number'
 
 	@property
@@ -362,14 +362,14 @@ class JsonStringSchema(JsonDataSchema):
 			self,
 			*,
 			type: Optional[str | JsonArgType] = None,
-			args: Optional[dict[str, Union[Any, None]]] = None,
+			args: Optional[dict[str, Any | None]] = None,
 			description: MDStr = '',
 			deprecated: bool = False,
 			allowMultilineStr: Optional[bool]
 	):
 		super(JsonStringSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.type: Optional[str] = getattr(type, 'name', type)
-		self.args: Optional[dict[str, Union[Any, None]]] = args or {}
+		self.args: Optional[dict[str, Any | None]] = args or {}
 
 
 class JsonStringOptionsSchema(JsonStringSchema):
@@ -421,7 +421,7 @@ class JsonKeySchema(JsonStringSchema):
 			self,
 			*,
 			type: Optional[str] = 'dpe:json/key_schema',
-			args: Optional[dict[str, Union[Any, None]]] = None,
+			args: Optional[dict[str, Any | None]] = None,
 			description: MDStr = '',
 			deprecated: bool = False,
 			allowMultilineStr: Optional[bool] = None
@@ -434,9 +434,6 @@ class JsonKeySchema(JsonStringSchema):
 			allowMultilineStr=allowMultilineStr,
 		)
 		self.forProp: Optional[JsonProperty] = None
-
-
-JSON_KEY_SCHEMA = JsonKeySchema(allowMultilineStr=None)
 
 
 @as_dataclass(hashable=True, readonly=True)
@@ -486,7 +483,7 @@ class PropertySchema(JsonSchema):
 	def __init__(
 			self,
 			*,
-			name: Union[str, Anything],
+			name: str | Anything,
 			description: MDStr = '',
 			value: Optional[JsonDataSchema],
 			optional: bool = False,
@@ -498,7 +495,7 @@ class PropertySchema(JsonSchema):
 			deprecated: bool = False,
 			allowMultilineStr: Optional[bool]):
 		super(PropertySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
-		self.name: Union[str, Anything] = name
+		self.name: str | Anything = name
 		self.optional: bool = optional
 		self.default: PyJsonValue = default
 		self.value: Optional[JsonDataSchema] = value
@@ -549,11 +546,19 @@ class JsonObjectSchema(JsonDataSchema):
 	_fields: ClassVar[FieldsMeta] = dict(
 		inherits=(..., ()),
 		properties=(..., Nothing),
+		definingProps=(..., frozenset()),
 	)
 
-	def __init__(self, *, description: MDStr = '', properties: list[PropertySchema], inherits: list[Inheritance] = (), deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = '', properties: list[PropertySchema], inherits: list[Inheritance] = (), definingProps: AbstractSet[str] = frozenset(), deprecated: bool = False, allowMultilineStr: Optional[bool]):
 		super(JsonObjectSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.inherits: tuple[Inheritance, ...] = tuple(inherits)
+		self.definingProps: AbstractSet[str] = definingProps
+		"""
+		Used to help select the correct choice from a JsonUnionSchema of ObjectSchemas. 
+		If any of the definingProps are given, then THIS must be the correct choice from the union.
+		
+		A defining prop is not necessarily mandatory and Missing definingProps do have no effect on the selected choice.
+		"""
 		self.properties: tuple[PropertySchema, ...] = tuple(properties)
 		self.propertiesDict: Mapping[str, PropertySchema] = {}
 		self.anythingProp: Optional[PropertySchema] = None
@@ -888,7 +893,6 @@ __all__ = [
 	'JsonStringOptionsSchema',
 	'JsonArraySchema',
 	'JsonKeySchema',
-	'JSON_KEY_SCHEMA',
 	'DecidingPropRef',
 	'PropertySchema',
 	'JsonObjectSchema',

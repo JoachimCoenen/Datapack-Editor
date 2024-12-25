@@ -1,4 +1,3 @@
-from cat.utils import Anything
 from .core import *
 
 
@@ -64,19 +63,21 @@ def _enrichObjectWithSchema(data: JsonObject, schema: JsonObjectSchema) -> int:
 	needsAMandatory = False
 	atLeastOneMandatory = False
 	allMandatory = True
-	for prop in schema.propertiesDict.values():
-		if prop.mandatory and not prop.values:
-			if any(r in data.data for r in prop.hates):
-				continue
-			needsAMandatory = True
-			if prop.name in data.data:
-				atLeastOneMandatory = True
-			if not all(r in data.data for r in prop.requires):
-				continue
-			if prop.name not in data.data:
-				allMandatory = False
+	hasDefiningProp = not schema.definingProps.isdisjoint(data.data.keys())
+	if not hasDefiningProp:
+		for prop in schema.propertiesDict.values():
+			if prop.mandatory and not prop.values:
+				if any(r in data.data for r in prop.hates):
+					continue
+				needsAMandatory = True
+				if prop.name in data.data:
+					atLeastOneMandatory = True
+				if not all(r in data.data for r in prop.requires):
+					continue
+				if prop.name not in data.data:
+					allMandatory = False
 
-	atLeastOneMandatory = atLeastOneMandatory or not needsAMandatory  # treat atLeastOneMandatory as True if nothing in the schema is mandatory.
+		atLeastOneMandatory = atLeastOneMandatory or not needsAMandatory  # treat atLeastOneMandatory as True if nothing in the schema is mandatory.
 
 	atLeastOneOK = False
 	allOK = True
@@ -86,7 +87,7 @@ def _enrichObjectWithSchema(data: JsonObject, schema: JsonObjectSchema) -> int:
 		else:
 			allOK = False
 
-	return 2 if allOK and allMandatory else (1 if atLeastOneOK and atLeastOneMandatory else 0)
+	return 2 if hasDefiningProp or (allOK and allMandatory) else (1 if atLeastOneOK and atLeastOneMandatory else 0)
 
 
 def _enrichProperty(name: str, prop: JsonProperty, parentSchema: JsonObjectSchema, parent: JsonObject) -> bool:

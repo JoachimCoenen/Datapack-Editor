@@ -2,6 +2,7 @@
 ### Improvements
  * Exceptions when collecting suggestions for autocompletion no longer crash the entire application.
  * JSON array schemas can now specify a `minCount` and a `maxCount`.
+ * Improved suggestions inside incomplete JSON objects with union schemas.
 
 ### Fixes
  * Fixed crash when attempting to load project with a datapack version that is not supported.
