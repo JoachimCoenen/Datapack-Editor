@@ -4,8 +4,8 @@ from typing import Callable, Optional, Iterable, Any
 
 from base.model.messages import NUMBER_OUT_OF_BOUNDS_MSG
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.contextProvider import Suggestions, errorMsg, getCallTips, validateTree, getSuggestions, getClickableRanges, onIndicatorClicked, getDocumentation, \
-	parseNPrepare
+from base.model.parsing.contextProvider import Suggestions, errorMsg, getCallTips, validateTree, getSuggestions, \
+	getClickableRanges, onIndicatorClicked, getDocumentation, parseNPrepare, CtxInfo
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
 from base.model.utils import Span, Position, GeneralError, MDStr, LanguageId
@@ -74,13 +74,13 @@ class ParsingHandler(ArgumentContext, ABC):
 		"""override in subclasses if you wnt to provide an ersatz node for when nothing has been parsed yet."""
 		return None
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		if node is not None:
 			value = node.value
 			source = node.source
 		else:
 			value = self.getEmptyValueForSuggestions(ai, pos, replaceCtx)
-			source = b''
+			source = info.ctxProvider.text
 
 		return getSuggestions(value, source, pos, replaceCtx)
 
@@ -109,7 +109,7 @@ class BoolHandler(ArgumentContext):
 			return None
 		return makeParsedArgument(sr, ai, value=string)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		return ['true', 'false']
 
 
@@ -141,7 +141,7 @@ class NumberHandler(ArgumentContext):
 		if not minVal <= node.value <= maxVal:
 			errorMsg(NUMBER_OUT_OF_BOUNDS_MSG, minVal, maxVal, span=node.span, errorsIO=errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		args = ai.args or FrozenDict.EMPTY
 		minVal = args.get('min', -inf)
 		maxVal = args.get('max', +inf)

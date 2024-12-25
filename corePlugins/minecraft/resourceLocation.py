@@ -9,7 +9,8 @@ from base.model.parsing.parser import ParserBase
 from cat.GUI.components.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from cat.utils import Deprecated
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.contextProvider import AddContextFunc, ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
+from base.model.parsing.contextProvider import AddContextFunc, ContextProvider, Match, Context, Suggestions, \
+	AddContextToDictDecorator, CtxInfo
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath, FilePathTpl
 from base.model.project.project import Root
@@ -167,7 +168,7 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 			else:
 				errorsIO.append(SemanticsError(UNKNOWN_MSG.format(self.name, node.asString), node.span))
 
-	def getSuggestions(self, node: ResourceLocationNode, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: ResourceLocationNode, pos: Position, replaceCtx: str, info: CtxInfo[ResourceLocationNode]) -> Suggestions:
 		if not self.checkCorrectNodeType(node, ResourceLocationNode):
 			return []
 		locations: list[ResourceLocation] = []

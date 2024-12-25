@@ -4,7 +4,7 @@ from typing import Any, Iterable, Optional, Sequence, cast
 
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import AddContextToDictDecorator, Context, ContextProvider, Match, Suggestions, \
-	StructuredNodeValue, StructuredContext, getSuggestions
+	StructuredNodeValue, StructuredContext, getSuggestions, CtxInfo
 from base.model.parsing.tree import Node
 from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError, MDStr, ParsingError, Position, Span, formatAsError
@@ -71,12 +71,13 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 
 	def getSuggestionsForNext(self, nexts: Iterable[CommandPartSchema], node: Optional[CommandPart], pos: Position, replaceCtx: str) -> list[str]:
 		result = []
+		info = CtxInfo(self, '')
 		for nx in nexts:
 			if isinstance(nx, KeywordSchema):
 				result.append(nx.name + ' ')
 			elif isinstance(nx, ArgumentSchema):
 				if (ctx := getArgumentContext(nx.type)) is not None:
-					result += ctx.getSuggestions2(nx, node, pos, replaceCtx)
+					result += ctx.getSuggestions2(nx, node, pos, replaceCtx, info)
 			elif nx is COMMANDS_ROOT:
 				result += self._getCommandSuggestions()
 		return result
@@ -91,7 +92,7 @@ class CommandCtxProvider(ContextProvider[CommandPart]):
 			return self.getSuggestionsForNext(getNextSchemas(before), hit, pos, replaceCtx)
 		elif hit is not None and isinstance(hit, ParsedArgument) and isinstance(hit.schema, ArgumentSchema):
 			if (ctx := getArgumentContext(hit.schema.type)) is not None:
-				return ctx.getSuggestions2(hit.schema, hit, pos, replaceCtx)
+				return ctx.getSuggestions2(hit.schema, hit, pos, replaceCtx, CtxInfo(self, ''))
 
 		return self._getCommandSuggestions()
 
@@ -166,15 +167,16 @@ class ArgumentContext(Context[ParsedArgument], ABC):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		pass
 
-	def getSuggestions(self, node: ParsedArgument, pos: Position, replaceCtx: str) -> Suggestions:
-		return self.getSuggestions2(node.schema, node, pos, replaceCtx)
+	def getSuggestions(self, node: ParsedArgument, pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
+		return self.getSuggestions2(node.schema, node, pos, replaceCtx, info)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		"""
 		:param ai:
 		:param node:
 		:param pos: cursor position
 		:param replaceCtx: the string that will be replaced
+		:param info
 		:return:
 		"""
 		return []
@@ -205,14 +207,14 @@ class StructuredArgumentContext[T: StructuredNodeValue](StructuredContext[Parsed
 		source = b''
 		return getSuggestions(value, source, pos, replaceCtx)
 
-	def getSuggestions(self, node: ParsedArgument, pos: Position, replaceCtx: str) -> Suggestions:
-		return self.getSuggestions2(node.schema, node, pos, replaceCtx)
+	def getSuggestions(self, node: ParsedArgument, pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
+		return self.getSuggestions2(node.schema, node, pos, replaceCtx, info)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], position: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], position: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		if node is None:
 			return self.getEmptySuggestions(ai, node, position, replaceCtx)
 		else:
-			return StructuredContext.getSuggestions(self, node, position, replaceCtx)
+			return StructuredContext.getSuggestions(self, node, position, replaceCtx, info)
 
 
 class KeywordContext(ArgumentContext, ABC):
@@ -309,7 +311,7 @@ class LiteralArgumentHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return parseLiteral(sr, ai)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		if isinstance(ai.type, LiteralsArgumentType):
 			return [bytesToStr(option) + ' ' for option in ai.type.options]
 		else:

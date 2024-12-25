@@ -20,7 +20,8 @@ from .commandContext import getArgumentContext, missingArgumentParser, makeParse
 from .stringReader import StringReader
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.contextProvider import Suggestions, Match, getSuggestions, ContextProvider, Context, StructuredContext
+from base.model.parsing.contextProvider import Suggestions, Match, getSuggestions, ContextProvider, Context, \
+	StructuredContext, CtxInfo
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
 from base.model.utils import ParsingError, Span, Position, GeneralError, MDStr, LanguageId
@@ -304,7 +305,7 @@ class FilterArgNodeCtxProvider(ContextProvider[FilterArgNode]):
 
 
 class FilterArgumentsContext(StructuredContext[FilterArguments]):
-	def getSuggestions(self, node: FilterArguments, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: FilterArguments, pos: Position, replaceCtx: str, info: CtxInfo[FilterArguments]) -> Suggestions:
 		argsStart = node.span.start
 		contextStr = node.source[argsStart.index:node.span.end.index]
 		cursorPos = pos.index - argsStart.index
@@ -327,7 +328,7 @@ class FilterArgumentsContext(StructuredContext[FilterArguments]):
 		assert contextStr[0] == options.openingOrd, f"{contextStr=!r}, {options.openingOrd=!r}"
 		context = getCursorContext2(contextStr, cursorPos, pos, node)
 		if context.value is None and context.after is False and context.inside is False:  # and re.search(rb'\[\s*$', contextStr[:cursorPos]) is not None:
-			return [cursorTouchesWord + options.closingStr] + _getKeySuggestions(options, context.key, pos, replaceCtx, False)
+			return [cursorTouchesWord + options.closingStr] + _getKeySuggestions(options, context.key, pos, replaceCtx, False, info)
 
 		suggestions: Suggestions = []
 		if context.isValue:
@@ -337,7 +338,7 @@ class FilterArgumentsContext(StructuredContext[FilterArguments]):
 					if isinstance(tsaInfo, ArgumentSchema):
 						handler = getArgumentContext(tsaInfo.type)
 						if handler is not None:
-							suggestions += [sg.rstrip() for sg in handler.getSuggestions2(tsaInfo, value, pos, replaceCtx)]
+							suggestions += [sg.rstrip() for sg in handler.getSuggestions2(tsaInfo, value, pos, replaceCtx, info)]
 							# TODO: maybe log if no handler has been found...
 			if context.after:
 				suggestions.append(cursorTouchesWord + ', ')
@@ -347,7 +348,7 @@ class FilterArgumentsContext(StructuredContext[FilterArguments]):
 				suggestions.append(cursorTouchesWord + '=')
 			if context.inside:
 				# context.fa is not None, so we already have an '=' after the key, so don't add one here.
-				suggestions += _getKeySuggestions(options, context.key, pos, replaceCtx, False)
+				suggestions += _getKeySuggestions(options, context.key, pos, replaceCtx, False, info)
 
 		return suggestions
 
@@ -436,12 +437,12 @@ def getCursorContext2(contextStr: bytes, cursorPos: int, pos: Position, fas: Fil
 		return CursorCtx2(None, None, inside=False, after=False)
 
 
-def _getKeySuggestions(options: FilterArgOptions, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, addComma: bool):
+def _getKeySuggestions(options: FilterArgOptions, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, addComma: bool, info: CtxInfo[FilterArguments]):
 	if node is None:
-		ctxProvider = CommandCtxProvider(ParsedArgument(Span(pos), options.keySchema, b'', b'', b''), b'')
+		ctxProvider = CommandCtxProvider(ParsedArgument(Span(pos), options.keySchema, info.ctxProvider.text, b'', b''), info.ctxProvider.text)
 		suggestions = ctxProvider.getSuggestionsForNext((options.keySchema,), None, pos, replaceCtx)
 	else:
-		suggestions = getSuggestions(node, b'', pos, replaceCtx)
+		suggestions = getSuggestions(node, info.ctxProvider.text, pos, replaceCtx)
 
 	if addComma:
 		return [f', {suggestion.strip()}' for suggestion in suggestions]

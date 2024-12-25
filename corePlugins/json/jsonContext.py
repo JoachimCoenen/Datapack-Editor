@@ -238,7 +238,7 @@ class JsonCtxProvider(ContextProvider[JsonNode]):
 						prefix = '' if data.startswith(b'"') else '"'
 						return _getPropsForObject(container, container.schema, prefix, '": ')
 			elif (strHandler := self.getContext(hit)) is not None:
-				return strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx)  # TODO: set correct replaceCtx
+				return strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx, info=CtxInfo(self, ''))  # TODO: set correct replaceCtx
 		elif hit.schema is not None:
 			if hit.span.end == pos and not isinstance(hit, JsonInvalid):
 				return self._getSuggestionsForBefore(pos, hit, contained, replaceCtx)
@@ -314,7 +314,7 @@ class JsonContext(Context[JsonNode]):
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
 		raise ValueError("JsonContext.validate() should never be called. use validator2.validateJson(...) instead!")
 
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str, info: CtxInfo[JsonNode]) -> Suggestions:
 		return []
 
 	def getDocumentation(self, node: JsonString, pos: Position) -> MDStr:
@@ -447,9 +447,9 @@ class ParsingJsonCtx(JsonStringContext, ABC):
 		if node.parsedValue is not None:
 			validateTree(node.parsedValue, b'', errorsIO)
 
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str, info: CtxInfo[JsonNode]) -> Suggestions:
 		if node.parsedValue is not None:
-			return getSuggestions(node.parsedValue, b'', pos, replaceCtx)
+			return getSuggestions(node.parsedValue, info.ctxProvider.text, pos, replaceCtx)
 		return []
 
 	def getDocumentation(self, node: JsonString, pos: Position) -> MDStr:
@@ -486,7 +486,7 @@ class JsonKeyContext(JsonStringContext):
 	def validate(self, node: JsonString, errorsIO: list[GeneralError]) -> None:
 		pass
 
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str, info: CtxInfo[JsonNode]) -> Suggestions:
 		pass
 
 	def getDocumentation(self, node: JsonString, pos: Position) -> MDStr:
@@ -514,7 +514,7 @@ class OptionsJsonStrContext(JsonStringContext):
 			if node.data not in node.schema.args.get('values', ()):
 				errorsIO.append(SemanticsError(UNKNOWN_MSG.format("Option", node.data), node.span, style=style))
 
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str, info: CtxInfo[JsonNode]) -> Suggestions:
 		if isinstance(node.schema, JsonStringSchema):
 			return list(node.schema.args.get('values', ()))
 		return []
@@ -543,7 +543,7 @@ class FloatJsonStrContext(JsonStringContext):
 		if isinstance(node.schema, JsonStringSchema):
 			pass  # todo test min max
 
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str, info: CtxInfo[JsonNode]) -> Suggestions:
 		return []
 
 
@@ -559,7 +559,7 @@ class JsonArgTypeJsonStrContext(JsonStringContext):
 		if node.data not in ALL_NAMED_JSON_ARG_TYPES:
 			errorsIO.append(SemanticsError(UNKNOWN_MSG.format("JsonArgType", node.data), node.span))
 
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str, info: CtxInfo[JsonNode]) -> Suggestions:
 		return list(ALL_NAMED_JSON_ARG_TYPES.keys())
 
 	def getDocumentation(self, node: JsonString, pos: Position) -> MDStr:
@@ -603,7 +603,7 @@ class LibPathJsonStrContext(JsonStringContext):
 		if node.parsedValue is None or node.parsedValue[1] is None:
 			errorsIO.append(SemanticsError(UNKNOWN_MSG.format("library", node.data), node.span))
 
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str, info: CtxInfo[JsonNode]) -> Suggestions:
 		return []
 
 	def getDocumentation(self, node: JsonString, pos: Position) -> MDStr:
@@ -660,7 +660,7 @@ class TmplRefJsonStrContext(JsonStringContext):
 		else:
 			pass
 
-	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: JsonString, pos: Position, replaceCtx: str, info: CtxInfo[JsonNode]) -> Suggestions:
 		if node.parsedValue is None:
 			return []
 		tree = node.parsedValue[1]

@@ -471,7 +471,7 @@ class PredicateArgsContext(Context[PredicateArgNode]):
 	def onIndicatorClicked(self, node: PredicateArgNode, pos: Position) -> None:
 		pass
 
-	def getSuggestions(self, node: PredicateArgs, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: PredicateArgs, pos: Position, replaceCtx: str, info: CtxInfo[PredicateArgNode]) -> Suggestions:
 		return []
 
 

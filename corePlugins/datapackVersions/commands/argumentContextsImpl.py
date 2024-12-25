@@ -4,7 +4,7 @@ from typing import Any, Callable, Optional, ClassVar
 
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes, bytesOptToStr
-from base.model.parsing.contextProvider import Suggestions, errorMsg
+from base.model.parsing.contextProvider import Suggestions, errorMsg, CtxInfo
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
@@ -179,7 +179,7 @@ class ColumnPosHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return _parseVec(sr, ai, useFloat=False, count=2, notation=b'~')
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		return ['~ ~']
 
 
@@ -216,11 +216,11 @@ class EntityHandler(StructuredArgumentContext):
 
 	SELECTOR_SUGGESTIONS: ClassVar[Suggestions] = ['@a', '@e', '@s', '@p', '@r', ]
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		if node is None or pos.index - node.span.start.index < 2:
 			return self.SELECTOR_SUGGESTIONS
 		else:
-			return super().getSuggestions2(ai, node, pos, replaceCtx)
+			return super().getSuggestions2(ai, node, pos, replaceCtx, info)
 
 
 _INTEGER_REGEX = r'-?[0-9]+'
@@ -287,7 +287,7 @@ class NumberRangeHandler(ArgumentContext):
 		elif (numberMax - numberMin + intAdjust) > maxSize:
 			errorMsg(RANGE_TOO_BIG_MSG, maxSize, span=node.span, errorsIO=errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		args = ai.args or FrozenDict.EMPTY
 		minVal = args.get('minVal', -inf)
 		maxVal = args.get('maxVal', +inf)
@@ -357,7 +357,7 @@ class ItemSlotHandler(ArgumentContext):
 
 		return makeParsedArgument(sr, ai, value=ItemSlot(bytesToStr(slotType), bytesOptToStr(slotNumber)))
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		slots = getCurrentFullMcData().slots
 		suggestions = [bytesToStr(slotType if not slotNumber else slotType + b'.' + slotNumber) for slotType, slotNumbers in slots.items() for slotNumber in slotNumbers]
 		if self.allowWildcard:
@@ -525,8 +525,8 @@ class ScoreHolderHandler(EntityHandler):
 				return None
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		suggestions = super(ScoreHolderHandler, self).getSuggestions2(ai, node, pos, replaceCtx)
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
+		suggestions = super(ScoreHolderHandler, self).getSuggestions2(ai, node, pos, replaceCtx, info)
 		if node is None or (node.start.index - pos.index) <= 2:
 			suggestions.append('*')
 		return suggestions
@@ -614,7 +614,7 @@ class TimeHandler(ArgumentContext):
 		if not minVal <= ticks <= maxVal:
 			errorMsg(NUMBER_OUT_OF_BOUNDS_MSG, minVal, maxVal, span=node.span, errorsIO=errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		args = ai.args or FrozenDict.EMPTY
 		minVal = args.get('min', -inf)
 		maxVal = args.get('max', +inf)
@@ -673,7 +673,7 @@ class Vec2Handler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return _parseVec(sr, ai, useFloat=True, count=2, notation=b'~^')
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		return ['~ ~', '0 0']
 
 
@@ -686,7 +686,7 @@ class Vec3Handler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return _parseVec(sr, ai, useFloat=self.useFloat, count=3, notation=b'~^')
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		return ['~ ~ ~', '^ ^ ^', '0 0 0']
 
 
