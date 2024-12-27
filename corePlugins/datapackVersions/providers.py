@@ -36,12 +36,39 @@ def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[ObjectSche
 
 def propertiesFor_block_state_property(parent: ObjectNode) -> Optional[ObjectSchema]:
 	blockVal = parent.data.get('block', None)
+	if blockVal is None:
+		blockVal = parent.data.get('Name', None)  # for data_components-library.json/block_state
 	if blockVal is None or not isinstance(blockVal.value, StringNode):
 		return ObjectSchema(properties=[], allowMultilineStr=None).finish()
 	else:
 		block = blockVal.value.data
 		block = ResourceLocation.fromString(block)
 		return _propertiesFromBlockStates(block)
+
+
+def _propertiesForItemComponents(itemId: ResourceLocation) -> Optional[ObjectSchema]:
+	# todo: which items have which components?
+	allItemComponents = getCurrentFullMcData().itemComponents
+
+	properties = []
+	for itemComponent in allItemComponents:
+		valueDescr: MDStr = MDStr("")
+		value = AnySchema(description=valueDescr, allowMultilineStr=False)
+
+		properties.append(PropertySchema(name=itemComponent.asQualifiedString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+		if itemComponent.isMCNamespace:
+			properties.append(PropertySchema(name=itemComponent.asCompactString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+
+	return ObjectSchema(properties=properties, allowMultilineStr=None).finish()
+
+
+def propertiesFor_item_stack_components(parent: ObjectNode) -> Optional[ObjectSchema]:
+	itemIdNode = parent.data.get('id', None)
+	if itemIdNode is None or not isinstance(itemIdNode.value, StringNode):
+		return ObjectSchema(properties=[], allowMultilineStr=None).finish()
+	else:
+		itemId = ResourceLocation.fromString(itemIdNode.value.data)
+		return _propertiesForItemComponents(itemId)
 
 
 def _getTemplate(library: ObjectNode, name: str) -> Optional[ObjectNode]:

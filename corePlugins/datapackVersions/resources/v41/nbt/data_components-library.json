@@ -1,0 +1,37 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "utils": "utils-library.json" },
+  "$definitions": {
+
+    "block_state": {
+      "$type": "object",
+      "properties": {
+        "Name": {"$ref": "utils:resourceLocationString", "schema": "block", "allowTags": false },
+        "Properties": {
+          "optional": true,
+          "value": {
+            "$type": "calculated",
+            "function": "corePlugins.datapackVersions.providers.propertiesFor_block_state_property",
+            "description": "Block state property key-value pair. The property must be possessed by the specified block."
+          }
+        }
+      }
+    },
+
+    "item_stack": {
+      "$type": "object",
+      "properties": {
+        "id": {"$ref": "utils:resourceLocationString", "schema": "item", "allowTags": false },
+        "components": {
+          "optional": true,
+          "value": {
+            "$type": "calculated",
+            "function": "corePlugins.datapackVersions.providers.propertiesFor_item_stack_components"
+          }
+        }
+      }
+    }
+    
+    
+  }
+}

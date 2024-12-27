@@ -1,0 +1,35 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  
+  "$templates": {
+    "resourceLocationString": {
+      "$params": {
+        "schema": { "type": "string" },
+        "allowTags": { "type": "boolean", "default": false }
+      },
+      "$body": {
+        "$type": "string",
+        "type": "minecraft:resource_location",
+        "args": { "schema": { "$ref": "#schema" }, "allowTags": { "$ref": "#allowTags" } },
+        "description": "An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`."
+      }
+    }
+  },
+  
+  "$definitions": {
+    
+    "radians_angle": {
+      "$type": "float",
+      "description": "The angle in radians. \n- 360° = 2π radians ≈ 6.28 radians\n- 180° = π radians ≈ 3.14 radians\n- 90° = 0.5π radians ≈ 1.57 radians"
+    },
+    
+    "block_pos": {
+      "$type": "array",
+      "element": { "$type": "integer" },
+      "minCount": 3,
+      "maxCount": 3,
+      "description": "The block position. [X, Y, Z]"
+    }
+  }
+}

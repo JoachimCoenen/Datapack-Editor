@@ -28,7 +28,17 @@ def loadJsonSchemas() -> dict[str, StructureDataSchema]:
 	return v23Schemas
 
 
+def loadNBTSchemas() -> dict[str, StructureDataSchema]:
+	resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
+	v41Dir = os.path.join(resourcesDir, "v41/nbt")
+	v41Schemas = {
+		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:particle_configuration_tags', os.path.join(v41Dir, 'particle_configuration_tags.json')),
+	}
+	return v41Schemas
+
+
 JSON_SCHEMAS = loadJsonSchemas()
+SNBT_SCHEMAS = loadNBTSchemas()
 
 
 def buildVersion41() -> DPVersion:
@@ -38,6 +48,6 @@ def buildVersion41() -> DPVersion:
 		name='41',
 		structure=buildEntryHandlers(DATAPACK_CONTENTS),
 		jsonSchemas=JSON_SCHEMAS,
-		snbtSchemas={},
+		snbtSchemas=SNBT_SCHEMAS,
 		mcFunctionSchema=COMMANDS_V41.buildSchema(getFullMcData('1.20.5'))
 	)

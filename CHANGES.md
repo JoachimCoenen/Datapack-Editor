@@ -1,6 +1,7 @@
 ## Next Version
 ### Features
  * Added support for validation and code suggestions in SNBT. JSON schemas are used. 
+ * Added validation and code suggestions for particle configuration tags.
 
 ### Improvements
  * Exceptions when collecting suggestions for autocompletion no longer crash the entire application.
