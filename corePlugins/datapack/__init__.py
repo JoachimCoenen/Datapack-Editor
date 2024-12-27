@@ -34,10 +34,10 @@ class DatapackPlugin(PluginBase):
 		return [DatapackSettings]
 
 	def schemas(self) -> dict[str, Schema]:
-		from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
+		from corePlugins.nbtJsonBase.schemaStore import STRUCTURE_SCHEMA_LOADER
 		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
 		schemaPath = os.path.join(resourcesDir, 'dependencies.json')
-		return {'dpe:dependencies': JSON_SCHEMA_LOADER.loadSchema('dpe:dependencies', schemaPath)}
+		return {'dpe:dependencies': STRUCTURE_SCHEMA_LOADER.loadSchema('dpe:dependencies', schemaPath)}
 
 	def schemaMappings(self) -> dict[LanguageId, list[SchemaMapping]]:
 		mappings = [

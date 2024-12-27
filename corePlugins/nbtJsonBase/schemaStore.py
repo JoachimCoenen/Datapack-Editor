@@ -4,8 +4,8 @@ from typing import Optional
 from base.model.utils import WrappedError
 from cat.utils.logging_ import logWarning, logInfo
 from base.model.pathUtils import FilePathStr
-from .core import JsonSchema
-from .jsonSchema import SchemaBuilderOrchestrator
+from corePlugins.nbtJsonBase.core import StructureDataSchema
+from corePlugins.nbtJsonBase.schemaBuilder import SchemaBuilderOrchestrator
 
 
 @dataclass
@@ -15,7 +15,7 @@ class _SchemaLibPath:  # todo find better name for class _SchemaLibPath
 
 
 @dataclass(frozen=True)
-class JsonSchemaLoader:
+class StructureSchemaLoader:
 	"""
 	loads JSON schemas and schema libraries, and remembers where thy have been loaded from, so they can be reloaded.
 	Also Caches them for when schemas rely on each other (see also SchemaBuilderOrchestrator).
@@ -25,14 +25,14 @@ class JsonSchemaLoader:
 
 	orchestrator: SchemaBuilderOrchestrator = field(default_factory=lambda: SchemaBuilderOrchestrator(''))
 
-	def loadSchema(self, name: str, path: str) -> Optional[JsonSchema]:
+	def loadSchema(self, name: str, path: str) -> Optional[StructureDataSchema]:
 		self._registeredSchemas[name] = path
 		schema = self._load_schema(path)
 		self.logAndClearErrors()
 		return schema
 
 	# def registerSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> dict[str, JsonSchema]:
-	def loadSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> dict[str, JsonSchema]:
+	def loadSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> dict[str, StructureDataSchema]:
 		"""
 
 		:param name:
@@ -46,13 +46,13 @@ class JsonSchemaLoader:
 		self.logAndClearErrors()
 		return schemas
 
-	def _load_schema(self, path: FilePathStr) -> Optional[JsonSchema]:
+	def _load_schema(self, path: FilePathStr) -> Optional[StructureDataSchema]:
 		schema = self.orchestrator.getSchema(path)
 		if schema is None:
 			logWarning(f"Failed to load schema '{path}'")
 		return schema
 
-	def _load_library(self, name: str, path: _SchemaLibPath) -> dict[str, JsonSchema]:
+	def _load_library(self, name: str, path: _SchemaLibPath) -> dict[str, StructureDataSchema]:
 		library = self.orchestrator.getSchemaLibrary(path.path)
 		inclDefs = path.includedDefinitions or list(library.definitions.keys())
 		schemas = {}
@@ -64,7 +64,7 @@ class JsonSchemaLoader:
 				logWarning(f"schema library '{path.path}' has no definition for '{defName}")
 		return schemas
 
-	def reloadAllSchemas(self) -> dict[str, JsonSchema]:
+	def reloadAllSchemas(self) -> dict[str, StructureDataSchema]:
 		logInfo(f"reloadAllSchemas():")
 		self.orchestrator.clear()
 		schemas = {}
@@ -99,10 +99,10 @@ class JsonSchemaLoader:
 		self.clearErrors()
 
 
-JSON_SCHEMA_LOADER: JsonSchemaLoader = JsonSchemaLoader()
+STRUCTURE_SCHEMA_LOADER: StructureSchemaLoader = StructureSchemaLoader()
 
 
 __all__ = [
-	'JsonSchemaLoader',
-	'JSON_SCHEMA_LOADER',
+	'StructureSchemaLoader',
+	'STRUCTURE_SCHEMA_LOADER',
 ]

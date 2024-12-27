@@ -1,7 +1,7 @@
 from .core import *
 
 
-def enrichWithSchema(data: JsonData, schema: JsonSchema) -> bool:
+def enrichWithSchema(data: StructureDataNode, schema: StructureDataSchema) -> bool:
 	# data.schema = schema
 	if schema is not None:
 		return _enrichWithSchemaInternal(data, schema) > 0
@@ -11,10 +11,10 @@ def enrichWithSchema(data: JsonData, schema: JsonSchema) -> bool:
 		return False
 
 
-def _enrichWithSchemaInternal(data: JsonData, schema: JsonSchema) -> int:
+def _enrichWithSchemaInternal(data: StructureDataNode, schema: StructureDataSchema) -> int:
 	# 2 = OK, 1 = Maybe, 0 = No
 	schema = resolveCalculatedSchema(schema, data.parent)
-	if isinstance(schema, JsonUnionSchema):
+	if isinstance(schema, UnionSchema):
 		return _enrichWithUnionSchema(data, schema)
 
 	if schema.typeName == 'any':
@@ -22,11 +22,11 @@ def _enrichWithSchemaInternal(data: JsonData, schema: JsonSchema) -> int:
 		return 2
 
 	dataType = type(data)
-	if schema.DATA_TYPE is dataType:
+	if issubclass(dataType, schema.DATA_TYPE):
 		data.schema = schema
-		if dataType is JsonArray and isinstance(schema, JsonArraySchema):
-			return _enrichArrayWithSchema(data, schema)
-		elif dataType is JsonObject and isinstance(schema, JsonObjectSchema):
+		if isinstance(data, ListLikeNode) and isinstance(schema, ListLikeSchema):
+			return _enrichListLikeWithSchema(data, schema)
+		elif isinstance(data, ObjectNode) and isinstance(schema, ObjectSchema):
 			return _enrichObjectWithSchema(data, schema)
 		return 2
 	# elif dataType is JsonInvalid:
@@ -34,7 +34,7 @@ def _enrichWithSchemaInternal(data: JsonData, schema: JsonSchema) -> int:
 	return 0
 
 
-def _enrichWithUnionSchema(data: JsonData, schema: JsonUnionSchema) -> int:
+def _enrichWithUnionSchema(data: StructureDataNode, schema: UnionSchema) -> int:
 	result = 0
 	for opt in schema.allOptions:
 		internal = _enrichWithSchemaInternal(data, opt)
@@ -47,7 +47,7 @@ def _enrichWithUnionSchema(data: JsonData, schema: JsonUnionSchema) -> int:
 	return result
 
 
-def _enrichArrayWithSchema(data: JsonArray, schema: JsonArraySchema) -> int:
+def _enrichListLikeWithSchema(data: ListLikeNode, schema: ListLikeSchema) -> int:
 	atLeastOneOK = False
 	allOK = True
 	for v in data.data:
@@ -58,7 +58,7 @@ def _enrichArrayWithSchema(data: JsonArray, schema: JsonArraySchema) -> int:
 	return 2 if allOK else (1 if atLeastOneOK else 0)
 
 
-def _enrichObjectWithSchema(data: JsonObject, schema: JsonObjectSchema) -> int:
+def _enrichObjectWithSchema(data: ObjectNode, schema: ObjectSchema) -> int:
 	# 2 = OK, 1 = Maybe, 0 = No
 	needsAMandatory = False
 	atLeastOneMandatory = False
@@ -90,7 +90,7 @@ def _enrichObjectWithSchema(data: JsonObject, schema: JsonObjectSchema) -> int:
 	return 2 if hasDefiningProp or (allOK and allMandatory) else (1 if atLeastOneOK and atLeastOneMandatory else 0)
 
 
-def _enrichProperty(name: str, prop: JsonProperty, parentSchema: JsonObjectSchema, parent: JsonObject) -> bool:
+def _enrichProperty(name: str, prop: StructureProperty, parentSchema: ObjectSchema, parent: ObjectNode) -> bool:
 	propSchema, valueSchema = parentSchema.getSchemaForPropAndVal(name, parent)
 	if propSchema is not None:
 		prop.schema = propSchema
@@ -99,30 +99,29 @@ def _enrichProperty(name: str, prop: JsonProperty, parentSchema: JsonObjectSchem
 	return False
 
 
-def _enrichWithAnySchema(data: JsonData):
+def _enrichWithAnySchema(data: StructureDataNode):
 	if data.schema is None:
-		data.schema = JSON_ANY_SCHEMA
-		dataType = type(data)
-		if dataType is JsonArray:
+		data.schema = STRUCTURE_ANY_SCHEMA
+		if isinstance(data, ListLikeNode):
 			for v in data.data:
 				_enrichWithAnySchema(v)
-		# elif dataType is JsonObject:
+		# elif isinstance(data, ObjectNode):
 		# 	for key, prop in data.data.items():
 		# 		if prop.schema is None:
 		# 			prop.schema = PropertySchema(name=key, value=JSON_ANY_SCHEMA, allowMultilineStr=None)
 		# 			_enrichWithAnySchema(prop.value)
 
 
-def _enrichWithIllegalSchema(data: JsonData):
-	data.schema = JSON_ILLEGAL_SCHEMA
+def _enrichWithIllegalSchema(data: StructureDataNode):
+	data.schema = STRUCTURE_ILLEGAL_SCHEMA
 
 
-def pathify(data: JsonData, path: str) -> None:
+def pathify(data: StructureDataNode, path: str) -> None:
 	data.path = path
-	if isinstance(data, JsonArray):
+	if isinstance(data, ListLikeNode):
 		for i, element in enumerate(data.data):
 			pathify(element, f'{path}[{i}]')
-	elif isinstance(data, JsonObject):
+	elif isinstance(data, ObjectNode):
 		for key, prop in data.data.items():
 			ppath = f'{path}/{key}'
 			pathify(prop.value, ppath)

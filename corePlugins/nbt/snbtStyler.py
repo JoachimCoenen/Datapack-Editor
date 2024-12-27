@@ -11,17 +11,16 @@ from base.model.utils import LanguageId
 
 
 class StyleId(StyleIdEnum):
-	default   = DEFAULT_STYLE_ID
-	boolean   = DEFAULT_STYLE_ID + 1
-	intLike   = DEFAULT_STYLE_ID + 2
-	floatLike = DEFAULT_STYLE_ID + 3
-	string    = DEFAULT_STYLE_ID + 4
-	key       = DEFAULT_STYLE_ID + 5
-	invalid   = DEFAULT_STYLE_ID + 6
+	default    = DEFAULT_STYLE_ID
+	boolean    = DEFAULT_STYLE_ID + 1
+	numberLike = DEFAULT_STYLE_ID + 2
+	string     = DEFAULT_STYLE_ID + 3
+	key        = DEFAULT_STYLE_ID + 4
+	invalid    = DEFAULT_STYLE_ID + 5
 
 
 @dataclass
-class SNBTStyler(CatStyler[NBTTag]):
+class SNBTStyler(CatStyler[NBTNode]):
 
 	@property
 	def styleIdEnum(self) -> Type[StyleIdEnum]:
@@ -31,20 +30,19 @@ class SNBTStyler(CatStyler[NBTTag]):
 	def localInnerLanguages(cls) -> list[LanguageId]:
 		return []
 
-	_STYLERS: ClassVar[dict[str, Callable[[SNBTStyler, NBTTag], int]]] = {}
+	_STYLERS: ClassVar[dict[str, Callable[[SNBTStyler, NBTNode], int]]] = {}
 	_Styler: ClassVar = AddToDictDecorator(_STYLERS)
 
 	def __post_init__(self):
 		super(SNBTStyler, self).__post_init__()
-		self.DEFAULT_STYLE:    StyleId = self.offset + StyleId.default.value
-		self.BOOLEAN_STYLE:    StyleId = self.offset + StyleId.boolean.value
-		self.INT_LIKE_STYLE:   StyleId = self.offset + StyleId.intLike.value
-		self.FLOAT_LIKE_STYLE: StyleId = self.offset + StyleId.floatLike.value
-		self.STRING_STYLE:     StyleId = self.offset + StyleId.string.value
-		self.KEY_STYLE:        StyleId = self.offset + StyleId.key.value
-		self.INVALID_STYLE:    StyleId = self.offset + StyleId.invalid.value
+		self.DEFAULT_STYLE:     StyleId = self.offset + StyleId.default.value
+		self.BOOLEAN_STYLE:     StyleId = self.offset + StyleId.boolean.value
+		self.NUMBER_LIKE_STYLE: StyleId = self.offset + StyleId.numberLike.value
+		self.STRING_STYLE:      StyleId = self.offset + StyleId.string.value
+		self.KEY_STYLE:         StyleId = self.offset + StyleId.key.value
+		self.INVALID_STYLE:     StyleId = self.offset + StyleId.invalid.value
 
-	def styleNode(self, data: NBTTag) -> int:
+	def styleNode(self, data: NBTNode) -> int:
 		return self._STYLERS[data.typeName](self, data)
 
 	@_Styler(InvalidTag.typeName)
@@ -57,18 +55,15 @@ class SNBTStyler(CatStyler[NBTTag]):
 		self.setStyling(data.span.slice, self.BOOLEAN_STYLE)
 		return data.span.end.index
 
-	@_Styler(ByteTag.typeName)
-	@_Styler(ShortTag.typeName)
-	@_Styler(IntTag.typeName)
-	@_Styler(LongTag.typeName)
+	@_Styler(NumberTag.typeName)
+	# @_Styler(ByteTag.typeName)
+	# @_Styler(ShortTag.typeName)
+	# @_Styler(IntTag.typeName)
+	# @_Styler(LongTag.typeName)
+	# @_Styler(FloatTag.typeName)
+	# @_Styler(DoubleTag.typeName)
 	def styleIntLike(self, data: NumberTag) -> int:
-		self.setStyling(data.span.slice, self.INT_LIKE_STYLE)
-		return data.span.end.index
-
-	@_Styler(FloatTag.typeName)
-	@_Styler(DoubleTag.typeName)
-	def styleFloatLike(self, data: NumberTag) -> int:
-		self.setStyling(data.span.slice, self.FLOAT_LIKE_STYLE)
+		self.setStyling(data.span.slice, self.NUMBER_LIKE_STYLE)
 		return data.span.end.index
 
 	@_Styler(StringTag.typeName)
@@ -77,28 +72,23 @@ class SNBTStyler(CatStyler[NBTTag]):
 			beforeLen = slice(data.span.start.index, data.parsedValue.span.start.index)
 			self.setStyling(beforeLen, self.STRING_STYLE)
 			after = self.styleForeignNode(data.parsedValue)
-			afterLen = slice(after, data.parsedValue.span.end.index)
+			afterLen = slice(after, data.span.end.index)
 			self.setStyling(afterLen, self.STRING_STYLE)
 		else:
 			self.setStyling(data.span.slice, self.STRING_STYLE)
 		return data.span.end.index
 
 	@_Styler(ListTag.typeName)
+	# @_Styler(ArrayTag.typeName)
+	# @_Styler(ByteArrayTag.typeName)
+	# @_Styler(IntArrayTag.typeName)
+	# @_Styler(LongArrayTag.typeName)
 	def styleList(self, data: ListTag) -> int:
 		lastPos = data.span.start.index
 		for element in data.data:
 			self.setStyling(slice(lastPos, element.span.start.index), self.DEFAULT_STYLE)
 			lastPos = self.styleNode(element)
 		self.setStyling(slice(lastPos, data.span.end.index), self.DEFAULT_STYLE)
-		return data.span.end.index
-
-	@_Styler(ByteArrayTag.typeName)
-	@_Styler(IntArrayTag.typeName)
-	@_Styler(LongArrayTag.typeName)
-	# @_Styler(ArrayTag.typeName)
-	def styleArray(self, data: ArrayTag) -> int:
-		for element in data.data:
-			self.styleNode(element)
 		return data.span.end.index
 
 	def styleKey(self, data: StringTag) -> int:

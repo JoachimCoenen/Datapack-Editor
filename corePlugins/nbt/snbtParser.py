@@ -1,62 +1,58 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Type, Union, Callable, NamedTuple, overload, TypeVar, ClassVar
+from typing import Optional, Type, Callable, ClassVar, cast
+
+from better_orderedmultidict import OrderedMultiDict
 
 from base.model.messages import *
+from base.model.parsing.bytesConstants import ORD_BACKSLASH
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes
+from base.model.parsing.parser import ParserBase, IndexMapBuilder, IndexMapper
+from base.model.utils import Message, Position, Span, MDStr, wrapInMDCode
+from corePlugins.nbtJsonBase.core import StructureDataSchema, StructureDataNode, KeySchema, StructureValue
+from corePlugins.nbtJsonBase.schema import pathify, enrichWithSchema
 from .snbtTokenizer import SNBTTokenizer, Token, TokenType
 from .tags import *
-from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.parser import ParserBase
-from base.model.utils import Message, Position, Span, MDStr, wrapInMDCode
 
 INVALID_NUMBER_MSG: Message = Message("Invalid {0}: '`{1}`'", 2)
 
 
-class NumberInfo(NamedTuple):
+type NumberTagCtor[T: int | float] = Callable[[Span, Optional[StructureDataSchema], T, bytes], NumberTag[T]]
+
+
+@dataclass
+class NumberInfo[T: int | float]:
 	suffix: tuple[bytes, ...]
-	min: Union[int, float]
-	max: Union[int, float]
+	min: T
+	max: T
 	name: str
-	pyType: Type
+	pyType: Type[T]
+	numberTagCls: Type[NumberTag[T]]
+	numberTagCtor: NumberTagCtor[T]
 
 
 NUMBER_INFO = {
-	ByteTag: NumberInfo((b'b', b'B'), -128, 127, 'a Byte', int),
-	ShortTag: NumberInfo((b's', b'S'), -32768,  32767, 'a Short', int),
-	IntTag: NumberInfo((b'',), -2147483648, 2147483647, 'a Int', int),
-	LongTag: NumberInfo((b'l', b'L'), -9223372036854775808, 9223372036854775807, 'a Long', int),
-	FloatTag: NumberInfo((b'f', b'F', b''), -3.4E+38, +3.4E+38, 'a Float', float),
-	DoubleTag: NumberInfo((b'd', b'D'), -1.7E+308, 1.7E+308, 'a Double', float),
+	ByteTag: NumberInfo((b'b', b'B'), -128, 127, 'a Byte', int, ByteTag, cast(NumberTagCtor, ByteTag)),
+	ShortTag: NumberInfo((b's', b'S'), -32768,  32767, 'a Short', int, ShortTag, cast(NumberTagCtor, ShortTag)),
+	IntTag: NumberInfo((b'',), -2147483648, 2147483647, 'a Int', int, IntTag, cast(NumberTagCtor, IntTag)),
+	LongTag: NumberInfo((b'l', b'L'), -9223372036854775808, 9223372036854775807, 'a Long', int, LongTag, cast(NumberTagCtor, LongTag)),
+	FloatTag: NumberInfo((b'f', b'F', b''), -3.4E+38, +3.4E+38, 'a Float', float, FloatTag, cast(NumberTagCtor, FloatTag)),
+	DoubleTag: NumberInfo((b'd', b'D'), -1.7E+308, 1.7E+308, 'a Double', float, DoubleTag, cast(NumberTagCtor, DoubleTag)),
 }
 
-NUMBER_TAG_BY_SUFFIX = {suffix: tagType for tagType, info in NUMBER_INFO.items() for suffix in info[0] if suffix}
+NUMBER_INFO_BY_SUFFIX: dict[bytes, NumberInfo] = {suffix: info for info in NUMBER_INFO.values() for suffix in info.suffix if suffix}
 
-
-_ESCAPE_CHAR_MAP = {
-	ord('"'): '"',
-	ord("'"): "'",
-	ord('/'): '/',
-	ord('\\'): '\\',
-	ord('b'): '\b',
-	ord('f'): '\f',
-	ord('n'): '\n',
-	ord('r'): '\r',
-	ord('t'): '\t',
-}
-
-
-_TNumber = TypeVar('_TNumber', int, float)
-_TNBTTag = TypeVar('_TNBTTag', bound=BasicDataTag)
 
 @dataclass
-class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
+class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 	ignoreTrailingChars: bool = False
 	_tokenizer: SNBTTokenizer = field(init=False)
 	_current: Optional[Token] = field(init=False)
 	_last: Optional[Token] = field(init=False, default=None)
 
 	def __post_init__(self):
+		super().__post_init__()
 		self._tokenizer = SNBTTokenizer(
 			self.text,
 			self.line,
@@ -109,7 +105,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 		self._next()
 		return True
 
-	def parseNBTTag(self) -> Optional[NBTTag]:
+	def parseNBTTag(self) -> Optional[StructureDataNode[NBTNode, StructureValue[NBTNode]]]:
 		current = self._current
 		if current is None:
 			self._error(EXPECTED_BUT_GOT_MSG_RAW.format("a NBTTag", 'end of str'), self._last)
@@ -123,7 +119,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 			self._error(EXPECTED_BUT_GOT_MSG_RAW.format("a NBTTag", self._current.type.name), current)
 			return None
 	
-	def _parseStringOrBoolTag(self) -> Optional[NBTTag]:
+	def _parseStringOrBoolTag(self) -> Optional[NBTNode]:
 		current = self._current
 		content = self._getContent(current)
 		if content == b'true':
@@ -134,7 +130,7 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 			return BooleanTag(current.span, None, False, content)
 		else:
 			self._next()
-			return StringTag(current.span, None, bytesToStr(content), content)
+			return StringTag(current.span, None, bytesToStr(content), content, content, self.indexMapper)
 		
 	def parseBooleanTag(self) -> Optional[BooleanTag]:
 		current = self._current
@@ -157,109 +153,142 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 			return None
 
 		suffix = content[-1:]
-		tagType = NUMBER_TAG_BY_SUFFIX.get(suffix)
-		if tagType is not None:
-			return self._parseNumberTagInternal(tagType, *NUMBER_INFO[tagType])
+		numberInfo = NUMBER_INFO_BY_SUFFIX.get(suffix)
+		if numberInfo is not None:
+			return self._parseNumberTagInternal(numberInfo)
 		if any(c in content for c in b'.eE'):
-			return self._parseNumberTagInternal(FloatTag, *NUMBER_INFO[FloatTag])
+			return self._parseNumberTagInternal(NUMBER_INFO[FloatTag])
 		else:
-			return self._parseNumberTagInternal(IntTag, *NUMBER_INFO[IntTag])
+			return self._parseNumberTagInternal(NUMBER_INFO[IntTag])
 
-	@overload
-	def _parseNumberTagInternal(self, cls: Callable[[Span, Optional[NBTTagSchema], int, bytes], NumberTag[int]], suffix: tuple[bytes, ...], minVal: int, maxVal: int, name: str, number: Type[int]) -> Optional[NumberTag[int]]: ...
-	@overload
-	def _parseNumberTagInternal(self, cls: Callable[[Span, Optional[NBTTagSchema], float, bytes], NumberTag[float]], suffix: tuple[bytes, ...], minVal: float, maxVal: float, name: str, number: Type[float]) -> Optional[NumberTag[float]]: ...
+	# @overload
+	# def _parseNumberTagInternal(self, cls: NumberTagCtor[int], suffix: tuple[bytes, ...], minVal: int, maxVal: int, name: str, number: Type[int]) -> Optional[NumberTag[int]]: ...
+	# @overload
+	# def _parseNumberTagInternal(self, cls: NumberTagCtor[float], suffix: tuple[bytes, ...], minVal: float, maxVal: float, name: str, number: Type[float]) -> Optional[NumberTag[float]]: ...
 
-	def _parseNumberTagInternal(self, cls: Callable[[Span, Optional[NBTTagSchema], _TNumber, bytes], NumberTag[_TNumber]], suffix: tuple[bytes, ...], minVal: _TNumber, maxVal: _TNumber, name: str, number: Type[_TNumber]) -> Optional[NumberTag[_TNumber]]:
+	def _parseNumberTagInternal[T: int | float](self, numberInfo: NumberInfo[T]) -> Optional[NumberTag[T]]:
 		current = self._current
 		content = self._getContent(current)
 		if current.type == TokenType.Number:
-			if content.endswith(suffix):
+			if content.endswith(numberInfo.suffix):
 				try:
 					strVal = content
-					for sfx in suffix:
+					for sfx in numberInfo.suffix:
 						if content.endswith(sfx):
 							strVal = strVal.removesuffix(sfx)
 							break
-					value = number(bytesToStr(strVal))
+					value = numberInfo.pyType(bytesToStr(strVal))
 				except ValueError:
-					self._error(INVALID_NUMBER_MSG.format(cls.__name__, bytesToStr(content)), current)
+					self._error(INVALID_NUMBER_MSG.format(numberInfo.numberTagCls.__name__, bytesToStr(content)), current)
 					value = 0
-				if not minVal <= value <= maxVal:
-					self._error(NUMBER_OUT_OF_BOUNDS_MSG.format(minVal, maxVal), current)
+				if not numberInfo.min <= value <= numberInfo.max:
+					self._error(NUMBER_OUT_OF_BOUNDS_MSG.format(numberInfo.min, numberInfo.max), current)
 				self._next()
-				return cls(current.span, None, value, content)
-		self._error(EXPECTED_BUT_GOT_MSG_RAW.format(name, wrapInMDCode(bytesToStr(content))), current)
+				return numberInfo.numberTagCtor(current.span, None, value, content)
+		self._error(EXPECTED_BUT_GOT_MSG_RAW.format(numberInfo.name, wrapInMDCode(bytesToStr(content))), current)
 		return None
 
 	def parseByteTag(self) -> Optional[ByteTag]:
-		return self._parseNumberTagInternal(ByteTag, *NUMBER_INFO[ByteTag])
+		return self._parseNumberTagInternal(NUMBER_INFO[ByteTag])
 
 	def parseShortTag(self) -> Optional[ShortTag]:
-		return self._parseNumberTagInternal(ShortTag, *NUMBER_INFO[ShortTag])
+		return self._parseNumberTagInternal(NUMBER_INFO[ShortTag])
 
 	def parseIntTag(self) -> Optional[IntTag]:
-		return self._parseNumberTagInternal(IntTag, *NUMBER_INFO[IntTag])
+		return self._parseNumberTagInternal(NUMBER_INFO[IntTag])
 
 	def parseLongTag(self) -> Optional[LongTag]:
-		return self._parseNumberTagInternal(LongTag, *NUMBER_INFO[LongTag])
+		return self._parseNumberTagInternal(NUMBER_INFO[LongTag])
 
 	def parseFloatTag(self) -> Optional[FloatTag]:
-		return self._parseNumberTagInternal(FloatTag, *NUMBER_INFO[FloatTag])
+		return self._parseNumberTagInternal(NUMBER_INFO[FloatTag])
 
 	def parseDoubleTag(self) -> Optional[DoubleTag]:
-		return self._parseNumberTagInternal(DoubleTag, *NUMBER_INFO[DoubleTag])
+		return self._parseNumberTagInternal(NUMBER_INFO[DoubleTag])
 
-	def unescapeString(self, string: bytes, span: Span) -> str:
-		if b'\\' in string:
-			chars: list[str] = []
-			index = 0
+	def unescapeQuotedString(self, string: bytes, span: Span) -> tuple[str, bytes, IndexMapper]:
+		hasEscapeSequence = b'\\' in string
+		quote: int = string[0]
+		quotesLen = 1
+
+		if hasEscapeSequence:
+			idxMapBldr = self._makeIndexMapBuilderForStr(span.start.index, quotesLen)
+
+			escapableChars = b'\\' + strToBytes(chr(quote))
+
+			chars: bytes = b''  # list[str] = []
+			index = quotesLen  # decoded index
 			strStreakStart = index
-			end = len(string)
+			end = len(string) - quotesLen
 			while index < end:
 				char = string[index]
 
-				if char != '\\':
+				if char != ORD_BACKSLASH:
 					# chars.append(char)
 					index += 1
 					continue
 
-				chars.append(bytesToStr(string[strStreakStart:index]))
+				chars += (string[strStreakStart:index])
+				decIdx = len(chars)
 				next_char = string[index + 1]
-
-				next_char_str = _ESCAPE_CHAR_MAP.get(next_char)
-				if next_char_str is not None:
-					chars.append(next_char_str)
+				if next_char in escapableChars:
+					next_char_str = bytes((next_char,))  # make bytes from ordinal
+					chars += next_char_str
+					idxMapBldr.addMarker(index - 1,     decIdx)  # just before (=start of) escape sequence
+					idxMapBldr.addMarker(index - 1 + 2, decIdx + 1)  # just after (=end of) escape sequence
 				else:
 					self.error(MDStr(f"Unknown escape sequence: `{bytesToStr(string)}`"), span=span)
+					chars += string[index:index+2]
 
 				index += 2
 				strStreakStart = index
 
-			value = ''.join(chars)
-		elif string:
-			value = bytesToStr(string)
+			chars += (string[strStreakStart:index])
+			decPosLastChar = len(chars)  # = index
+			encPosLastChar = len(string) - 2  # we have to account for the quotation marks at start and end of string
+			idxMap = idxMapBldr.completeIndexMapper(encPosLastChar, decPosLastChar)
+			rawData = chars
+			value = bytesToStr(chars)
 		else:
-			value = ''
-		return value
+			if string:
+				rawData = string[quotesLen:].removesuffix(bytes((quote,)))  # todo probably to be removed. INVESTIGATE (see also JsonParser.parse_string())
+				value = bytesToStr(rawData)
+			else:
+				rawData = b''
+				value = ''
+
+			if not self._idxMprIsIdentity:
+				idxMapBldr = self._makeIndexMapBuilderForStr(span.start.index, quotesLen)
+				decPosLastChar = len(string)
+				encPosLastChar = decPosLastChar
+				idxMap = idxMapBldr.completeIndexMapper(encPosLastChar, decPosLastChar)
+			else:
+				idxMap = IndexMapper.IDENTITY_MAPPER
+
+		return value, rawData, idxMap
 
 	def parseStringTag(self, acceptNumber: bool = False) -> Optional[StringTag]:
 		current = self._current
 		if current is None:
 			self._error(EXPECTED_BUT_GOT_MSG_RAW.format('a String', 'nothing'), self._last)
-			return None  # oh no!
+			return None  # oh, no!
 
 		content: bytes = self._getContent(current)
 		if current.type == TokenType.QuotedString:
-			data: str = self.unescapeString(content, current.span)
+			data, rawData, idxMap = self.unescapeQuotedString(content, current.span)
 		elif (current.type == TokenType.String) or (acceptNumber and current.type == TokenType.Number):
 			data: str = bytesToStr(content)  # we're good
+			rawData: bytes = content
+			idxMap = self.indexMapper
 		else:
 			self._error(EXPECTED_BUT_GOT_MSG.format('a String', wrapInMDCode(bytesToStr(content))), current)
-			return None  # oh no!
+			return None  # oh, no!
 
 		self._next()
-		return StringTag(current.span, None, data, content)
+		return StringTag(current.span, None, data, content, rawData, idxMap)
+
+	def _makeIndexMapBuilderForStr(self, contentStartIdx: int, decodedQuotesLen: int) -> IndexMapBuilder:
+		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(contentStartIdx) + decodedQuotesLen)  # + 1 because of opening quotation marks?
 
 	def _parseListLike(self, delimiter: TokenType, closing: TokenType, parseItem: Callable[[], bool]) -> bool:
 		if self._current is not None and self._current.type is closing:
@@ -280,8 +309,8 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 		if not self._consumeToken(TokenType.List):
 			return None
 		openingToken = self._last
-		values = list[NBTTag]()
-		tagType: Optional[Type[NBTTag]] = None
+		values = list[StructureDataNode[NBTNode, StructureValue[NBTNode]]]()
+		tagType: Optional[Type[NBTNode]] = None
 
 		def parseItem() -> bool:
 			nonlocal tagType
@@ -304,28 +333,29 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 		keyTag = self.parseStringTag(acceptNumber=True)
 		if keyTag is None:
 			return None
+		keyTag.schema = KeySchema()
 		if not self._consumeToken(TokenType.Colon):
-			valueTag = InvalidTag(Span(keyTag.span.end), None, b'')
+			valueTag = InvalidTag(Span(keyTag.span.end), None, '')
 		else:
 			valueTag = self.parseNBTTag()
 			if valueTag is None:
 				current = self._current
 				if current is None:
-					valueTag = InvalidTag(Span(keyTag.span.end), None, b'')
+					valueTag = InvalidTag(Span(keyTag.span.end), None, '')
 				else:
 					if current.type in {TokenType.Comma, TokenType.CloseCompound}:
-						valueTag = InvalidTag(Span.between(self._last.span, current.span), None, b'')
+						valueTag = InvalidTag(Span.between(self._last.span, current.span), None, '')
 					else:
-						valueTag = InvalidTag(Span(keyTag.span.end), None, b'')
+						valueTag = InvalidTag(Span(keyTag.span.end), None, '')
 						# todo? tag = InvalidTag(current.span, None, self._getContent(current))
 					# return False
-		return NBTProperty(Span.encompassing(keyTag.span, valueTag.span), None, (keyTag, valueTag))
+		return NBTProperty(Span.encompassing(keyTag.span, valueTag.span), None, keyTag, valueTag)
 
 	def parseCompoundTag(self) -> Optional[CompoundTag]:
 		if not self._consumeToken(TokenType.Compound):
 			return None
 		openingToken = self._last
-		values = {}
+		values = OrderedMultiDict[str, NBTProperty]()
 
 		def parseProperty() -> bool:
 			tag = self.parsePropertyTag()
@@ -339,11 +369,11 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 		return CompoundTag(span, None, values)
 
 	# def _parseArrayTag(self, cls: Type[ArrayTag], opening: TokenType, parseTag: Callable[[], Optional[NBTTag]]) -> Optional[ArrayTag]:
-	def _parseArrayTag(self, cls: Callable[[Span, Optional[NBTTagSchema], list[_TNBTTag]], ArrayTag[_TNBTTag]], opening: TokenType, parseTag: Callable[[], Optional[NBTTag]]) -> Optional[ArrayTag[_TNBTTag]]:
+	def _parseArrayTag[T: NBTNode](self, cls: Callable[[Span, Optional[StructureDataSchema], list[T]], ArrayTag[T]], opening: TokenType, parseTag: Callable[[], Optional[T]]) -> Optional[ArrayTag[T]]:
 		if not self._consumeToken(opening):
 			return None
 		openingToken = self._last
-		values = list[NBTTag]()
+		values: list[T] = []
 		
 		def parseItem() -> bool:
 			tag = parseTag()
@@ -376,8 +406,11 @@ class SNBTParser(ParserBase[NBTTag, NBTTagSchema]):
 		TokenType.List: parseListTag,
 	}
 
-	def parse(self) -> Optional[NBTTag]:
+	def parse(self) -> Optional[NBTNode]:
 		tag = self.parseNBTTag()
+		if tag is not None:
+			pathify(tag, '')
+			enrichWithSchema(tag, self.schema)
 		self.cursor = self._tokenizer.lastCursor
 		self.line = self._tokenizer.lastLine
 		self.lineStart = self._tokenizer.lastLineStart

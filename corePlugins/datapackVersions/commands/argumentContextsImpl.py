@@ -23,16 +23,16 @@ from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, Resourc
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
 from corePlugins.nbt import SNBT_ID
 from corePlugins.nbt.path import NBTPathSchema, SNBT_PATH_ID
-from corePlugins.nbt.tags import NBTTagSchema
 from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag, tryReadNBTTag, readPredicateArgs
 from .argumentTypes import *
 from .argumentValues import BlockState, ItemStack, TargetSelector, ItemSlot, ResourceLocationOrInlineNBT, Particle
 from .itemComponents import ITEM_COMPONENT_ARG_OPTIONS
 from .targetSelector import TARGET_SELECTOR_ARG_OPTIONS
 from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgs
+from corePlugins.nbtJsonBase.core import STRUCTURE_ANY_SCHEMA
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
-MISSING_PARTICLE_CONFIGURATION_TAGS_MSG = Message("Missing particle configuration tags for particle`{0}`", 1)
+MISSING_PARTICLE_CONFIGURATION_TAGS_MSG = Message("Missing particle configuration tags for particle '`{0}`'", 1)
 
 
 @argumentContext(MINECRAFT_DIMENSION.name, rlcSchema=ResourceLocationSchema('', 'dimension', allowTags=False))
@@ -103,7 +103,7 @@ class ResourceLocationOrSNBTHandler(StructuredArgumentContext):
 
 		nbtTagSchema = GLOBAL_SCHEMA_STORE.get(self.nbtSchema, LanguageId('SNBT'))
 		if nbtTagSchema is None:
-			nbtTagSchema = NBTTagSchema('')
+			nbtTagSchema = STRUCTURE_ANY_SCHEMA
 		nbt = tryReadNBTTag(sr, nbtTagSchema, filePath, errorsIO=errorsIO)
 		if nbt is not None:
 			value = ResourceLocationOrInlineNBT(resLoc=None, nbt=nbt)
@@ -161,7 +161,7 @@ class BlockStateHandler(StructuredArgumentContext[BlockState]):
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
-			nbt = tryReadNBTCompoundTag(sr, NBTTagSchema(''), filePath, errorsIO=errorsIO)
+			nbt = tryReadNBTCompoundTag(sr, STRUCTURE_ANY_SCHEMA, filePath, errorsIO=errorsIO)
 		else:
 			nbt = None
 		if nbt is not None:
@@ -390,7 +390,7 @@ class ItemStackHandler(StructuredArgumentContext[ItemStack]):
 			# until 1.20.5 (excl.):
 			# data tags:
 			if sr.tryPeek() == ord('{'):
-				nbt = tryReadNBTCompoundTag(sr, NBTTagSchema(''), filePath, errorsIO=errorsIO)
+				nbt = tryReadNBTCompoundTag(sr, STRUCTURE_ANY_SCHEMA, filePath, errorsIO=errorsIO)
 				if nbt is not None:
 					sr.mergeLastSave()
 			else:
@@ -440,7 +440,7 @@ class NbtPathHandler(ParsingHandler):
 @argumentContext(MINECRAFT_NBT_TAG.name)
 class NbtTagHandler(ParsingHandler):
 	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
-		return NBTTagSchema('')
+		return STRUCTURE_ANY_SCHEMA
 
 	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
 		return SNBT_ID
@@ -482,14 +482,14 @@ class ParticleHandler(StructuredArgumentContext[Particle]):
 
 			if sr.tryPeek() == ord('{'):
 				if nbtTagSchema is None:
-					nbtTagSchema = NBTTagSchema('')
+					nbtTagSchema = STRUCTURE_ANY_SCHEMA
 
 				configurationTags = tryReadNBTCompoundTag(sr, nbtTagSchema, filePath, errorsIO=errorsIO)
 				if configurationTags is not None:
 					sr.mergeLastSave()
 			else:
 				if nbtTagSchema is not None:
-					errorMsg(MISSING_PARTICLE_CONFIGURATION_TAGS_MSG, span=particleId.span, errorsIO=errorsIO)
+					errorMsg(MISSING_PARTICLE_CONFIGURATION_TAGS_MSG, particleId.asString, span=particleId.span, errorsIO=errorsIO)
 				configurationTags = None
 		else:
 			configurationTags = None

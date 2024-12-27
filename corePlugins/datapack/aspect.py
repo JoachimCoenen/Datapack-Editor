@@ -19,9 +19,9 @@ from base.model.utils import GeneralError, MDStr, NULL_SPAN, SemanticsError
 from .datapackContents import collectEntry
 from .dpVersions import getAllDPVersions, getDPVersion, DPVersion
 from corePlugins.json import JSON_ID
-from corePlugins.json.core import JsonData
 from corePlugins.minecraft.settings import MinecraftSettings, MinecraftVersion
 from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
+from corePlugins.nbtJsonBase.core import StructureDataNode
 
 
 def minecraftVersionValidator(version: str) -> Optional[pd.ValidatorResult]:
@@ -66,7 +66,7 @@ class DatapackAspect(ProjectAspect):
 	def __post_init__(self):
 		self.analyzeFilesPart = AnalyzeFilesDatapackAspectPart(self)
 		self.dependenciesPart = DependenciesDatapackAspectPart(self)
-		self.projectInfoPart = ProjectInfoAspectPart[DatapackAspect](self)
+		self.projectInfoPart = ProjectInfoAspectPart(self)
 
 	dpVersion: str = field(
 		default_factory=lambda: last(sorted(getAllDPVersions().keys()), ''),  # by default selects the latest version
@@ -199,7 +199,7 @@ class DependenciesDatapackAspectPart(DependenciesAspectPart[DatapackAspect]):
 		dependencies: list[DependencyDescr] = []  # TODO: DependencyDescr(applicationSettings.minecraft.executable, 'minecraft', mandatory=True)]
 
 		filePath = (rootPath, fileName)
-		node: Optional[JsonData]
+		node: Optional[StructureDataNode]
 		try:
 			with ZipFilePool() as pool:
 				file = loadBinaryFile(filePath, pool)

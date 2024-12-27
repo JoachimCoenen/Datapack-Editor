@@ -1,12 +1,12 @@
 from base.model.utils import MDStr
-from .core import JsonArgType, OPTIONS_JSON_ARG_TYPE
+from .core import StructureArgType, OPTIONS_STRUCTURE_ARG_TYPE
 
-DPE_FLOAT = JsonArgType(
+DPE_FLOAT = StructureArgType(
 	name='dpe:float',
 	description=MDStr("a string containing a float value"),
 )
 
-DPE_URL = JsonArgType(
+DPE_URL = StructureArgType(
 	name='dpe:url',
 	description=MDStr("a web address"),
 	examples=MDStr(
@@ -15,23 +15,23 @@ DPE_URL = JsonArgType(
 	),
 )
 
-DPE_DEF_REF = JsonArgType(
+DPE_DEF_REF = StructureArgType(
 	name='dpe:def_ref',
 	description=MDStr("a reference to a definition in a dpe/json/schema"),
 )
 
 
-DPE_TMPL_REF = JsonArgType(
+DPE_TMPL_REF = StructureArgType(
 	name='dpe:tmpl_ref',
 	description=MDStr("a reference to a template in a dpe/json/schema"),
 )
 
-DPE_JSON_ARG_TYPE = JsonArgType(
+DPE_STRUCTURE_ARG_TYPE = StructureArgType(
 	name='dpe:json_arg_type',
-	description=MDStr("name of a JsonArgType"),
+	description=MDStr("name of a StructureArgType"),
 )
 
-DPE_LIB_PATH = JsonArgType(
+DPE_LIB_PATH = StructureArgType(
 	name='dpe:schema_library_path',
 	description=MDStr("relative path to a schema library"),
 )
@@ -42,11 +42,11 @@ def init() -> None:
 
 
 __all__ = [
-	'OPTIONS_JSON_ARG_TYPE',
+	'OPTIONS_STRUCTURE_ARG_TYPE',
 	'DPE_FLOAT',
 	'DPE_URL',
 	'DPE_DEF_REF',
 	'DPE_TMPL_REF',
-	'DPE_JSON_ARG_TYPE',
+	'DPE_STRUCTURE_ARG_TYPE',
 	'DPE_LIB_PATH',
 ]

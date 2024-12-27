@@ -293,7 +293,7 @@
 					"values": {
 						"string": { "$ref": "orRef", "type": {
 							"$type": "calculated",
-							"function": "corePlugins.json.jsonContext.getStringSchemaArgTypeArgsSchema"
+							"function": "corePlugins.nbtJsonBase.structureContextImpl.getStringSchemaArgTypeArgsSchema"
 						}}
 					}
 				},

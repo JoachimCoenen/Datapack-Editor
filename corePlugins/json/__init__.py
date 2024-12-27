@@ -20,11 +20,10 @@ def initPlugin() -> None:
 class JsonPlugin(PluginBase):
 
 	def initPlugin(self) -> None:
-		from .argTypes import init  # load standard argument types
-		init()
+		pass
 
 	def dependencies(self) -> set[str]:
-		return set()
+		return {'NbtJsonBasePlugin'}
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from .parser import JsonParser
@@ -33,10 +32,10 @@ class JsonPlugin(PluginBase):
 		}
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
-		from .jsonContext import JsonCtxProvider
+		from corePlugins.nbtJsonBase.context import StructureCtxProvider
 		from .core import JsonNode
 		return {
-			JsonNode: JsonCtxProvider
+			JsonNode: StructureCtxProvider
 		}
 
 	def documentTypes(self) -> list[DocumentTypeDescription]:
@@ -52,7 +51,7 @@ class JsonPlugin(PluginBase):
 		return {JSON_ID: JsonStyler}
 
 	def schemas(self) -> dict[str, Schema]:
-		from .schemaStore import JSON_SCHEMA_LOADER
+		from corePlugins.nbtJsonBase.schemaStore import STRUCTURE_SCHEMA_LOADER
 		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
 		schemaPath = os.path.join(resourcesDir, 'jsonSchema.json')
-		return {'dpe:json_schema': JSON_SCHEMA_LOADER.loadSchema('dpe:json_schema', schemaPath)}
+		return {'dpe:json_schema': STRUCTURE_SCHEMA_LOADER.loadSchema('dpe:json_schema', schemaPath)}

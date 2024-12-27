@@ -8,23 +8,23 @@ from base.model.parsing.tree import Schema
 from base.model.utils import GeneralError, LanguageId, MDStr, Span
 from cat.utils.logging_ import logError
 from corePlugins.json.core import *
-from corePlugins.json.jsonContext import ParsingJsonCtx, jsonStringContext, orRefSchema
+from corePlugins.nbtJsonBase.context import ParsingStructureCtx, structureStringContext, orRefSchema
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
 from corePlugins.mcFunction.argumentTypes import ArgumentType
 from corePlugins.mcFunction.command import ArgumentSchema
 from corePlugins.mcFunction.commandContext import getArgumentContext
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocationSchema, getAllKnownResourceLocationContexts
-from corePlugins.nbt.tags import NBTTagSchema
 from .argTypes import *
 from .commands.argumentTypes import *
+from corePlugins.nbtJsonBase.core import *
 
 
-@jsonStringContext(MINECRAFT_RESOURCE_LOCATION.name)
-class ResourceLocationHandler(ParsingJsonCtx):
+@structureStringContext(MINECRAFT_RESOURCE_LOCATION.name)
+class ResourceLocationHandler(ParsingStructureCtx):
 	def getSchema(self, node: JsonString) -> ResourceLocationSchema:
 		schema = node.schema
-		if isinstance(schema, JsonStringSchema):
+		if hasattr(schema, 'args'):  # isinstance(schema, JsonStringSchema):
 			args = (schema.args or {})
 			schema = args.get('schema')
 			allowTags = args.get('allowTags', False) is True
@@ -45,47 +45,47 @@ class ResourceLocationHandler(ParsingJsonCtx):
 	def getLanguage(self, node: JsonString) -> LanguageId:
 		return RESOURCE_LOCATION_ID
 
-	def getArgsSchema(self) -> tuple[JsonObjectSchema | JsonUnionSchema | JsonIllegalSchema, bool]:
+	def getArgsSchema(self) -> tuple[ObjectSchema | UnionSchema | IllegalSchema, bool]:
 		allResLocCtxKeys = getAllKnownResourceLocationContexts().keys()
 		properties: list[PropertySchema] = [
 			PropertySchema(
 				name='schema',
-				value=orRefSchema(JsonStringOptionsSchema(options={val: MDStr("") for val in allResLocCtxKeys}, warningOnly=True, allowMultilineStr=False)),
+				value=orRefSchema(StringOptionsSchema(options={val: MDStr("") for val in allResLocCtxKeys}, warningOnly=True, allowMultilineStr=False)),
 				optional=False,
 				allowMultilineStr=None
 			),
 			PropertySchema(
 				name='allowTags',
-				value=orRefSchema(JsonBoolSchema(allowMultilineStr=None)),
+				value=orRefSchema(BooleanSchema(allowMultilineStr=None)),
 				optional=True,
 				default=False,
 				allowMultilineStr=None
 			),
 			PropertySchema(
 				name='onlyTags',
-				value=orRefSchema(JsonBoolSchema(allowMultilineStr=None)),
+				value=orRefSchema(BooleanSchema(allowMultilineStr=None)),
 				optional=True,
 				default=False,
 				allowMultilineStr=None
 			),
 		]
-		return JsonObjectSchema(properties=properties, allowMultilineStr=None).finish(), True
+		return ObjectSchema(properties=properties, allowMultilineStr=None).finish(), True
 
 
-@jsonStringContext(MINECRAFT_NBT_COMPOUND_TAG.name)
-@jsonStringContext(MINECRAFT_NBT_TAG.name)
-class NBTJsonStrContext(ParsingJsonCtx):
+@structureStringContext(MINECRAFT_NBT_COMPOUND_TAG.name)
+@structureStringContext(MINECRAFT_NBT_TAG.name)
+class NBTJsonStrContext(ParsingStructureCtx):
 
 	def getSchema(self, node: JsonString) -> Optional[Schema]:
-		if isinstance(node.schema, JsonStringSchema):
-			return node.schema.args.get('schema') or NBTTagSchema('')
+		if isinstance(node.schema, StringSchema):
+			return node.schema.args.get('schema') or STRUCTURE_ANY_SCHEMA
 
 	def getLanguage(self, node: JsonString) -> LanguageId:
 		return LanguageId('SNBT')
 
 
-@jsonStringContext(MINECRAFT_NBT_PATH.name)
-class NBTPathJsonStrContext(ParsingJsonCtx):
+@structureStringContext(MINECRAFT_NBT_PATH.name)
+class NBTPathJsonStrContext(ParsingStructureCtx):
 
 	def getSchema(self, node: JsonString) -> Optional[Schema]:
 		return None
@@ -94,11 +94,11 @@ class NBTPathJsonStrContext(ParsingJsonCtx):
 		return LanguageId('SNBTPath')  # todo implement proper nbt path parsing
 
 
-@jsonStringContext(MINECRAFT_CHAT_COMMAND.name)
-class CommandJsonStrContext(ParsingJsonCtx):
+@structureStringContext(MINECRAFT_CHAT_COMMAND.name)
+class CommandJsonStrContext(ParsingStructureCtx):
 
 	def getSchema(self, node: JsonString) -> Optional[Schema]:
-		if isinstance(node.schema, JsonStringSchema):
+		if isinstance(node.schema, StringSchema):
 			schema = node.schema.args.get('schema') if node.schema.args is not None else None
 			return schema or GLOBAL_SCHEMA_STORE.get(MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID)
 
@@ -106,13 +106,13 @@ class CommandJsonStrContext(ParsingJsonCtx):
 		return MC_FUNCTION_ID
 
 
-@jsonStringContext(MINECRAFT_SCORE_HOLDER.name, argType=MINECRAFT_SCORE_HOLDER)
-@jsonStringContext(MINECRAFT_OBJECTIVE.name, argType=MINECRAFT_OBJECTIVE)
-@jsonStringContext('minecraft:target_selector', argType=MINECRAFT_ENTITY)  # for now
-@jsonStringContext(MINECRAFT_BLOCK_POS.name, argType=MINECRAFT_BLOCK_POS)
-@jsonStringContext(MINECRAFT_COLOR.name, argType=MINECRAFT_COLOR)
-@jsonStringContext(MINECRAFT_UUID.name, argType=MINECRAFT_UUID)
-class McFunctionArgumentContextAdaptor(ParsingJsonCtx, ABC):
+@structureStringContext(MINECRAFT_SCORE_HOLDER.name, argType=MINECRAFT_SCORE_HOLDER)
+@structureStringContext(MINECRAFT_OBJECTIVE.name, argType=MINECRAFT_OBJECTIVE)
+@structureStringContext('minecraft:target_selector', argType=MINECRAFT_ENTITY)  # for now
+@structureStringContext(MINECRAFT_BLOCK_POS.name, argType=MINECRAFT_BLOCK_POS)
+@structureStringContext(MINECRAFT_COLOR.name, argType=MINECRAFT_COLOR)
+@structureStringContext(MINECRAFT_UUID.name, argType=MINECRAFT_UUID)
+class McFunctionArgumentContextAdaptor(ParsingStructureCtx, ABC):
 
 	def __init__(self, *, argType: ArgumentType):
 		self.argType: ArgumentType = argType
@@ -140,7 +140,7 @@ class McFunctionArgumentContextAdaptor(ParsingJsonCtx, ABC):
 		ai = ArgumentSchema(
 			"value",
 			type=self.argType,
-			args=cast(JsonStringSchema, node.schema).args
+			args=cast(StringSchema, node.schema).args
 		)
 
 		if (context := getArgumentContext(self.argType)) is not None:

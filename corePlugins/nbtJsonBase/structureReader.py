@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Collection, Optional, TypeVar, Type, Any, AbstractSet, Generic, TypeAlias, final, overload, Literal, NoReturn
+from typing import Collection, Optional, TypeVar, Type, Any, AbstractSet, final, overload, Literal, NoReturn
 
 from .core import *
 from base.model.parsing.bytesUtils import strToBytes
@@ -11,28 +11,28 @@ from base.model.utils import GeneralError, MDStr, Span, SemanticsError
 
 TEMPLATE_REF_PROP = '$ref'
 
-JSON_TYPE_NAMES = {'null', 'boolean', 'number', 'string', 'array', 'object'}
+STRUCTURE_TYPE_NAMES = {'null', 'boolean', 'number', 'string', 'array', 'object'}
 
-_TT = TypeVar('_TT')
-_TT2 = TypeVar('_TT2')
-_TD = TypeVar('_TD')
-_TJN = TypeVar('_TJN', bound=JsonNode)
-_TJSD = TypeVar('_TJSD', bound=JsonData)
+# _TT = TypeVar('_TT')
+# _TT2 = TypeVar('_TT2')
+# _TD = TypeVar('_TD')
+# _TJN = TypeVar('_TJN', bound=StructureNode)
+# _TJSD = TypeVar('_TJSD', bound=StructureDataNode)
 
 
 @dataclass(frozen=True, slots=True)
-class V(Generic[_TT]):
-	n: _TT
+class V[T]:
+	n: T
 	ctx: TemplateContext
 
 
 @final
 @dataclass(frozen=True, slots=True)
-class JD(V[_TJSD], Generic[_TJSD, _TT2]):
-	n: _TJSD
+class JD[TJSD: StructureDataNode, T2](V[TJSD]):
+	n: TJSD
 
 	@property
-	def data(self) -> _TT2:
+	def data(self) -> T2:
 		return self.n.data
 
 	@property
@@ -40,7 +40,7 @@ class JD(V[_TJSD], Generic[_TJSD, _TT2]):
 		return self.n.span
 
 	@property
-	def schema(self) -> JsonSchema:
+	def schema(self) -> StructureDataSchema:
 		return self.n.schema
 
 	@property
@@ -48,16 +48,17 @@ class JD(V[_TJSD], Generic[_TJSD, _TT2]):
 		return self.n.typeName
 
 
-JInvalid: TypeAlias = JD[JsonInvalid, None]
-JNull: TypeAlias = JD[JsonNull, None]
-JBool: TypeAlias = JD[JsonBool, bool]
-JNumber: TypeAlias = JD[JsonNumber, int | float]
-JString: TypeAlias = JD[JsonString, str]
-JArray: TypeAlias = JD[JsonArray, Array]
-JObject: TypeAlias = JD[JsonObject, Object]
+type JInvalid = JD[InvalidNode, None]
+type JNull = JD[NullNode, None]
+type JBool = JD[BooleanNode, bool]
+type JNumber = JD[NumberNode, int | float]
+type JString = JD[StringNode, str]
+type JListLike = JD[ListLikeNode, ListLike]
+type JObject = JD[ObjectNode, Object]
 
 
 _TSchemaLibrary = TypeVar('_TSchemaLibrary', bound='SchemaLibrary')
+
 
 @dataclass
 class SchemaLibrary:
@@ -67,16 +68,23 @@ class SchemaLibrary:
 	additional: dict[str, Any]  # = field(default_factory=dict, init=False)
 	filePath: str
 
+	def __post_init__(self):
+		self.additional.setdefault('definitions', {})
+
 	@property
 	def dirPath(self) -> str:
 		return self.filePath.rpartition('/')[0]
+
+	@property
+	def definitions(self) -> dict[str, StructureDataSchema]:
+		return self.additional['definitions']
 
 
 @dataclass
 class SchemaTemplate:
 	description: MDStr
 	params: OrderedDict[str, TemplateParam]
-	body: JsonObject
+	body: ObjectNode
 	span: Span
 
 
@@ -103,7 +111,7 @@ class TemplateArg:
 
 
 @dataclass
-class JsonReader:
+class StructureReader:
 	errors: list[GeneralError] = field(default_factory=list)
 	libraries: dict[str, SchemaLibrary] = field(default_factory=dict, init=False)
 
@@ -186,7 +194,7 @@ class JsonReader:
 		return params
 
 	def parseParam(self, node: JObject, name: str, span: Span) -> TemplateParam:
-		type_ = MDStr(self.reqEnumVal(node, 'type', JSON_TYPE_NAMES))
+		type_ = MDStr(self.reqEnumVal(node, 'type', STRUCTURE_TYPE_NAMES))
 		description = MDStr(self.optStrVal(node, 'description', ''))
 		default = self._optProp(node, 'default')
 
@@ -210,8 +218,8 @@ class JsonReader:
 				), ctx=refNode.ctx)
 		return library, ns, lref
 
-	def fromRef(self, node: JD) -> JD:
-		if not isinstance(node.n, JsonObject):
+	def fromRef[TJD: JD](self, node: TJD) -> TJD:
+		if not isinstance(node.n, ObjectNode):
 			return node
 		if (refNode := self.optStr(node, TEMPLATE_REF_PROP)) is None:
 			return node
@@ -232,17 +240,17 @@ class JsonReader:
 		else:
 			self.error(MDStr(f"No template \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
 
-	def fromRef2(self, data: _TJSD, ctx: TemplateContext) -> JD[_TJSD]:
+	def fromRef2[TJSD: StructureDataNode, T](self, data: TJSD, ctx: TemplateContext) -> JD[TJSD, T]:
 		return self.fromRef(JD(data, ctx))
 
-	def checkType(self, data: JD, type_: Type[_TJSD]) -> JD[_TJSD]:
+	def checkType[TJSD: StructureDataNode, T](self, data: JD, type_: Type[TJSD]) -> JD[TJSD, T]:
 		if isinstance(data.n, type_):
 			return data
 		msg = f"Unexpected type. Got {type(data.n)}, but expected type: {type_}"
 		self.error(MDStr(msg), span=data.span, ctx=data.ctx)
 		raise ValueError(msg)
 
-	def checkOptions(self, data: JD[_TJSD], options: AbstractSet[_TT]) -> JD[_TJSD]:
+	def checkOptions(self, data: JD[StringNode, str], options: AbstractSet[str]) -> JD[StringNode, str]:
 		if data.n.data in options:
 			return data
 		optionsStr = ', '.join(repr(opt) for opt in options)
@@ -262,103 +270,103 @@ class JsonReader:
 			return self.fromRef2(prop.value, obj.ctx)
 		return None
 
-	def reqType(self, obj: JObject, key: str, type_: Type[_TJSD]) -> JD[_TJSD]:
+	def reqType[TJSD: StructureDataNode, T](self, obj: JObject, key: str, type_: Type[TJSD]) -> JD[TJSD, T]:
 		data = self._reqProp(obj, key)
 		return self.checkType(self.fromRef(data), type_)
 
 	def reqBool(self, obj: JObject, key: str):
-		return self.reqType(obj, key, JsonBool)
+		return self.reqType(obj, key, BooleanNode)
 
 	def reqNumber(self, obj: JObject, key: str):
-		return self.reqType(obj, key, JsonNumber)
+		return self.reqType(obj, key, NumberNode)
 
 	def reqStr(self, obj: JObject, key: str):
-		return self.reqType(obj, key, JsonString)
+		return self.reqType(obj, key, StringNode)
 
-	def reqArray(self, obj: JObject, key: str):
-		return self.reqType(obj, key, JsonArray)
+	def reqListLike(self, obj: JObject, key: str):
+		return self.reqType(obj, key, ListLikeNode)
 
-	def reqObject(self, obj: JObject, key: str):
-		return self.reqType(obj, key, JsonObject)
+	def reqObject(self, obj: JObject, key: str) -> JD[ObjectNode, Object]:
+		return self.reqType(obj, key, ObjectNode)
 
 	def reqObjectRaw(self, obj: JObject, key: str):
-		return self.checkType(self._reqProp(obj, key), JsonObject)
+		return self.checkType(self._reqProp(obj, key), ObjectNode)
 
-	def optType(self, obj: JObject, key: str, type_: Type[_TJSD]) -> Optional[JD[_TJSD]]:
+	def optType[TJSD: StructureDataNode, T](self, obj: JObject, key: str, type_: Type[TJSD]) -> Optional[JD[TJSD, T]]:
 		data = self._optProp(obj, key)
 		return self.checkType(self.fromRef(data), type_) if data is not None else None
 
 	def optBool(self, obj: JObject, key: str):
-		return self.optType(obj, key, JsonBool)
+		return self.optType(obj, key, BooleanNode)
 
 	def optNumber(self, obj: JObject, key: str):
-		return self.optType(obj, key, JsonNumber)
+		return self.optType(obj, key, NumberNode)
 
 	def optStr(self, obj: JObject, key: str):
-		return self.optType(obj, key, JsonString)
+		return self.optType(obj, key, StringNode)
 
-	def optArray(self, obj: JObject, key: str):
-		return self.optType(obj, key, JsonArray)
+	def optListLike(self, obj: JObject, key: str):
+		return self.optType(obj, key, ListLikeNode)
 
 	def optObject(self, obj: JObject, key: str):
-		return self.optType(obj, key, JsonObject)
+		return self.optType(obj, key, ObjectNode)
 
 	def optObjectRaw(self, obj: JObject, key: str):
 		if (prop := obj.n.data.get(key)) is not None:
-			return self.checkType(JD(prop.value, obj.ctx), JsonObject)
+			return self.checkType(JD(prop.value, obj.ctx), ObjectNode)
 		return None
 
 	def reqBoolVal(self, obj: JObject, key: str) -> bool:
-		return self.reqType(obj, key, JsonBool).n.data
+		return self.reqType(obj, key, BooleanNode).n.data
 
 	def reqNumberVal(self, obj: JObject, key: str) -> int | float:
-		return self.reqType(obj, key, JsonNumber).n.data
+		return self.reqType(obj, key, NumberNode).n.data
 
 	def reqStrVal(self, obj: JObject, key: str) -> str:
-		return self.reqType(obj, key, JsonString).n.data
+		return self.reqType(obj, key, StringNode).n.data
 
 	def reqEnumVal(self, obj: JObject, key: str, options: AbstractSet[str]) -> str:
 		data = self.reqStr(obj, key)
 		return self.checkOptions(data, options).n.data
 
-	def reqArrayVal(self, obj: JObject, key: str) -> V[list[JsonData]]:
-		array = self.reqType(obj, key, JsonArray)
+	def reqListLikeVal(self, obj: JObject, key: str) -> V[list[StructureDataNode]]:
+		array = self.reqType(obj, key, ListLikeNode)
 		return V(array.n.data, array.ctx)
 
-	def reqArrayVal2(self, obj: JObject, key: str, type_: Type[_TJN]) -> list[JD[_TJN]]:
-		array = self.reqType(obj, key, JsonArray)
+	def reqListLikeVal2[TJN: StructureNode, T](self, obj: JObject, key: str, type_: Type[TJN]) -> list[JD[TJN, T]]:
+		array = self.reqType(obj, key, ListLikeNode)
 		ctx = array.ctx
 		return [self.checkType(self.fromRef2(elem, ctx), type_) for elem in array.n.data]
 
-	def optBoolVal(self, obj: JObject, key: str, default: _TD = None) -> bool | _TD:
-		if (data := self.optType(obj, key, JsonBool)) is not None:
+	def optBoolVal[D](self, obj: JObject, key: str, default: D = None) -> bool | D:
+		if (data := self.optType(obj, key, BooleanNode)) is not None:
 			return data.n.data
 		return default
 
-	def optNumberVal(self, obj: JObject, key: str, default: _TD = None) -> int | float | _TD:
-		if (data := self.optType(obj, key, JsonNumber)) is not None:
+	def optNumberVal[D](self, obj: JObject, key: str, default: D = None) -> int | float | D:
+		if (data := self.optType(obj, key, NumberNode)) is not None:
 			return data.n.data
 		return default
 
-	def optStrVal(self, obj: JObject, key: str, default: _TD = None) -> str | _TD:
-		if (data := self.optType(obj, key, JsonString)) is not None:
+	def optStrVal[D](self, obj: JObject, key: str, default: D = None) -> str | D:
+		if (data := self.optType(obj, key, StringNode)) is not None:
 			return data.n.data
 		return default
 
-	def optEnumVal(self, obj: JObject, key: str, options: AbstractSet[str], default: _TD = None) -> str | _TD:
+	def optEnumVal[D](self, obj: JObject, key: str, options: AbstractSet[str], default: D = None) -> str | D:
 		data = self.optStr(obj, key)
 		if data is not None:
 			return self.checkOptions(data, options).n.data
 		return default
 
-	def optArrayVal(self, obj: JObject, key: str) -> Optional[V[list[JsonData]]]:
-		array = self.optType(obj, key, JsonArray)
+	def optListLikeVal(self, obj: JObject, key: str) -> Optional[V[list[StructureDataNode]]]:
+		array = self.optType(obj, key, ListLikeNode)
 		if array is not None:
 			return V(array.n.data, array.ctx)
 		return None
 
-	def optArrayVal2(self, obj: JObject, key: str, type_: Type[_TJSD]) -> list[JD[_TJSD]]:
-		array = self.optType(obj, key, JsonArray)
+	def optListLikeVal2[TJSD: StructureDataNode, T](self, obj: JObject, key: str, type_: Type[TJSD]) -> list[JD[TJSD, T]]:
+		array = self.optType(obj, key, ListLikeNode)
 		if array is not None:
 			ctx = array.ctx
 			return [self.checkType(self.fromRef2(elem, ctx), type_) for elem in array.n.data]

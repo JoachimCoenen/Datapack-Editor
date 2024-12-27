@@ -56,8 +56,8 @@ class GlobalSchemaStore:
 	def getAllForLanguage(self, language: LanguageId) -> Mapping[str, Schema]:
 		return self._schemaStores[language]._registeredSchemas2
 
-	def registerSchema(self, name: str, schema: Schema):
-		self._schemaStores[schema.language].registerSchema(name, schema)
+	def registerSchema(self, name: str, schema: Schema, languageId: LanguageId | None = None):
+		self._schemaStores[languageId or schema.language].registerSchema(name, schema)
 
 	def unregisterSchema(self, name: str, languageSchemaCls: LanguageId | Type[_TSchema]):
 		if isinstance(languageSchemaCls, str):

@@ -170,19 +170,17 @@ def addSNBTScheme():
 	class StyleId(StyleIdEnum):
 		default = DEFAULT_STYLE_ID
 		boolean = DEFAULT_STYLE_ID + 1
-		intLike = DEFAULT_STYLE_ID + 2
-		floatLike = DEFAULT_STYLE_ID + 3
-		string = DEFAULT_STYLE_ID + 4
-		key = DEFAULT_STYLE_ID + 5
-		invalid = DEFAULT_STYLE_ID + 6
+		numberLike = DEFAULT_STYLE_ID + 2
+		string = DEFAULT_STYLE_ID + 3
+		key = DEFAULT_STYLE_ID + 4
+		invalid = DEFAULT_STYLE_ID + 5
 	styles = {
 		StyleId.default.name: Style(),
-		StyleId.boolean.name:   Style(foreground=QColor(0x00, 0x00, 0xBf)),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
-		StyleId.intLike.name:   Style(foreground=QColor(0x00, 0x7f, 0x7f)),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),
-		StyleId.floatLike.name: Style(foreground=QColor(0x00, 0x7f, 0x7f)),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),
-		StyleId.string.name:    Style(foreground=QColor(0x7f, 0x00, 0x00)),  # , background=lighten(QColor(0x7f, 0x00, 0x00))),
-		StyleId.key.name:       Style(foreground=QColor(0x88, 0x0a, 0xe8)),  # , background=lighten(QColor(0x88, 0x0a, 0xe8))),  # .lighten(209)),
-		StyleId.invalid.name:   Style(foreground=QColor(0xff, 0x00, 0x00)),  # , background=lighten(QColor(0xff, 0x00, 0x00))),  # .lighten(209)),
+		StyleId.boolean.name:    Style(foreground=QColor(0x00, 0x00, 0xBf)),  # , background=lighten(QColor(0x00, 0x00, 0xBf))),
+		StyleId.numberLike.name: Style(foreground=QColor(0x00, 0x7f, 0x7f)),  # , background=lighten(QColor(0x00, 0x7f, 0x7f))),
+		StyleId.string.name:     Style(foreground=QColor(0x7f, 0x00, 0x00)),  # , background=lighten(QColor(0x7f, 0x00, 0x00))),
+		StyleId.key.name:        Style(foreground=QColor(0x88, 0x0a, 0xe8)),  # , background=lighten(QColor(0x88, 0x0a, 0xe8))),  # .lighten(209)),
+		StyleId.invalid.name:    Style(foreground=QColor(0xff, 0x00, 0x00)),  # , background=lighten(QColor(0xff, 0x00, 0x00))),  # .lighten(209)),
 	}
 
 	assert len(styles) == len(StyleId)

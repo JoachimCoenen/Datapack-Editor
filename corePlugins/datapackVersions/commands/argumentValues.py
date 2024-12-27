@@ -5,7 +5,7 @@ from base.model.parsing.tree import Node
 from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgs
 from corePlugins.mcFunction.filterArgs import FilterArguments
 from corePlugins.minecraft.resourceLocation import ResourceLocationNode
-from corePlugins.nbt.tags import CompoundTag, NBTTag
+from corePlugins.nbt.tags import CompoundTag, NBTNode
 
 
 @dataclass
@@ -58,7 +58,7 @@ class Particle:
 @dataclass
 class ResourceLocationOrInlineNBT:
 	resLoc: Optional[ResourceLocationNode]
-	nbt: Optional[NBTTag]
+	nbt: Optional[NBTNode]
 
 	def getForeignNodes(self) -> Collection[Node | None]:
 		return self.resLoc, self.nbt

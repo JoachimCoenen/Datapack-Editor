@@ -20,10 +20,11 @@ from cat.utils import first
 from .. import PREDICATE_ARGS_ID
 from corePlugins.mcFunction.command import CommandPartSchema, ParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
-from corePlugins.minecraft.resourceLocation import ResourceLocationNode, ResourceLocationSchema
+from corePlugins.minecraft.resourceLocation import ResourceLocationNode, ResourceLocationSchema, RESOURCE_LOCATION_ID
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 from corePlugins.nbt import SNBT_ID
-from corePlugins.nbt.tags import NBTTag, NBTTagSchema, InvalidTag
+from corePlugins.nbt.tags import InvalidTag
+from corePlugins.nbtJsonBase.core import StructureDataSchema, STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA
 
 
 def makeArgument(sr: StringReader, schema: CommandPartSchema, key: bytes, value: Any) -> ParsedArgument:
@@ -84,7 +85,7 @@ class PredicateArg(PredicateArgNode[PredicateArgInfo]):
 	key: ResourceLocationNode
 	isNegated: bool
 	operator: str  # usually '='
-	value: NBTTag | None
+	value: StructureDataSchema | None
 
 	@property
 	def children(self) -> Sequence[PredicateArgNode]:
@@ -137,7 +138,7 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 		p1 = self.currentPos
 		isNegated = self.tryConsumeLiteral(b'!')
 		self.consumeWhitespace()
-		key = self._parseForeignNode(self.schema.keySchema, ignoreTrailingChars=True)
+		key = self._parseForeignNode(self.schema.keySchema, RESOURCE_LOCATION_ID, ignoreTrailingChars=True)
 		if key is None:
 			self.error(EXPECTED_MSG.format(self.schema.keySchema.asString()))
 			key = ResourceLocationNode(None, '', False, Span(self.currentPos), self.schema.keySchema)
@@ -162,14 +163,14 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 
 			nbtSchema = GLOBAL_SCHEMA_STORE.get(nbtSchemaName, SNBT_ID)
 			if nbtSchema is None:
-				nbtSchema = NBTTagSchema("")
+				nbtSchema = STRUCTURE_ANY_SCHEMA
 
 			self.consumeWhitespace()
 			if self.text.startswith((b'|', b',', b']'), self.cursor):
 				self.error(EXPECTED_MSG.format("snbt"))
-				value = InvalidTag(Span(self.currentPos), self.schema.keySchema, b'')
+				value = InvalidTag(Span(self.currentPos), STRUCTURE_ILLEGAL_SCHEMA, '')
 			else:
-				value = self._parseForeignNode(nbtSchema)
+				value = self._parseForeignNode(nbtSchema, SNBT_ID)
 		else:
 			value = None
 
@@ -214,9 +215,7 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 		p2 = self.currentPos
 		return PredicateArgs(Span(p1, p2), self.schema, arguments)
 
-	def _parseForeignNode(self, schema: Schema, **kwargs) -> Node | None:
-		language = schema.language
-
+	def _parseForeignNode(self, schema: Schema, language: LanguageId, **kwargs) -> Node | None:
 		node, errors, parser = parseNPrepare(
 			self.text,
 			filePath=self.filePath,
