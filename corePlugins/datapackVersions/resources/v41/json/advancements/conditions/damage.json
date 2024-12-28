@@ -1,0 +1,40 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "damage_type": "damage_type.json",
+    "entity": "entity.json",
+    "base": "_base.json"
+  },
+  "$definitions": {
+    "damage": {
+      "$type": "object",
+      "properties": {
+        "blocked": {
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "description": "Checks if the damage was successfully blocked."
+        },
+        "dealt": {
+          "optional": true,
+          "value": { "$ref": "base:valOrRange", "type": "float" },
+          "description": "Checks the amount of incoming damage before damage reduction."
+        },
+        "source_entity": {
+          "optional": true,
+          "value": { "$defRef": "entity:entity" },
+          "description": "Checks the entity that was the source of the damage (for example: The skeleton that shot the arrow)."
+        },
+        "taken": {
+          "optional": true,
+          "value": { "$ref": "base:valOrRange", "type": "float" },
+          "description": "Checks the amount of incoming damage after damage reduction."
+        },
+        "type": {
+          "optional": true,
+          "value": { "$defRef": "damage_type:damage_type" },
+          "description": "Checks the type of damage done."
+        }
+      }
+    }
+  }
+}

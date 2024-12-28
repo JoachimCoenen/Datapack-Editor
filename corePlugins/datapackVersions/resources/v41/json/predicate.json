@@ -1,0 +1,7 @@
+{
+  "$schema": "dpe/json/schema",
+  "$libraries": {
+    "predicate": "predicate-library.json"
+  },
+  "$body": { "$defRef": "predicate:predicate-body" }
+}

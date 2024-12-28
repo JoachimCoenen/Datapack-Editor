@@ -1,0 +1,38 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "base": "_base.json"
+  },
+  "$definitions": {
+    "distance": {
+			"$type": "object",
+			"properties": {
+				"absolute": {
+					"optional": true,
+					"value": { "$ref": "base:range", "type": "float" },
+					"description": "Test the distance between the two points in 3D space."
+				},
+				"horizontal": {
+					"optional": true,
+					"value": { "$ref": "base:range", "type": "float" },
+					"description": "Test the distance between the two points, ignoring the Y value."
+				},
+				"x": {
+					"optional": true,
+					"value": { "$ref": "base:range", "type": "float" },
+					"description": "Test the absolute difference between the X-coordinates of the two points."
+				},
+				"y": {
+					"optional": true,
+					"value": { "$ref": "base:range", "type": "float" },
+					"description": "Test the absolute difference between the Y-coordinates of the two points."
+				},
+				"z": {
+					"optional": true,
+					"value": { "$ref": "base:range", "type": "float" },
+					"description": "Test the absolute difference between the Z-coordinates of the two points."
+				}
+			}
+		}
+  }
+}

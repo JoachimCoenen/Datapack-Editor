@@ -1,0 +1,149 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$definitions": {
+
+    "constant_number": {
+      "$type": "union",
+      "options": [
+        { "$type": "float" },
+        { "$type": "integer" }
+      ]
+    },
+		
+    "number_provider": {
+      "$type": "union",
+      "options": [
+        {  "$defRef": "constant_number" },
+        {
+          "$type": "object",
+          "properties": {
+            "type": {
+              "optional": false,
+              "value": {
+                "$type": "enum",
+                "options": {
+                  "constant": "A constant value.",
+                  "uniform": "A random number following a uniform distribution between two values (inclusive).",
+                  "binomial": "A random number following a binomial distribution.",
+                  "score": "To query and use a scoreboard value."
+                },
+                "optionalPrefixes": ["minecraft:"]
+              },
+              "description": "The number provider type."
+            },
+            "value": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": { "constant": { "$defRef": "constant_number" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "The exact value."
+            },
+            "min": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": { "uniform": { "$defRef": "number_provider" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "The minimum value."
+            },
+            "max": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": { "uniform": { "$defRef": "number_provider" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "The maximum value."
+            },
+            "n": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": { "binomial": { "$defRef": "number_provider" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "The amount of trials."
+            },
+            "p": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": { "binomial": { "$defRef": "number_provider" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "The probability of success on an individual trial."
+            },
+            "target": {
+              "optional": true,
+              "default": "score",
+              "decidingProp": "type",
+              "values": { "score": { "$defRef": "%%16!" } },
+              "optionalPrefixes": ["minecraft:"]
+            },
+            "score": {
+              "optional": true,
+              "default": "target",
+              "decidingProp": "type",
+              "values": { "score": { "$defRef": "%%17!" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "The scoreboard objective to query on the selected player name or UUID."
+            },
+            "scale": {
+              "optional": true,
+              "default": 1.0,
+              "decidingProp": "type",
+              "values": { "score": { "$type": "float" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "The scoreboard objective to query on the selected player name or UUID."
+            }
+          }
+        }
+      ]
+    },
+    "loot_context_killer": {
+      "$type": "enum",
+      "options": {
+        "this": "the invoking entity",
+        "killer": "the entity that killed the invoking entity",
+        "direct_killer": "the entity that *directly* killed the invoking entity",
+        "killer_player": "only select the killer if they are a player"
+      },
+      "optionalPrefixes": ["minecraft:"]
+    },
+    "%%16!": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "properties": {
+            "type": {
+              "optional": false,
+              "value": {
+                "$type": "enum",
+                "options": {
+                  "fixed": "manually specify a player name or UUID",
+                  "context": "use an entity from loot context"
+                },
+                "optionalPrefixes": ["minecraft:"]
+              },
+              "description": "Set to `fixed` to manually specify a player name or UUID. Set to `context` to use an entity from loot context."
+            },
+            "name": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": { "fixed": { "$type": "string" }},  // can also be an odinary player name..., "type": "minecraft:uuid" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "Included only if type is set to `fixed`. Specifies the name of the player, or the entity's UUID (in hyphenated hexadecimal format) whose score to query."
+            },
+            "target": {
+              "optional": false,
+              "decidingProp": "type",
+              "values": { "context": { "$defRef": "loot_context_killer" } },
+              "optionalPrefixes": ["minecraft:"],
+              "description": "Included only if type is set to context. Specifies an entity from loot context to query the score of. Use `this` for the invoking entity, `killer` for the entity that killed the invoking entity, `direct_killer` for the entity that *directly* killed the invoking entity, or `player_killer` to select the killer only if they are a player."
+            }
+          }
+        },
+        { "$defRef": "loot_context_killer" }
+      ]
+    },
+    "%%17!": {
+      "$type": "string",
+      "type": "minecraft:objective"
+    }
+  }
+}
