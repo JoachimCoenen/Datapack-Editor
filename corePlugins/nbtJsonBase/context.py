@@ -1,20 +1,23 @@
 from __future__ import annotations
+
 import functools
 from abc import ABC, abstractmethod
 from itertools import chain
 from typing import Generator, Iterable, Optional, Callable, cast, Any
 
-from base.model.pathUtils import FilePath
-from cat.utils import Decorator, flatmap, Anything
-from base.model.parsing.tree import Schema
-from base.model.session import getSession
-from .core import *
+from base.model.messages import UNKNOWN_MSG
 from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, \
 	CtxInfo, getCallTips, parseNPrepare, validateTree, getSuggestions, getDocumentation, getClickableRanges, \
 	onIndicatorClicked, prepareTree
+from base.model.parsing.tree import Schema
+from base.model.pathUtils import FilePath
+from base.model.session import getSession
 from base.model.utils import Position, SemanticsError, Span, GeneralError, MDStr, LanguageId
-from base.model.messages import UNKNOWN_MSG
+from cat.utils import Decorator, flatmap, Anything
+from .core import *
 from .schema import enrichWithSchema
+from .schemaBuilder import SchemaBuilder
+from .structureReader import JObject
 
 
 def _getBestMatchInListLike[N: StructureNode](tree: ListLikeNode[N, StructureDataNode[N]], pos: Position, matches: Match[N]) -> None:
@@ -101,60 +104,11 @@ def _flattenOptions(schema: UnionSchema, parent: ObjectNode) -> Generator[Struct
 			yield actualOpt
 
 
-def _suggestionsForUnionSchema(schema: UnionSchema, contained: list[StructureNode], data: bytes):
-	gsfs = functools.partial(getSuggestionsForSchema, contained=contained, data=data)
-	if contained:
-		return list(flatmap(gsfs, _flattenOptions(schema, contained[-1])))  # maybe contained[-2]??
-	else:
-		return list(flatmap(gsfs, schema.options))
-
-
-def _getPropsForObject(container: ObjectNode, schema: ObjectSchema | UnionSchema, prefix: str, suffix: str) -> list[str]:
-	if isinstance(schema, UnionSchema):
-		allOptions = list(_flattenOptions(schema, container.parent))
-	elif isinstance(schema, ObjectSchema):
-		allOptions = (schema,)
-	else:
-		return []
-
-	return [
-		f'{prefix}{p.name}{suffix}'
-		for opt in allOptions
-		if isinstance(opt, ObjectSchema)
-		for p in opt.propertiesDict.values()
-		if p.name not in container.data and p.getValueSchemaForParent(container) is not None
-	]
-
-
-def _suggestionsForKeySchema(schema: KeySchema, contained: list[StructureNode], data: bytes):
-	if len(contained) >= 2:
-		container = contained[-2]  # if hit was a key, matches.contained[-2] is the object.
-		if isinstance(container, ObjectNode) and isinstance(container.schema, (ObjectSchema, UnionSchema)):
-			suffix = chr(data[0]) + ': ' if data.startswith((b'"', b"'")) else ': '
-			return _getPropsForObject(container, container.schema, '', suffix)
-	return []
-
-
-_SCHEMA_SUGGESTIONS_PROVIDERS = {
-	AnySchema.typeName: lambda schema, contained, data: [],
-	NullSchema.typeName: lambda schema, contained, data: ['null'],
-	BooleanSchema.typeName: lambda schema, contained, data: ['true', 'false'],
-	NumberSchema.typeName: lambda schema, contained, data: ['0'],
-	FloatSchema.typeName: lambda schema, contained, data: ['0'],
-	IntSchema.typeName: lambda schema, contained, data: ['0'],
-	StringSchema.typeName: lambda schema, contained, data: ['"'],
-	ListLikeSchema.typeName: lambda schema, contained, data: ['['],
-	ObjectSchema.typeName: lambda schema, contained, data: ['{'],
-	UnionSchema.typeName: _suggestionsForUnionSchema,
-	KeySchema.typeName: _suggestionsForKeySchema,
-}
-
-
-def getSuggestionsForSchema(schema: StructureSchema, contained: list[StructureNode], data: bytes) -> list[str]:
-	return _SCHEMA_SUGGESTIONS_PROVIDERS[schema.typeName](schema, contained, data)
-
-
 class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
+
+	def __init__(self, tree: N, text: bytes, requiresStringQuotation: bool):
+		super().__init__(tree, text)
+		self.requiresStringQuotation: bool = requiresStringQuotation
 
 	def getBestMatch(self, pos: Position) -> Match[N]:
 		tree = self.tree
@@ -180,6 +134,60 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 		from . import validator2
 		validator2.validateStructure(self.tree, errorsIO)
 
+	def _getKeySuggestionsForObject(self, container: ObjectNode, schema: ObjectSchema | UnionSchema, data: bytes) -> list[str]:
+		if isinstance(schema, UnionSchema):
+			allOptions = list(_flattenOptions(schema, container.parent))
+		elif isinstance(schema, ObjectSchema):
+			allOptions = (schema,)
+		else:
+			return []
+
+		if self.requiresStringQuotation:
+			prefix = '' if data.startswith(b'"') else '"'
+			suffix = '": '
+		else:
+			prefix = ''
+			suffix = chr(data[0]) + ': ' if data.startswith((b'"', b"'")) else ': '
+
+		return [
+			f'{prefix}{p.name}{suffix}'
+			for opt in allOptions
+			if isinstance(opt, ObjectSchema)
+			for p in opt.propertiesDict.values()
+			if p.name not in container.data and p.getValueSchemaForParent(container) is not None
+		]
+
+	def _suggestionsForUnionSchema(self, schema: UnionSchema, contained: list[StructureNode], data: bytes):
+		gsfs = functools.partial(self.getSuggestionsForSchema, contained=contained, data=data)
+		if contained:
+			return list(flatmap(gsfs, _flattenOptions(schema, contained[-1])))  # maybe contained[-2]??
+		else:
+			return list(flatmap(gsfs, schema.options))
+
+	def _suggestionsForKeySchema(self, schema: KeySchema | None, contained: list[StructureNode], data: bytes):
+		if len(contained) >= 2:
+			container = contained[-2]  # if hit was a key, matches.contained[-2] is the object.
+			if isinstance(container, ObjectNode) and isinstance(container.schema, (ObjectSchema, UnionSchema)):
+				return self._getKeySuggestionsForObject(container, container.schema, data)
+		return []
+
+	_SCHEMA_SUGGESTIONS_PROVIDERS = {
+		AnySchema.typeName: lambda self, schema, contained, data: [],
+		NullSchema.typeName: lambda self, schema, contained, data: ['null'],
+		BooleanSchema.typeName: lambda self, schema, contained, data: ['true', 'false'],
+		NumberSchema.typeName: lambda self, schema, contained, data: ['0'],
+		FloatSchema.typeName: lambda self, schema, contained, data: ['0'],
+		IntSchema.typeName: lambda self, schema, contained, data: ['0'],
+		StringSchema.typeName: lambda self, schema, contained, data: ['"'],
+		ListLikeSchema.typeName: lambda self, schema, contained, data: ['['],
+		ObjectSchema.typeName: lambda self, schema, contained, data: ['{'],
+		UnionSchema.typeName: _suggestionsForUnionSchema,
+		KeySchema.typeName: _suggestionsForKeySchema,
+	}
+
+	def getSuggestionsForSchema(self, schema: StructureSchema, contained: list[StructureNode], data: bytes) -> list[str]:
+		return self._SCHEMA_SUGGESTIONS_PROVIDERS[schema.typeName](self, schema, contained, data)
+
 	def _getSuggestionsForBefore(self, pos: Position, before: N, contained: list[N], replaceCtx: str) -> Suggestions:
 		if isinstance(before.schema, KeySchema):
 			needsColon = b':' not in self.text[before.span.end.index:pos.index]
@@ -191,7 +199,7 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 						valueSchema = prop.schema.getValueSchemaForParent(parent)
 						if valueSchema is not None:
 							data = self.text[prop.value.span.slice]
-							suggestions = getSuggestionsForSchema(valueSchema, contained, data)
+							suggestions = self.getSuggestionsForSchema(valueSchema, contained, data)
 							return [f': {sg}' for sg in suggestions] if needsColon else suggestions
 			return [': '] if needsColon else []
 		elif not contained:
@@ -214,13 +222,12 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 			if needsComma:
 				return [f'{replaceCtx}, ', f'{replaceCtx}]']
 			if isinstance(container.schema, ListLikeSchema):
-				data = b''
-				return getSuggestionsForSchema(container.schema.element, contained, data) + ([']'] if not container.data else [])
+				return self.getSuggestionsForSchema(container.schema.element, contained, b'') + ([']'] if not container.data else [])
 		elif isinstance(container, ObjectNode):
 			if needsComma:
 				return [f'{replaceCtx}, ', f'{replaceCtx}}}']
 			if isinstance(container.schema, (ObjectSchema, UnionSchema)):
-				return _getPropsForObject(container, container.schema, '', ': ') + (['}'] if not container.data else [])
+				return self._getKeySuggestionsForObject(container, container.schema, b'') + (['}'] if not container.data else [])
 
 		return []
 
@@ -231,13 +238,13 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 				return self._getSuggestionsForBefore(pos, hit, contained, replaceCtx)
 
 			elif isinstance(hit.schema, KeySchema):
-				return _suggestionsForKeySchema(hit.schema, contained, data)
+				return self._suggestionsForKeySchema(hit.schema, contained, data)
 			elif (strHandler := self.getContext(hit)) is not None:
 				return strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx, info=CtxInfo(self, ''))  # TODO: set correct replaceCtx
 		elif hit.schema is not None:
 			if hit.span.end == pos and not isinstance(hit, InvalidNode):
 				return self._getSuggestionsForBefore(pos, hit, contained, replaceCtx)
-			return getSuggestionsForSchema(hit.schema, contained, data)
+			return self.getSuggestionsForSchema(hit.schema, contained, data)
 		return []
 
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:

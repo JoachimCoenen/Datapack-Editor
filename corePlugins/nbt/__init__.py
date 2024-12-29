@@ -35,9 +35,15 @@ class SNBTPlugin(PluginBase):
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
 		from corePlugins.nbtJsonBase.context import StructureCtxProvider
+		from corePlugins.nbtJsonBase.core import StructureNode
 		from .tags import NBTNode
+
+		class NBTCtxProvider(StructureCtxProvider):
+			def __init__(self, tree: StructureNode, text: bytes):
+				super().__init__(tree, text, requiresStringQuotation=False)
+
 		return {
-			NBTNode: StructureCtxProvider
+			NBTNode: NBTCtxProvider
 		}
 
 	def documentTypes(self) -> list[DocumentTypeDescription]:
