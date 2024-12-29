@@ -162,7 +162,7 @@
           "value": { "$type": "boolean" },
           "description": "True if the block is closely above a campfire or soul campfire."
         },
-        "structure": {
+        "structures": {
           "optional": true,
           "value": { 
             "$ref": "utils:value_or_array",
