@@ -1,6 +1,8 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": {},
+  "$libraries": {
+    "utils": "../../common/utils-library.json"
+  },
   "$templates": {},
   "$definitions": {
     
@@ -14,7 +16,7 @@
         },
         "result": {
           "description": "An [ [Java Edition data values#Items|item ID] ]. The output item of the recipe.",
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
           "optional": false
         },
         "experience": {
@@ -120,7 +122,7 @@
         },
         "result": {
           "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
           "optional": false
         },
         "count": {
@@ -143,7 +145,7 @@
         },
         "item": {
           "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
           "optional": false
         }
       }
@@ -162,7 +164,7 @@
       "properties": {
         "item": {
           "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
+          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
           "optional": true
         }
       }
@@ -174,7 +176,7 @@
       "properties": {
         "tag": {
           "description": "An [ [Tag#Item tags|item tag] ].",
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item", "onlyTags": true } },
+          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "onlyTags": true },
           "optional": true
         }
       }

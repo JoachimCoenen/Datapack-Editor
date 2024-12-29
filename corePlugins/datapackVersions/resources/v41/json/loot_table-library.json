@@ -3,7 +3,8 @@
   "$libraries": {
     "predicate": "predicate-library.json",
     "item_modifier": "item_modifier-library.json",
-    "number_provider": "utils/number_provider-library.json"
+    "number_provider": "utils/number_provider-library.json",
+    "utils": "../common/utils-library.json"
   },
   "$templates": {},
   "$definitions": {
@@ -46,7 +47,7 @@
         },
         
         "random_sequence": {
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "any" } }, 
+          "value": {"$ref": "utils:resourceLocationString", "schema": "any", "description": "" },
           "optional": true,
           "description": "A resource location specifying the name of the random sequence that will be used to generate loot from this loot table. If only one loot table uses a specific random sequence, the order of the randomized sets of items generated is the same for every world using the same world seed. If multiple loot tables use the same random sequence, the loot generated from any one of them changes depending on how many times and in what order any of the other loot tables were invoked."
         }
@@ -161,15 +162,30 @@
         
         "name": {
           "values": {
-            "item": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } },
-            "tag": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item", "onlyTags": true } },
-            "loot_table": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "loot_table" } },
+            "item": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
+            "tag": {"$ref": "utils:resourceLocationString", "schema": "item", "onlyTags": true, "description": "" },
             "dynamic": { "$type": "enum", "options": { "contents": "to drop block entity contents.", "sherds": "to drop the sherds of a decorated pot." }, "optionalPrefixes": ["minecraft:"] }
           },
           "optionalPrefixes": ["minecraft:"],
           "decidingProp": "type",
           "optional": false,
           "description": "The [[resource location]] of the item to be generated, e.g. {{cd|minecraft:diamond}}. The default, if not changed by item functions, is a stack of 1 of the default instance of the item."
+        },
+        
+        "value": {
+          "values": {
+            "loot_table": {
+              "$type": "union",
+              "options": [
+                {"$ref": "utils:resourceLocationString", "schema": "loot_table" },
+                {"$defRef": "loot_table" }
+              ]
+            }
+          },
+          "optionalPrefixes": ["minecraft:"],
+          "decidingProp": "type",
+          "optional": false,
+          "description": "One loot table (an ID, or a new loot table definition) to be used. Cannot be the ID of the current loot table file. Recursive calling is not allowed."
         },
         
         "expand": {

@@ -1,7 +1,7 @@
 {
   "$schema": "dpe/json/schema/library",
   "$libraries": {
-    "utils": "utils-library.json",
+    "utils": "../common/utils-library.json",
     "data_components": "data_components-library.json"
   },
   "$templates": {

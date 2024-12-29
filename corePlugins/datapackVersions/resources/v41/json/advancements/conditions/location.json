@@ -1,18 +1,18 @@
 {
   "$schema": "dpe/json/schema/library",
   "$libraries": {
-    "base": "_base.json"
+    "base": "_base.json",
+    "utils": "../../../common/utils-library.json"
   },
   "$definitions": {
     "location": {
       "$type": "object",
       "properties": {
-        "biome": {
+        "biomes": {
           "optional": true,
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "worldgen/biome" }
+          "value": { 
+            "$ref": "utils:value_or_array",
+            "element": {"$ref": "utils:resourceLocationString", "schema": "worldgen/biome", "allowTags": true }
           },
           "description": "The biome the entity is currently in. This tag is a [ [resource location] ] for a biome (see [ [Biome#Biome IDs] ] for the ones used in vanilla)."
         },
@@ -23,20 +23,11 @@
             "properties": {
               "blocks": {
                 "optional": true,
-                "value": {
-                  "$type": "array",
-                  "element": {
-                    "$type": "string",
-                    "type": "minecraft:resource_location",
-                    "args": { "schema": "block" }
-                  }
+                "value": { 
+                  "$ref": "utils:value_or_array",
+                  "element": {"$ref": "utils:resourceLocationString", "schema": "block", "allowTags": true }
                 },
                 "description": "A list of [ [Java Edition data values#Blocks|block IDs] ]."
-              },
-              "tag": {
-                "optional": true,
-                "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "block", "onlyTags": true } },
-                "description": "The block [ [tag] ]."
               },
               "nbt": {
                 "optional": true,
@@ -84,33 +75,18 @@
           "value": { "$type": "string" },
           "description": "The dimension the entity is currently in."
         },
-        "feature": {
-          "optional": true,
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "worldgen/structure" }
-          },
-          "description": "{{until|java 1.19}}: The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
-        },
         "fluid": {
           "optional": true,
           "value": {
             "$type": "object",
             "properties": {
-              "fluid": {
+              "fluids": {
                 "optional": true,
-                "value": {
-                  "$type": "string",
-                  "type": "minecraft:resource_location",
-                  "args": { "schema": "fluid" }
+                "value": { 
+                  "$ref": "utils:value_or_array",
+                  "element": {"$ref": "utils:resourceLocationString", "schema": "fluid", "allowTags": true }
                 },
                 "description": "The [ [Java Edition data values#Fluids|fluid ID] ]."
-              },
-              "tag": {
-                "optional": true,
-                "value": { "$type": "string" },
-                "description": "The fluid [ [tag] ]."
               },
               "state": {
                 "optional": true,
@@ -188,12 +164,11 @@
         },
         "structure": {
           "optional": true,
-          "value": {
-            "$type": "string",
-            "type": "minecraft:resource_location",
-            "args": { "schema": "worldgen/structure" }
+          "value": { 
+            "$ref": "utils:value_or_array",
+            "element": {"$ref": "utils:resourceLocationString", "schema": "worldgen/structure", "allowTags": true }
           },
-          "description": "{{upcoming|java 1.19}}: The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
+          "description": "The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
         }
       }
     }

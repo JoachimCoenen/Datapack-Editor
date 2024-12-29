@@ -4,7 +4,9 @@
     "rawJsonText": "rawJsonText-library.json",
     "predicate": "predicate-library.json",
     "loot_table": "loot_table-library.json",
-    "number_provider": "utils/number_provider-library.json"
+    "number_provider": "utils/number_provider-library.json",
+    "utils": "../common/utils-library.json",
+    "data_components": "../nbt/data_components-library.json"
   },
   "$templates": {},
   "$definitions": {
@@ -17,8 +19,9 @@
             "$type": "enum",
             "options": {
               "apply_bonus": "Applies a predefined bonus formula to the count of the item stack.",
+              "copy_components": "Copies components from a specified source onto an item.",
+              "copy_custom_data": "Copies NBT values from a specified block entity or entity, or from command storage to the item's `minecraft:custom_data` component.",
               "copy_name": "Copies an entity's or a block entity's name tag into the item's <code>display.Name</code> tag.",
-              "copy_nbt": "Copies [[NBT]] values from a specified block entity or entity, or from [[Commands/data#Storage|command storage]] to the item's <code>tag</code> tag.",
               "copy_state": "Copies block state properties provided by [[Loot table#Loot context types|loot context]] to the item's <code>BlockStateTag</code> tag.",
               "enchant_randomly": "Enchants the item with one randomly-selected enchantment. The power of the enchantment, if applicable, is random. A book will convert to an [[enchanted book]] when enchanted.",
               "enchant_with_levels": "Enchants the item, with the specified [[Enchantment mechanics#How Enchantments Are Chosen|enchantment level]] (roughly equivalent to using an [[enchantment table]] at that level). A book will convert to an [[enchanted book]].",
@@ -31,15 +34,16 @@
               "reference": "Call sub-functions",
               "set_attributes": "Add [[attribute|attribute modifiers]] to the item.",
               "set_banner_pattern": "Adds or replaces banner patterns of a banner. Function successfully adds patterns into NBT tag even if invoked on a non-banner.",
+              "set_components": "Sets components of an item.",
               "set_contents": "Sets the contents of a container block item to a list of entries.",
               "set_count": "Sets the stack size.",
+              "set_custom_data": "Sets the `minecraft:custom_data` component.",
               "set_damage": "Sets the item's damage value (durability).",
               "set_enchantments": "Modifies the item's enchantments. A book will convert to an [[enchanted book]].",
               "set_instrument": "Sets the item tags for instrument items to a random value from a tag.",
               "set_loot_table": "Sets the loot table for a container block when placed and opened.",
               "set_lore": "Adds or changes the item's lore.",
               "set_name": "Adds or changes the item's custom name.",
-              "set_nbt": "Adds or changes NBT data of the item.",
               "set_potion": "Sets the <code>Potion</code> tag of an item.",
               "set_stew_effect": "Sets the status effects for [[suspicious stew]]. Fails if invoked on an item that is not suspicious stew."
             },
@@ -67,29 +71,26 @@
         "source": {
           "decidingProp": "function",
           "values": {
+            "copy_components": { "$defRef": "%source-copy_components" },
             "copy_name": { "$defRef": "%source-copy_name" },
-            "copy_nbt": { "$defRef": "%source-copy_nbt" }
+            "copy_custom_data": { "$defRef": "%source-copy_custom_data" }
           },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
+          "optionalPrefixes": ["minecraft:"]
         },
         "ops": {
           "decidingProp": "function",
-          "values": { "copy_nbt": { "$defRef": "%ops-copy_nbt" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
+          "values": { "copy_custom_data": { "$defRef": "%ops-copy_custom_data" } },
+          "optionalPrefixes": ["minecraft:"]
         },
         "block": {
           "decidingProp": "function",
           "values": { "copy_state": { "$defRef": "%block-copy_state" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
+          "optionalPrefixes": ["minecraft:"]
         },
         "properties": {
           "decidingProp": "function",
           "values": { "copy_state": { "$defRef": "%properties-copy_state" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
+          "optionalPrefixes": ["minecraft:"]
         },
         "enchantments": {
           "decidingProp": "function",
@@ -261,7 +262,7 @@
         },
         "tag": {
           "decidingProp": "function",
-          "values": { "set_nbt": { "$defRef": "%tag-set_nbt" } },
+          "values": { "set_custom_data": { "$defRef": "%tag-set_custom_data" } },
           "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
@@ -277,6 +278,12 @@
           "optionalPrefixes": ["minecraft:"],
           "optional": true
         },
+        "components": {
+          "description": "A map of components ID to component value. Components with a `!` prefix (e.g. `\"!minecraft:damage\": {}`) causes this component to be removed.",
+          "decidingProp": "function",
+          "values": { "set_components": { "$defRef": "data_components:data_components_removable" } },
+          "optional": true
+        },
         "conditions": {
           "description": "A list of [[predicate]]s, of which all must pass, for this function to be applied.",
           "value": {
@@ -284,13 +291,22 @@
             "element": { "$defRef": "predicate:predicate-body" }
           },
           "optional": true
+        },
+        "include": {
+          "decidingProp": "function",
+          "values": { "copy_components": { "$defRef": "%include-copy_components" } },
+          "optionalPrefixes": ["minecraft:"],
+          "optional": true
+        },
+        "exclude": {
+          "decidingProp": "function",
+          "values": { "copy_components": { "$defRef": "%exclude-copy_components" } },
+          "optionalPrefixes": ["minecraft:"],
+          "optional": true
         }
       }
     },
-    "%enchantment-apply_bonus": {
-      "$type": "string",
-      "description": "[[Java_Edition_data_value#Enchantments|ID of an enchantment]] on the tool provided by [[Loot table#Loot context types|loot context]] used for level calculation."
-    },
+    "%enchantment-apply_bonus": {"$ref": "utils:resourceLocationString", "schema": "enchantment", "description": "[[Java_Edition_data_value#Enchantments|ID of an enchantment]] on the tool provided by [[Loot table#Loot context types|loot context]] used for level calculation." },
     "%formula-apply_bonus": {
       "$type": "enum",
       "options": {
@@ -322,23 +338,19 @@
         }
       }
     },
+    "%source-copy_components": {
+      "$defRef": "number_provider:loot_context",
+      "description": "Source type to pull from. Specifies an entity or block entity from loot context. Only allowed value is `block_entity`."
+    },
     "%source-copy_name": {
-      "$type": "enum",
-      "options": {
-        "block_entity": "the invoking block entity",
-        "this": "the invoking entity",
-        "killer": "the entity that killed the invoking entity",
-        "direct_killer": "the entity that *directly* killed the invoking entity",
-        "killer_player": "only select the killer if they are a player"
-      },
-      "optionalPrefixes": ["minecraft:"],
+      "$defRef": "number_provider:loot_context",
       "description": " - The target whose name will be copied. Specifies an entity or block entity from [ [Loot table#Loot context types|loot context] ]. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, or {{cd|killer_player}} (cannot be {{cd|direct_killer}})."
     },
-    "%source-copy_nbt": {
+    "%source-copy_custom_data": {
       "$type": "union",
       "options": [
         {
-          "$defRef": "%source-copy_name",
+          "$defRef": "number_provider:loot_context",
           "description": "Shorthand form of {{nbt|compound|source}} below with {{nbt|string|type}} set to <code>context</code>. Specifies an entity or block entity from [ [Loot table#Loot context types|loot context] ]. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}."
         },
         {
@@ -357,14 +369,14 @@
             "target": {
               "description": "Included only if <code>type</code> is set to <code>context</code>. Specifies an entity or block entity from [ [Loot table#Loot context types|loot context] ] to copy NBT from. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}.",
               "decidingProp": "type",
-              "values": { "context": { "$defRef": "%source-copy_name" } },
+              "values": { "context": { "$defRef": "number_provider:loot_context" } },
               "optionalPrefixes": ["minecraft:"],
               "optional": true
             },
             "source": {
               "description": "Included only if <code>type</code> is set to <code>storage</code>. A [ [resource location] ] specifying the storage ID to copy NBT from. ",
               "decidingProp": "type",
-              "values": { "storage": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "any"} }},
+              "values": { "storage": {"$ref": "utils:resourceLocationString", "schema": "any", "description": "" }},
               "optionalPrefixes": ["minecraft:"],
               "optional": true
             }
@@ -372,7 +384,7 @@
         }
       ]
     },
-    "%ops-copy_nbt": {
+    "%ops-copy_custom_data": {
       "$type": "array",
       "description": "A list of copy operations.",
       "element": {
@@ -411,12 +423,7 @@
         }
       }
     },
-    "%block-copy_state": {
-      "$type": "string",
-      "description": "A [ [Resource location|block ID] ]. Function fails if the block doesn't match the {{nbt|list|properties}} list.",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "block" }
-    },
+    "%block-copy_state": {"$ref": "utils:resourceLocationString", "schema": "block", "description": "A [ [Resource location|block ID] ]. Function fails if the block doesn't match the {{nbt|list|properties}} list." },
     "%properties-copy_state": {
       "$type": "array",
       "description": "A list of properties to copy.",
@@ -428,12 +435,7 @@
     "%enchantments-enchant_randomly": {
       "$type": "array",
       "description": "Optional. List of [ [Java_Edition_data_value#Enchantments|enchantment IDs] ] to choose from. If omitted, all discoverable enchantments (currently only [ [Soul speed] ] and [ [Swift Sneak] ] are undiscoverable) applicable to the item are possible.",
-      "element": {
-        "$type": "string",
-        "description": "Optional. List of [ [Java_Edition_data_value#Enchantments|enchantment IDs] ] to choose from. If omitted, all discoverable enchantments (currently only [ [Soul speed] ] and [ [Swift Sneak] ] are undiscoverable) applicable to the item are possible.",
-        "type": "minecraft:resource_location",
-        "args": { "schema": "enchantment" }
-      }
+      "element": {"$ref": "utils:resourceLocationString", "schema": "enchantment", "description": "Optional. List of [ [Java_Edition_data_value#Enchantments|enchantment IDs] ] to choose from. If omitted, all discoverable enchantments (currently only [ [Soul speed] ] and [ [Swift Sneak] ] are undiscoverable) applicable to the item are possible." }
     },
     "%enchantments-set_enchantments": {
       "$type": "object",
@@ -454,12 +456,7 @@
       "$type": "string",
       "description": "A tag of structure to locate. Defaults to <code>on_treasure_maps</code>."
     },
-    "%decoration-exploration_map": {
-      "$type": "string",
-      "description": "The icon used to mark the destination on the map. Accepts any of the [ [Map#Map icons|map icon text IDs] ] (case insensitive). If <code>mansion</code> or <code>monument</code> is used, the color of the lines on the item texture changes to match the corresponding explorer map. Defaults to <code>mansion</code>.",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "map_marker" }
-    },
+    "%decoration-exploration_map": {"$ref": "utils:resourceLocationString", "schema": "map_marker", "description": "The icon used to mark the destination on the map. Accepts any of the [ [Map#Map icons|map icon text IDs] ] (case insensitive). If <code>mansion</code> or <code>monument</code> is used, the color of the lines on the item texture changes to match the corresponding explorer map. Defaults to <code>mansion</code>." },
     "%zoom-exploration_map": {
       "$type": "integer",
       "description": "The zoom level of the resulting map. Defaults to 2."
@@ -537,12 +534,7 @@
         }
       ]
     },
-    "%name-set_loot_table": {
-      "$type": "string",
-      "type": "minecraft:resource_location", 
-      "args": { "schema": "loot_table" },
-      "description": "Specifies the [ [resource location] ] of the loot table to be used."
-    },
+    "%name-set_loot_table": {"$ref": "utils:resourceLocationString", "schema": "loot_table", "description": "Specifies the [ [resource location] ] of the loot table to be used." },
     "%name-set_name": {
       "$type": "union",
       "description": "A [ [Raw JSON text format|JSON text component] ], overwriting the previous custom name on the item. Components requiring [ [Raw_JSON_text_format#Component_resolution|resolution] ] are resolved only if <code>entity</code> successfully targets an entity.",
@@ -565,14 +557,16 @@
             "optional": true
           },
           "operation": {
-            "description": "The operation of this attribute modifier. One of <code>addition</code>, <code>multiply_base</code>, or <code>multiply_total</code>.",
-            "$type": "enum",
-            "options": {
-              "addition": "",
-              "multiply_base": "",
-              "multiply_total": ""
+            "description": "The operation of this attribute modifier. One of `add_value`, `add_multiplied_base`, or `add_multiplied_total`.",
+            "value": {
+              "$type": "enum",
+              "options": {
+                "add_value": "",
+                "add_multiplied_base": "",
+                "add_multiplied_total": ""
+              },
+              "optionalPrefixes": ["minecraft:"] // maybe...?
             },
-            "optionalPrefixes": ["minecraft:"], // maybe...?
             "optional": true
           },
           "amount": {
@@ -605,8 +599,11 @@
     "%armor_slots": {
       "$type": "enum",
       "options": {
+        "any": "",
+        "hand": "",
         "mainhand": "",
         "offhand": "",
+        "amor": "",
         "feet": "",
         "legs": "",
         "chest": "",
@@ -663,12 +660,7 @@
       "$type": "boolean",
       "description": "Optional. If <code>true</code>, change will be relative to current level. A nonexistent enchantment will be presumed to start at 0. Defaults to false."
     },
-    "%options-set_instrument": {
-      "$type": "string",
-      "type": "minecraft:resource_location", 
-      "args": { "schema": "instrument" },
-      "description": "The resource location started with <code>#</code> of an instrument [ [tag] ], one of the listings is selected randomly."
-    },
+    "%options-set_instrument": {"$ref": "utils:resourceLocationString", "schema": "instrument", "description": "The resource location started with <code>#</code> of an instrument [ [tag] ], one of the listings is selected randomly." },
     "%seed-set_loot_table": {
       "$type": "integer",
       "description": "Optional. Specifies the loot table seed. If absent or set to 0, the seed won't be put into the NBT, and a random seed will be used when opening the continer."
@@ -677,17 +669,12 @@
       "$type": "boolean",
       "description": "Optional. Set to <code>true</code> to replace the existing item lore with only the lines in {{nbt|list|lore}}. If <code>false</code>, the lines are appended to the list of existing lines of lore. Defaults to false."
     },
-    "%tag-set_nbt": {
+    "%tag-set_custom_data": {
       "$type": "string",
       "description": "The NBT to merge onto the item's <code>tag</code> tag, within a JSON string. The outer braces <code>{ }</code> of the NBT must be present within this JSON string. Additional care is required when the NBT contains quotation marks <code>\"</code>, as they must be escaped from the JSON syntax with a backslash <code>\\</code>.",
       "type": "minecraft:nbt_compound_tag"
     },
-    "%id-set_potion": {
-      "$type": "string",
-      "description": "The [ [Potion#Java_Edition|potion ID] ]. Set to <code>empty</code> to remove the <code>Potion</code> tag.",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "potion" }
-    },
+    "%id-set_potion": {"$ref": "utils:resourceLocationString", "schema": "potion", "description": "The [ [Potion#Java_Edition|potion ID] ]. Set to <code>empty</code> to remove the <code>Potion</code> tag." },
     "%effects-set_stew_effect": {
       "$type": "array",
       "description": "The effects to apply.",
@@ -707,6 +694,16 @@
           }
         }
       }
+    },
+    "%include-copy_components": {
+      "$type": "array",
+      "description": "A list of components to include. If omitted, all components are copied.",
+      "element": {"$ref": "utils:resourceLocationString", "schema": "item_components"}
+    },
+    "%exclude-copy_components": {
+      "$type": "array",
+      "description": "A list of components to exclude.",
+      "element": {"$ref": "utils:resourceLocationString", "schema": "item_components"}
     }
   }
 }

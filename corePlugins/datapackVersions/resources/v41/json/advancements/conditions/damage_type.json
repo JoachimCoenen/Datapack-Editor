@@ -1,7 +1,8 @@
 {
   "$schema": "dpe/json/schema/library",
     "$libraries": {
-    "entity": "entity.json"
+    "entity": "entity.json",
+    "utils": "../../../common/utils-library.json"
   },
   "$definitions": {
     "damage_type": {
@@ -28,7 +29,7 @@
               "properties": {
                 "id": {
                   "optional": false,
-                  "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "damage_type", "onlyTags": true } }
+                  "value": {"$ref": "utils:resourceLocationString", "schema": "damage_type", "onlyTags": true }
                 },
                 "expected": {
                   "optional": false,

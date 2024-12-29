@@ -1,7 +1,11 @@
 {
   "$schema": "dpe/json/schema",
   "$libraries": {
-    "item_modifier": "item_modifier-library.json"
+    "item_modifier": "item_modifier-library.json",
+    "utils": "../common/utils-library.json"
   },
-  "$body": { "$defRef": "item_modifier:item_modifier-body" }
+  "$body": { 
+    "$ref": "utils:value_or_array",
+    "element": { "$defRef": "item_modifier:item_modifier-body" }
+  }
 } 

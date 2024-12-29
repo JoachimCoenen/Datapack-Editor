@@ -5,7 +5,8 @@
     "entity": "advancements/conditions/entity.json",
     "item": "advancements/conditions/item.json",
     "location": "advancements/conditions/location.json",
-    "number_provider": "utils/number_provider-library.json"
+    "number_provider": "utils/number_provider-library.json",
+    "utils": "../common/utils-library.json"
   },
   "$definitions": {
     "predicate-body": {
@@ -24,7 +25,7 @@
       "properties": {
         "condition": {
           "optional": false,
-          "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "condition" } },
+          "value": {"$ref": "utils:resourceLocationString", "schema": "condition", "description": "" },
           "description": "The resource location of the condition type to check."
         },
         "terms": {
@@ -193,11 +194,7 @@
       },
       "description": "The root element of the condition."
     },
-    "%%2!": {
-      "$type": "string",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "block", "allowTags": true }
-    },
+    "%%2!": {"$ref": "utils:resourceLocationString", "schema": "block", "allowTags": true },
     "%%3!": {
       "$type": "calculated",
       "function": "corePlugins.datapackVersions.providers.propertiesFor_block_state_property"
@@ -270,16 +267,8 @@
       "min": 0,
       "max": 1
     },
-    "%%26!": {
-      "$type": "string",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "predicate" }
-    },
-    "%%27!": {
-      "$type": "string",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "enchantment" }
-    },
+    "%%26!": {"$ref": "utils:resourceLocationString", "schema": "predicate", "description": "" },
+    "%%27!": {"$ref": "utils:resourceLocationString", "schema": "enchantment", "description": "" },
     "%%28!": {
       "$type": "array",
       "element": { "$type": "float" }

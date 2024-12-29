@@ -2,7 +2,10 @@
   "$schema": "dpe/json/schema/library",
   "$meta": {
     "last_mc_version_checked": "23w44a"
-  }, 
+  },
+  "$libraries": {
+    "utils": "../common/utils-library.json"
+  },
   "$definitions": {
     "rawJsonText": {
       "$type": "union",
@@ -227,11 +230,7 @@
           },
           "storage": {
             "optional": true,
-            "value": {
-              "$type": "string",
-              "type": "minecraft:resource_location",
-              "args": { "schema": "command_storage" }
-            },
+            "value": {"$ref": "utils:resourceLocationString", "schema": "command_storage", "description": "" },
             "requires": [ "nbt" ],
             "description": "A string specifying the namespaced ID of the command storage from which the NBT value is obtained. Ignored if `nbt` is not present."
           }
@@ -395,11 +394,7 @@
                     "properties": {
                       "id": {
                         "optional": false,
-                        "value": {
-                          "$type": "string",
-                          "type": "minecraft:resource_location",
-                          "args": { "schema": "item" }
-                        },
+                        "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
                         "description": "The namespaced item ID. Preset `minecraft:air` if invalid."
                       },
                       "count": {
@@ -435,7 +430,7 @@
                       },
                       "type": {
                         "optional": false,
-                        "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "entity_type"} },
+                        "value": {"$ref": "utils:resourceLocationString", "schema": "entity_type", "description": "" },
                         "description": "A string containing the type of the entity. Should be a namespaced entity ID. Present `minecraft:pig` if invalid."
                       },
                       "name": {

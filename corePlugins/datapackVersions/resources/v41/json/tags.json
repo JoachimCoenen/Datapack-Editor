@@ -1,18 +1,8 @@
 {
-  "$schema": "dpe/json/schema/library",
+  "$schema": "dpe/json/schema/library",  "$libraries": {
+    "utils": "../common/utils-library.json"
+  },
   "$templates": {
-    "resourceLocationString": {
-      "$params": {
-        "schema": { "type": "string" }
-      },
-      "$body": {
-        "$type": "string",
-        "type": "minecraft:resource_location",
-        "args": { "schema": { "$ref": "#schema" }, "allowTags": true },
-        "description": "An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`."
-      }
-    },
-    
     "tags": {
       "$params": {
         "schema": { "type": "string" }
@@ -38,13 +28,13 @@
               "element": {
                 "$type": "union",
                 "options": [
-                  {"$ref": "resourceLocationString", "schema": { "$ref": "#schema" }},
+                  {"$ref": "utils:resourceLocationString", "schema": { "$ref": "#schema"}, "allowTags": true },
                   {
                     "$type": "object",
                     "properties": {
                       "id": {
                         "optional": false,
-                        "value": {"$ref": "resourceLocationString", "schema": { "$ref": "#schema" }},
+                        "value": {"$ref": "utils:resourceLocationString", "schema": { "$ref": "#schema"}, "allowTags": true },
                         "description": "A string in one of the string formats above."
                       },
                       "required": {

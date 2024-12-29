@@ -9,7 +9,8 @@
     "location": "conditions/location.json",
     "distance": "conditions/distance.json",
     "base": "conditions/_base.json",
-    "predicate": "../predicate-library.json"
+    "predicate": "../predicate-library.json",
+    "utils": "../../common/utils-library.json"
   },
   "$body": { "$defRef": "advancement" },
   "$templates": {},
@@ -29,7 +30,7 @@
                   "properties": {
                     "item": {
                       "description": "The item's [ [Resource location|ID] ].",
-                      "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "item" } }
+                      "value": {"$ref": "utils:resourceLocationString", "schema": "item" }
                     },
                     "nbt": {
                       "description": "A string containing [ [NBT format#SNBT_format|SNBT] ] that may modify the item's appearance on the icon.",
@@ -110,6 +111,7 @@
                       "$type": "enum",
                       "options": {
                         "allay_drop_item_on_block": "Triggers when an allay drops an item on a block. Available extra conditions:",
+                        "any_block_use": "Triggers under the same conditions as both `minecraft:default_block_use` and `minecraft:item_used_on_block`. Available extra conditions: ",
                         "avoid_vibration": "Triggers when a vibration event is ignored because the source player is crouching. No extra conditions.",
                         "bee_nest_destroyed": "Triggers when the player breaks a bee nest or beehive. Available extra conditions:",
                         "bred_animals": "Triggers after the player breeds 2 [[animals]]. Available extra conditions:",
@@ -119,6 +121,7 @@
                         "construct_beacon": "Triggers after the player changes the structure of a [[beacon]]. (When the beacon updates itself). Available extra conditions:",
                         "consume_item": "Triggers when the player consumes an item. Available extra conditions:",
                         "cured_zombie_villager": "Triggers when the player cures a [[zombie villager]]. Available extra conditions:",
+                        "default_block_use": "Triggers when the player activates a block's default use action (opening a door, pushing a button, opening a crafting grid, etc). Available extra conditions:",
                         "effects_changed": "Triggers after the player gets a [[status effect]] applied or taken from them. Available extra conditions:",
                         "enchanted_item": "Triggers after the player enchants an item through an [[enchanting table]] (does not get triggered through an [[anvil]], or through [[command]]s). Available extra conditions:",
                         "enter_block": "Every tick, triggers once for each block the player's hitbox is inside (up to 12 blocks, the maximum number of blocks the player can stand in). Available extra conditions:",
@@ -193,7 +196,9 @@
                           "values": {
                             "allay_drop_item_on_block": { "$defRef": "%location-allay_drop_item_on_block" },
                             "item_used_on_block": { "$defRef": "%location-item_used_on_block" },
-                            "placed_block": { "$defRef": "%location-placed_block" }
+                            "placed_block": { "$defRef": "%location-placed_block" },
+                            "default_block_use": { "$defRef": "%location-default_block_use" },
+                            "any_block_use": { "$defRef": "%location-any_block_use" }
                           },
                           "optionalPrefixes": [ "minecraft:" ],
                           "optional": true
@@ -506,7 +511,7 @@
                 "description": "To unlock [ [recipe] ]s.",
                 "value": {
                   "$type": "array",
-                  "element": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "recipe" } }
+                  "element": {"$ref": "utils:resourceLocationString", "schema": "recipe" }
                 },
                 "optional": true
               },
@@ -514,7 +519,7 @@
                 "description": "To give items from [ [loot table] ]s to the player.",
                 "value": {
                   "$type": "array",
-                  "element": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "loot_table" } }
+                  "element": {"$ref": "utils:resourceLocationString", "schema": "loot_table" }
                 },
                 "optional": true
               },
@@ -526,7 +531,7 @@
               },
               "function": {
                 "description": "To run a [ [Function (Java Edition)|function] ]. [ [Tag#Function Tags|Function tags] ] are not allowed.",
-                "value": { "$type": "string", "type": "minecraft:resource_location", "args": { "schema": "functions" } },
+                "value": {"$ref": "utils:resourceLocationString", "schema": "functions" },
                 "optional": true
               }
             }
@@ -550,6 +555,16 @@
       "description": "Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The origin is the location of the block the item was used on, the block state belongs to that block, and the tool is the item used on the block. The {{cd|this}} entity is the player that would get the advancement.",
       "element": { "$defRef": "predicate:predicate-body" }
     },
+    "%location-default_block_use": {
+      "$type": "array",
+      "description": "Specifies a list of predicates that must pass in order for the criterion to be granted. The origin is the location of the block that was interacted with and the block state belongs to that block. Note that for this trigger, a `tool` is not provided. The `this` entity is the player that would get the advancement.",
+      "element": { "$defRef": "predicate:predicate-body" }
+    },
+    "%location-any_block_use": {
+      "$type": "array",
+      "description": "Specifies a list of predicates that must pass in order for the criterion to be granted. The origin is the location of the block that was interacted with, the block state belongs to that block, and the tool is either the item used on the block (for the item_used_on_block case) or simply the item in the player's main hand (for the default_block_use case). The `this` entity is the player that would get the advancement. ",
+      "element": { "$defRef": "predicate:predicate-body" }
+    },
     "%location-placed_block": {
       "$type": "array",
       "description": "Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The origin is the location of the block placed, the block state belongs to that block, and the tool is the item used to place the block. The {{cd|this}} entity is the player that would get the advancement.",
@@ -559,12 +574,7 @@
       "$type": "string",
       "description": "Checks the block that was destroyed. Accepts block IDs."
     },
-    "%block-enter_block": {
-      "$type": "string",
-      "description": "The block that the player is standing in. Accepts [ [Data values#Block IDs|block ID] ]s.",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "block" }
-    },
+    "%block-enter_block": {"$ref": "utils:resourceLocationString", "schema": "block", "description": "The block that the player is standing in. Accepts [ [Data values#Block IDs|block ID] ]s." },
     "%block-slide_down_block": {
       "$type": "string",
       "description": "The block that the player slid on."
@@ -668,22 +678,9 @@
         }
       ]
     },
-    "%potion-brewed_potion": {
-      "$type": "string",
-      "description": "A [ [Potion#Item data|brewed potion ID] ].",
-      "type": "minecraft:resource_location",
-      "args": { "schema": "potion" }
-    },
-    "%from-changed_dimension": {
-      "$type": "string", 
-      "type": "minecraft:resource_location", 
-      "args": { "schema": "recipe" },
-      "description": "The dimension the entity traveled from. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)."
-    },
-    "%to-changed_dimension": {
-      "$type": "string",
-      "description": "The dimension the entity traveled to. Same accepted values as above."
-    },
+    "%potion-brewed_potion": {"$ref": "utils:resourceLocationString", "schema": "potion", "description": "A [ [Potion#Item data|brewed potion ID] ]." },
+    "%from-changed_dimension": {"$ref": "utils:resourceLocationString", "schema": "dimension", "description": "The dimension the entity traveled from. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
+    "%to-changed_dimension": {"$ref": "utils:resourceLocationString", "schema": "dimension", "description": "The dimension the entity traveled to. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
     "%victims-channeled_lightning": {
       "$type": "array",
       "description": "The victims hit by the lightning summoned by the Channeling enchantment. All entities in this list must be hit.",

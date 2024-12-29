@@ -46,7 +46,7 @@ def propertiesFor_block_state_property(parent: ObjectNode) -> Optional[ObjectSch
 		return _propertiesFromBlockStates(block)
 
 
-def _propertiesForItemComponents(itemId: ResourceLocation) -> Optional[ObjectSchema]:
+def _propertiesForItemComponents(itemId: ResourceLocation | None, removable: bool) -> Optional[ObjectSchema]:
 	# todo: which items have which components?
 	allItemComponents = getCurrentFullMcData().itemComponents
 
@@ -59,16 +59,29 @@ def _propertiesForItemComponents(itemId: ResourceLocation) -> Optional[ObjectSch
 		if itemComponent.isMCNamespace:
 			properties.append(PropertySchema(name=itemComponent.asCompactString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
 
+		if removable:
+			properties.append(PropertySchema(name='!' + itemComponent.asQualifiedString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+			if itemComponent.isMCNamespace:
+				properties.append(PropertySchema(name='!' + itemComponent.asCompactString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+
 	return ObjectSchema(properties=properties, allowMultilineStr=None).finish()
 
 
-def propertiesFor_item_stack_components(parent: ObjectNode) -> Optional[ObjectSchema]:
+def _propertiesFor_item_stack_components(parent: ObjectNode, removable: bool) -> Optional[ObjectSchema]:
 	itemIdNode = parent.data.get('id', None)
 	if itemIdNode is None or not isinstance(itemIdNode.value, StringNode):
-		return ObjectSchema(properties=[], allowMultilineStr=None).finish()
+		itemId = None
 	else:
 		itemId = ResourceLocation.fromString(itemIdNode.value.data)
-		return _propertiesForItemComponents(itemId)
+	return _propertiesForItemComponents(itemId, removable=removable)
+
+
+def propertiesFor_item_stack_components(parent: ObjectNode) -> Optional[ObjectSchema]:
+	return _propertiesFor_item_stack_components(parent, removable=False)
+
+
+def propertiesFor_removable_item_stack_components(parent: ObjectNode) -> Optional[ObjectSchema]:
+	return _propertiesFor_item_stack_components(parent, removable=True)
 
 
 def _getTemplate(library: ObjectNode, name: str) -> Optional[ObjectNode]:

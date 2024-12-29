@@ -1,7 +1,17 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": { "utils": "utils-library.json" },
+  "$libraries": { "utils": "../common/utils-library.json" },
   "$definitions": {
+
+    "data_components": {
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_item_stack_components"
+    },
+
+    "data_components_removable": { // can be prefixed with a '!'.
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_removable_item_stack_components"
+    },
 
     "block_state": {
       "$type": "object",

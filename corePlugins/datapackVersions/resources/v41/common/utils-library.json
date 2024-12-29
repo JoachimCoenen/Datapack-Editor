@@ -6,13 +6,31 @@
     "resourceLocationString": {
       "$params": {
         "schema": { "type": "string" },
-        "allowTags": { "type": "boolean", "default": false }
+        "allowTags": { "type": "boolean", "default": false },
+        "onlyTags": { "type": "boolean", "default": false },
+        "description": { "type": "string", "default": "A resource location in the form `namespace:path`." }
       },
       "$body": {
         "$type": "string",
         "type": "minecraft:resource_location",
-        "args": { "schema": { "$ref": "#schema" }, "allowTags": { "$ref": "#allowTags" } },
-        "description": "An object's resource location in the form `namespace:path`.\nID of another tag of the same type in the form `#namespace:path`."
+        "args": { "schema": { "$ref": "#schema" }, "allowTags": { "$ref": "#allowTags" }, "onlyTags": { "$ref": "#onlyTags" } },
+        "description": { "$ref": "#description" }
+      }
+    },
+
+    "value_or_array": {
+      "$params": {
+        "element": { "type": "object" }
+      },
+      "$body": { 
+        "$type": "union",
+        "options": [
+          { "$ref": "#element" },
+          {
+            "$type": "array",
+            "element": { "$ref": "#element" }
+          }
+        ]
       }
     }
   },

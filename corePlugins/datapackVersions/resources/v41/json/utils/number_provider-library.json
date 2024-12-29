@@ -10,7 +10,7 @@
         { "$type": "integer" }
       ]
     },
-		
+
     "number_provider": {
       "$type": "union",
       "options": [
@@ -97,6 +97,17 @@
     "loot_context_killer": {
       "$type": "enum",
       "options": {
+        "this": "the invoking entity",
+        "killer": "the entity that killed the invoking entity",
+        "direct_killer": "the entity that *directly* killed the invoking entity",
+        "killer_player": "only select the killer if they are a player"
+      },
+      "optionalPrefixes": ["minecraft:"]
+    },
+    "loot_context": {
+      "$type": "enum",
+      "options": {
+        "block_entity": "the invoking block entity",
         "this": "the invoking entity",
         "killer": "the entity that killed the invoking entity",
         "direct_killer": "the entity that *directly* killed the invoking entity",
