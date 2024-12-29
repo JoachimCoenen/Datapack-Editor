@@ -15,6 +15,7 @@
  * Fixed crash when styling a language with an inner language that has no styler associated.
  * Fixed `Ctrl-Click` in documents not working on Wayland.
  * Fixed app crashing with `Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= style.Length())] ...` when deleting multiple lines from a document, while scrolled to the very bottom.
+ * Fixed JSON parsing failing when the function for a calculated schema cannot be found.
 
 
 ## 0.8.6-alpha

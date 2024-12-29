@@ -691,7 +691,7 @@ def calculatedHandler(self: SchemaBuilder, node: JObject) -> Generator[Structure
 		func = lookupFunction(func)
 	except Exception as ex:
 		self.reader.errors.append(WrappedError(ex, span=node.n.data.get('function').value.span))
-		func = lambda x: None
+		func = lambda x: STRUCTURE_ILLEGAL_SCHEMA
 
 	objectSchema = CalculatedValueSchema(
 		description=description,
