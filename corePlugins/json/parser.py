@@ -12,7 +12,7 @@ from .lexer import JsonTokenizer
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes, ORD_BACKSLASH, ORD_u, ORD_DOUBLE_QUOTE, ORD_SINGLE_QUOTE, ORD_MINUS
 from base.model.parsing.parser import ParserBase, IndexMapBuilder, IndexMapper
-from base.model.utils import Span, MDStr, Message, NULL_SPAN
+from base.model.utils import Span, MDStr, Message, NULL_SPAN, Position
 from corePlugins.nbtJsonBase.core import StructureSchema, KeySchema, StructureDataNode, StructureValue
 from corePlugins.nbtJsonBase.schema import pathify, enrichWithSchema
 
@@ -209,11 +209,14 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 					objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
 					return
 
-		start = self._last
-		self._parse_list_like(TokenType.comma, TokenType.right_brace, valueTokens, goodValueTokens, parse_property)
-		return JsonObject(Span(start.span.start, self._last.span.end), None, objData)
+		start = self._last.span.start
+		end = self._parse_list_like(TokenType.comma, TokenType.right_brace, valueTokens, goodValueTokens, parse_property)
+		return JsonObject(Span(start, end), None, objData)
 
-	def _parse_list_like(self, delimiter: TokenType, closing: TokenType, valueTokens: AbstractSet[TokenType], goodValueTokens: AbstractSet[TokenType], parseItem: Callable[[], None]) -> None:
+	def _parse_list_like(self, delimiter: TokenType, closing: TokenType, valueTokens: AbstractSet[TokenType], goodValueTokens: AbstractSet[TokenType], parseItem: Callable[[], None]) -> Position:
+		"""
+		:return: the end position of the list like.
+		"""
 		delimiterOrClosing = {delimiter, closing}
 
 		def tryParseItem(goodTokens):
@@ -223,7 +226,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 				self.acceptAnyOf(goodTokens, advanceIfBad=False)
 
 		if self.tryAccept(closing) is not None:
-			return
+			return self._last.span.end
 		self._waitingForClosing[closing] += 1
 		tryParseItem(goodValueTokens | {closing})
 
@@ -232,7 +235,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 			if (tkn := self.tryAcceptAnyOf(delimiterOrClosing)) is not None:
 				if tkn.type is closing:
 					self._waitingForClosing[closing] -= 1
-					return
+					return self._last.span.end
 				else:  # now: tkn.type is delimiter:
 					while (tkn2 := self.tryAccept(delimiter)) is not None:
 						self.errorMsg(DUPLICATE_NOT_ALLOWED_MSG, delimiter.asString, span=tkn2.span)
@@ -240,7 +243,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 					if self.tryAccept(closing) is not None:
 						self.errorMsg(TRAILING_NOT_ALLOWED_MSG, delimiter.asString, span=tkn.span)
 						self._waitingForClosing[closing] -= 1
-						return
+						return self._last.span.end
 					tryParseItem(goodValueTokens)
 					continue
 			else:
@@ -250,46 +253,15 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 					continue
 				elif self._waitingForClosing[self._current.type] > 0:
 					self.errorMsg(MISSING_CLOSING_MSG, closing.asString, span=self._current.span)
-					return
+					return self._current.span.end
 				else:
 					# force an error and consume the unknown token, so we don't end up
 					# in an infinite loop of trying to parse that token:
 					tkn = self.acceptAnyOf(delimiterOrClosing)
 					if tkn.type is TokenType.eof:
-						return
+						return self._current.span.end
 					# tryParseItem(goodValueTokens)
 					continue
-
-	def parse_array(self) -> JsonArray:
-		"""Parses an array out of JSON tokens"""
-		arrayData: list[StructureDataNode[JsonNode]] = []
-
-		start = self._last
-
-		token = self.acceptAnyOf({TokenType.right_bracket, *self._PARSERS.keys()})
-		if token.type is TokenType.eof:
-			return JsonArray(Span(start.span.start, token.span.end), None, arrayData)
-		# special case:
-		if token.type is TokenType.right_bracket:
-			return JsonArray(Span(start.span.start, token.span.end), None, arrayData)
-
-		while token is not None:
-
-			value = self._internalParseTokens()
-			arrayData.append(value)
-
-			token = self.acceptAnyOf({TokenType.comma, TokenType.right_bracket})
-			if token.type is TokenType.eof:
-				break
-			if token.type is TokenType.comma:
-				token = self.acceptAnyOf(self._PARSERS.keys())
-				continue
-			if token.type == TokenType.right_bracket:
-				break
-
-		if token.type is TokenType.eof:
-			token = self._last
-		return JsonArray(Span(start.span.start, token.span.end), None, arrayData)
 
 	def parse_array2(self) -> JsonArray:
 		"""Parses an array out of JSON tokens"""
@@ -302,9 +274,9 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 			value = self._internalParseTokens()
 			arrayData.append(value)
 
-		start = self._last
-		self._parse_list_like(TokenType.comma, TokenType.right_bracket, valueTokens, goodValueTokens, parse_element)
-		return JsonArray(Span(start.span.start, self._last.span.end), None, arrayData)
+		start = self._last.span.start
+		end = self._parse_list_like(TokenType.comma, TokenType.right_bracket, valueTokens, goodValueTokens, parse_element)
+		return JsonArray(Span(start, end), None, arrayData)
 
 	def parse_string(self) -> JsonString:
 		"""Parses a string out of a JSON token"""

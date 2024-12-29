@@ -16,6 +16,7 @@
  * Fixed `Ctrl-Click` in documents not working on Wayland.
  * Fixed app crashing with `Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= style.Length())] ...` when deleting multiple lines from a document, while scrolled to the very bottom.
  * Fixed JSON parsing failing when the function for a calculated schema cannot be found.
+ * Fixed wrong code suggestions in JSON files when inside an unclosed array and the cursor is after the last element, but doesn't touch it.
 
 
 ## 0.8.6-alpha
