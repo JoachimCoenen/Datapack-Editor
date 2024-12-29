@@ -225,6 +225,7 @@
 					}
 				},
 				"minCount": {
+					"optional": true,
 					"decidingProp": "$type",
 					"values": {
 						"array": {
@@ -237,6 +238,7 @@
 					}
 				},
 				"maxCount": {
+					"optional": true,
 					"decidingProp": "$type",
 					"values": {
 						"array": {
