@@ -460,6 +460,8 @@ class ObjectSchema(StructureDataSchema):
 		self.properties: list[PropertySchema] = properties
 		self.propertiesDict: Mapping[str, PropertySchema] = {}
 		self.anythingProp: Optional[PropertySchema] = None
+		self.anythingKey: Optional[StringSchema] = None
+		"""Specialized key schema that can be applied together with anythingProp."""
 		self.isFinished: bool = False
 		# self.finish()
 
@@ -555,10 +557,18 @@ class ObjectSchema(StructureDataSchema):
 	def getSchemaForProp(self, name: str) -> Optional[PropertySchema]:
 		return self.propertiesDict.get(name, self.anythingProp)
 
-	def getSchemaForPropAndVal(self, name: str, parent: ObjectNode) -> tuple[Optional[PropertySchema], Optional[StructureDataSchema]]:
-		propSchema = self.propertiesDict.get(name, self.anythingProp)
+	def getSchemaForPropAndVal(self, name: str, parent: ObjectNode) -> tuple[Optional[StringSchema], Optional[PropertySchema], Optional[StructureDataSchema]]:
+		"""
+		:return: keySchema, propSchema, valueSchema.
+				usually keySchema is None, unless a special schema for default-keys has been provided.
+		"""
+		keySchema = None
+		propSchema = self.propertiesDict.get(name, None)
+		if propSchema is None:
+			propSchema = self.anythingProp
+			keySchema = self.anythingKey
 		valueSchema = propSchema.getValueSchemaForParent(parent) if propSchema is not None else None
-		return propSchema, valueSchema
+		return keySchema, propSchema, valueSchema
 
 
 @dataclass

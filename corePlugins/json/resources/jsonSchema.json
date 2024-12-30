@@ -199,6 +199,14 @@
 						"object": { "$defRef": "propertyOrSchemaOrRef" }
 					}
 				},
+				"default-key": {
+					"optional": true,
+					"requires": ["default-property"],
+					"decidingProp": "$type",
+					"values": {
+						"object": { "$defRef": "schemaOrRef" }
+					}
+				},
 				"defining-properties": {
 					"optional": true,
 					"decidingProp": "$type",

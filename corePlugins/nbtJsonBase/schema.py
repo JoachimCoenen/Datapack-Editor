@@ -91,9 +91,14 @@ def _enrichObjectWithSchema(data: ObjectNode, schema: ObjectSchema) -> int:
 
 
 def _enrichProperty(name: str, prop: StructureProperty, parentSchema: ObjectSchema, parent: ObjectNode) -> bool:
-	propSchema, valueSchema = parentSchema.getSchemaForPropAndVal(name, parent)
+	keySchema, propSchema, valueSchema = parentSchema.getSchemaForPropAndVal(name, parent)
 	if propSchema is not None:
 		prop.schema = propSchema
+		if keySchema is not None:
+			assert isinstance(prop.key.schema, KeySchema)
+			prop.key.schema.type = keySchema.type
+			prop.key.schema.args = keySchema.args
+			prop.key.schema.description = keySchema.description
 		if valueSchema is not None:
 			return enrichWithSchema(prop.value, valueSchema)
 	return False

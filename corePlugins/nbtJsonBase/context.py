@@ -238,14 +238,22 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 				return self._getSuggestionsForBefore(pos, hit, contained, replaceCtx)
 
 			elif isinstance(hit.schema, KeySchema):
-				return self._suggestionsForKeySchema(hit.schema, contained, data)
-			elif (strHandler := self.getContext(hit)) is not None:
-				return strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx, info=CtxInfo(self, ''))  # TODO: set correct replaceCtx
+				suggestions = self._suggestionsForKeySchema(hit.schema, contained, data)
+				suggestions.extend(self._getSuggestionsForString(pos, hit, replaceCtx))
+				return suggestions
+			else:
+				return self._getSuggestionsForString(pos, hit, replaceCtx)
 		elif hit.schema is not None:
 			if hit.span.end == pos and not isinstance(hit, InvalidNode):
 				return self._getSuggestionsForBefore(pos, hit, contained, replaceCtx)
 			return self.getSuggestionsForSchema(hit.schema, contained, data)
 		return []
+
+	def _getSuggestionsForString(self, pos: Position, hit: N, replaceCtx: str):
+		if (strHandler := self.getContext(hit)) is not None:
+			return strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx, info=CtxInfo(self, ''))  # TODO: set correct replaceCtx
+		else:
+			return []
 
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
 		matches = self.getBestMatch(pos)
@@ -465,17 +473,8 @@ class ParsingStructureCtx(StringNodeContext, ABC):
 @structureStringContext('dpe:structure/key_schema')
 class KeyContext(StringNodeContext):
 
-	def prepare(self, node: StringNode, info: CtxInfo[StructureNode], errorsIO: list[GeneralError]) -> None:
-		pass
-
 	def validate(self, node: StringNode, errorsIO: list[GeneralError]) -> None:
 		pass
-
-	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:
-		pass
-
-	def getDocumentation(self, node: StringNode, pos: Position) -> MDStr:
-		return super().getDocumentation(node, pos)
 
 	def getClickableRanges(self, node: StringNode) -> Optional[Iterable[Span]]:
 		if isinstance(node.schema, KeySchema) and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:

@@ -472,7 +472,9 @@ typeHandler = AddToDictDecorator(_typeHandlers)
 def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[StructureDataSchema]:
 	reader = self.reader
 	description, deprecated, allowMultilineStr = readCommonValues(reader, node)
-	defaultProp = reader.optType(node, 'default-property', ObjectNode)
+	defaultProp = reader.optObject(node, 'default-property')
+	defaultKey = reader.optObject(node, 'default-key')
+
 	if defaultProp is not None:
 		properties = reader.optObjectRaw(node, 'properties')
 	else:
@@ -498,6 +500,7 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[StructureData
 
 	finishers = []
 	schemaProps = []
+	anythingKey = None
 	if properties is not None:
 		for name in properties.n.data.keys():
 			propObj = reader.reqType(properties, name, ObjectNode)
@@ -505,10 +508,18 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[StructureData
 			schemaProps.append(prop.setSpan(properties.n.data[name].value.span, properties.ctx.filePath))
 			finishers.append(finisher)
 	if defaultProp is not None:
-		# 'default-property' might be a reference, so get the span from the raw (non-resolved ) value!
+		# 'default-property' might be a reference, so get the span from the raw (non-resolved) value!
 		prop, finisher = propertyHandler(self, Anything, defaultProp)
 		schemaProps.append(prop.setSpan(node.n.data['default-property'].value.span, node.ctx.filePath))
 		finishers.append(finisher)
+	if defaultKey is not None:
+		anythingKey, finisher = self.parseType(defaultKey)
+		finishers.append(finisher)
+		if not isinstance(anythingKey, StringSchema):
+			# 'default-key' might be a reference, so get the span from the raw (non-resolved) value!
+			span = node.n.data['default-key'].value.span
+			reader.error(MDStr(f"Definition  is not an string schema."), span=span, ctx=node.ctx)
+			anythingKey = None
 
 	schemaInherits = []
 	for inherit in inherits:
@@ -516,6 +527,7 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[StructureData
 
 	objectSchema.properties = tuple(schemaProps)
 	objectSchema.inherits = tuple(schemaInherits)
+	objectSchema.anythingKey = anythingKey
 	yield objectSchema
 	objectSchema.finish()
 	for finisher in finishers:

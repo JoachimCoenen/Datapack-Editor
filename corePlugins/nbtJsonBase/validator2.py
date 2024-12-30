@@ -141,7 +141,7 @@ def validateObjectNode(data: StructureDataNode, schema: ObjectSchema, *, errorsI
 		else:
 			validatedProps.add(name)
 
-		prop_schema, value_schema = schema.getSchemaForPropAndVal(name, data)
+		key_schema, prop_schema, value_schema = schema.getSchemaForPropAndVal(name, data)
 		isUnknownProp = prop_schema is None or value_schema is None
 		if isUnknownProp:
 			msg = UNKNOWN_PROPERTY_MSG.format(name)
@@ -161,6 +161,9 @@ def validateObjectNode(data: StructureDataNode, schema: ObjectSchema, *, errorsI
 		if prop_schema.deprecated:
 			msg = DEPRECATED_PROPERTY_MSG.format(prop.key.data)
 			errorsIO.append(SemanticsError(msg, prop.key.span, style='warning'))
+
+		if key_schema is not None:
+			validateStringNode(prop.key, key_schema, errorsIO=errorsIO)
 
 		validateStructure(prop.value, errorsIO)
 
