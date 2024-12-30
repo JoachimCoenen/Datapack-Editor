@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -11,6 +12,7 @@ from .core import *
 from .context import structureStringContext, StringNodeContext, getStringNodeContext
 from .schemaStore import STRUCTURE_SCHEMA_LOADER
 from .schemaBuilder import SchemaLibrary
+from .structureReader import SchemaTemplate, TemplateParam
 
 INVALID_NUMBER_MSG = Message("Invalid number `{0}`", 1)
 
@@ -122,6 +124,14 @@ class LibPathStrContext(StringNodeContext):
 			getSession().tryOpenOrSelectDocument(node.parsedValue[1])
 
 
+@dataclass
+class TmplRefStrValue:
+	definition: StructureDataSchema | SchemaTemplate | ObjectNode | None
+	tree: StructureNode
+	libraryFilePath: FilePath | None
+	dirPath: FilePath
+
+
 @structureStringContext(DPE_DEF_REF.name, propKey='$definitions', libraryAttr='definitions', unknownMsg="definition")
 @structureStringContext(DPE_TMPL_REF.name, propKey='$templates', libraryAttr='templates', unknownMsg="template")
 @dataclass
@@ -130,7 +140,7 @@ class TmplRefStrContext(StringNodeContext):
 	libraryAttr: str
 	unknownMsg: str
 
-	def prepare(self, node: StringNode, info: CtxInfo[StringNode], errorsIO: list[GeneralError]) -> None:
+	def prepare(self, node: StringNode, info: CtxInfo[StructureNode], errorsIO: list[GeneralError]) -> None:
 		dirPath = dirFromFilePath(info.filePath)
 		data = node.data
 		tree = info.ctxProvider.tree
@@ -147,18 +157,18 @@ class TmplRefStrContext(StringNodeContext):
 		else:
 			definition = resolvePath(tree, (self.propKey, data))
 			libraryFilePath = info.filePath
-		node.parsedValue = definition, tree, libraryFilePath, dirPath
+		node.parsedValue = TmplRefStrValue(definition, tree, libraryFilePath, dirPath)
 
 	def validate(self, node: StringNode, errorsIO: list[GeneralError]) -> None:
-		if node.parsedValue is None or node.parsedValue[0] is None:
+		if not isinstance(node.parsedValue, TmplRefStrValue) or node.parsedValue.definition is None:
 			errorsIO.append(SemanticsError(UNKNOWN_MSG.format(self.unknownMsg, node.data), node.span))
 		else:
 			pass
 
 	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:
-		if node.parsedValue is None:
+		if not isinstance(node.parsedValue, TmplRefStrValue):
 			return []
-		tree = node.parsedValue[1]
+		tree = node.parsedValue.tree
 		definitions = resolvePath(tree, (self.propKey,))
 		if not isinstance(definitions, ObjectNode):
 			definitions = []
@@ -168,7 +178,7 @@ class TmplRefStrContext(StringNodeContext):
 		libraries = resolvePath(tree, ("$libraries",))
 		if not isinstance(libraries, ObjectNode):
 			return definitions
-		dirPath = node.parsedValue[3]
+		dirPath = node.parsedValue.dirPath
 		for ns, prop in libraries.data.items():
 			if isinstance(prop.value.data, str):
 				# definition, tree, libraryFilePath, dirPath
@@ -178,28 +188,93 @@ class TmplRefStrContext(StringNodeContext):
 		return definitions
 
 	def getDocumentation(self, node: StringNode, pos: Position) -> MDStr:
-		if node.parsedValue is None or node.parsedValue[0] is None:
+		if not isinstance(node.parsedValue, TmplRefStrValue) or (definition := node.parsedValue.definition) is None:
 			return MDStr('')
 
-		description = resolvePath(node.parsedValue[0], ("description",))
-		if isinstance(description, StringNode):
-			description = MDStr(description.data)
+		if isinstance(definition, StructureNode):
+			description = resolvePath(definition, ("description",))
 		else:
-			description = MDStr('')
+			description = node.parsedValue.definition.description
 
 		docs = [
 			super().getDocumentation(node, pos),
 			description
-		] if node.parsedValue is not None else []
+		] if description is not None else []
 		return MDStr('\n\n'.join(docs))
 
 	def getClickableRanges(self, node: StringNode) -> Iterable[Span] | None:
-		if node.parsedValue is not None and node.parsedValue[0] is not None:
+		if isinstance(node.parsedValue, TmplRefStrValue) and node.parsedValue.definition is not None:
 			return (node.span,)
 
 	def onIndicatorClicked(self, node: StringNode, pos: Position) -> None:
-		if node.parsedValue is not None and node.parsedValue[0] is not None:
-			getSession().tryOpenOrSelectDocument(node.parsedValue[2], Span(node.parsedValue[0].span.start))
+		if isinstance(node.parsedValue, TmplRefStrValue) and node.parsedValue.definition is not None:
+			getSession().tryOpenOrSelectDocument(node.parsedValue.libraryFilePath, Span(node.parsedValue.definition.span.start))
+
+
+@structureStringContext(DPE_TMPL_REF_ARG_KEYS.name)
+@dataclass
+class TmplRefStrArgKeysContext(StringNodeContext):
+
+	def _getTmplRefStrValue(self, node: StringNode) -> TmplRefStrValue | None:
+		if isinstance(parent := node.parent, ObjectNode):
+			if isinstance(refNode := parent.getValue('$ref'), StringNode):
+				if isinstance(tmplRefStrValue := refNode.parsedValue, TmplRefStrValue):
+					return tmplRefStrValue
+		return None
+
+	def _makeTemplateParam(self, name: str, node: StructureNode, span: Span) -> TemplateParam:
+		type_ = resolvePath(node, ('type',))
+		description = resolvePath(node, ('description',))
+		default = resolvePath(node, ('default',))
+		return TemplateParam(name, type_, description, default, span)
+
+	def _getTemplate(self, node: StringNode) -> SchemaTemplate | ObjectNode | None:
+		if (tmplRefStrValue := self._getTmplRefStrValue(node)) is not None:
+			if isinstance(definition := tmplRefStrValue.definition, SchemaTemplate):
+				return definition
+			elif isinstance(definition, ObjectNode):
+				paramsNode = resolvePath(definition, ("$params",))
+				if isinstance(paramsNode, ObjectNode):
+					params = {
+						key: self._makeTemplateParam(key, prop.value, prop.key.span)
+						for key, prop in paramsNode.data.items()
+						if prop.value is not None
+					}
+				else:
+					params = {}
+				return SchemaTemplate(MDStr(''), OrderedDict(params), definition, definition.span)
+		return None
+
+	def prepare(self, node: StringNode, info: CtxInfo[StringNode], errorsIO: list[GeneralError]) -> None:
+		pass
+
+	def validate(self, node: StringNode, errorsIO: list[GeneralError]) -> None:
+		if (template := self._getTemplate(node)) is None:
+			return
+		if (param := template.params.get(node.data)) is None:
+			errorsIO.append(SemanticsError(UNKNOWN_MSG.format("argument", node.data), node.span))
+		else:
+			node.parsedValue = param
+
+	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:
+		template = self._getTemplate(node)
+		if template is None:
+			return []
+		return list(template.params.keys())
+
+	def getDocumentation(self, node: StringNode, pos: Position) -> MDStr:
+		if not isinstance(node.parsedValue, TemplateParam):
+			return MDStr('')
+		return node.parsedValue.description
+
+	def getClickableRanges(self, node: StringNode) -> Iterable[Span] | None:
+		if isinstance(node.parsedValue, TemplateParam):
+			return (node.span,)
+
+	def onIndicatorClicked(self, node: StringNode, pos: Position) -> None:
+		if isinstance(node.parsedValue, TemplateParam):
+			if (tmplRefStrValue := self._getTmplRefStrValue(node)) is not None and tmplRefStrValue.definition is not None:
+				getSession().tryOpenOrSelectDocument(tmplRefStrValue.libraryFilePath, Span(node.parsedValue.span.start))
 
 
 ##########################################################################################

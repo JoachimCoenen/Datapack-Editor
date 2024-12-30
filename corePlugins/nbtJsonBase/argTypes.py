@@ -26,6 +26,11 @@ DPE_TMPL_REF = StructureArgType(
 	description=MDStr("a reference to a template in a dpe/json/schema"),
 )
 
+DPE_TMPL_REF_ARG_KEYS = StructureArgType(
+	name='dpe:tmpl_ref_arg_keys',
+	description=MDStr("a the arguments of a template in a dpe/json/schema"),
+)
+
 DPE_STRUCTURE_ARG_TYPE = StructureArgType(
 	name='dpe:json_arg_type',
 	description=MDStr("name of a StructureArgType"),
@@ -47,6 +52,7 @@ __all__ = [
 	'DPE_URL',
 	'DPE_DEF_REF',
 	'DPE_TMPL_REF',
+	'DPE_TMPL_REF_ARG_KEYS',
 	'DPE_STRUCTURE_ARG_TYPE',
 	'DPE_LIB_PATH',
 ]

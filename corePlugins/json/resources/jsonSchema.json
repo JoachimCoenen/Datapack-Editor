@@ -96,7 +96,8 @@
 						"properties": {
 							"$ref": { "$type": "string", "type": "dpe:tmpl_ref" }
 						},
-						"default-property": { "$type": "any" } // todo add calculated properties for params.
+						"default-property": { "$type": "any" }, // todo add calculated properties for params.
+						"default-key": { "$type": "string", "type": "dpe:tmpl_ref_arg_keys" }
 					}
 				]
 			}

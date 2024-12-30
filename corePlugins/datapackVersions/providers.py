@@ -37,7 +37,7 @@ def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[ObjectSche
 def propertiesFor_block_state_property(parent: ObjectNode) -> Optional[ObjectSchema]:
 	blockVal = parent.data.get('block', None)
 	if blockVal is None:
-		blockVal = parent.data.get('Name', None)  # for data_components-library.json/block_state
+		blockVal = parent.data.get('Name', None)  # for utils-library.json/block_state
 	if blockVal is None or not isinstance(blockVal.value, StringNode):
 		return ObjectSchema(properties=[], allowMultilineStr=None).finish()
 	else:
@@ -82,34 +82,6 @@ def propertiesFor_item_stack_components(parent: ObjectNode) -> Optional[ObjectSc
 
 def propertiesFor_removable_item_stack_components(parent: ObjectNode) -> Optional[ObjectSchema]:
 	return _propertiesFor_item_stack_components(parent, removable=True)
-
-
-def _getTemplate(library: ObjectNode, name: str) -> Optional[ObjectNode]:
-	templatesProp = library.data.get('$templates')
-
-	if templatesProp is None or not isinstance(templatesProp.value, ObjectNode):
-		return None
-	templateProp = templatesProp.value.data.get(name)
-	if templateProp is None or not isinstance(templateProp.value, ObjectNode):
-		return None
-	return templateProp.value
-
-
-# def propertiesFor_ref(stack: list[JsonData]) -> Optional[ObjectSchema]:
-#
-# 	library = stack[-1]
-# 	if isinstance(stack[-1], ObjectNode):
-# 		if isinstance(library, ObjectNode):
-#
-# 			template = _getTemplate(library, name)
-#
-# 	blockVal = parent.data.get('block', None)
-# 	if blockVal is None or not isinstance(blockVal.value, JsonString):
-# 		return ObjectSchema(properties=[])
-# 	else:
-# 		block = blockVal.value.data
-# 		block = ResourceLocation.fromString(block)
-# 		return _propertiesFromBlockStates(block)
 
 
 def init() -> None:
