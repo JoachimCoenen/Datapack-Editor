@@ -1,8 +1,7 @@
 {
   "$schema": "dpe/json/schema/library",
   "$libraries": {
-    "utils": "../common/utils-library.json",
-    "data_components": "data_components-library.json"
+    "utils": "../common/utils-library.json"
   },
   "$templates": {
     
@@ -37,8 +36,8 @@
         "block_state": {
           "$type": "union",
           "options": [
-            {"$ref": "utils:resourceLocationString", "schema": "block", "allowTags": false },
-            { "$defRef": "data_components:block_state" }
+            {"$ref": "utils:resource_location", "schema": "block", "allowTags": false },
+            { "$defRef": "utils:block_state" }
           ]
         }
       }
@@ -100,8 +99,8 @@
         "item": {
           "$type": "union",
           "options": [
-            { "$ref": "utils:resourceLocationString", "schema": "item", "allowTags": false },
-            { "$defRef": "data_components:item_stack" }
+            { "$ref": "utils:resource_location", "schema": "item", "allowTags": false },
+            { "$defRef": "utils:item_stack" }
           ]
         }
       }

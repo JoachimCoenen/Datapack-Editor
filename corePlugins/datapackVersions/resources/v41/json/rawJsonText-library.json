@@ -230,7 +230,7 @@
           },
           "storage": {
             "optional": true,
-            "value": {"$ref": "utils:resourceLocationString", "schema": "command_storage", "description": "" },
+            "value": {"$ref": "utils:resource_location", "schema": "command_storage", "description": "" },
             "requires": [ "nbt" ],
             "description": "A string specifying the namespaced ID of the command storage from which the NBT value is obtained. Ignored if `nbt` is not present."
           }
@@ -394,7 +394,7 @@
                     "properties": {
                       "id": {
                         "optional": false,
-                        "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
+                        "value": {"$ref": "utils:resource_location", "schema": "item", "description": "" },
                         "description": "The namespaced item ID. Preset `minecraft:air` if invalid."
                       },
                       "count": {
@@ -430,7 +430,7 @@
                       },
                       "type": {
                         "optional": false,
-                        "value": {"$ref": "utils:resourceLocationString", "schema": "entity_type", "description": "" },
+                        "value": {"$ref": "utils:resource_location", "schema": "entity_type", "description": "" },
                         "description": "A string containing the type of the entity. Should be a namespaced entity ID. Present `minecraft:pig` if invalid."
                       },
                       "name": {

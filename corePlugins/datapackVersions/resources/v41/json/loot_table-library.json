@@ -47,7 +47,7 @@
         },
         
         "random_sequence": {
-          "value": {"$ref": "utils:resourceLocationString", "schema": "any", "description": "" },
+          "value": {"$ref": "utils:resource_location", "schema": "any", "description": "" },
           "optional": true,
           "description": "A resource location specifying the name of the random sequence that will be used to generate loot from this loot table. If only one loot table uses a specific random sequence, the order of the randomized sets of items generated is the same for every world using the same world seed. If multiple loot tables use the same random sequence, the loot generated from any one of them changes depending on how many times and in what order any of the other loot tables were invoked."
         }
@@ -162,8 +162,8 @@
         
         "name": {
           "values": {
-            "item": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
-            "tag": {"$ref": "utils:resourceLocationString", "schema": "item", "onlyTags": true, "description": "" },
+            "item": {"$ref": "utils:resource_location", "schema": "item", "description": "" },
+            "tag": {"$ref": "utils:resource_location", "schema": "item", "onlyTags": true, "description": "" },
             "dynamic": { "$type": "enum", "options": { "contents": "to drop block entity contents.", "sherds": "to drop the sherds of a decorated pot." }, "optionalPrefixes": ["minecraft:"] }
           },
           "optionalPrefixes": ["minecraft:"],
@@ -177,7 +177,7 @@
             "loot_table": {
               "$type": "union",
               "options": [
-                {"$ref": "utils:resourceLocationString", "schema": "loot_table" },
+                {"$ref": "utils:resource_location", "schema": "loot_table" },
                 {"$defRef": "loot_table" }
               ]
             }

@@ -29,7 +29,7 @@
               "properties": {
                 "id": {
                   "optional": false,
-                  "value": {"$ref": "utils:resourceLocationString", "schema": "damage_type", "onlyTags": true }
+                  "value": {"$ref": "utils:resource_location", "schema": "damage_type", "onlyTags": true }
                 },
                 "expected": {
                   "optional": false,

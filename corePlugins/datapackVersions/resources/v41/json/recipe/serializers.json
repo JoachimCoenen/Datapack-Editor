@@ -152,11 +152,8 @@
     },
     
     "%ingredient_options": {
-      "$type": "union",
-      "options": [
-        { "$defRef": "%item_or_tag" },
-        { "$type": "array", "element": { "$defRef": "%item_or_tag" } }
-      ]
+      "$ref": "utils:value_or_array", 
+      "element": { "$defRef": "%item_or_tag" } 
     },
     
     "%item": {
@@ -164,7 +161,7 @@
       "properties": {
         "item": {
           "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
+          "value": {"$ref": "utils:resource_location", "schema": "item", "description": "" },
           "optional": true
         }
       }
@@ -176,7 +173,7 @@
       "properties": {
         "tag": {
           "description": "An [ [Tag#Item tags|item tag] ].",
-          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "onlyTags": true },
+          "value": {"$ref": "utils:resource_location", "schema": "item", "onlyTags": true },
           "optional": true
         }
       }

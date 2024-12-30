@@ -5,8 +5,7 @@
     "predicate": "predicate-library.json",
     "loot_table": "loot_table-library.json",
     "number_provider": "utils/number_provider-library.json",
-    "utils": "../common/utils-library.json",
-    "data_components": "../nbt/data_components-library.json"
+    "utils": "../common/utils-library.json"
   },
   "$templates": {},
   "$definitions": {
@@ -281,7 +280,7 @@
         "components": {
           "description": "A map of components ID to component value. Components with a `!` prefix (e.g. `\"!minecraft:damage\": {}`) causes this component to be removed.",
           "decidingProp": "function",
-          "values": { "set_components": { "$defRef": "data_components:data_components_removable" } },
+          "values": { "set_components": { "$defRef": "utils:data_components_removable" } },
           "optional": true
         },
         "conditions": {
@@ -306,7 +305,7 @@
         }
       }
     },
-    "%enchantment-apply_bonus": {"$ref": "utils:resourceLocationString", "schema": "enchantment", "description": "[[Java_Edition_data_value#Enchantments|ID of an enchantment]] on the tool provided by [[Loot table#Loot context types|loot context]] used for level calculation." },
+    "%enchantment-apply_bonus": {"$ref": "utils:resource_location", "schema": "enchantment", "description": "[[Java_Edition_data_value#Enchantments|ID of an enchantment]] on the tool provided by [[Loot table#Loot context types|loot context]] used for level calculation." },
     "%formula-apply_bonus": {
       "$type": "enum",
       "options": {
@@ -376,7 +375,7 @@
             "source": {
               "description": "Included only if <code>type</code> is set to <code>storage</code>. A [ [resource location] ] specifying the storage ID to copy NBT from. ",
               "decidingProp": "type",
-              "values": { "storage": {"$ref": "utils:resourceLocationString", "schema": "any", "description": "" }},
+              "values": { "storage": {"$ref": "utils:resource_location", "schema": "any", "description": "" }},
               "optionalPrefixes": ["minecraft:"],
               "optional": true
             }
@@ -423,7 +422,7 @@
         }
       }
     },
-    "%block-copy_state": {"$ref": "utils:resourceLocationString", "schema": "block", "description": "A [ [Resource location|block ID] ]. Function fails if the block doesn't match the {{nbt|list|properties}} list." },
+    "%block-copy_state": {"$ref": "utils:resource_location", "schema": "block", "description": "A [ [Resource location|block ID] ]. Function fails if the block doesn't match the {{nbt|list|properties}} list." },
     "%properties-copy_state": {
       "$type": "array",
       "description": "A list of properties to copy.",
@@ -435,7 +434,7 @@
     "%enchantments-enchant_randomly": {
       "$type": "array",
       "description": "Optional. List of [ [Java_Edition_data_value#Enchantments|enchantment IDs] ] to choose from. If omitted, all discoverable enchantments (currently only [ [Soul speed] ] and [ [Swift Sneak] ] are undiscoverable) applicable to the item are possible.",
-      "element": {"$ref": "utils:resourceLocationString", "schema": "enchantment", "description": "Optional. List of [ [Java_Edition_data_value#Enchantments|enchantment IDs] ] to choose from. If omitted, all discoverable enchantments (currently only [ [Soul speed] ] and [ [Swift Sneak] ] are undiscoverable) applicable to the item are possible." }
+      "element": {"$ref": "utils:resource_location", "schema": "enchantment", "description": "Optional. List of [ [Java_Edition_data_value#Enchantments|enchantment IDs] ] to choose from. If omitted, all discoverable enchantments (currently only [ [Soul speed] ] and [ [Swift Sneak] ] are undiscoverable) applicable to the item are possible." }
     },
     "%enchantments-set_enchantments": {
       "$type": "object",
@@ -456,7 +455,7 @@
       "$type": "string",
       "description": "A tag of structure to locate. Defaults to <code>on_treasure_maps</code>."
     },
-    "%decoration-exploration_map": {"$ref": "utils:resourceLocationString", "schema": "map_marker", "description": "The icon used to mark the destination on the map. Accepts any of the [ [Map#Map icons|map icon text IDs] ] (case insensitive). If <code>mansion</code> or <code>monument</code> is used, the color of the lines on the item texture changes to match the corresponding explorer map. Defaults to <code>mansion</code>." },
+    "%decoration-exploration_map": {"$ref": "utils:resource_location", "schema": "map_marker", "description": "The icon used to mark the destination on the map. Accepts any of the [ [Map#Map icons|map icon text IDs] ] (case insensitive). If <code>mansion</code> or <code>monument</code> is used, the color of the lines on the item texture changes to match the corresponding explorer map. Defaults to <code>mansion</code>." },
     "%zoom-exploration_map": {
       "$type": "integer",
       "description": "The zoom level of the resulting map. Defaults to 2."
@@ -534,7 +533,7 @@
         }
       ]
     },
-    "%name-set_loot_table": {"$ref": "utils:resourceLocationString", "schema": "loot_table", "description": "Specifies the [ [resource location] ] of the loot table to be used." },
+    "%name-set_loot_table": {"$ref": "utils:resource_location", "schema": "loot_table", "description": "Specifies the [ [resource location] ] of the loot table to be used." },
     "%name-set_name": {
       "$type": "union",
       "description": "A [ [Raw JSON text format|JSON text component] ], overwriting the previous custom name on the item. Components requiring [ [Raw_JSON_text_format#Component_resolution|resolution] ] are resolved only if <code>entity</code> successfully targets an entity.",
@@ -660,7 +659,7 @@
       "$type": "boolean",
       "description": "Optional. If <code>true</code>, change will be relative to current level. A nonexistent enchantment will be presumed to start at 0. Defaults to false."
     },
-    "%options-set_instrument": {"$ref": "utils:resourceLocationString", "schema": "instrument", "description": "The resource location started with <code>#</code> of an instrument [ [tag] ], one of the listings is selected randomly." },
+    "%options-set_instrument": {"$ref": "utils:resource_location", "schema": "instrument", "description": "The resource location started with <code>#</code> of an instrument [ [tag] ], one of the listings is selected randomly." },
     "%seed-set_loot_table": {
       "$type": "integer",
       "description": "Optional. Specifies the loot table seed. If absent or set to 0, the seed won't be put into the NBT, and a random seed will be used when opening the continer."
@@ -674,7 +673,7 @@
       "description": "The NBT to merge onto the item's <code>tag</code> tag, within a JSON string. The outer braces <code>{ }</code> of the NBT must be present within this JSON string. Additional care is required when the NBT contains quotation marks <code>\"</code>, as they must be escaped from the JSON syntax with a backslash <code>\\</code>.",
       "type": "minecraft:nbt_compound_tag"
     },
-    "%id-set_potion": {"$ref": "utils:resourceLocationString", "schema": "potion", "description": "The [ [Potion#Java_Edition|potion ID] ]. Set to <code>empty</code> to remove the <code>Potion</code> tag." },
+    "%id-set_potion": {"$ref": "utils:resource_location", "schema": "potion", "description": "The [ [Potion#Java_Edition|potion ID] ]. Set to <code>empty</code> to remove the <code>Potion</code> tag." },
     "%effects-set_stew_effect": {
       "$type": "array",
       "description": "The effects to apply.",
@@ -698,12 +697,12 @@
     "%include-copy_components": {
       "$type": "array",
       "description": "A list of components to include. If omitted, all components are copied.",
-      "element": {"$ref": "utils:resourceLocationString", "schema": "item_components"}
+      "element": {"$ref": "utils:resource_location", "schema": "item_components"}
     },
     "%exclude-copy_components": {
       "$type": "array",
       "description": "A list of components to exclude.",
-      "element": {"$ref": "utils:resourceLocationString", "schema": "item_components"}
+      "element": {"$ref": "utils:resource_location", "schema": "item_components"}
     }
   }
 }

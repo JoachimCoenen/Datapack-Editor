@@ -28,13 +28,13 @@
               "element": {
                 "$type": "union",
                 "options": [
-                  {"$ref": "utils:resourceLocationString", "schema": { "$ref": "#schema"}, "allowTags": true },
+                  {"$ref": "utils:resource_location", "schema": { "$ref": "#schema"}, "allowTags": true },
                   {
                     "$type": "object",
                     "properties": {
                       "id": {
                         "optional": false,
-                        "value": {"$ref": "utils:resourceLocationString", "schema": { "$ref": "#schema"}, "allowTags": true },
+                        "value": {"$ref": "utils:resource_location", "schema": { "$ref": "#schema"}, "allowTags": true },
                         "description": "A string in one of the string formats above."
                       },
                       "required": {

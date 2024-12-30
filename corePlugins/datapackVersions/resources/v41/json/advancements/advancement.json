@@ -30,7 +30,7 @@
                   "properties": {
                     "item": {
                       "description": "The item's [ [Resource location|ID] ].",
-                      "value": {"$ref": "utils:resourceLocationString", "schema": "item" }
+                      "value": {"$ref": "utils:resource_location", "schema": "item" }
                     },
                     "nbt": {
                       "description": "A string containing [ [NBT format#SNBT_format|SNBT] ] that may modify the item's appearance on the icon.",
@@ -511,7 +511,7 @@
                 "description": "To unlock [ [recipe] ]s.",
                 "value": {
                   "$type": "array",
-                  "element": {"$ref": "utils:resourceLocationString", "schema": "recipe" }
+                  "element": {"$ref": "utils:resource_location", "schema": "recipe" }
                 },
                 "optional": true
               },
@@ -519,7 +519,7 @@
                 "description": "To give items from [ [loot table] ]s to the player.",
                 "value": {
                   "$type": "array",
-                  "element": {"$ref": "utils:resourceLocationString", "schema": "loot_table" }
+                  "element": {"$ref": "utils:resource_location", "schema": "loot_table" }
                 },
                 "optional": true
               },
@@ -531,7 +531,7 @@
               },
               "function": {
                 "description": "To run a [ [Function (Java Edition)|function] ]. [ [Tag#Function Tags|Function tags] ] are not allowed.",
-                "value": {"$ref": "utils:resourceLocationString", "schema": "functions" },
+                "value": {"$ref": "utils:resource_location", "schema": "functions" },
                 "optional": true
               }
             }
@@ -574,7 +574,7 @@
       "$type": "string",
       "description": "Checks the block that was destroyed. Accepts block IDs."
     },
-    "%block-enter_block": {"$ref": "utils:resourceLocationString", "schema": "block", "description": "The block that the player is standing in. Accepts [ [Data values#Block IDs|block ID] ]s." },
+    "%block-enter_block": {"$ref": "utils:resource_location", "schema": "block", "description": "The block that the player is standing in. Accepts [ [Data values#Block IDs|block ID] ]s." },
     "%block-slide_down_block": {
       "$type": "string",
       "description": "The block that the player slid on."
@@ -678,9 +678,9 @@
         }
       ]
     },
-    "%potion-brewed_potion": {"$ref": "utils:resourceLocationString", "schema": "potion", "description": "A [ [Potion#Item data|brewed potion ID] ]." },
-    "%from-changed_dimension": {"$ref": "utils:resourceLocationString", "schema": "dimension", "description": "The dimension the entity traveled from. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
-    "%to-changed_dimension": {"$ref": "utils:resourceLocationString", "schema": "dimension", "description": "The dimension the entity traveled to. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
+    "%potion-brewed_potion": {"$ref": "utils:resource_location", "schema": "potion", "description": "A [ [Potion#Item data|brewed potion ID] ]." },
+    "%from-changed_dimension": {"$ref": "utils:resource_location", "schema": "dimension", "description": "The dimension the entity traveled from. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
+    "%to-changed_dimension": {"$ref": "utils:resource_location", "schema": "dimension", "description": "The dimension the entity traveled to. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
     "%victims-channeled_lightning": {
       "$type": "array",
       "description": "The victims hit by the lightning summoned by the Channeling enchantment. All entities in this list must be hit.",

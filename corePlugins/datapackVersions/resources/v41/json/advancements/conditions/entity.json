@@ -186,10 +186,7 @@
         },
         "type": {
           "optional": true,
-          "value": { 
-            "$ref": "utils:value_or_array",
-            "element": {"$ref": "utils:resourceLocationString", "schema": "entity_type", "allowTags": true }
-          },
+          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "entity_type"},
           "description": "Test this entity's type. Accepts an [ [Data values/Entity IDs|entity ID] ]."
         },
         "targeted_entity": {

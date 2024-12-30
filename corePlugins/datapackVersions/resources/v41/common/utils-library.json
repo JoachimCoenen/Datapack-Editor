@@ -1,9 +1,11 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": {},
+  "$libraries": {
+    "nbt": "nbt-types.json"
+  },
   
   "$templates": {
-    "resourceLocationString": {
+    "resource_location": {
       "$params": {
         "schema": { "type": "string" },
         "allowTags": { "type": "boolean", "default": false },
@@ -15,6 +17,24 @@
         "type": "minecraft:resource_location",
         "args": { "schema": { "$ref": "#schema" }, "allowTags": { "$ref": "#allowTags" }, "onlyTags": { "$ref": "#onlyTags" } },
         "description": { "$ref": "#description" }
+      }
+    },
+
+    "resource_location_or_tag_or_list": {
+      "$params": {
+        "schema": { "type": "string" },
+        "description": { "type": "string", "default": "A resource location in the form `namespace:path`, a resource tag or a list if resource locations." }
+      },
+      "$body": { 
+        "$type": "union",
+        "options": [
+          {"$ref": "resource_location", "schema": {"$ref": "#schema"}, "allowTags": true, "description": {"$ref": "#description"}},
+          {
+            "$type": "array",
+            "element": {"$ref": "resource_location", "schema": {"$ref": "#schema"}}  // no tags allowed.
+          }
+        ],
+        "description": {"$ref": "#description"}
       }
     },
 
@@ -48,6 +68,66 @@
       "minCount": 3,
       "maxCount": 3,
       "description": "The block position. [X, Y, Z]"
+    },
+
+    "data_components": {
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_item_stack_components"
+    },
+
+    "data_components_removable": { // can be prefixed with a '!'.
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_removable_item_stack_components"
+    },
+
+    "block_state": {
+      "$type": "object",
+      "properties": {
+        "Name": {"$ref": "resource_location", "schema": "block", "allowTags": false },
+        "Properties": {
+          "optional": true,
+          "value": {
+            "$type": "calculated",
+            "function": "corePlugins.datapackVersions.providers.propertiesFor_block_state_property",
+            "description": "Block state property key-value pair. The property must be possessed by the specified block."
+          }
+        }
+      }
+    },
+
+    "item_stack": { // corresponds to "Item format/ItemNoCount" in wiki
+      "$type": "object",
+      "properties": {
+        "id": {"$ref": "resource_location", "schema": "item", "allowTags": false },
+        "components": {
+          "optional": true,
+          "value": { "$defRef": "data_components" }
+        }
+      }
+    },
+
+    "item_stack_with_count": { // corresponds to "Item format/ItemNoSlot" in wiki
+      "$type": "object",
+      "inherits": [ {"defRef": "item_stack"} ],
+      "properties": {
+        "count": {
+          "optional": true,
+          "value": { "$type": "integer", "min": 0 },
+          "default": 1,
+          "description": "Optional. The amount of the item. Falls back to 1 if the field is absent."
+        }
+      }
+    },
+
+    "item_stack_with_slot": { // corresponds to "Item format/Item" in wiki. has both dlot and count.
+      "$type": "object",
+      "inherits": [ {"defRef": "item_stack_with_count"} ],
+      "properties": {
+        "slot": {
+          "value": { "$defRef": "nbt:byte" } // investigate: is this also true for json, or is minecraft:item_slot used?
+        }
+      }
     }
+    
   }
 }

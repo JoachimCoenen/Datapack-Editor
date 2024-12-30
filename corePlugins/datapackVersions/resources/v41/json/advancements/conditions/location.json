@@ -10,10 +10,7 @@
       "properties": {
         "biomes": {
           "optional": true,
-          "value": { 
-            "$ref": "utils:value_or_array",
-            "element": {"$ref": "utils:resourceLocationString", "schema": "worldgen/biome", "allowTags": true }
-          },
+          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "worldgen/biome"},
           "description": "The biome the entity is currently in. This tag is a [ [resource location] ] for a biome (see [ [Biome#Biome IDs] ] for the ones used in vanilla)."
         },
         "block": {
@@ -23,10 +20,7 @@
             "properties": {
               "blocks": {
                 "optional": true,
-                "value": { 
-                  "$ref": "utils:value_or_array",
-                  "element": {"$ref": "utils:resourceLocationString", "schema": "block", "allowTags": true }
-                },
+                "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "block"},
                 "description": "A list of [ [Java Edition data values#Blocks|block IDs] ]."
               },
               "nbt": {
@@ -82,10 +76,7 @@
             "properties": {
               "fluids": {
                 "optional": true,
-                "value": { 
-                  "$ref": "utils:value_or_array",
-                  "element": {"$ref": "utils:resourceLocationString", "schema": "fluid", "allowTags": true }
-                },
+                "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "fluid"},
                 "description": "The [ [Java Edition data values#Fluids|fluid ID] ]."
               },
               "state": {
@@ -164,10 +155,7 @@
         },
         "structures": {
           "optional": true,
-          "value": { 
-            "$ref": "utils:value_or_array",
-            "element": {"$ref": "utils:resourceLocationString", "schema": "worldgen/structure", "allowTags": true }
-          },
+          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "worldgen/structure"},
           "description": "The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
         }
       }

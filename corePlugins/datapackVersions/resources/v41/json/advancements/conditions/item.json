@@ -2,8 +2,7 @@
   "$schema": "dpe/json/schema/library",
   "$libraries": {
     "base": "_base.json",
-    "utils": "../../../common/utils-library.json",
-    "data_components": "../../../nbt/data_components-library.json"
+    "utils": "../../../common/utils-library.json"
   },
   "$definitions": {
     "item": {
@@ -28,7 +27,7 @@
               "properties": {
                 "enchantment": {
                   "optional": true,
-                  "value": {"$ref": "utils:resourceLocationString", "schema": "enchantment" },
+                  "value": {"$ref": "utils:resource_location", "schema": "enchantment" },
                   "description": "An [ [Java Edition data values#Enchantments|enchantment ID] ]."
                 },
                 "levels": {
@@ -50,7 +49,7 @@
               "properties": {
                 "enchantment": {
                   "optional": true,
-                  "value": {"$ref": "utils:resourceLocationString", "schema": "enchantment" },
+                  "value": {"$ref": "utils:resource_location", "schema": "enchantment" },
                   "description": "An [ [Java Edition data values#Enchantments|enchantment ID] ]."
                 },
                 "levels": {
@@ -65,15 +64,12 @@
         },
         "items": {
           "optional": true,
-          "value": { 
-            "$ref": "utils:value_or_array",
-            "element": {"$ref": "utils:resourceLocationString", "schema": "item", "allowTags": true }
-          },
+          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "item"},
           "description": "A list of [ [Java Edition data values#Items|item IDs] ]."
         },
         "components": {
           "optional": true,
-          "value": { "$defRef": "data_components:data_components" },
+          "value": { "$defRef": "utils:data_components" },
           "description": "Matches exact item component values. Each key in this object corresponds to a component to test, with its value as the desired data to compare."
         },
         "custom_data": {
@@ -86,10 +82,7 @@
         },
         "potions": {
           "optional": true,
-          "value": { 
-            "$ref": "utils:value_or_array",
-            "element": {"$ref": "utils:resourceLocationString", "schema": "potion", "allowTags": true }
-          },
+          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "potion"},
           "description": "A [ [Potion#Item data|brewed potion ID] ]."
         }
       }
