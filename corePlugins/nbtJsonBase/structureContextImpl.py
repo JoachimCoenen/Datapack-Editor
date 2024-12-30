@@ -277,6 +277,16 @@ class TmplRefStrArgKeysContext(StringNodeContext):
 				getSession().tryOpenOrSelectDocument(tmplRefStrValue.libraryFilePath, Span(node.parsedValue.span.start))
 
 
+@structureStringContext(DPE_MARKDOWN.name)
+class MarkdownStrContext(StringNodeContext):
+
+	def prepare(self, node: StringNode, info: CtxInfo[StringNode], errorsIO: list[GeneralError]) -> None:
+		pass
+
+	def validate(self, node: StringNode, errorsIO: list[GeneralError]) -> None:
+		pass
+
+
 ##########################################################################################
 ################## Providers for calculated schemas in jsonSchema.json ###################
 ##########################################################################################

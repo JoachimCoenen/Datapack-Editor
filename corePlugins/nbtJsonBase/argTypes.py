@@ -41,6 +41,11 @@ DPE_LIB_PATH = StructureArgType(
 	description=MDStr("relative path to a schema library"),
 )
 
+DPE_MARKDOWN = StructureArgType(
+	name='markdown',
+	description=MDStr("a markdown formatted string"),
+)
+
 
 def init() -> None:
 	pass
@@ -55,4 +60,5 @@ __all__ = [
 	'DPE_TMPL_REF_ARG_KEYS',
 	'DPE_STRUCTURE_ARG_TYPE',
 	'DPE_LIB_PATH',
+	'DPE_MARKDOWN',
 ]

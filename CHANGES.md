@@ -11,6 +11,7 @@
    * Schemas can now be specified using both JSON or SNBT.
    * Object schemas with a `"default-property"` can now also specify a `"default-key"` schema.
    * Added suggestions for arguments of templates in schema definitions. 
+   * Finally added `markdown` StructureArgType. 
 
 ### Fixes
  * Fixed crash when attempting to load project with a datapack version that is not supported.
