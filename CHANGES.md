@@ -12,6 +12,7 @@
    * Object schemas with a `"default-property"` can now also specify a `"default-key"` schema.
    * Added suggestions for arguments of templates in schema definitions. 
    * Finally added `markdown` StructureArgType. 
+   * Improved suggestions quality for property definitions in schema files. 
 
 ### Fixes
  * Fixed crash when attempting to load project with a datapack version that is not supported.

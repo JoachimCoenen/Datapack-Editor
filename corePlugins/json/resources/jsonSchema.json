@@ -336,6 +336,7 @@
 		
 		"property": {
 			"$type": "object",
+			"defining-properties": ["value", "values"],
 			"properties": {
 				"description": { "$ref": "descriptionProp" },
 				"deprecated": { "$ref": "deprecatedProp" },
@@ -398,8 +399,8 @@
 		"propertyOrSchemaOrRef": {
 			"$type": "union",
 			"options": [
-				{ "$defRef": "property" },
-				{ "$defRef": "schemaOrRef" }
+				{ "$defRef": "schemaOrRef" },
+				{ "$defRef": "property" }
 			]
 		},
 		
