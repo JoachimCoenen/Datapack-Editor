@@ -16,7 +16,6 @@ from corePlugins.mcFunction.commandContext import getArgumentContext
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocationSchema, getAllKnownResourceLocationContexts
 from .argTypes import *
-from .commands.argumentTypes import *
 from corePlugins.nbtJsonBase.core import *
 
 
@@ -108,14 +107,15 @@ class CommandJsonStrContext(ParsingStructureCtx):
 
 @structureStringContext(MINECRAFT_SCORE_HOLDER.name, argType=MINECRAFT_SCORE_HOLDER)
 @structureStringContext(MINECRAFT_OBJECTIVE.name, argType=MINECRAFT_OBJECTIVE)
-@structureStringContext('minecraft:target_selector', argType=MINECRAFT_ENTITY)  # for now
+@structureStringContext(MINECRAFT_TARGET_SELECTOR.name, argType=MINECRAFT_TARGET_SELECTOR)  # for now
 @structureStringContext(MINECRAFT_BLOCK_POS.name, argType=MINECRAFT_BLOCK_POS)
 @structureStringContext(MINECRAFT_COLOR.name, argType=MINECRAFT_COLOR)
+@structureStringContext(MINECRAFT_ITEM_SLOTS.name, argType=MINECRAFT_ITEM_SLOTS)
 @structureStringContext(MINECRAFT_UUID.name, argType=MINECRAFT_UUID)
 class McFunctionArgumentContextAdaptor(ParsingStructureCtx, ABC):
 
-	def __init__(self, *, argType: ArgumentType):
-		self.argType: ArgumentType = argType
+	def __init__(self, *, argType: StructureArgType):
+		self.argType: ArgumentType = argType.commandArgumentType
 
 	def getSchema(self, node: JsonString) -> Optional[Schema]:
 		raise NotImplemented()  # we don't need this

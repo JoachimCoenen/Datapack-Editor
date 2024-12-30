@@ -15,8 +15,8 @@
           "optional": true
         },
         "result": {
-          "description": "An [ [Java Edition data values#Items|item ID] ]. The output item of the recipe.",
-          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
+          "value": { "$defRef": "utils:item_stack" },
+          "description": "The output item of the recipe.",
           "optional": false
         },
         "experience": {
@@ -54,7 +54,8 @@
           "optional": true
         },
         "result": {
-          "value": { "$defRef": "%result-crafting_shaped" },
+          "value": { "$defRef": "utils:item_stack_with_count" },
+          "description": "The output item of the recipe.",
           "optional": false
         }
       }
@@ -68,7 +69,8 @@
           "optional": true
         },
         "result": {
-          "value": { "$defRef": "%result-crafting_shaped" },
+          "value": { "$defRef": "utils:item_stack_with_count" },
+          "description": "The output item of the recipe.",
           "optional": false
         }
       }
@@ -85,7 +87,7 @@
       "inherits": [{ "defRef": "%smithing_base" }],
       "properties": {
         "result": {
-          "value": { "$defRef": "%item" },
+          "value": { "$defRef": "utils:item_stack_with_count" },
           "optional": false,
           "description": "Item specifying the resulting upgraded item."
         }
@@ -121,31 +123,8 @@
           "optional": false
         },
         "result": {
-          "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
-          "optional": false
-        },
-        "count": {
-          "description": "Optional. The amount of the item. Falls back to 1 if the field is absent.",
-          "value": { "$type": "integer" },
-          "optional": false
-        }
-      }
-    },
-    
-    "%result-crafting_shaped": {
-      "$type": "object",
-      "description": "The output item of the recipe.",
-      "properties": {
-        "count": {
-          "description": "Optional. The amount of the item. Falls back to 1 if the field is absent.",
-          "value": { "$type": "integer" },
-          "optional": true,
-          "default": 1
-        },
-        "item": {
-          "description": "An [ [Java Edition data values#Items|item ID] ].",
-          "value": {"$ref": "utils:resourceLocationString", "schema": "item", "description": "" },
+          "value": { "$defRef": "utils:item_stack_with_count" },
+          "description": "The output item of the recipe.",
           "optional": false
         }
       }
