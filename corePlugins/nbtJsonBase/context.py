@@ -431,6 +431,7 @@ class ParsingStructureCtx(StringNodeContext, ABC):
 			cursor=0,
 			cursorOffset=node.indexMapper.toDecoded(node.span.start.index) + 1,  # + 1 in order to skip the quotation marks
 			indexMapper=node.indexMapper,
+			fullSource=info.ctxProvider.text,
 			**self.getParserKwArgs(node)
 		)
 		errorsIO.extend(errors)

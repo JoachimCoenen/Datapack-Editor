@@ -188,8 +188,8 @@ def parseFilterArgsLike(
 	checkMinArgumentCount(arguments, options, sr, errorsIO)
 
 	argsSpan = sr.currentSpan
-	startC = argsSpan.start.column
-	endC = argsSpan.end.column
+	startC = sr.lastCursors[-1]
+	endC = sr.cursor
 	if startC != endC:  # if we have filter args specified:
 		assert sr.text[startC] == options.openingOrd, f"start mismatch: {sr.text[startC:endC]=!r}, {chr(options.openingOrd)=!r}"
 

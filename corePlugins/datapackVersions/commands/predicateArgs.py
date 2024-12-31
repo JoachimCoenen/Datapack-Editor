@@ -226,6 +226,7 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 			cursor=self.cursor,
 			cursorOffset=self.cursorOffset,
 			indexMapper=self.indexMapper,
+			fullSource=self.fullSource,
 			**kwargs
 		)
 		self.errors.extend(errors)
@@ -243,7 +244,9 @@ class Match2[T: Node]:
 
 
 def _getAnyChildNodes(node: Node) -> Sequence[Node]:
-	return node.children or node.foreignNodes
+	if isinstance(node, PredicateArgNode):
+		return node.children or node.foreignNodes
+	return ()
 
 
 def _collectBeforeMatches(node: Node, match: Match2) -> None:
@@ -281,10 +284,9 @@ def _getBestMatchInChildren2(children: Sequence[Node | None], pos: Position, mat
 
 def _getBestMatchInNode2(node: Node, pos: Position, match: Match2) -> None:
 	match.hit.append(node)
-	if (children := node.children) or (children := node.foreignNodes):
-		_getBestMatchInChildren2(children, pos, match)
-	else:
-		match.hit.append(node)
+	if isinstance(node, PredicateArgNode):
+		if (children := node.children) or (children := node.foreignNodes):
+			_getBestMatchInChildren2(children, pos, match)
 
 
 def _getBestMatch2(node: Node, pos: Position) -> Match2[Node]:
