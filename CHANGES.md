@@ -1,7 +1,9 @@
 ## Next Version
 ### Features
- * Added support for validation and code suggestions in SNBT. JSON schemas are used. 
- * Added validation and code suggestions for particle configuration tags.
+ * Added support for validation, code suggestions, and inline documentation in SNBT. JSON schemas are used. 
+ * Added validation, code suggestions, and inline documentation for particle configuration tags.
+ * Added validation, code suggestions, and inline documentation for item sub-predicates (in JSON, SNBT and MCFunction).
+ * Added syntax validation for data components.
 
 ### Improvements
  * Exceptions when collecting suggestions for autocompletion no longer crash the entire application.
@@ -22,6 +24,7 @@
  * Fixed app crashing with `Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= style.Length())] ...` when deleting multiple lines from a document, while scrolled to the very bottom.
  * Fixed JSON parsing failing when the function for a calculated schema cannot be found.
  * Fixed wrong code suggestions in JSON files when inside an unclosed array and the cursor is after the last element, but doesn't touch it.
+ * Fixed missing error message when a resource tag is used where only resource locations are allowed.
 
 
 ## 0.8.6-alpha
