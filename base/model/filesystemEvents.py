@@ -98,9 +98,9 @@ class FilesystemObserver:
 				event_handler = _CombinedEventHandler(path, self._handlers)
 				self.__observer.schedule(event_handler, path, recursive=True)
 			except FileNotFoundError as e:
-				logDebug(e)
+				logDebug(e, f"'{path=}'", "while trying to schedule a FileSystemEventHandler", includeTraceback=False)
 			except OSError as e:
-				logInfo(e)
+				logInfo(e, f"'{path=}'", "while trying to schedule a FileSystemEventHandler", includeTraceback=False)
 
 	def _unschedule(self, handlerId: str, path: str):
 		handler = self._handlers.pop(handlerId, path)
