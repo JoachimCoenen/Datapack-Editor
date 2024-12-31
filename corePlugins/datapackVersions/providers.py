@@ -1,8 +1,10 @@
 from typing import Optional
 
-from base.model.utils import MDStr
+from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
+from base.model.utils import MDStr, LanguageId
 from corePlugins.mcFunction.argumentTypes import BRIGADIER_BOOL, BRIGADIER_INTEGER
 from corePlugins.minecraft.resourceLocation import ResourceLocation
+from corePlugins.nbt import SNBT_ID
 from corePlugins.nbtJsonBase.core import *
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
 
@@ -46,23 +48,32 @@ def propertiesFor_block_state_property(parent: ObjectNode) -> Optional[ObjectSch
 		return _propertiesFromBlockStates(block)
 
 
+def _getStructureSchema(name: str, language: LanguageId) -> StructureDataSchema:
+	schema = GLOBAL_SCHEMA_STORE.get(name, language)
+	if schema is None:
+		schema = STRUCTURE_ANY_SCHEMA
+	return schema
+
+
 def _propertiesForItemComponents(itemId: ResourceLocation | None, removable: bool) -> Optional[ObjectSchema]:
 	# todo: which items have which components?
 	allItemComponents = getCurrentFullMcData().itemComponents
 
 	properties = []
 	for itemComponent in allItemComponents:
-		valueDescr: MDStr = MDStr("")
-		value = AnySchema(description=valueDescr, allowMultilineStr=False)
+		name = f'{itemComponent.actualNamespace}:item_components/{itemComponent.path}'
+		value = _getStructureSchema(name, SNBT_ID)
 
 		properties.append(PropertySchema(name=itemComponent.asQualifiedString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
 		if itemComponent.isMCNamespace:
 			properties.append(PropertySchema(name=itemComponent.asCompactString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
 
 		if removable:
-			properties.append(PropertySchema(name='!' + itemComponent.asQualifiedString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+			valueDescr: MDStr = MDStr("")
+			value2 = ObjectSchema(description=valueDescr, properties=[], allowMultilineStr=None)
+			properties.append(PropertySchema(name='!' + itemComponent.asQualifiedString, value=value2, optional=True, description=MDStr(''), allowMultilineStr=None))
 			if itemComponent.isMCNamespace:
-				properties.append(PropertySchema(name='!' + itemComponent.asCompactString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+				properties.append(PropertySchema(name='!' + itemComponent.asCompactString, value=value2, optional=True, description=MDStr(''), allowMultilineStr=None))
 
 	return ObjectSchema(properties=properties, allowMultilineStr=None).finish()
 
@@ -82,6 +93,21 @@ def propertiesFor_item_stack_components(parent: ObjectNode) -> Optional[ObjectSc
 
 def propertiesFor_removable_item_stack_components(parent: ObjectNode) -> Optional[ObjectSchema]:
 	return _propertiesFor_item_stack_components(parent, removable=True)
+
+
+def propertiesFor_item_sub_predicates(parent: ObjectNode) -> Optional[ObjectSchema]:
+	allItemSubPredicates = getCurrentFullMcData().itemSubPredicates
+
+	properties = []
+	for itemSubPredicate in allItemSubPredicates:
+		name = f'{itemSubPredicate.actualNamespace}:item_sub_predicates/{itemSubPredicate.path}'
+		value = _getStructureSchema(name, SNBT_ID)
+
+		properties.append(PropertySchema(name=itemSubPredicate.asQualifiedString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+		if itemSubPredicate.isMCNamespace:
+			properties.append(PropertySchema(name=itemSubPredicate.asCompactString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+
+	return ObjectSchema(properties=properties, allowMultilineStr=None).finish()
 
 
 def init() -> None:

@@ -35,6 +35,7 @@ def loadNBTSchemas() -> dict[str, StructureDataSchema]:
 	v41Dir = os.path.join(resourcesDir, "v41/nbt")
 	v41Schemas = {
 		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:particle_configuration_tags', os.path.join(v41Dir, 'particle_configuration_tags.json')),
+		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:item_sub_predicates', os.path.join(v41Dir, 'item_sub_predicates.json')),
 	}
 	return v41Schemas
 
