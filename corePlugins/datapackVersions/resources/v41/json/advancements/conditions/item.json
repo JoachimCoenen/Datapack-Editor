@@ -1,7 +1,6 @@
 {
   "$schema": "dpe/json/schema/library",
   "$libraries": {
-    "base": "_base.json",
     "utils": "../../../common/utils-library.json"
   },
   "$definitions": {
@@ -10,57 +9,8 @@
       "properties": {
         "count": {
           "optional": true,
-          "value": { "$ref": "base:valOrRange" },
+          "value": { "$ref": "utils:val_or_range" },
           "description": "Amount of the item."
-        },
-        "durability": {
-          "optional": true,
-          "value": { "$ref": "base:valOrRange" },
-          "description": "The durability of the item."
-        },
-        "enchantments": {
-          "optional": true,
-          "value": {
-            "$type": "array",
-            "element": {
-              "$type": "object",
-              "properties": {
-                "enchantment": {
-                  "optional": true,
-                  "value": {"$ref": "utils:resource_location", "schema": "enchantment" },
-                  "description": "An [ [Java Edition data values#Enchantments|enchantment ID] ]."
-                },
-                "levels": {
-                  "optional": true,
-                  "value": { "$ref": "base:valOrRange" },
-                  "description": "The level of the enchantment."
-                }
-              }
-            }
-          },
-          "description": "List of enchantments."
-        },
-        "stored_enchantments": {
-          "optional": true,
-          "value": {
-            "$type": "array",
-            "element": {
-              "$type": "object",
-              "properties": {
-                "enchantment": {
-                  "optional": true,
-                  "value": {"$ref": "utils:resource_location", "schema": "enchantment" },
-                  "description": "An [ [Java Edition data values#Enchantments|enchantment ID] ]."
-                },
-                "levels": {
-                  "optional": true,
-                  "value": { "$ref": "base:valOrRange" },
-                  "description": "The level of the enchantment."
-                }
-              }
-            }
-          },
-          "description": "List of stored enchantments."
         },
         "items": {
           "optional": true,
@@ -72,18 +22,10 @@
           "value": { "$defRef": "utils:data_components" },
           "description": "Matches exact item component values. Each key in this object corresponds to a component to test, with its value as the desired data to compare."
         },
-        "custom_data": {
+        "predicates": {
           "optional": true,
-          "value": {
-            "$type": "string",
-            "type": "minecraft:nbt_compound_tag"
-          },
-          "description": "An NBT string."
-        },
-        "potions": {
-          "optional": true,
-          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "potion"},
-          "description": "A [ [Potion#Item data|brewed potion ID] ]."
+          "value": { "$defRef": "utils:item_sub_predicates" },
+          "description": "Matches item sub-predicates. "
         }
       }
     }

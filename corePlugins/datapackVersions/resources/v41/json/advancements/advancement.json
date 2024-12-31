@@ -8,7 +8,6 @@
     "damage_type": "conditions/damage_type.json",
     "location": "conditions/location.json",
     "distance": "conditions/distance.json",
-    "base": "conditions/_base.json",
     "predicate": "../predicate-library.json",
     "utils": "../../common/utils-library.json"
   },
@@ -660,7 +659,7 @@
     "%num_bees_inside-bee_nest_destroyed": {
       "$type": "union",
       "description": "The number of bees that were inside the bee nest/beehive before it was broken.",
-      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "integer" }]
     },
     "%parent_partner_child-bred_animals": {
       "$type": "union",
@@ -724,7 +723,7 @@
     "%level-construct_beacon": {
       "$type": "union",
       "description": "The level of the updated beacon structure.",
-      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "integer" }]
     },
     "%villager-cured_zombie_villager": {
       "$type": "union",
@@ -790,12 +789,12 @@
             },
             "amplifier": {
               "description": "The effect amplifier.",
-               "value": { "$ref": "base:valOrRange", "type": "integer" },
+               "value": { "$ref": "utils:val_or_range", "type": "integer" },
               "optional": true
             },
             "duration": {
               "description": "The effect duration in ticks.",
-              "value": { "$ref": "base:valOrRange", "type": "integer" },
+              "value": { "$ref": "utils:val_or_range", "type": "integer" },
               "optional": true
             },
             "visible": {
@@ -827,7 +826,7 @@
     "%levels-enchanted_item": {
       "$type": "union",
       "description": "The levels spent by the player on the enchantment.",
-      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "integer" }]
     },
     "%state-enter_block": {
       "$type": "object",
@@ -1002,7 +1001,7 @@
     "%distance-used_ender_eye": {
       "$type": "union",
       "description": "The horizontal distance between the player and the stronghold.",
-      "options": [{ "$ref": "base:valOrRange", "type": "float" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "float" }]
     },
     "%rod-fishing_rod_hooked": {
       "$type": "object",
@@ -1025,17 +1024,17 @@
       "properties": {
         "empty": {
           "description": "The amount of slots empty in the inventory.",
-          "value": { "$ref": "base:valOrRange", "type": "integer" },
+          "value": { "$ref": "utils:val_or_range", "type": "integer" },
           "optional": true
         },
         "full": {
           "description": "The amount of slots completely filled (stacksize) in the inventory.",
-          "value": { "$ref": "base:valOrRange", "type": "integer" },
+          "value": { "$ref": "utils:val_or_range", "type": "integer" },
           "optional": true
         },
         "occupied": {
           "description": "The amount of slots occupied in the inventory.",
-          "value": { "$ref": "base:valOrRange", "type": "integer" },
+          "value": { "$ref": "utils:val_or_range", "type": "integer" },
           "optional": true
         }
       }
@@ -1043,22 +1042,22 @@
     "%delta-item_durability_changed": {
       "$type": "union",
       "description": "The change in durability (negative numbers are used to indicate a decrease in durability).",
-      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "integer" }]
     },
     "%durability-item_durability_changed": {
       "$type": "union",
       "description": "The remaining durability of the item.",
-      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "integer" }]
     },
     "%unique_entity_types-killed_by_crossbow": {
       "$type": "union",
       "description": "The exact count of types of entities killed.",
-      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "integer" }]
     },
     "%duration-levitation": {
       "$type": "union",
       "description": "The duration of the levitation in ticks.",
-      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "integer" }]
     },
     "%lightning-lightning_strike": {
       "$type": "union",
@@ -1117,7 +1116,7 @@
     "%signal_strength-target_hit": {
       "$type": "union",
       "description": "The redstone signal that will come out of the target block.",
-      "options": [{ "$ref": "base:valOrRange", "type": "integer" }]
+      "options": [{ "$ref": "utils:val_or_range", "type": "integer" }]
     },
     "%projectile-target_hit": {
       "$type": "union",

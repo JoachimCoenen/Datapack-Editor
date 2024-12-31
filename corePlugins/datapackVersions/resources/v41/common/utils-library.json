@@ -52,6 +52,49 @@
           }
         ]
       }
+    },
+    
+    "val_or_range": {
+      "$params": {
+        "type": { "type": "string", "default": "integer" }
+      },
+      "$body": {
+        "$type": "union",
+        "options": [
+          {
+            "$type": { "$ref": "#type" }
+          },
+          {
+            "$ref": "range",
+            "type": { "$ref": "#type"}
+          }
+        ]
+      }
+    },
+
+    "range": {
+      "$params": {
+        "type": { "type": "string", "default": "integer" }
+      },
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "max": {
+            "optional": true,
+            "value": {
+              "$type": { "$ref": "#type" }
+            },
+            "description": "The maximum value."
+          },
+          "min": {
+            "optional": true,
+            "value": {
+              "$type": { "$ref": "#type" }
+            },
+            "description": "The minimum value."
+          }
+        }
+      }
     }
   },
   
@@ -69,6 +112,46 @@
       "maxCount": 3,
       "description": "The block position. [X, Y, Z]"
     },
+    
+    "firework_shape": {
+      "$type": "enum",
+      "description": "The shape of the explosion",
+      "options": {
+        "small_ball": "",
+        "large_ball": "",
+        "star": "",
+        "creeper": "",
+        "burst": ""
+      }
+    },
+    
+    "attribute_operations": {
+      "$type": "enum",
+      "description": "The operation of this attribute modifier. One of `add_value`, `add_multiplied_base`, or `add_multiplied_total`.",
+      "options": {
+        "add_value": "",
+        "add_multiplied_base": "",
+        "add_multiplied_total": ""
+      }
+      //"optionalPrefixes": ["minecraft:"] // maybe...?
+    },
+    
+    "armor_slots": {
+      "$type": "enum",
+      "options": {
+        "any": "",
+        "hand": "",
+        "mainhand": "",
+        "offhand": "",
+        "amor": "",
+        "feet": "",
+        "legs": "",
+        "chest": "",
+        "head": "",
+        "body": ""
+      },
+      "optionalPrefixes": ["minecraft:"] // maybe...?
+    },
 
     "data_components": {
       "$type": "calculated",
@@ -78,6 +161,11 @@
     "data_components_removable": { // can be prefixed with a '!'.
       "$type": "calculated",
       "function": "corePlugins.datapackVersions.providers.propertiesFor_removable_item_stack_components"
+    },
+
+    "item_sub_predicates": {
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_item_sub_predicates"
     },
 
     "block_state": {

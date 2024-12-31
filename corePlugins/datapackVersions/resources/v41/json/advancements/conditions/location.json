@@ -1,7 +1,6 @@
 {
   "$schema": "dpe/json/schema/library",
   "$libraries": {
-    "base": "_base.json",
     "utils": "../../../common/utils-library.json"
   },
   "$definitions": {
@@ -50,7 +49,7 @@
                           ],
                           "description": "Block property key and value pair."
                         },
-                        { "$ref": "base:valOrRange", "type": "integer" }
+                        { "$ref": "utils:val_or_range", "type": "integer" }
                       ]
                     },
                     "description": "Block property key and value pair."
@@ -97,7 +96,7 @@
                           ],
                           "description": "Fluid property key and value pair."
                         },
-                        { "$ref": "base:valOrRange", "type": "integer" }
+                        { "$ref": "utils:val_or_range", "type": "integer" }
                       ]
                     },
                     "description": "Fluid property key and value pair."
@@ -118,7 +117,7 @@
             "properties": {
               "light": {
                 "optional": true,
-                "value": { "$ref": "base:valOrRange", "type": "integer" },
+                "value": { "$ref": "utils:val_or_range", "type": "integer" },
                 "description": "The light Level of visible light. Calculated using: <code>(max(sky-darkening,block))</code>."
               }
             }
@@ -132,17 +131,17 @@
             "properties": {
               "x": {
                 "optional": true,
-                "value": { "$ref": "base:valOrRange", "type": "float" },
+                "value": { "$ref": "utils:val_or_range", "type": "float" },
                 "description": "The x position."
               },
               "y": {
                 "optional": true,
-                "value": { "$ref": "base:valOrRange", "type": "float" },
+                "value": { "$ref": "utils:val_or_range", "type": "float" },
                 "description": "The y position."
               },
               "z": {
                 "optional": true,
-                "value": { "$ref": "base:valOrRange", "type": "float" },
+                "value": { "$ref": "utils:val_or_range", "type": "float" },
                 "description": "The z position."
               }
             }

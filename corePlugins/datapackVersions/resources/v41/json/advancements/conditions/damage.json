@@ -3,7 +3,7 @@
   "$libraries": {
     "damage_type": "damage_type.json",
     "entity": "entity.json",
-    "base": "_base.json"
+    "utils": "../../../common/utils-library.json"
   },
   "$definitions": {
     "damage": {
@@ -16,7 +16,7 @@
         },
         "dealt": {
           "optional": true,
-          "value": { "$ref": "base:valOrRange", "type": "float" },
+          "value": { "$ref": "utils:val_or_range", "type": "float" },
           "description": "Checks the amount of incoming damage before damage reduction."
         },
         "source_entity": {
@@ -26,7 +26,7 @@
         },
         "taken": {
           "optional": true,
-          "value": { "$ref": "base:valOrRange", "type": "float" },
+          "value": { "$ref": "utils:val_or_range", "type": "float" },
           "description": "Checks the amount of incoming damage after damage reduction."
         },
         "type": {

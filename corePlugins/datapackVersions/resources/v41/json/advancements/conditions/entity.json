@@ -3,7 +3,6 @@
   "$libraries": {
     "location": "location.json",
     "item": "item.json",
-    "base": "_base.json",
     "utils": "../../../common/utils-library.json"
   },
   "$definitions": {
@@ -17,27 +16,27 @@
             "properties": {
               "absolute": {
                 "optional": true,
-                "value": { "$ref": "base:range", "type": "float" },
+                "value": { "$ref": "utils:range", "type": "float" },
                 "description": "Test the distance between the two points in 3D space."
               },
               "horizontal": {
                 "optional": true,
-                "value": { "$ref": "base:range", "type": "float" },
+                "value": { "$ref": "utils:range", "type": "float" },
                 "description": "Test the distance between the two points, ignoring the Y value."
               },
               "x": {
                 "optional": true,
-                "value": { "$ref": "base:range", "type": "float" },
+                "value": { "$ref": "utils:range", "type": "float" },
                 "description": "Test the absolute difference between the X-coordinates of the two points."
               },
               "y": {
                 "optional": true,
-                "value": { "$ref": "base:range", "type": "float" },
+                "value": { "$ref": "utils:range", "type": "float" },
                 "description": "Test the absolute difference between the Y-coordinates of the two points."
               },
               "z": {
                 "optional": true,
-                "value": { "$ref": "base:range", "type": "float" },
+                "value": { "$ref": "utils:range", "type": "float" },
                 "description": "Test the absolute difference between the Z-coordinates of the two points."
               }
             }
@@ -61,12 +60,12 @@
                     },
                     "amplifier": {
                       "optional": true,
-                      "value": { "$ref": "base:valOrRange", "type": "integer" },
+                      "value": { "$ref": "utils:val_or_range", "type": "integer" },
                       "description": "Test if the effect's amplifier matches an exact value. Level I is represented by 0."
                     },
                     "duration": {
                       "optional": true,
-                      "value": { "$ref": "base:valOrRange", "type": "integer" },
+                      "value": { "$ref": "utils:val_or_range", "type": "integer" },
                       "description": "Test if the effect's remaining time (in ticks) matches an exact value."
                     },
                     "visible": {
@@ -101,22 +100,27 @@
               "head": {
                 "optional": true,
                 "value": { "$defRef": "item:item" },
-                "description": "Test the item in the entity's head armour slot."
+                "description": "Test the item in the entity's head armor slot."
               },
               "chest": {
                 "optional": true,
                 "value": { "$defRef": "item:item" },
-                "description": "Test the item in the entity's chest  armour slot."
+                "description": "Test the item in the entity's chest armor slot."
               },
               "legs": {
                 "optional": true,
                 "value": { "$defRef": "item:item" },
-                "description": "Test the item in the entity's legs armour slot."
+                "description": "Test the item in the entity's legs armor slot."
               },
               "feet": {
                 "optional": true,
                 "value": { "$defRef": "item:item" },
-                "description": "Test the item in the entity's feet armour slot."
+                "description": "Test the item in the entity's feet armor slot."
+              },
+              "body": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's body armor slot."
               }
             }
           },
@@ -246,7 +250,7 @@
                 "optional": true,
                 "decidingProp": "type",
                 "values": {
-                  "lightning": { "$ref": "base:valOrRange", "type": "integer" }
+                  "lightning": { "$ref": "utils:val_or_range", "type": "integer" }
                 },
                 "description": "Test the number of blocks set on fire by this lightning bolt is between a minimum and maximum value."
               },
@@ -313,7 +317,7 @@
                 "optional": true,
                 "decidingProp": "type",
                 "values": {
-                  "player": { "$ref": "base:valOrRange", "type": "integer" }
+                  "player": { "$ref": "utils:val_or_range", "type": "integer" }
                 },
                 "description": "Test if the experience level of this player matches an exact value or is between <code>min</code> and <code>max</code> values, inclusive."
               },
@@ -355,7 +359,7 @@
                         },
                         "value": {
                           "optional": true,
-                          "value": { "$ref": "base:valOrRange", "type": "integer" },
+                          "value": { "$ref": "utils:val_or_range", "type": "integer" },
                           "description": "Test if the value of the statistic matches an exact number."
                         }
                       },
@@ -368,7 +372,7 @@
                 "optional": true,
                 "decidingProp": "type",
                 "values": {
-                  "slime": { "$ref": "base:valOrRange", "type": "integer" }
+                  "slime": { "$ref": "utils:val_or_range", "type": "integer" }
                 },
                 "description": "Test if the size of this slime matches an exact value or is between <code>min</code> and <code>max</code> values, inclusive."
               }

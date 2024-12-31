@@ -556,16 +556,7 @@
             "optional": true
           },
           "operation": {
-            "description": "The operation of this attribute modifier. One of `add_value`, `add_multiplied_base`, or `add_multiplied_total`.",
-            "value": {
-              "$type": "enum",
-              "options": {
-                "add_value": "",
-                "add_multiplied_base": "",
-                "add_multiplied_total": ""
-              },
-              "optionalPrefixes": ["minecraft:"] // maybe...?
-            },
+            "value": {"$defRef": "utils:attribute_operations"},
             "optional": true
           },
           "amount": {
@@ -580,35 +571,11 @@
           },
           "slot": {
             "description": "Sets the slots the item must be in for the modifier to take effect. One of: <code>mainhand</code>, <code>offhand</code>, <code>feet</code>, <code>legs</code>, <code>chest</code>, <code>head</code>.",
-            "value": {
-              "$type": "union",
-              "options": [
-                { "$defRef": "%armor_slots" },
-                {
-                  "$type": "array",
-                  "element": { "$defRef": "%armor_slots" }
-                }
-              ]
-            },
+            "value": {"$ref": "utils:value_or_array", "element": {"$defRef": "utils:armor_slots"}},
             "optional": true
           }
         }
       }
-    },
-    "%armor_slots": {
-      "$type": "enum",
-      "options": {
-        "any": "",
-        "hand": "",
-        "mainhand": "",
-        "offhand": "",
-        "amor": "",
-        "feet": "",
-        "legs": "",
-        "chest": "",
-        "head": ""
-      },
-      "optionalPrefixes": ["minecraft:"] // maybe...?
     },
     "%patterns-set_banner_pattern": {
       "$type": "array",
