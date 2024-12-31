@@ -1,0 +1,64 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt": "../common/nbt-types.json",
+    "utils": "../common/utils-library.json"
+  },
+  "$templates": { },
+  
+  "$definitions": {
+    
+    "firework_explosion_data": {
+      "$type": "object",
+      "description": "Specifies firework explosions. ",
+      "properties": {
+        "shape": {
+          "description": "The shape of the explosion.",
+          "value": { "$defRef": "utils:firework_shape" }
+        },
+        "colors": {
+          "description": "The colors of the initial particles of the explosion, randomly selected from.",
+          "value": {"$defRef": "nbt:int_array"},
+          "optional": true
+        },
+        "fade_colors": {
+          "description": "The colors of the fading particles of the explosion, randomly selected from.",
+          "value": {"$defRef": "nbt:int_array"},
+          "optional": true
+        },
+        "has_trail": {
+          "optional": true,
+          "value": {"$type": "boolean"},
+          "description": "Whether or not the explosion has a trail effect (diamond)."
+        },
+        "has_twinkle": {
+          "optional": true,
+          "value": {"$type": "boolean"},
+          "description": "Whether or not the explosion has a twinkle effect (glowstone dust)."
+        }
+      }
+    }
+    
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

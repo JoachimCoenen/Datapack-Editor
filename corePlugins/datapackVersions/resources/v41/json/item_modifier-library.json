@@ -5,7 +5,9 @@
     "predicate": "predicate-library.json",
     "loot_table": "loot_table-library.json",
     "number_provider": "utils/number_provider-library.json",
-    "utils": "../common/utils-library.json"
+    "data_components": "../nbt/data_components-library.json",
+    "utils": "../common/utils-library.json",
+    "nbt": "../common/nbt-types.json"
   },
   "$templates": {},
   "$definitions": {
@@ -14,7 +16,7 @@
       "properties": {
         "function": {
           "description": "[[Resource location]] of the function to apply. Valid functions are described below.",
-          "value": { 
+          "value": {
             "$type": "enum",
             "options": {
               "apply_bonus": "Applies a predefined bonus formula to the count of the item stack.",
@@ -31,257 +33,29 @@
               "limit_count": "Limits the count of every item stack.",
               "looting_enchant": "Adjusts the stack size based on the level of the [[Looting]] enchantment on the {{cd|killer}} entity provided by [[Loot table#Loot context types|loot context]].",
               "reference": "Call sub-functions",
+              "sequence": "Applies a list of functions",
               "set_attributes": "Add [[attribute|attribute modifiers]] to the item.",
               "set_banner_pattern": "Adds or replaces banner patterns of a banner. Function successfully adds patterns into NBT tag even if invoked on a non-banner.",
+              "set_book_cover": "Sets the cover details of the `minecraft:written_book_content` component`. If present, any pages in the book are left untouched. ",
               "set_components": "Sets components of an item.",
               "set_contents": "Sets the contents of a container block item to a list of entries.",
               "set_count": "Sets the stack size.",
               "set_custom_data": "Sets the `minecraft:custom_data` component.",
               "set_damage": "Sets the item's damage value (durability).",
               "set_enchantments": "Modifies the item's enchantments. A book will convert to an [[enchanted book]].",
+              "set_fireworks": "Sets `minecraft:fireworks` component.",
+              "set_firework_explosion": "Sets `minecraft:firework_explosion` component.",
               "set_instrument": "Sets the item tags for instrument items to a random value from a tag.",
               "set_loot_table": "Sets the loot table for a container block when placed and opened.",
               "set_lore": "Adds or changes the item's lore.",
               "set_name": "Adds or changes the item's custom name.",
               "set_potion": "Sets the <code>Potion</code> tag of an item.",
-              "set_stew_effect": "Sets the status effects for [[suspicious stew]]. Fails if invoked on an item that is not suspicious stew."
+              "set_stew_effect": "Sets the status effects for [[suspicious stew]]. Fails if invoked on an item that is not suspicious stew.",
+              "set_writable_book_pages": "Manipulates the pages of the `minecraft:writable_book_content` component.",
+              "set_written_book_pages": "Manipulates the pages of the `minecraft:writable_book_content` component."
             },
-            "optionalPrefixes": ["minecraft:"]
+            "optionalPrefixes": [ "minecraft:" ]
           }
-        },
-        "enchantment": {
-          "decidingProp": "function",
-          "values": { "apply_bonus": { "$defRef": "%enchantment-apply_bonus" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "formula": {
-          "decidingProp": "function",
-          "values": { "apply_bonus": { "$defRef": "%formula-apply_bonus" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "parameters": {
-          "decidingProp": "function",
-          "values": { "apply_bonus": { "$defRef": "%parameters-apply_bonus" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "source": {
-          "decidingProp": "function",
-          "values": {
-            "copy_components": { "$defRef": "%source-copy_components" },
-            "copy_name": { "$defRef": "%source-copy_name" },
-            "copy_custom_data": { "$defRef": "%source-copy_custom_data" }
-          },
-          "optionalPrefixes": ["minecraft:"]
-        },
-        "ops": {
-          "decidingProp": "function",
-          "values": { "copy_custom_data": { "$defRef": "%ops-copy_custom_data" } },
-          "optionalPrefixes": ["minecraft:"]
-        },
-        "block": {
-          "decidingProp": "function",
-          "values": { "copy_state": { "$defRef": "%block-copy_state" } },
-          "optionalPrefixes": ["minecraft:"]
-        },
-        "properties": {
-          "decidingProp": "function",
-          "values": { "copy_state": { "$defRef": "%properties-copy_state" } },
-          "optionalPrefixes": ["minecraft:"]
-        },
-        "enchantments": {
-          "decidingProp": "function",
-          "values": {
-            "enchant_randomly": { "$defRef": "%enchantments-enchant_randomly" },
-            "set_enchantments": { "$defRef": "%enchantments-set_enchantments" }
-          },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "treasure": {
-          "decidingProp": "function",
-          "values": { "enchant_with_levels": { "$defRef": "%treasure-enchant_with_levels" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "levels": {
-          "decidingProp": "function",
-          "values": { "enchant_with_levels": { "$defRef": "number_provider:number_provider" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true,
-          "description": "[ [Loot_table#Number_Providers|Number provider] ]. Specifies the enchantment level to use."
-        },
-        "destination": {
-          "decidingProp": "function",
-          "values": { "exploration_map": { "$defRef": "%destination-exploration_map" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "decoration": {
-          "decidingProp": "function",
-          "values": { "exploration_map": { "$defRef": "%decoration-exploration_map" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "zoom": {
-          "decidingProp": "function",
-          "values": { "exploration_map": { "$defRef": "%zoom-exploration_map" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "search_radius": {
-          "decidingProp": "function",
-          "values": { "exploration_map": { "$defRef": "%search_radius-exploration_map" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "skip_existing_chunks": {
-          "decidingProp": "function",
-          "values": { "exploration_map": { "$defRef": "%skip_existing_chunks-exploration_map" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "entity": {
-          "decidingProp": "function",
-          "values": {
-            "fill_player_head": { "$defRef": "%entity-fill_player_head" },
-            "set_lore": { "$defRef": "%entity-set_lore" },
-            "set_name": { "$defRef": "%entity-set_name" }
-          },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "limit": {
-          "decidingProp": "function",
-          "values": {
-            "limit_count": { "$defRef": "%limit-limit_count" },
-            "looting_enchant": { "$defRef": "%limit-looting_enchant" }
-          },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "count": {
-          "decidingProp": "function",
-          "values": {
-            "looting_enchant": { "$defRef": "%count-looting_enchant" },
-            "set_count": { "$defRef": "%count-set_count" }
-          },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "name": {
-          "decidingProp": "function",
-          "values": {
-            "reference": { "$defRef": "%name-reference" },
-            "set_loot_table": { "$defRef": "%name-set_loot_table" },
-            "set_name": { "$defRef": "%name-set_name" }
-          },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "modifiers": {
-          "decidingProp": "function",
-          "values": { "set_attributes": { "$defRef": "%modifiers-set_attributes" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "patterns": {
-          "decidingProp": "function",
-          "values": { "set_banner_pattern": { "$defRef": "%patterns-set_banner_pattern" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "append": {
-          "decidingProp": "function",
-          "values": { "set_banner_pattern": { "$defRef": "%append-set_banner_pattern" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "entries": {
-          "decidingProp": "function",
-          "values": { "set_contents": { "$defRef": "%entries-set_contents" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "type": {
-          "decidingProp": "function",
-          "values": {
-            "set_contents": { "$defRef": "%type-set_contents" },
-            "set_loot_table": { "$defRef": "%type-set_loot_table" }
-          },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "add": {
-          "decidingProp": "function",
-          "values": {
-            "set_count": { "$defRef": "%add-set_count" },
-            "set_damage": { "$defRef": "%add-set_damage" },
-            "set_enchantments": { "$defRef": "%add-set_enchantments" }
-          },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "damage": {
-          "decidingProp": "function",
-          "values": { "set_damage": { "$defRef": "number_provider:number_provider" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true,
-          "description": "A [ [Loot_table#Number_Providers|number provider] ]. Specifies the damage fraction to set (1.0 is undamaged, 0.0 is zero durability left)."
-        },
-        "options": {
-          "decidingProp": "function",
-          "values": { "set_instrument": { "$defRef": "%options-set_instrument" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "seed": {
-          "decidingProp": "function",
-          "values": { "set_loot_table": { "$defRef": "%seed-set_loot_table" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "lore": {
-          "description": "List of lines to append or replace on the item's lore. Components requiring [ [Raw_JSON_text_format#Component_resolution|resolution] ] are resolved only if <code>entity</code> successfully targets an entity.",
-          "decidingProp": "function",
-          "values": { "set_lore": {
-            "$type": "array",
-            "element": { "$defRef": "rawJsonText:rawJsonText" }
-          }},
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "replace": {
-          "decidingProp": "function",
-          "values": { "set_lore": { "$defRef": "%replace-set_lore" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "tag": {
-          "decidingProp": "function",
-          "values": { "set_custom_data": { "$defRef": "%tag-set_custom_data" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "id": {
-          "decidingProp": "function",
-          "values": { "set_potion": { "$defRef": "%id-set_potion" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "effects": {
-          "decidingProp": "function",
-          "values": { "set_stew_effect": { "$defRef": "%effects-set_stew_effect" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
-        },
-        "components": {
-          "description": "A map of components ID to component value. Components with a `!` prefix (e.g. `\"!minecraft:damage\": {}`) causes this component to be removed.",
-          "decidingProp": "function",
-          "values": { "set_components": { "$defRef": "utils:data_components_removable" } },
-          "optional": true
         },
         "conditions": {
           "description": "A list of [[predicate]]s, of which all must pass, for this function to be applied.",
@@ -290,386 +64,813 @@
             "element": { "$defRef": "predicate:predicate-body" }
           },
           "optional": true
+        }
+      },
+      "inherits": [
+        { "defRef": "%apply_bonus", "decidingValues": [ "apply_bonus" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%copy_components", "decidingValues": [ "copy_components" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%copy_custom_data", "decidingValues": [ "copy_custom_data" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%copy_name", "decidingValues": [ "copy_name" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%copy_state", "decidingValues": [ "copy_state" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%enchant_randomly", "decidingValues": [ "enchant_randomly" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%enchant_with_levels", "decidingValues": [ "enchant_with_levels" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%exploration_map", "decidingValues": [ "exploration_map" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%explosion_decay", "decidingValues": [ "explosion_decay" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%fill_player_head", "decidingValues": [ "fill_player_head" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%furnace_smelt", "decidingValues": [ "furnace_smelt" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%limit_count", "decidingValues": [ "limit_count" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%looting_enchant", "decidingValues": [ "looting_enchant" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%reference", "decidingValues": [ "reference" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%sequence", "decidingValues": [ "sequence" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_attributes", "decidingValues": [ "set_attributes" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_banner_pattern", "decidingValues": [ "set_banner_pattern" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_book_cover", "decidingValues": [ "set_book_cover" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_components", "decidingValues": [ "set_components" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_contents", "decidingValues": [ "set_contents" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_count", "decidingValues": [ "set_count" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_custom_data", "decidingValues": [ "set_custom_data" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_damage", "decidingValues": [ "set_damage" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_enchantments", "decidingValues": [ "set_enchantments" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_fireworks", "decidingValues": [ "set_fireworks" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_firework_explosion", "decidingValues": [ "set_firework_explosion" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_instrument", "decidingValues": [ "set_instrument" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_loot_table", "decidingValues": [ "set_loot_table" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_lore", "decidingValues": [ "set_lore" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_name", "decidingValues": [ "set_name" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_potion", "decidingValues": [ "set_potion" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_stew_effect", "decidingValues": [ "set_stew_effect" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_written_book_pages", "decidingValues": [ "set_writable_book_pages", "set_written_book_pages" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] }
+      ]
+    },
+    "%apply_bonus": {
+      "$type": "object",
+      "properties": {
+        "enchantment": {
+          "optional": true,
+          "description": "[[Java_Edition_data_value#Enchantments|ID of an enchantment]] on the tool provided by [[Loot table#Loot context types|loot context]] used for level calculation.",
+          "value": { "$ref": "utils:resource_location", "schema": "enchantment"  }
+        },
+        "formula": {
+          "optional": true,
+          "description": "A [[resource location]]. Can be <code>binomial_with_bonus_count</code> for a binomial distribution (with <code>n=level + extra</code>, <code>p=probability</code>), <code>uniform_bonus_count</code> for uniform distribution (from <code>0</code> to <code>level * bonusMultiplier</code>), or <code>ore_drops</code> for a special function used for ore drops in the vanilla game (<code>Count *= (max(1; randomInt(0<small>''(inclusive)''</small> .. (Level + 2)<small>''(exclusive)''</small>)))</code>)",
+          "value": {
+            "$type": "enum",
+            "options": {
+              "binomial_with_bonus_count": "for a binomial distribution (with <code>n=level + extra</code>, <code>p=probability</code>)",
+              "uniform_bonus_count": "for uniform distribution (from <code>0</code> to <code>level * bonusMultiplier</code>)",
+              "ore_drops": "for a special function used for ore drops in the vanilla game (<code>Count *= (max(1; randomInt(0<small>''(inclusive)''</small> .. (Level + 2)<small>''(exclusive)''</small>)))</code>)"
+            },
+            "optionalPrefixes": [ "minecraft:" ]
+          }
+        },
+        "parameters": {
+          "optional": true,
+          "description": "Values required for the formula.",
+          "value": {
+            "$type": "object",
+            "properties": {
+              "extra": {
+                "description": "For formula 'binomial_with_bonus_count', the extra value.",
+                "value": { "$type": "integer" },
+                "optional": true
+              },
+              "probability": {
+                "description": "For formula 'binomial_with_bonus_count', the probability.",
+                "value": { "$type": "float" },
+                "optional": true
+              },
+              "bonusMultiplier": {
+                "description": "For formula 'uniform_bonus_count', the bonus multiplier.",
+                "value": { "$type": "float" },
+                "optional": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "%copy_components": {
+      "$type": "object",
+      "properties": {
+        "source": {
+          "description": "Source type to pull from. Specifies an entity or block entity from loot context. Only allowed value is `block_entity`.",
+          "value": { "$defRef": "number_provider:loot_context" }
         },
         "include": {
-          "decidingProp": "function",
-          "values": { "copy_components": { "$defRef": "%include-copy_components" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
+          "optional": true,
+          "description": "A list of components to include. If omitted, all components are copied.",
+          "value": {
+            "$type": "array",
+            "element": { "$ref": "utils:resource_location", "schema": "item_components"  }
+          }
         },
         "exclude": {
-          "decidingProp": "function",
-          "values": { "copy_components": { "$defRef": "%exclude-copy_components" } },
-          "optionalPrefixes": ["minecraft:"],
-          "optional": true
+          "optional": true,
+          "description": "A list of components to exclude.",
+          "value": {
+            "$type": "array",
+            "element": { "$ref": "utils:resource_location", "schema": "item_components"  }
+          }
         }
       }
     },
-    "%enchantment-apply_bonus": {"$ref": "utils:resource_location", "schema": "enchantment", "description": "[[Java_Edition_data_value#Enchantments|ID of an enchantment]] on the tool provided by [[Loot table#Loot context types|loot context]] used for level calculation." },
-    "%formula-apply_bonus": {
-      "$type": "enum",
-      "options": {
-        "binomial_with_bonus_count": "for a binomial distribution (with <code>n=level + extra</code>, <code>p=probability</code>)",
-        "uniform_bonus_count": "for uniform distribution (from <code>0</code> to <code>level * bonusMultiplier</code>)",
-        "ore_drops": "for a special function used for ore drops in the vanilla game (<code>Count *= (max(1; randomInt(0<small>''(inclusive)''</small> .. (Level + 2)<small>''(exclusive)''</small>)))</code>)"
-      },
-      "optionalPrefixes": ["minecraft:"],
-      "description": "A [[resource location]]. Can be <code>binomial_with_bonus_count</code> for a binomial distribution (with <code>n=level + extra</code>, <code>p=probability</code>), <code>uniform_bonus_count</code> for uniform distribution (from <code>0</code> to <code>level * bonusMultiplier</code>), or <code>ore_drops</code> for a special function used for ore drops in the vanilla game (<code>Count *= (max(1; randomInt(0<small>''(inclusive)''</small> .. (Level + 2)<small>''(exclusive)''</small>)))</code>)"
-    },
-    "%parameters-apply_bonus": {
+    "%copy_custom_data": {
       "$type": "object",
-      "description": "Values required for the formula.",
       "properties": {
-        "extra": {
-          "description": "For formula 'binomial_with_bonus_count', the extra value.",
-          "value": { "$type": "integer" },
-          "optional": true
-        },
-        "probability": {
-          "description": "For formula 'binomial_with_bonus_count', the probability.",
-          "value": { "$type": "float" },
-          "optional": true
-        },
-        "bonusMultiplier": {
-          "description": "For formula 'uniform_bonus_count', the bonus multiplier.",
-          "value": { "$type": "float" },
-          "optional": true
-        }
-      }
-    },
-    "%source-copy_components": {
-      "$defRef": "number_provider:loot_context",
-      "description": "Source type to pull from. Specifies an entity or block entity from loot context. Only allowed value is `block_entity`."
-    },
-    "%source-copy_name": {
-      "$defRef": "number_provider:loot_context",
-      "description": " - The target whose name will be copied. Specifies an entity or block entity from [ [Loot table#Loot context types|loot context] ]. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, or {{cd|killer_player}} (cannot be {{cd|direct_killer}})."
-    },
-    "%source-copy_custom_data": {
-      "$type": "union",
-      "options": [
-        {
-          "$defRef": "number_provider:loot_context",
-          "description": "Shorthand form of {{nbt|compound|source}} below with {{nbt|string|type}} set to <code>context</code>. Specifies an entity or block entity from [ [Loot table#Loot context types|loot context] ]. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}."
-        },
-        {
-          "$type": "object",
-          "description": "Information of the block entity, entity or storage to copy NBT from.",
-          "properties": {
-            "type": {
-              "description": "Set to <code>context</code> to use a block entity or an entity as the source, or <code>storage</code> to use a command storage as the source.",
-              "value": {
-                "$type": "enum",
-                "options": { "context": "", "storage": ""},
-                "optionalPrefixes": ["minecraft:"]
+        "source": {
+          "value": {
+            "$type": "union",
+            "options": [
+              {
+                "$defRef": "number_provider:loot_context",
+                "description": "Shorthand form of {{nbt|compound|source}} below with {{nbt|string|type}} set to <code>context</code>. Specifies an entity or block entity from [[Loot table#Loot context types|loot context]]. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}."
               },
-              "optional": true
-            },
-            "target": {
-              "description": "Included only if <code>type</code> is set to <code>context</code>. Specifies an entity or block entity from [ [Loot table#Loot context types|loot context] ] to copy NBT from. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}.",
-              "decidingProp": "type",
-              "values": { "context": { "$defRef": "number_provider:loot_context" } },
-              "optionalPrefixes": ["minecraft:"],
-              "optional": true
-            },
-            "source": {
-              "description": "Included only if <code>type</code> is set to <code>storage</code>. A [ [resource location] ] specifying the storage ID to copy NBT from. ",
-              "decidingProp": "type",
-              "values": { "storage": {"$ref": "utils:resource_location", "schema": "any", "description": "" }},
-              "optionalPrefixes": ["minecraft:"],
-              "optional": true
+              {
+                "$type": "object",
+                "description": "Information of the block entity, entity or storage to copy NBT from.",
+                "properties": {
+                  "type": {
+                    "description": "Set to <code>context</code> to use a block entity or an entity as the source, or <code>storage</code> to use a command storage as the source.",
+                    "value": {
+                      "$type": "enum",
+                      "options": {
+                        "context": "",
+                        "storage": ""
+                      },
+                      "optionalPrefixes": [ "minecraft:" ]
+                    },
+                    "optional": true
+                  },
+                  "target": {
+                    "description": "Included only if <code>type</code> is set to <code>context</code>. Specifies an entity or block entity from [[Loot table#Loot context types|loot context]] to copy NBT from. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}.",
+                    "decidingProp": "type",
+                    "values": { "context": { "$defRef": "number_provider:loot_context" } },
+                    "optionalPrefixes": [ "minecraft:" ],
+                    "optional": true
+                  },
+                  "source": {
+                    "description": "Included only if <code>type</code> is set to <code>storage</code>. A [[resource location]] specifying the storage ID to copy NBT from. ",
+                    "decidingProp": "type",
+                    "values": {
+                      "storage": { "$ref": "utils:resource_location", "schema": "any"  }
+                    },
+                    "optionalPrefixes": [ "minecraft:" ],
+                    "optional": true
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "ops": {
+          "description": "A list of copy operations.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "description": " An NBT operation.",
+              "properties": {
+                "source": {
+                  "description": "The [[NBT path format|NBT path]] to copy from.",
+                  "value": {
+                    "$type": "string",
+                    "type": "minecraft:nbt_path"
+                  },
+                  "optional": true
+                },
+                "target": {
+                  "description": "The [[NBT path format|NBT path]] to copy to, starting from the item's <code>tag</code> tag.",
+                  "value": {
+                    "$type": "string",
+                    "type": "minecraft:nbt_path"
+                  },
+                  "optional": true
+                },
+                "op": {
+                  "description": "Set to <code>replace</code> to replace any existing contents of the target NBT path, <code>append</code> to append to a list or array, or <code>merge</code> to merge into a compound tag.",
+                  "value": {
+                    "$type": "enum",
+                    "options": {
+                      "replace": "to replace any existing contents of the target NBT path",
+                      "append": "to append to a list or array",
+                      "merge": "to merge into a compound tag"
+                    },
+                    "optionalPrefixes": [ "minecraft:" ]
+                  },
+                  "optional": true
+                }
+              }
             }
           }
         }
-      ]
+      }
     },
-    "%ops-copy_custom_data": {
-      "$type": "array",
-      "description": "A list of copy operations.",
-      "element": {
-        "$type": "object",
-        "description": " An NBT operation.",
+    "%copy_name": {
+      "$type": "object",
+      "properties": {
+        "source": {
+          "description": " - The target whose name will be copied. Specifies an entity or block entity from [[Loot table#Loot context types|loot context]]. Can be {{cd|block_entity}}, {{cd|this}}, {{cd|killer}}, or {{cd|killer_player}} (cannot be {{cd|direct_killer}}).",
+          "value": { "$defRef": "number_provider:loot_context" }
+        }
+      }
+    },
+    "%copy_state": {
+      "$type": "object",
+      "properties": {
+        "block": {
+          "description": "A [[Resource location|block ID]]. Function fails if the block doesn't match the {{nbt|list|properties}} list.",
+          "value": { "$ref": "utils:resource_location", "schema": "block"  }
+        },
         "properties": {
-          "source": {
-            "description": "The [ [NBT path format|NBT path] ] to copy from.",
-            "value": {
+          "description": "A list of properties to copy.",
+          "value": {
+            "$type": "array",
+            "element": {
               "$type": "string",
-              "type": "minecraft:nbt_path"
-            },
-            "optional": true
-          },
-          "target": {
-            "description": "The [ [NBT path format|NBT path] ] to copy to, starting from the item's <code>tag</code> tag.",
-            "value": {
-              "$type": "string",
-              "type": "minecraft:nbt_path"
-            },
-            "optional": true
-          },
-          "op": {
-            "description": "Set to <code>replace</code> to replace any existing contents of the target NBT path, <code>append</code> to append to a list or array, or <code>merge</code> to merge into a compound tag.",
-            "value": {
-              "$type": "enum",
-              "options": {
-                "replace": "to replace any existing contents of the target NBT path",
-                "append": "to append to a list or array",
-                "merge": "to merge into a compound tag"
-              },
-              "optionalPrefixes": ["minecraft:"]
-            },
-            "optional": true
-          }
-        }
-      }
-    },
-    "%block-copy_state": {"$ref": "utils:resource_location", "schema": "block", "description": "A [ [Resource location|block ID] ]. Function fails if the block doesn't match the {{nbt|list|properties}} list." },
-    "%properties-copy_state": {
-      "$type": "array",
-      "description": "A list of properties to copy.",
-      "element": {
-        "$type": "string",
-        "description": " The name of a block state to copy."
-      }
-    },
-    "%enchantments-enchant_randomly": {
-      "$type": "array",
-      "description": "Optional. List of [ [Java_Edition_data_value#Enchantments|enchantment IDs] ] to choose from. If omitted, all discoverable enchantments (currently only [ [Soul speed] ] and [ [Swift Sneak] ] are undiscoverable) applicable to the item are possible.",
-      "element": {"$ref": "utils:resource_location", "schema": "enchantment", "description": "Optional. List of [ [Java_Edition_data_value#Enchantments|enchantment IDs] ] to choose from. If omitted, all discoverable enchantments (currently only [ [Soul speed] ] and [ [Swift Sneak] ] are undiscoverable) applicable to the item are possible." }
-    },
-    "%enchantments-set_enchantments": {
-      "$type": "object",
-      "description": "Enchantments to modify.",
-      "properties": {
-        "An enchantment": {
-          "description": "Key name is the [ [Java_Edition_data_value#Enchantments|enchantment ID] ]. Value is a [ [Loot_table#Number_Providers|number provider] ] specifying the enchantment power. Powers are clamped at a maximum of 255. Decreasing an enchantment power below 1 will remove the enchantment, through a relative negative add or through a direct value assignemnt.",
-          "value": { "$defRef": "number_provider:number_provider" },
-          "optional": true
-        }
-      }
-    },
-    "%treasure-enchant_with_levels": {
-      "$type": "boolean",
-      "description": "Determines whether [ [treasure enchantment] ]s are allowed on this item. Defaults to false."
-    },
-    "%destination-exploration_map": {
-      "$type": "string",
-      "description": "A tag of structure to locate. Defaults to <code>on_treasure_maps</code>."
-    },
-    "%decoration-exploration_map": {"$ref": "utils:resource_location", "schema": "map_marker", "description": "The icon used to mark the destination on the map. Accepts any of the [ [Map#Map icons|map icon text IDs] ] (case insensitive). If <code>mansion</code> or <code>monument</code> is used, the color of the lines on the item texture changes to match the corresponding explorer map. Defaults to <code>mansion</code>." },
-    "%zoom-exploration_map": {
-      "$type": "integer",
-      "description": "The zoom level of the resulting map. Defaults to 2."
-    },
-    "%search_radius-exploration_map": {
-      "$type": "integer",
-      "description": "The size, in chunks, of the area to search for structures. The area checked is square, not circular. Radius 0 causes only the current chunk to be searched, radius 1 causes the current chunk and eight adjacent chunks to be searched, and so on. Defaults to 50."
-    },
-    "%skip_existing_chunks-exploration_map": {
-      "$type": "boolean",
-      "description": "Don't search in chunks that have already been generated. Defaults to true."
-    },
-    "%entity-fill_player_head": {
-      "$defRef": "number_provider:loot_context_killer",
-      "description": "Specifies a player to be used for the player head. Specifies an entity from [ [Loot table#Loot context types|loot context] ]. Can be {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}."
-    },
-    "%entity-set_lore": {
-      "$defRef": "number_provider:loot_context_killer",
-      "description": "Specifies the entity to act as <code>@s</code> when referenced in the JSON text component. Specifies an entity from [ [Loot table#Loot context types|loot context] ]. Can be {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}."
-    },
-    "%entity-set_name": {
-      "$defRef": "number_provider:loot_context_killer",
-      "description": "Specifies the entity to act as <code>@s</code> when referenced in the JSON text component. Specifies an entity from [ [Loot table#Loot context types|loot context] ]. Can be {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}."
-    },
-    "%limit-limit_count": {
-      "$type": "union",
-      "options": [
-        {
-          "$type": "integer",
-          "description": "An integer to specify the exact limit to use."
-        },
-        {
-          "$type": "object",
-          "description": "Limits the count between a minimum and maximum value.",
-          "properties": {
-            "min": {
-              "description": "Optional. A [ [Loot_table#Number_Providers|number provider] ]. Minimum limit to use.",
-              "value": { "$defRef": "number_provider:number_provider" },
-              "optional": true
-            },
-            "max": {
-              "description": "Optional. A [ [Loot_table#Number_Providers|number provider] ]. Maximum limit to use.",
-              "value": { "$defRef": "number_provider:number_provider" },
-              "optional": true
+              "description": " The name of a block state to copy."
             }
           }
         }
-      ]
+      }
     },
-    "%limit-looting_enchant": {
-      "$type": "integer",
-      "description": "Specifies the maximum amount of items in the stack after the looting calculation. If the value is 0, no limit is applied. Defaults to 0."
-    },
-    "%count-looting_enchant": {
-      "$defRef": "number_provider:number_provider"
-    },
-    "%count-set_count": {
-      "$defRef": "number_provider:number_provider"
-    },
-    "%name-reference": {
-      "$type": "union",
-      "description": "Location of function to call.",
-      "options": [
-        {
-          "$type": "string",
-          "description": "Location of function to call."
+    "%enchant_randomly": {
+      "$type": "object",
+      "properties": {
+        "enchantments": {
+          "optional": true,
+          "description": "Optional. List of [[Java_Edition_data_value#Enchantments|enchantment IDs]] to choose from. If omitted, all discoverable enchantments (currently only [[Soul speed]] and [[Swift Sneak]] are undiscoverable) applicable to the item are possible.",
+          "value": {
+            "$type": "array",
+            "element": { "$ref": "utils:resource_location", "schema": "enchantment"  }
+          }
         },
-        {
-          "$type": "array",
+        "only_compatible": {
+          "description": "Whether only enchantments that are compatible with the item should be chosen (i.e. the item is listed in the enchantments `supported_items`). Books are always considered compatible.",
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "default": true
+        }
+      }
+    },
+    "%enchant_with_levels": {
+      "$type": "object",
+      "properties": {
+        "levels": {
+          "description": "Specifies the enchantment level to use.",
+          "optional": true,
+          "value": { "$defRef": "number_provider:number_provider" }
+        },
+        "treasure": {
+          "description": "Determines whether treasure enchantments are allowed on this item. Defaults to false.",
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "default": false
+        }
+      }
+    },
+    "%exploration_map": {
+      "$type": "object",
+      "properties": {
+        "destination": {
+          "optional": true,
+          "description": "A tag of structure to locate. Defaults to <code>on_treasure_maps</code>.",
+          "value": { "$type": "string" }
+        },
+        "decoration": {
+          "optional": true,
+          "description": "The icon used to mark the destination on the map. Accepts any of the [[Map#Map icons|map icon text IDs]] (case insensitive). If <code>mansion</code> or <code>monument</code> is used, the color of the lines on the item texture changes to match the corresponding explorer map. Defaults to <code>mansion</code>.",
+          "value": { "$ref": "utils:resource_location", "schema": "map_marker"  }
+        },
+        "zoom": {
+          "optional": true,
+          "description": "The zoom level of the resulting map. Defaults to 2.",
+          "value": { "$type": "integer" }
+        },
+        "search_radius": {
+          "optional": true,
+          "description": "The size, in chunks, of the area to search for structures. The area checked is square, not circular. Radius 0 causes only the current chunk to be searched, radius 1 causes the current chunk and eight adjacent chunks to be searched, and so on. Defaults to 50.",
+          "value": { "$type": "integer" }
+        },
+        "skip_existing_chunks": {
+          "optional": true,
+          "description": "Don't search in chunks that have already been generated. Defaults to true.",
+          "value": { "$type": "boolean" }
+        }
+      }
+    },
+    "%explosion_decay": {
+      "$type": "object",
+      "properties": {}
+    },
+    "%fill_player_head": {
+      "$type": "object",
+      "properties": {
+        "entity": {
+          "optional": true,
+          "description": "Specifies a player to be used for the player head. Specifies an entity from [[Loot table#Loot context types|loot context]]. Can be {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}.",
+          "value": { "$defRef": "number_provider:loot_context_killer" }
+        }
+      }
+    },
+    "%furnace_smelt": {
+      "$type": "object",
+      "properties": {}
+    },
+    "%limit_count": {
+      "$type": "object",
+      "properties": {
+        "limit": {
+          "optional": true,
+          "value": {
+            "$type": "union",
+            "options": [
+              {
+                "$type": "integer",
+                "description": "An integer to specify the exact limit to use."
+              },
+              {
+                "$type": "object",
+                "description": "Limits the count between a minimum and maximum value.",
+                "properties": {
+                  "min": {
+                    "description": "Optional. A [[Loot_table#Number_Providers|number provider]]. Minimum limit to use.",
+                    "value": { "$defRef": "number_provider:number_provider" },
+                    "optional": true
+                  },
+                  "max": {
+                    "description": "Optional. A [[Loot_table#Number_Providers|number provider]]. Maximum limit to use.",
+                    "value": { "$defRef": "number_provider:number_provider" },
+                    "optional": true
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "%looting_enchant": {
+      "$type": "object",
+      "properties": {
+        "limit": {
+          "optional": true,
+          "description": "Specifies the maximum amount of items in the stack after the looting calculation. If the value is 0, no limit is applied. Defaults to 0.",
+          "value": { "$type": "integer" }
+        },
+        "count": {
+          "optional": true,
+          "value": { "$defRef": "number_provider:number_provider" }
+        }
+      }
+    },
+    "%reference": {
+      "$type": "object",
+      "properties": {
+        "name": {
+          "optional": true,
           "description": "Location of function to call.",
-          "element": {
+          "value": {
+            "$type": "union",
+            "options": [
+              {
+                "$type": "string",
+                "description": "Location of function to call."
+              },
+              {
+                "$type": "array",
+                "description": "Location of function to call.",
+                "element": {
+                  "$type": "string",
+                  "description": "Location of function to call."
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "%sequence": {
+      "$type": "object",
+      "properties": {
+        "functions": {
+          "description": "A list of functions.",
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": { "$defRef": "item_modifier-body" }
+          }
+        }
+      }
+    },
+    "%set_attributes": {
+      "$type": "object",
+      "properties": {
+        "modifiers": {
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "description": "An attribute modifier to add.",
+              "properties": {
+                "name": {
+                  "description": "Name of the modifier.",
+                  "value": { "$type": "string" },
+                  "optional": true
+                },
+                "attribute": {
+                  "description": "The [[resource location]] of the attribute this modifier is to act upon.",
+                  "value": { "$type": "string" },
+                  "optional": true
+                },
+                "operation": {
+                  "value": { "$defRef": "utils:attribute_operations" },
+                  "optional": true
+                },
+                "amount": {
+                  "description": "A [[Loot_table#Number_Provider|number provider]]. Specifies the amount of the modifier.",
+                  "value": { "$defRef": "number_provider:number_provider" },
+                  "optional": true
+                },
+                "id": {
+                  "description": "Optional. [[UUID]] to assign the modifier, in hyphenated hexadecimal format. If none specified, a new random UUID is generated.",
+                  "value": { "$type": "string" },
+                  "optional": true
+                },
+                "slot": {
+                  "description": "Sets the slots the item must be in for the modifier to take effect. One of: <code>mainhand</code>, <code>offhand</code>, <code>feet</code>, <code>legs</code>, <code>chest</code>, <code>head</code>.",
+                  "value": {
+                    "$ref": "utils:value_or_array",
+                    "element": { "$defRef": "utils:armor_slots" }
+                  },
+                  "optional": true
+                }
+              }
+            }
+          }
+        },
+        "replace": {
+          "description": "Set to `true` to replace the existing item attributes with the attributes in  modifiers. If `false`, the lines are appended to the list of existing attributes. Defaults to `true`.",
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "default": true
+        }
+      }
+    },
+    "%set_banner_pattern": {
+      "$type": "object",
+      "properties": {
+        "patterns": {
+          "optional": true,
+          "description": "List of patterns to add or replace with.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "description": "A pattern.",
+              "properties": {
+                "pattern": {
+                  "description": "The [[Banner/Patterns|pattern]] type. For example, <code>square_bottom_left</code>.",
+                  "value": {
+                    "$type": "string",
+                    "type": "minecraft:banner_pattern"
+                  },
+                  "optional": true
+                },
+                "color": {
+                  "description": "The color for this pattern. One of <code>white</code>, <code>orange</code>, <code>magenta</code>, <code>light_blue</code>, <code>yellow</code>, <code>lime</code>, <code>pink</code>, <code>gray</code>, <code>light_gray</code>, <code>cyan</code>, <code>purple</code>, <code>blue</code>, <code>brown</code>, <code>green</code>, <code>red</code>, <code>black</code>.",
+                  "value": {
+                    "$type": "string",
+                    "type": "minecraft:color"
+                  },
+                  "optional": true
+                }
+              }
+            }
+          }
+        },
+        "append": {
+          "optional": true,
+          "description": "Required. If true, the patterns will be applied on top of the banner's existing patterns.",
+          "value": { "$type": "boolean" }
+        }
+      }
+    },
+    "%set_book_cover": {
+      "$type": "object",
+      "properties": {
+        "author": {
+          "description": "Sets the author of the book. If omitted, the original author is kept (or an empty string is used if there was no component).",
+          "optional": true,
+          "value": { "$type": "string" }
+        },
+        "generation": {
+          "description": "Sets the generation value of the book (original, copy, etc.). Allowed values are `0` to `3`. If omitted, the original generation is kept (or `0` is used if there was no component).",
+          "optional": true,
+          "value": { "$type": "integer", "min": 0, "max": 3 },
+          "default": 0
+        },
+        "title": {
+          "description": "Sets the title of the book as a raw JSON text component. If omitted, the original title is kept (or an empty string is used if there was no component).",
+          "optional": true,
+          "value": { "$defRef": "rawJsonText:rawJsonText" }
+        }
+      }
+    },
+    "%set_components": {
+      "$type": "object",
+      "properties": {
+        "components": {
+          "description": "A map of components ID to component value. Components with a `!` prefix (e.g. `\"!minecraft:damage\": {}`) causes this component to be removed.",
+          "optional": true,
+          "value": { "$defRef": "utils:data_components_removable" }
+        }
+      }
+    },
+    "%set_contents": {
+      "$type": "object",
+      "properties": {
+        "entries": {
+          "optional": true,
+          "description": "A list of [[Loot table|loot table entry producer]] to provide item stacks.",
+          "value": {
+            "$type": "array",
+            "element": { "$defRef": "loot_table:entry_provider" }
+          }
+        },
+        "type": {
+          "optional": true,
+          "description": "the block entity type to be written in <code>BlockEntityTag.id</code>.",
+          "value": { "$type": "string" }
+        }
+      }
+    },
+    "%set_count": {
+      "$type": "object",
+      "properties": {
+        "count": {
+          "optional": true,
+          "value": { "$defRef": "number_provider:number_provider" }
+        },
+        "add": {
+          "optional": true,
+          "description": "Optional. If <code>true</code>, change will be relative to current count. Defaults to false.",
+          "value": { "$type": "boolean" }
+        }
+      }
+    },
+    "%set_custom_data": {
+      "$type": "object",
+      "properties": {
+        "tag": {
+          "optional": true,
+          "description": "The NBT to merge onto the item's <code>tag</code> tag, within a JSON string. The outer braces <code>{ }</code> of the NBT must be present within this JSON string. Additional care is required when the NBT contains quotation marks <code>\"</code>, as they must be escaped from the JSON syntax with a backslash <code>\\</code>.",
+          "value": {
             "$type": "string",
-            "description": "Location of function to call."
-          }
-        }
-      ]
-    },
-    "%name-set_loot_table": {"$ref": "utils:resource_location", "schema": "loot_table", "description": "Specifies the [ [resource location] ] of the loot table to be used." },
-    "%name-set_name": {
-      "$type": "union",
-      "description": "A [ [Raw JSON text format|JSON text component] ], overwriting the previous custom name on the item. Components requiring [ [Raw_JSON_text_format#Component_resolution|resolution] ] are resolved only if <code>entity</code> successfully targets an entity.",
-      "options": [{ "$defRef": "rawJsonText:rawJsonText" }]
-    },
-    "%modifiers-set_attributes": {
-      "$type": "array",
-      "element": {
-        "$type": "object",
-        "description": "An attribute modifier to add.",
-        "properties": {
-          "name": {
-            "description": "Name of the modifier.",
-            "value": { "$type": "string" },
-            "optional": true
-          },
-          "attribute": {
-            "description": "The [ [resource location] ] of the attribute this modifier is to act upon.",
-            "value": { "$type": "string" },
-            "optional": true
-          },
-          "operation": {
-            "value": {"$defRef": "utils:attribute_operations"},
-            "optional": true
-          },
-          "amount": {
-            "description": "A [ [Loot_table#Number_Provider|number provider] ]. Specifies the amount of the modifier.",
-            "value": { "$defRef": "number_provider:number_provider" },
-            "optional": true
-          },
-          "id": {
-            "description": "Optional. [ [UUID] ] to assign the modifier, in hyphenated hexadecimal format. If none specified, a new random UUID is generated.",
-            "value": { "$type": "string" },
-            "optional": true
-          },
-          "slot": {
-            "description": "Sets the slots the item must be in for the modifier to take effect. One of: <code>mainhand</code>, <code>offhand</code>, <code>feet</code>, <code>legs</code>, <code>chest</code>, <code>head</code>.",
-            "value": {"$ref": "utils:value_or_array", "element": {"$defRef": "utils:armor_slots"}},
-            "optional": true
+            "type": "minecraft:nbt_compound_tag"
           }
         }
       }
     },
-    "%patterns-set_banner_pattern": {
-      "$type": "array",
-      "description": "List of patterns to add or replace with.",
-      "element": {
-        "$type": "object",
-        "description": "A pattern.",
-        "properties": {
-          "pattern": {
-            "description": "The [ [Banner/Patterns|pattern] ] type. For example, <code>square_bottom_left</code>.",
-            "value": { "$type": "string",  "type": "minecraft:banner_pattern" },
-            "optional": true
-          },
-          "color": {
-            "description": "The color for this pattern. One of <code>white</code>, <code>orange</code>, <code>magenta</code>, <code>light_blue</code>, <code>yellow</code>, <code>lime</code>, <code>pink</code>, <code>gray</code>, <code>light_gray</code>, <code>cyan</code>, <code>purple</code>, <code>blue</code>, <code>brown</code>, <code>green</code>, <code>red</code>, <code>black</code>.",
-            "value": { "$type": "string",  "type": "minecraft:color" },
-            "optional": true
+    "%set_damage": {
+      "$type": "object",
+      "properties": {
+        "add": {
+          "optional": true,
+          "description": "Optional. If <code>true</code>, change will be relative to current damage. Defaults to false.",
+          "value": { "$type": "boolean" }
+        },
+        "damage": {
+          "description": "A [[Loot_table#Number_Providers|number provider]]. Specifies the damage fraction to set (1.0 is undamaged, 0.0 is zero durability left).",
+          "optional": true,
+          "value": { "$defRef": "number_provider:number_provider" }
+        }
+      }
+    },
+    "%set_enchantments": {
+      "$type": "object",
+      "properties": {
+        "enchantments": {
+          "optional": true,
+          "description": "Enchantments to modify. Key name is the [[Java_Edition_data_value#Enchantments|enchantment ID]]. Value is a [[Loot_table#Number_Providers|number provider]] specifying the enchantment power. Powers are clamped at a maximum of 255. Decreasing an enchantment power below 1 will remove the enchantment, through a relative negative add or through a direct value assignemnt.",
+          "value": {
+            "$type": "object",
+            "default-property": { "$defRef": "number_provider:number_provider" },
+            "default-key": { "$ref": "utils:resource_location", "schema": "enchantment"  }
+          }
+        },
+        "add": {
+          "optional": true,
+          "description": "Optional. If <code>true</code>, change will be relative to current level. A nonexistent enchantment will be presumed to start at 0. Defaults to false.",
+          "value": { "$type": "boolean" }
+        }
+      }
+    },
+    "%set_fireworks": {
+      "$type": "object",
+      "properties": {
+        "explosions": {
+          "optional": true,
+          "description": "Specifies firework explosions.",
+          "value": {
+            "$type": "object",
+            "properties": {
+              "values": {
+                "description": "List of firework explosion data.",
+                "value": { "$defRef": "data_components:firework_explosion_data" }
+              },
+              "mode": {
+                "description": "Determines how existing fireworks component should be modified.",
+                "value": { "$defRef": "utils:modify_mode" }
+              },
+              "offset": {
+                "description": "Specifies index to insert or replace explosions from. Defaults to `0`. Only applicable if property `mode` is `insert` or `replace_section`.",
+                "optional": true,
+                "value": { "$type": "integer" },
+                "default": 0
+              },
+              "size": {
+                "description": "Specifies the size of the range to be replaced. If omitted, the size of the `values` field is used. Only applicable if property `mode` is `replace_section`.",
+                "optional": true,
+                "value": { "$type": "integer" }
+              }
+            }
+          }
+        },
+        "flight_duration": {
+          "description": "Allowed values are `0` to `255`. Determines flight duration measured in number of gunpowder. If omitted, the flight duration of the item is left untouched (or set to `0` if the component did not exist before).",
+          "optional": true,
+          "value": {
+            "$type": "integer",
+            "min": 0,
+            "max": 255
           }
         }
       }
     },
-    "%append-set_banner_pattern": {
-      "$type": "boolean",
-      "description": "Required. If true, the patterns will be applied on top of the banner's existing patterns."
+    "%set_firework_explosion": {
+      "$type": "object",
+      "inherits": [ { "defRef": "data_components:firework_explosion_data" } ],
+      "properties": {}
     },
-    "%entries-set_contents": {
-      "$type": "array",
-      "description": "A list of [ [Loot table|loot table entry producer] ] to provide item stacks.",
-      "element": { "$defRef": "loot_table:entry_provider" }
+    "%set_instrument": {
+      "$type": "object",
+      "properties": {
+        "options": {
+          "optional": true,
+          "description": "The resource location started with <code>#</code> of an instrument [[tag]], one of the listings is selected randomly.",
+          "value": { "$ref": "utils:resource_location", "schema": "instrument"  }
+        }
+      }
     },
-    "%type-set_contents": {
-      "$type": "string",
-      "description": "the block entity type to be written in <code>BlockEntityTag.id</code>."
+    "%set_loot_table": {
+      "$type": "object",
+      "properties": {
+        "name": {
+          "optional": true,
+          "description": "Specifies the [[resource location]] of the loot table to be used.",
+          "value": { "$ref": "utils:resource_location", "schema": "loot_table"  }
+        },
+        "type": {
+          "optional": true,
+          "description": "the block entity type to be written in <code>BlockEntityTag.id</code>.",
+          "value": { "$type": "string" }
+        },
+        "seed": {
+          "optional": true,
+          "description": "Optional. Specifies the loot table seed. If absent or set to 0, the seed won't be put into the NBT, and a random seed will be used when opening the continer.",
+          "value": { "$type": "integer" }
+        }
+      }
     },
-    "%type-set_loot_table": {
-      "$type": "string",
-      "description": "the block entity type to be written in <code>BlockEntityTag.id</code>."
+    "%set_lore": {
+      "$type": "object",
+      "properties": {
+        "lore": {
+          "description": "List of lines to append or replace on the item's lore. Components requiring [[Raw_JSON_text_format#Component_resolution|resolution]] are resolved only if <code>entity</code> successfully targets an entity.",
+          "value": {
+            "$type": "array",
+            "element": { "$defRef": "rawJsonText:rawJsonText" }
+          }
+        },
+        "entity": {
+          "description": "Specifies the entity to act as <code>@s</code> when referenced in the JSON text component. Specifies an entity from [[Loot table#Loot context types|loot context]]. Can be {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}.",
+          "value": { "$defRef": "number_provider:loot_context_killer" }
+        },
+        "replace": {
+          "description": "Optional. Set to <code>true</code> to replace the existing item lore with only the lines in {{nbt|list|lore}}. If <code>false</code>, the lines are appended to the list of existing lines of lore. Defaults to false.",
+          "optional": true,
+          "value": { "$type": "boolean" },
+          "default": false
+        },
+        "mode": {
+          "description": "Determines how existing lore component should be modified.",
+          "value": { "$defRef": "utils:modify_mode" }
+        },
+        "offset": {
+          "description": "Specifies index to insert or replace lines of lore from. Defaults to `0`. Only applicable if property `mode` is `insert` or `replace_section`.",
+          "optional": true,
+          "value": { "$type": "integer" },
+          "default": 0
+        },
+        "size": {
+          "description": "Specifies the size of the range to be replaced. If omitted, the size of the `lore` field is used. Only applicable if property `mode` is `replace_section`.",
+          "optional": true,
+          "value": { "$type": "integer" }
+        }
+      }
     },
-    "%add-set_count": {
-      "$type": "boolean",
-      "description": "Optional. If <code>true</code>, change will be relative to current count. Defaults to false."
-    },
-    "%add-set_damage": {
-      "$type": "boolean",
-      "description": "Optional. If <code>true</code>, change will be relative to current damage. Defaults to false."
-    },
-    "%add-set_enchantments": {
-      "$type": "boolean",
-      "description": "Optional. If <code>true</code>, change will be relative to current level. A nonexistent enchantment will be presumed to start at 0. Defaults to false."
-    },
-    "%options-set_instrument": {"$ref": "utils:resource_location", "schema": "instrument", "description": "The resource location started with <code>#</code> of an instrument [ [tag] ], one of the listings is selected randomly." },
-    "%seed-set_loot_table": {
-      "$type": "integer",
-      "description": "Optional. Specifies the loot table seed. If absent or set to 0, the seed won't be put into the NBT, and a random seed will be used when opening the continer."
-    },
-    "%replace-set_lore": {
-      "$type": "boolean",
-      "description": "Optional. Set to <code>true</code> to replace the existing item lore with only the lines in {{nbt|list|lore}}. If <code>false</code>, the lines are appended to the list of existing lines of lore. Defaults to false."
-    },
-    "%tag-set_custom_data": {
-      "$type": "string",
-      "description": "The NBT to merge onto the item's <code>tag</code> tag, within a JSON string. The outer braces <code>{ }</code> of the NBT must be present within this JSON string. Additional care is required when the NBT contains quotation marks <code>\"</code>, as they must be escaped from the JSON syntax with a backslash <code>\\</code>.",
-      "type": "minecraft:nbt_compound_tag"
-    },
-    "%id-set_potion": {"$ref": "utils:resource_location", "schema": "potion", "description": "The [ [Potion#Java_Edition|potion ID] ]. Set to <code>empty</code> to remove the <code>Potion</code> tag." },
-    "%effects-set_stew_effect": {
-      "$type": "array",
-      "description": "The effects to apply.",
-      "element": {
-        "$type": "object",
-        "description": " An effect.",
-        "properties": {
-          "type": {
-            "description": "The effect ID.",
-            "value": { "$type": "string" },
-            "optional": true
+    "%set_name": {
+      "$type": "object",
+      "properties": {
+        "entity": {
+          "optional": true,
+          "description": "Specifies the entity to act as <code>@s</code> when referenced in the JSON text component. Specifies an entity from [[Loot table#Loot context types|loot context]]. Can be {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}.",
+          "value": { "$defRef": "number_provider:loot_context_killer" }
+        },
+        "name": {
+          "optional": true,
+          "description": "A [[Raw JSON text format|JSON text component]], overwriting the previous custom name on the item. Components requiring [[Raw_JSON_text_format#Component_resolution|resolution]] are resolved only if <code>entity</code> successfully targets an entity.",
+          "value": { "$defRef": "rawJsonText:rawJsonText" }
+        },
+        "target": {
+          "description": "Allowed values are `custom_name` or `item_name`, corresponding with the component to be set. Defaults to `custom_name`.",
+          "optional": true,
+          "value": {
+            "$type": "enum",
+            "options": {
+              "custom_name": "",
+              "item_name": ""
+            }
           },
-          "duration": {
-            "description": "A [ [Loot_table#Number_Providers|number provider] ]. The duration of the effect.",
-            "value": { "$defRef": "number_provider:number_provider" },
-            "optional": true
+          "default": "custom_name"
+        }
+      }
+    },
+    "%set_potion": {
+      "$type": "object",
+      "properties": {
+        "id": {
+          "optional": true,
+          "description": "The [[Potion#Java_Edition|potion ID]]. Set to <code>empty</code> to remove the <code>Potion</code> tag.",
+          "value": { "$ref": "utils:resource_location", "schema": "potion"  }
+        }
+      }
+    },
+    "%set_stew_effect": {
+      "$type": "object",
+      "properties": {
+        "effects": {
+          "optional": true,
+          "description": "The effects to apply.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "description": " An effect.",
+              "properties": {
+                "type": {
+                  "description": "The effect ID.",
+                  "value": { "$type": "string" },
+                  "optional": true
+                },
+                "duration": {
+                  "description": "A [[Loot_table#Number_Providers|number provider]]. The duration of the effect.",
+                  "value": { "$defRef": "number_provider:number_provider" },
+                  "optional": true
+                }
+              }
+            }
           }
         }
       }
     },
-    "%include-copy_components": {
-      "$type": "array",
-      "description": "A list of components to include. If omitted, all components are copied.",
-      "element": {"$ref": "utils:resource_location", "schema": "item_components"}
-    },
-    "%exclude-copy_components": {
-      "$type": "array",
-      "description": "A list of components to exclude.",
-      "element": {"$ref": "utils:resource_location", "schema": "item_components"}
+    "%set_written_book_pages": {
+      "$type": "object",
+      "properties": {
+        "pages": {
+        "description": "A list of pages as raw JSON text components.",
+          "value": {
+            "$type": "array",
+            "element": { "$defRef": "rawJsonText:rawJsonText" }
+          }
+        },
+        "mode": {
+          "description": "Determines how existing lore component should be modified.",
+          "value": { "$defRef": "utils:modify_mode" }
+        },
+        "offset": {
+          "description": "Specifies index to insert or replace pages from. Defaults to `0`. Only applicable if property `mode` is `insert` or `replace_section`.",
+          "optional": true,
+          "value": { "$type": "integer" },
+          "default": 0
+        },
+        "size": {
+          "description": "Specifies the size of the range to be replaced. If omitted, the size of the `pages` field is used. Only applicable if property `mode` is `replace_section`.",
+          "optional": true,
+          "value": { "$type": "integer" }
+        }
+      }
     }
   }
 }

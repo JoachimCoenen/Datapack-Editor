@@ -149,8 +149,19 @@
         "chest": "",
         "head": "",
         "body": ""
-      },
-      "optionalPrefixes": ["minecraft:"] // maybe...?
+      }
+      //"optionalPrefixes": ["minecraft:"] // maybe...?
+    },
+    
+    "modify_mode": {
+      "$type": "enum",
+      "options": {
+        "append": "",
+        "insert": "",
+        "replace_all": "",
+        "replace_section": ""
+      }
+      //"optionalPrefixes": ["minecraft:"] // maybe...?
     },
 
     "data_components": {

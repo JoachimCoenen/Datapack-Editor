@@ -1,0 +1,30 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "data_components": "data_components-library.json",
+    "rawJsonText": "../json/rawJsonText-library.json",
+    "utils": "../common/utils-library.json",
+    "nbt": "../common/nbt-types.json"
+  },
+  "$templates": { },
+  
+  "$definitions": {
+  
+    "firework_explosion": {
+      "$defRef": "data_components:firework_explosion_data"
+    },
+    
+    "fireworks": {
+      "$type": "object",
+      "properties": {
+        "explosions": {
+          "value": { "$defRef": "data_components:firework_explosion_data" }
+        },
+        "flight_duration": {
+          "description": "The flight duration of this firework rocket, i.e. the number of gunpowders used to craft it. Must be an integer between -128 and 127. Defaults to 1.",
+          "value": { "$defRef": "nbt:byte" }
+        }
+      }
+    }
+  }
+}
