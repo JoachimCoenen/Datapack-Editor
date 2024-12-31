@@ -263,16 +263,16 @@ class TmplRefStrArgKeysContext(StringNodeContext):
 		return list(template.params.keys())
 
 	def getDocumentation(self, node: StringNode, pos: Position) -> MDStr:
-		if not isinstance(node.parsedValue, TemplateParam):
-			return MDStr('')
-		return node.parsedValue.description
+		if isinstance(node, StringNode) and isinstance(node.parsedValue, TemplateParam):
+			return node.parsedValue.description
+		return MDStr('')
 
 	def getClickableRanges(self, node: StringNode) -> Iterable[Span] | None:
-		if isinstance(node.parsedValue, TemplateParam):
+		if isinstance(node, StringNode) and isinstance(node.parsedValue, TemplateParam):
 			return (node.span,)
 
 	def onIndicatorClicked(self, node: StringNode, pos: Position) -> None:
-		if isinstance(node.parsedValue, TemplateParam):
+		if isinstance(node, StringNode) and isinstance(node.parsedValue, TemplateParam):
 			if (tmplRefStrValue := self._getTmplRefStrValue(node)) is not None and tmplRefStrValue.definition is not None:
 				getSession().tryOpenOrSelectDocument(tmplRefStrValue.libraryFilePath, Span(node.parsedValue.span.start))
 
