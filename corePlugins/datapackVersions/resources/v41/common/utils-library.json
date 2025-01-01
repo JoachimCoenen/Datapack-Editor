@@ -163,6 +163,31 @@
       }
       //"optionalPrefixes": ["minecraft:"] // maybe...?
     },
+    
+    "game_mode": {
+      "$type": "string",
+      "type": "game_mode"
+    },
+    
+    "nbt_path": {
+      "$type": "string",
+      "type": "minecraft:nbt_path"
+    },
+    
+    "advancement_id": {
+      "$type": "string",
+      "type": "dpe:target_selector_advancements"
+    },
+    
+    "advancement_criterion_id": {
+      "$type": "string",
+      "type": "dpe:target_selector_advancements_criterion"
+    },
+    
+    "scoreboard_objective": {
+      "$type": "string",
+      "type": "minecraft:objective"
+    },
 
     "data_components": {
       "$type": "calculated",

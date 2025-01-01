@@ -25,6 +25,46 @@ def buildGamerulesDict(gamerules: list[Gamerule]) -> FrozenDict[bytes, Gamerule]
 
 
 @dataclass
+class EntityVariants:
+	# do NOT change the name of any field! They are used to generate the ResourceLocationContexts dynamically.
+	axolotl: frozenset[ResourceLocation]
+	boat: frozenset[ResourceLocation]  # may be removed in 1.21.x ?
+	cat: frozenset[ResourceLocation]
+	fox: frozenset[ResourceLocation]
+	frog: frozenset[ResourceLocation]
+	horse: frozenset[ResourceLocation]
+	llama: frozenset[ResourceLocation]
+	mooshroom: frozenset[ResourceLocation]
+	painting: frozenset[ResourceLocation]
+	parrot: frozenset[ResourceLocation]
+	rabbit: frozenset[ResourceLocation]
+	salmon: frozenset[ResourceLocation]
+	tropical_fish: frozenset[ResourceLocation]
+	villager: frozenset[ResourceLocation]
+	# wolf: frozenset[ResourceLocation] specified in datapack
+
+	EMPTY: ClassVar[EntityVariants]
+
+
+EntityVariants.EMPTY = EntityVariants(
+	axolotl=frozenset(),
+	boat=frozenset(),
+	cat=frozenset(),
+	fox=frozenset(),
+	frog=frozenset(),
+	horse=frozenset(),
+	llama=frozenset(),
+	mooshroom=frozenset(),
+	painting=frozenset(),
+	parrot=frozenset(),
+	rabbit=frozenset(),
+	salmon=frozenset(),
+	tropical_fish=frozenset(),
+	villager=frozenset(),
+)
+
+
+@dataclass
 class CustomMCData:
 	name: str
 
@@ -39,6 +79,8 @@ class CustomMCData:
 	damageTypes: frozenset[ResourceLocation]
 	itemComponents: frozenset[ResourceLocation]
 	itemSubPredicates: frozenset[ResourceLocation]
+	statisticTypes: frozenset[ResourceLocation]
+	entityVariants: EntityVariants
 
 	slots: FrozenDict[bytes, frozenset[bytes | None]]
 	gamerules: FrozenDict[bytes, Gamerule]
@@ -59,6 +101,8 @@ CustomMCData.EMPTY = CustomMCData(
 	damageTypes=frozenset(),
 	itemComponents=frozenset(),
 	itemSubPredicates=frozenset(),
+	statisticTypes=frozenset(),
+	entityVariants=EntityVariants.EMPTY,
 	slots=FrozenDict(),
 	gamerules=FrozenDict(),
 )

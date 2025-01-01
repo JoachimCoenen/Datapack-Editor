@@ -24,23 +24,7 @@
             "properties": {
               "icon": {
                 "description": "Object containing data for the advancement's icon.",
-                "value": {
-                  "$type": "object",
-                  "properties": {
-                    "item": {
-                      "description": "The item's [ [Resource location|ID] ].",
-                      "value": {"$ref": "utils:resource_location", "schema": "item" }
-                    },
-                    "nbt": {
-                      "description": "A string containing [ [NBT format#SNBT_format|SNBT] ] that may modify the item's appearance on the icon.",
-                      "value": {
-                        "$type": "string",
-                        "type": "minecraft:nbt_compound_tag"
-                      },
-                      "optional": true
-                    }
-                  }
-                }
+                "value": { "$defRef": "utils:item_stack_with_count" }
               },
               "title": {
                 "description": "A [ [Raw JSON text format|JSON text component] ] for the title of this advancement.",
@@ -119,6 +103,7 @@
                         "channeled_lightning": "Triggers after the player successfully uses the Channeling enchantment on an entity or a lightning rod. Available extra conditions:",
                         "construct_beacon": "Triggers after the player changes the structure of a [[beacon]]. (When the beacon updates itself). Available extra conditions:",
                         "consume_item": "Triggers when the player consumes an item. Available extra conditions:",
+                        "crafter_recipe_crafted": "Triggers when the player is within a certain range of a crafter when it crafts a recipe. Available extra conditions:",
                         "cured_zombie_villager": "Triggers when the player cures a [[zombie villager]]. Available extra conditions:",
                         "default_block_use": "Triggers when the player activates a block's default use action (opening a door, pushing a button, opening a crafting grid, etc). Available extra conditions:",
                         "effects_changed": "Triggers after the player gets a [[status effect]] applied or taken from them. Available extra conditions:",
@@ -126,6 +111,7 @@
                         "enter_block": "Every tick, triggers once for each block the player's hitbox is inside (up to 12 blocks, the maximum number of blocks the player can stand in). Available extra conditions:",
                         "entity_hurt_player": "Triggers after a player gets hurt (even when it's not caused by an entity). Available extra conditions:",
                         "entity_killed_player": "Triggers after a living [[entity]] kills a player. Available extra conditions:",
+                        "fall_after_explosion": "Triggers when a player lands after being launched upward by an explosion or wind burst. Available extra conditions:",
                         "fall_from_height": "Triggers when a player lands after falling. Available extra conditions:",
                         "filled_bucket": "Triggers after the player fills a bucket. Available extra conditions:",
                         "fishing_rod_hooked": "Triggers after the player successfully catches an item with a fishing rod or pulls an entity with a fishing rod. Available extra conditions:",
@@ -174,20 +160,7 @@
                       "properties": {
                         "player": {
                           "description": "Checks properties of the player that would get the advancement. Not available for <code>minecraft:impossible</code> trigger.",
-                          "value": {
-                            "$type": "union",
-                            "options": [
-                              {
-                                "$type": "object",
-                                "inherits": [ { "defRef": "entity:entity" } ],
-                                "properties": {}
-                              },
-                              {
-                                "$type": "array",
-                                "element": { "$defRef": "predicate:predicate-body" }
-                              }
-                            ]
-                          },
+                          "value": { "$defRef": "%entity_or_predicates" },
                           "optional": true
                         },
                         "location": {
@@ -372,7 +345,8 @@
                           "values": {
                             "fall_from_height": { "$defRef": "%start_position" },
                             "nether_travel": { "$defRef": "%start_position" },
-                            "ride_entity_in_lava": { "$defRef": "%start_position" }
+                            "ride_entity_in_lava": { "$defRef": "%start_position" },
+                            "fall_after_explosion": { "$defRef": "%start_position" }
                           },
                           "optionalPrefixes": [ "minecraft:" ],
                           "optional": true
@@ -384,6 +358,7 @@
                             "levitation": { "$defRef": "%distance-traveled_or_fallen" },
                             "nether_travel": { "$defRef": "%distance-traveled_or_fallen" },
                             "ride_entity_in_lava": { "$defRef": "%distance-traveled_or_fallen" },
+                            "fall_after_explosion": { "$defRef": "%distance-traveled_or_fallen" },
                             "used_ender_eye": { "$defRef": "%distance-used_ender_eye" }
                           },
                           "optionalPrefixes": [ "minecraft:" ],
@@ -450,12 +425,18 @@
                         },
                         "recipe_id": {
                           "decidingProp": "../trigger",
-                          "values": { "recipe_crafted": { "$defRef": "%recipe_id-recipe_crafted" } },
+                          "values": {
+                            "recipe_crafted": { "$defRef": "%recipe_id-recipe_crafted" },
+                            "crafter_recipe_crafted": { "$defRef": "%recipe_id-recipe_crafted" }
+                          },
                           "optionalPrefixes": [ "minecraft:" ]
                         },
                         "ingredients": {
                           "decidingProp": "../trigger",
-                          "values": { "recipe_crafted": { "$defRef": "%ingredients-recipe_crafted" } },
+                          "values": {
+                            "recipe_crafted": { "$defRef": "%ingredients-recipe_crafted" },
+                            "crafter_recipe_crafted": { "$defRef": "%ingredients-recipe_crafted" }
+                          },
                           "optionalPrefixes": [ "minecraft:" ],
                           "optional": true
                         },
@@ -475,6 +456,12 @@
                           "values": { "target_hit": { "$defRef": "%projectile-target_hit" } },
                           "optionalPrefixes": [ "minecraft:" ],
                           "optional": true
+                        },
+                        "cause": {
+                          "description": "An entity predicate matching the entity which caused the explosion or burst to happen.",
+                          "decidingProp": "../trigger",
+                          "values": { "fall_after_explosion": { "$defRef": "%cause-fall_after_explosion" } },
+                          "optionalPrefixes": [ "minecraft:" ]
                         }
                       }
                     },
@@ -663,19 +650,8 @@
     },
     "%parent_partner_child-bred_animals": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "The parent, its partner or the child.",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"parent\", \"partner\", or \"child\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The origin of the predicate is the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "The parent, its partner or the child.",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%potion-brewed_potion": {"$ref": "utils:resource_location", "schema": "potion", "description": "A [ [Potion#Item data|brewed potion ID] ]." },
     "%from-changed_dimension": {"$ref": "utils:resource_location", "schema": "dimension", "description": "The dimension the entity traveled from. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
@@ -683,41 +659,14 @@
     "%victims-channeled_lightning": {
       "$type": "array",
       "description": "The victims hit by the lightning summoned by the Channeling enchantment. All entities in this list must be hit.",
-      "element": {
-        "$type": "union",
-        "options": [
-          {
-            "$type": "object",
-            "description": "A victim.",
-            "inherits": [ { "defRef": "entity:entity" } ],
-            "properties": {}
-          },
-          {
-            "$type": "array",
-            "description": "Another format for the victim. Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the victim hit by the lighting, with the origin being the position of the player that would get the advancement.",
-            "element": { "$defRef": "predicate:predicate-body" }
-          }
-        ]
-      }
+      "element": { "$defRef": "%entity_or_predicates" }
     },
     "%victims-killed_by_crossbow": {
       "$type": "array",
       "description": "A list of victims. All of the entries must be matched, and one killed entity may match only one entry.",
       "element": {
         "$type": "union",
-        "options": [
-          {
-            "$type": "object",
-            "description": "A killed entities.",
-            "inherits": [ { "defRef": "entity:entity" } ],
-            "properties": {}
-          },
-          {
-            "$type": "array",
-            "description": "Another format for the victim. Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the victim, with the origin being the position of the player that would get the advancement.",
-            "element": { "$defRef": "predicate:predicate-body" }
-          }
-        ]
+        "options": [{ "$defRef": "%entity_or_predicates" }]
       }
     },
     "%level-construct_beacon": {
@@ -727,51 +676,18 @@
     },
     "%villager-cured_zombie_villager": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "The villager that is the result of the conversion. The 'type' tag is redundant since it will always be \"villager\".",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"villager\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the villager, with the origin being the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "The villager that is the result of the conversion. The 'type' tag is redundant since it will always be \"villager\".",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%villager-villager_trade": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "The villager the item was purchased from.",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"villager\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the villager, with the origin being the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "The villager the item was purchased from.",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%zombie-cured_zombie_villager": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "The zombie villager right before the conversion is complete (not when it is initiated). The 'type' tag is redundant since it will always be \"zombie_villager\".",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"zombie\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the zombie villager, with the origin being the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "The zombie villager right before the conversion is complete (not when it is initiated). The 'type' tag is redundant since it will always be \"zombie_villager\".",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%effects-effects_changed": {
       "$type": "object",
@@ -809,19 +725,8 @@
     },
     "%source-effects_changed": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "The entity that was the source of the status effect. When there is no entity or when the effect was self-applied or removed, the test passes only if the source is not specified.",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"source\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the source, with the origin being the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "The entity that was the source of the status effect. When there is no entity or when the effect was self-applied or removed, the test passes only if the source is not specified.",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%levels-enchanted_item": {
       "$type": "union",
@@ -950,35 +855,13 @@
     },
     "%entity-entity_killed_player": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "Checks the entity that was the source of the damage that killed the player (for example: The skeleton that shot the arrow).",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"entity\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the entity that kills the player, with the origin being the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "Checks the entity that was the source of the damage that killed the player (for example: The skeleton that shot the arrow).",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%entity-checkAppliedToEntity": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "The entity that was damaged / interacted with / damaged / killed / summoned / tamed / pulled or has picked up / thrown the item. When fishing and no entity is pulled, it will be the fishing bobber",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"entity\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the entity, with the origin being the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "The entity that was damaged / interacted with / damaged / killed / summoned / tamed / pulled or has picked up / thrown the item. When fishing and no entity is pulled, it will be the fishing bobber",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%killing_blow-kill_entity_or_player": {
       "$type": "object",
@@ -1002,6 +885,10 @@
       "$type": "union",
       "description": "The horizontal distance between the player and the stronghold.",
       "options": [{ "$ref": "utils:val_or_range", "type": "float" }]
+    },
+    "%cause-fall_after_explosion": {
+      "$type": "union",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%rod-fishing_rod_hooked": {
       "$type": "object",
@@ -1061,56 +948,32 @@
     },
     "%lightning-lightning_strike": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "The lightning bolt that disappeared.",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"lightning\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the lightning, with the origin being the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "The lightning bolt that disappeared.",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%bystander-lightning_strike": {
       "$type": "union",
-      "options": [
-        {
-          "$type": "object",
-          "description": "An entity not hurt by the lightning strike but in a certain area around it.",
-          "inherits": [ { "defRef": "entity:entity" } ],
-          "properties": {}
-        },
-        {
-          "$type": "array",
-          "description": "Another format for \"bystander\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the bystander, with the origin being the position of the player that would get the advancement.",
-          "element": { "$defRef": "predicate:predicate-body" }
-        }
-      ]
+      "description": "An entity not hurt by the lightning strike but in a certain area around it.",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%loot_table-player_generates_container_loot": {
-      "$type": "string",
+      "$ref": "utils:resource_location",
+      "schema": "loot_table",
       "description": "<span style=\"color:red;\">'''*'''</span>: The resource location of the generated loot table."
     },
     "%recipe_id-recipe_crafted": {
-      "$type": "string",
+      "$ref": "utils:resource_location",
+      "schema": "recipe",
       "description": "<span style=\"color:red;\">'''*'''</span>: The recipe that was crafted."
     },
     "%ingredients-recipe_crafted": {
       "$type": "array",
       "description": "An array of item predicates for the recipe ingredients. Each item can only match one predicate, and every predicate needs to pass for the criterion to be granted.",
-      "element": {
-        "$type": "object",
-        "description": "A single predicate.",
-        "inherits": [ { "defRef": "item:item" } ],
-        "properties": {}
-      }
+      "element": { "$defRef": "item:item" }
     },
     "%recipe-recipe_unlocked": {
-      "$type": "string",
+      "$ref": "utils:resource_location",
+      "schema": "recipe",
       "description": "<span style=\"color:red;\">'''*'''</span>: The recipe that was unlocked."
     },
     "%signal_strength-target_hit": {
@@ -1120,16 +983,23 @@
     },
     "%projectile-target_hit": {
       "$type": "union",
+      "description": "The projectile hit the target block.",
+      "options": [{ "$defRef": "%entity_or_predicates" }]
+    },
+    
+    
+    "%entity_or_predicates": {
+      "$type": "union",
       "options": [
         {
           "$type": "object",
-          "description": "The projectile hit the target block.",
+          "description": "An entity.",
           "inherits": [ { "defRef": "entity:entity" } ],
           "properties": {}
         },
         {
           "$type": "array",
-          "description": "Another format for \"projectile\". Specifies a list of [ [predicate] ]s that must pass in order for the criterion to be granted. The checks are applied to the projectile, with the origin being the position of the player that would get the advancement.",
+          "description": "Specifies a list of predicates that must pass in order for the criterion to be granted. The checks are applied with the origin being the position of the player that would get the advancement.",
           "element": { "$defRef": "predicate:predicate-body" }
         }
       ]

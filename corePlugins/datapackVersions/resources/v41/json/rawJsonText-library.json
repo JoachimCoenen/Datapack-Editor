@@ -188,10 +188,7 @@
         },
         "nbt": {
           "optional": true,
-          "value": {
-            "$type": "string",
-            "type": "minecraft:nbt_path"
-          },
+          "value": { "$defRef": "utils:nbt_path" },
           "description": "The NBT path used for looking up NBT values from an entity, block entity, or storage. Requires one of `block`, `entity`, or `storage`. Having more than one is allowed, but only one is used."
         },
         "interpret": {

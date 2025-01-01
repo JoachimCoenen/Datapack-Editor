@@ -5,7 +5,7 @@ from dataclasses import replace
 
 from base.model.parsing.bytesUtils import strToBytes
 from cat.utils.collections_ import FrozenDict
-from corePlugins.minecraft_data.customData import CustomMCData, Gamerule, buildGamerulesDict
+from corePlugins.minecraft_data.customData import CustomMCData, Gamerule, buildGamerulesDict, EntityVariants
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 
 _VERSION_1_17_0 = CustomMCData(
@@ -118,6 +118,175 @@ _VERSION_1_17_0 = CustomMCData(
 	# compiled from the 1.20.2.jar using this command "javap -constants -c  buj.class":
 	itemComponents=frozenset(),  # empty. because introduced in 1.20.5.
 	itemSubPredicates=frozenset(),  # empty. because introduced in 1.20.5.
+	statisticTypes=frozenset({
+		ResourceLocation.fromString('custom'),
+		ResourceLocation.fromString('crafted'),
+		ResourceLocation.fromString('used'),
+		ResourceLocation.fromString('broken'),
+		ResourceLocation.fromString('mined'),
+		ResourceLocation.fromString('killed'),
+		ResourceLocation.fromString('picked_up'),
+		ResourceLocation.fromString('dropped'),
+		ResourceLocation.fromString('killed_by'),
+	}),
+	entityVariants=EntityVariants(
+		axolotl=frozenset({
+			ResourceLocation.fromString('lucy'),
+			ResourceLocation.fromString('wild'),
+			ResourceLocation.fromString('gold'),
+			ResourceLocation.fromString('cyan'),
+			ResourceLocation.fromString('blue'),
+		}),
+		boat=frozenset({
+			ResourceLocation.fromString('oak'),
+			ResourceLocation.fromString('spruce'),
+			ResourceLocation.fromString('birch'),
+			ResourceLocation.fromString('jungle'),
+			ResourceLocation.fromString('acacia'),
+			ResourceLocation.fromString('dark_oak'),
+			# ResourceLocation.fromString('mangrove'),  # 1.19
+			# ResourceLocation.fromString('bamboo'),  # 1.20
+			# ResourceLocation.fromString('cherry'),  # 1.20
+		}),
+		cat=frozenset({
+			ResourceLocation.fromString('white'),
+			ResourceLocation.fromString('black'),
+			ResourceLocation.fromString('red'),
+			ResourceLocation.fromString('siamese'),
+			ResourceLocation.fromString('british_shorthair'),
+			ResourceLocation.fromString('calico'),
+			ResourceLocation.fromString('persian'),
+			ResourceLocation.fromString('ragdoll'),
+			ResourceLocation.fromString('tabby'),
+			ResourceLocation.fromString('all_black'),
+			ResourceLocation.fromString('jellie'),
+		}),
+		fox=frozenset({
+			ResourceLocation.fromString('red'),
+			ResourceLocation.fromString('snow'),
+		}),
+		frog=frozenset({
+			ResourceLocation.fromString('temperate'),
+			ResourceLocation.fromString('warm'),
+			ResourceLocation.fromString('cold'),
+		}),
+		horse=frozenset({
+			ResourceLocation.fromString('white'),
+			ResourceLocation.fromString('creamy'),
+			ResourceLocation.fromString('chestnut'),
+			ResourceLocation.fromString('brown'),
+			ResourceLocation.fromString('black'),
+			ResourceLocation.fromString('gray'),
+			ResourceLocation.fromString('darkbrown'),
+		}),
+		llama=frozenset({
+			ResourceLocation.fromString('creamy'),
+			ResourceLocation.fromString('white'),
+			ResourceLocation.fromString('brown'),
+			ResourceLocation.fromString('gray'),
+		}),
+		mooshroom=frozenset({
+			ResourceLocation.fromString('red'),
+			ResourceLocation.fromString('brown'),
+		}),
+		painting=frozenset({
+			ResourceLocation.fromString('kebab'),
+			ResourceLocation.fromString('aztec'),
+			ResourceLocation.fromString('alban'),
+			ResourceLocation.fromString('aztec2'),
+			ResourceLocation.fromString('bomb'),
+			ResourceLocation.fromString('plant'),
+			ResourceLocation.fromString('wasteland'),
+			ResourceLocation.fromString('meditative'),
+			ResourceLocation.fromString('wanderer'),
+			ResourceLocation.fromString('graham'),
+			ResourceLocation.fromString('prairie_ride'),
+			ResourceLocation.fromString('pool'),
+			ResourceLocation.fromString('courbet'),
+			ResourceLocation.fromString('sunset'),
+			ResourceLocation.fromString('sea'),
+			ResourceLocation.fromString('creebet'),
+			ResourceLocation.fromString('match'),
+			ResourceLocation.fromString('bust'),
+			ResourceLocation.fromString('stage'),
+			ResourceLocation.fromString('void'),
+			ResourceLocation.fromString('skull_and_roses'),
+			ResourceLocation.fromString('wither'),
+			ResourceLocation.fromString('baroque'),
+			ResourceLocation.fromString('humble'),
+			ResourceLocation.fromString('bouquet'),
+			ResourceLocation.fromString('cavebird'),
+			ResourceLocation.fromString('cotan'),
+			ResourceLocation.fromString('endboss'),
+			ResourceLocation.fromString('fern'),
+			ResourceLocation.fromString('owlemons'),
+			ResourceLocation.fromString('sunflowers'),
+			ResourceLocation.fromString('tides'),
+			ResourceLocation.fromString('backyard'),
+			ResourceLocation.fromString('pond'),
+			ResourceLocation.fromString('fighters'),
+			ResourceLocation.fromString('changing'),
+			ResourceLocation.fromString('finding'),
+			ResourceLocation.fromString('lowmist'),
+			ResourceLocation.fromString('passage'),
+			ResourceLocation.fromString('skeleton'),
+			ResourceLocation.fromString('donkey_kong'),
+			ResourceLocation.fromString('pointer'),
+			ResourceLocation.fromString('pigscene'),
+			ResourceLocation.fromString('burning_skull'),
+			ResourceLocation.fromString('orb'),
+			ResourceLocation.fromString('unpacked'),
+
+			# ResourceLocation.fromString('earth'),  # 1.19
+			# ResourceLocation.fromString('wind'),  # 1.19
+			# ResourceLocation.fromString('fire'),  # 1.19
+			# ResourceLocation.fromString('water'),  # 1.19
+		}),
+		parrot=frozenset({
+			ResourceLocation.fromString('red_blue'),
+			ResourceLocation.fromString('blue'),
+			ResourceLocation.fromString('green'),
+			ResourceLocation.fromString('yellow_blue'),
+			ResourceLocation.fromString('gray'),
+		}),
+		rabbit=frozenset({
+			ResourceLocation.fromString('brown'),
+			ResourceLocation.fromString('white'),
+			ResourceLocation.fromString('black'),
+			ResourceLocation.fromString('white_splotched'),
+			ResourceLocation.fromString('gold'),
+			ResourceLocation.fromString('salt'),
+			ResourceLocation.fromString('evil'),
+		}),
+		salmon=frozenset({
+			ResourceLocation.fromString('small'),
+			ResourceLocation.fromString('medium'),
+			ResourceLocation.fromString('large'),
+		}),
+		tropical_fish=frozenset({
+			ResourceLocation.fromString('flopper'),
+			ResourceLocation.fromString('glitter'),
+			ResourceLocation.fromString('betty'),
+			ResourceLocation.fromString('stripey'),
+			ResourceLocation.fromString('blockfish'),
+			ResourceLocation.fromString('clayfish'),
+			ResourceLocation.fromString('kob'),
+			ResourceLocation.fromString('snooper'),
+			ResourceLocation.fromString('brinely'),
+			ResourceLocation.fromString('sunstreak'),
+			ResourceLocation.fromString('dasher'),
+			ResourceLocation.fromString('spotty'),
+		}),
+		villager=frozenset({
+			ResourceLocation.fromString('desert'),
+			ResourceLocation.fromString('jungle'),
+			ResourceLocation.fromString('plains'),
+			ResourceLocation.fromString('savanna'),
+			ResourceLocation.fromString('snow'),
+			ResourceLocation.fromString('swamp'),
+			ResourceLocation.fromString('taiga'),
+		}),
+	),
 	# compiled from the Minecraft wiki:
 	slots=FrozenDict({
 		b'armor': frozenset({b'chest', b'feet', b'head', b'legs'}),

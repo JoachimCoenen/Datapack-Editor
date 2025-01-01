@@ -52,7 +52,8 @@
               "set_potion": "Sets the <code>Potion</code> tag of an item.",
               "set_stew_effect": "Sets the status effects for [[suspicious stew]]. Fails if invoked on an item that is not suspicious stew.",
               "set_writable_book_pages": "Manipulates the pages of the `minecraft:writable_book_content` component.",
-              "set_written_book_pages": "Manipulates the pages of the `minecraft:writable_book_content` component."
+              "set_written_book_pages": "Manipulates the pages of the `minecraft:writable_book_content` component.",
+              "toggle_tooltips": "used to modify item component tooltip visiblity."
             },
             "optionalPrefixes": [ "minecraft:" ]
           }
@@ -99,7 +100,8 @@
         { "defRef": "%set_name", "decidingValues": [ "set_name" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_potion", "decidingValues": [ "set_potion" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_stew_effect", "decidingValues": [ "set_stew_effect" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
-        { "defRef": "%set_written_book_pages", "decidingValues": [ "set_writable_book_pages", "set_written_book_pages" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] }
+        { "defRef": "%set_written_book_pages", "decidingValues": [ "set_writable_book_pages", "set_written_book_pages" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%toggle_tooltips", "decidingValues": [ "toggle_tooltips" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] }
       ]
     },
     "%apply_bonus": {
@@ -232,18 +234,12 @@
               "properties": {
                 "source": {
                   "description": "The [[NBT path format|NBT path]] to copy from.",
-                  "value": {
-                    "$type": "string",
-                    "type": "minecraft:nbt_path"
-                  },
+                  "value": {"$defRef": "utils:nbt_path"},
                   "optional": true
                 },
                 "target": {
                   "description": "The [[NBT path format|NBT path]] to copy to, starting from the item's <code>tag</code> tag.",
-                  "value": {
-                    "$type": "string",
-                    "type": "minecraft:nbt_path"
-                  },
+                  "value": {"$defRef": "utils:nbt_path"},
                   "optional": true
                 },
                 "op": {
@@ -757,12 +753,6 @@
           "description": "Specifies the entity to act as <code>@s</code> when referenced in the JSON text component. Specifies an entity from [[Loot table#Loot context types|loot context]]. Can be {{cd|this}}, {{cd|killer}}, {{cd|direct_killer}}, or {{cd|killer_player}}.",
           "value": { "$defRef": "number_provider:loot_context_killer" }
         },
-        "replace": {
-          "description": "Optional. Set to <code>true</code> to replace the existing item lore with only the lines in {{nbt|list|lore}}. If <code>false</code>, the lines are appended to the list of existing lines of lore. Defaults to false.",
-          "optional": true,
-          "value": { "$type": "boolean" },
-          "default": false
-        },
         "mode": {
           "description": "Determines how existing lore component should be modified.",
           "value": { "$defRef": "utils:modify_mode" }
@@ -869,6 +859,58 @@
           "description": "Specifies the size of the range to be replaced. If omitted, the size of the `pages` field is used. Only applicable if property `mode` is `replace_section`.",
           "optional": true,
           "value": { "$type": "integer" }
+        }
+      }
+    },
+    "%toggle_tooltips": {
+      "$type": "object",
+      "properties": {
+        "toggles": {
+          "description": "A map of supported item components to modify. All fields are optional.",
+          "value": {
+            "$type": "object",
+            "properties": {
+              "attribute_modifiers": {
+                "description": "Changes the visibility of the tooltip displaying the item's attribute modifiers.",
+                "value": { "$type": "boolean" }
+              },
+              "can_break": {
+                "description": "Changes the visibility of the tooltip displaying the blocks the item can break in Adventure mode.",
+                "optional": true,
+                "value": { "$type": "boolean" }
+              },
+              "can_place_on": {
+                "description": "Changes the visibility of the tooltip displaying the blocks the item can placed on in Adventure mode.",
+                "optional": true,
+                "value": { "$type": "boolean" }
+              },
+              "dyed_color": {
+                "description": "Changes the visibility of the tooltip displaying dyed armor color.",
+                "optional": true,
+                "value": { "$type": "boolean" }
+              },
+              "enchantments": {
+                "description": "Changes the visibility of the tooltip displaying the item's enchantments.",
+                "optional": true,
+                "value": { "$type": "boolean" }
+              },
+              "stored_enchantments": {
+                "description": "Changes the visibility of the tooltip displaying the item's stored enchantments (for enchanted books).",
+                "optional": true,
+                "value": { "$type": "boolean" }
+              },
+              "trim": {
+                "description": "Changes the visibility of the tooltip displaying the item's armor trim.",
+                "optional": true,
+                "value": { "$type": "boolean" }
+              },
+              "unbreakable": {
+                "description": "Changes the visibility of the tooltip displaying the item's unbreakable status. Setting this to any value does not change whether the item is unbreakable.",
+                "optional": true,
+                "value": { "$type": "boolean" }
+              }
+            }
+          }
         }
       }
     }
