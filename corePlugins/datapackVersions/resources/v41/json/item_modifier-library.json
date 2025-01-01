@@ -49,6 +49,7 @@
               "set_loot_table": "Sets the loot table for a container block when placed and opened.",
               "set_lore": "Adds or changes the item's lore.",
               "set_name": "Adds or changes the item's custom name.",
+              "set_ominous_bottle_amplifier": "Sets the `ominous_bottle_amplifier` component on the target item according to a number provider. ",
               "set_potion": "Sets the <code>Potion</code> tag of an item.",
               "set_stew_effect": "Sets the status effects for [[suspicious stew]]. Fails if invoked on an item that is not suspicious stew.",
               "set_writable_book_pages": "Manipulates the pages of the `minecraft:writable_book_content` component.",
@@ -98,6 +99,7 @@
         { "defRef": "%set_loot_table", "decidingValues": [ "set_loot_table" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_lore", "decidingValues": [ "set_lore" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_name", "decidingValues": [ "set_name" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_ominous_bottle_amplifier", "decidingValues": [ "set_ominous_bottle_amplifier" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_potion", "decidingValues": [ "set_potion" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_stew_effect", "decidingValues": [ "set_stew_effect" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_written_book_pages", "decidingValues": [ "set_writable_book_pages", "set_written_book_pages" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
@@ -794,6 +796,14 @@
             }
           },
           "default": "custom_name"
+        }
+      }
+    },
+    "%set_ominous_bottle_amplifier": {
+      "$type": "object",
+      "properties": {
+        "amplifier": {
+          "value": { "$defRef": "number_provider:number_provider"}
         }
       }
     },

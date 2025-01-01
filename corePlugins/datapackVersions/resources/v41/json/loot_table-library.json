@@ -17,18 +17,19 @@
           "value": { 
             "$type": "enum",
             "options": {
-              "empty": "* Only used by the hardcoded empty loot table. Supplies no loot context parameters. \n* Specifying {{cd|\"type\":\"empty\"}} means no context parameters can be used in this loot table.",
-              "chest": "* Opening of a container with loot table (can be {{#var:containers}}).\n* The command {{cmd|loot &hellip; loot &lt;loot_table&gt;}}.",
-              "command": "* Not used for loot tables. Specifying {{cd|\"type\":\"command\"}} doesn't make sense.\n* Used internally by commands such as {{cmd|item modify}} or {{cmd|execute (if{{!}}unless) predicate}}.",
-              "selector": "* Not used for loot tables. Specifying {{cd|\"type\":\"selector\"}} doesn't make sense.\n* Used internally by the {{cd|predicate}} [[Target selectors|target selector]] argument.",
-              "fishing": "* [[Fishing]].\n* The command {{cmd|loot &hellip; fish &lt;loot_table&gt;}}.",
-              "entity": "* Loot from a living entity's death.\n* The command {{cmd|loot &hellip; kill &lt;target&gt;}}.",
+              "empty": "Only used by the hardcoded empty loot table. Supplies no loot context parameters. \n\nSpecifying {{cd|\"type\":\"empty\"}} means no context parameters can be used in this loot table.",
+              "chest": "Opening of a container with loot table (can be {{#var:containers}}).\n* The command {{cmd|loot &hellip; loot &lt;loot_table&gt;}}.",
+              "command": "Not used for loot tables. Specifying {{cd|\"type\":\"command\"}} doesn't make sense.\n\nUsed internally by commands such as {{cmd|item modify}} or {{cmd|execute (if{{!}}unless) predicate}}.",
+              "selector": "Not used for loot tables. Specifying {{cd|\"type\":\"selector\"}} doesn't make sense.\n\nUsed internally by the {{cd|predicate}} [[Target selectors|target selector]] argument.",
+              "fishing": "Fishing.\n\nThe command `/loot … fish <loot_table>`.",
+              "entity": "Loot from a living entity's death.\n* The command {{cmd|loot &hellip; kill &lt;target&gt;}}.",
               "archaeology": "* Using a [[brush]] on [[suspicious sand]] that has a loot table.",
-              "gift": "* Gift from a cat or villager.",
-              "barter": "* [[Bartering]] with piglins.",
+              "gift": "Gift from a cat or villager.",
+              "barter": "Bartering with piglins.",
               "advancement_reward": "* Loot table set as an [[Advancement/JSON_format|advancement's reward]].",
-              "generic": "* Not used. Supplies all loot context parameters.\n* Specifying {{cd|\"type\":\"generic\"}} or omitting it means no checking for context parameters in this loot table when loading the data pack.",
-              "block": "* Loots from breaking a block.\n* The command {{cmd|loot &hellip; mine &lt;pos&gt;}}."
+              "generic": "Not used. Supplies all loot context parameters.\n* Specifying {{cd|\"type\":\"generic\"}} or omitting it means no checking for context parameters in this loot table when loading the data pack.",
+              "block": "Loots from breaking a block.\n* The command {{cmd|loot &hellip; mine &lt;pos&gt;}}.",
+              "equipment": "Has required parameters of `this_entity` and `origin`."
             },
             "optionalPrefixes": ["minecraft:"]
           }
