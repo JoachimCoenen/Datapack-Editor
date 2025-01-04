@@ -1,0 +1,119 @@
+{
+	"$schema": "dpe/json/schema",
+	"$libraries": {
+		rawJsonText: "rawJsonText-library.json",
+	},
+	description: "Configuration file defining the metadata of a data pack for Minecraft.",
+	
+	"$body": {
+		"$type": object,
+		properties: {
+			pack: {
+				description: "Holds the pack information.",
+				"$type": object,
+				properties: {
+					description: { "$defRef": "rawJsonText:rawJsonText" },
+					pack_format: { "$type": integer },
+					supported_formats: {
+						description: "Describes a range for pack formats that this pack supports. The range has to include the value of `pack_format`.",
+						optional: true,
+						value: { "$defRef": "%supported_formats" }
+					},
+				}
+			},
+			
+			features: {
+				description: "Section for selecting experimental features.",
+				optional: true,
+				value: {
+					"$type": object,
+					properties: {
+						enabled: {
+							"$type": array,
+							description: "List of enabled feature flags.",
+							element: {
+								"$type": string,
+								type: "minecraft:resource_location",
+								args: {schema: "feature_flag" }
+							}
+						}
+					}
+				}
+			},
+			
+			filter: {
+				description: "Section for filtering out files from packs applied below this one. Any file that matches one of the patterns inside `block` is treated as if it was not present in the pack at all.",
+				optional: true,
+				value: {
+					"$type": object,
+					properties: {
+						block: {
+							"$type": array,
+							description: "List of patterns.",
+							element: {
+								"$type": object,
+								properties: {
+									namespace: {
+										description: "A regular expression for the namespace of files to be filtered out. If unspecified, it applies to every namespace.",
+										optional: true,
+										value: { "$type": string, type: "dpe:regular_expression" }
+									},
+									path: {
+										description: "A regular expression for the paths of files to be filtered out. If unspecified, it applies to every file.",
+										optional: true,
+										value: { "$type": string, type: "dpe:regular_expression" }
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			
+			overlays: {
+				description: 'Section for specifying the overlays, which are sub-packs applied over the "normal" contents of a pack. Their directories have their own assets and data directories, and are placed in the pack\'s root directory. ',
+				optional: true,
+				value: {
+					"$type": object,
+					properties: {
+						entries: {
+							"$type": array,
+							description: "List of overlays. The order is important, as the first in the list is applied first.",
+							element: {
+								"$type": object,
+								properties: {
+									formats: {
+										description: "Describes a range for pack formats when this overlay should be active.",
+										value: { "$defRef": "%supported_formats" }
+									},
+									directory: {
+										description: "The directory to overlay for the respective versions (allowed characters: `a-z`, `0-9`, `_` and `-`). In this directory, `pack.mcmeta` and `pack.png` are ignored.",
+										value: { "$type": string }
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			
+		}
+	},
+	
+	"$definitions": {
+		"%supported_formats": {
+			"$type": union,
+			options: [
+				{ "$type": integer },
+				{ "$type": array, element: { "$type": integer } },
+				{ 
+					"$type": object, 
+					properties: {
+						min_inclusive: { "$type": integer },
+						max_inclusive: { "$type": integer },
+					}
+				}
+			]
+		}
+	}
+}

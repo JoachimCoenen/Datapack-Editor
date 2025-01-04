@@ -212,7 +212,7 @@ def loadJsonSchemas() -> dict[str, StructureDataSchema]:
 		'minecraft:raw_json_style': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:raw_json_style', os.path.join(v23Dir, 'rawJsonStyle.json')),
 		'minecraft:predicate': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:predicate', os.path.join(v23Dir, 'predicate.json')),
 		'minecraft:recipe': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:recipe', os.path.join(v23Dir, 'recipe.json')),
-		'minecraft:pack': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v23Dir, 'pack.json')),
+		'minecraft:pack': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v23Dir, 'pack.snbt')),
 		'minecraft:loot_table': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:loot_table', os.path.join(v23Dir, 'loot_table.json')),
 		'minecraft:item_modifier': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:item_modifier', os.path.join(v23Dir, 'item_modifier.json')),
 		'minecraft:advancement': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:advancement', os.path.join(v23Dir, 'advancements/advancement.json')),  # advancement.json is for datapack version 23!
