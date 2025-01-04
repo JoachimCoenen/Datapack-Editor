@@ -26,6 +26,7 @@
  * Fixed wrong code suggestions in JSON files when inside an unclosed array and the cursor is after the last element, but doesn't touch it.
  * Fixed missing error message when a resource tag is used where only resource locations are allowed.
  * Fixed Files tab not showing any projects after loading a new project.
+ * Fixed exception when parsing an empty JSON file on startup.
 
 
 ## 0.8.6-alpha

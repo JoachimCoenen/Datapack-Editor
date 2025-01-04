@@ -107,7 +107,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 			return True
 		return False
 
-	def accept(self, tokenType: TokenType, advanceIfBad: bool = True) -> Optional[Token]:
+	def accept(self, tokenType: TokenType, advanceIfBad: bool = True) -> Token:
 		current = self._current
 		if self._checkEof():
 			return current
@@ -120,7 +120,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 			self._next()
 		return current  # current == (self._last if _next() was called, else self._current)
 
-	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType], advanceIfBad: bool = True) -> Optional[Token]:
+	def acceptAnyOf(self, tokenTypes: AbstractSet[TokenType], advanceIfBad: bool = True) -> Token:
 		current = self._current
 		if self._checkEof():
 			return current
@@ -133,13 +133,6 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		else:
 			self._next()
 		return current  # current == (self._last if _next() was called, else self._current)
-
-	def acceptAny(self) -> Optional[Token]:
-		if self._checkEof():
-			return self._current
-
-		self._next()
-		return self._last
 
 	def parse_object2(self) -> JsonObject:
 		"""Parses an object out of JSON tokens"""
@@ -420,7 +413,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 	def parseJsonTokens(self) -> Optional[StructureDataNode[JsonNode, StructureValue[JsonNode]]]:
 		"""Recursive JSON parse implementation"""
 		token = self.acceptAnyOf(self._PARSERS.keys())
-		if token is not None:
+		if token.type is not TokenType.eof:
 			data = self._internalParseTokens()
 			pathify(data, '')
 			enrichWithSchema(data, self.schema)
