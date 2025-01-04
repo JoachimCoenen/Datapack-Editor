@@ -99,6 +99,11 @@
   },
   
   "$definitions": {
+
+    "object_any_content": {
+      "$type": "object",
+      "default-property": { "$type": "any" }
+    },
     
     "radians_angle": {
       "$type": "float",
@@ -187,6 +192,24 @@
     "scoreboard_objective": {
       "$type": "string",
       "type": "minecraft:objective"
+    },
+    
+    "nbt_sring_or_unflattened_tags": {
+      "$type": "union",
+      "options": [
+        {"$type": "string", "type": "minecraft:nbt_compound_tag"},
+        {"$defRef": "object_any_content"}
+      ]
+    },
+    
+    "data_components_with_contnets": {  // used by `set_contents` and `modify_contents` item modifiers.
+      "$type": "enum",
+      "options": {
+        "container": "",
+        "bundle_contents": "",
+        "charged_projectiles": ""
+      },
+      "optionalPrefixes": ["minecraft:"]
     },
 
     "data_components": {

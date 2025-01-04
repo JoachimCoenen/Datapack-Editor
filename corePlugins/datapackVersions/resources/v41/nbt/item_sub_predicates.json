@@ -46,8 +46,7 @@
       "$type": "union",
       "description": "Checks custom_data data component.",
       "options": [
-        {"$type": "string", "type": "minecraft:nbt_compound_tag"},
-        {"$type": "object", "default-property": {"$type": "any"}}
+        {"$defRef": "utils:nbt_sring_or_unflattened_tags"}
       ]
     },
     

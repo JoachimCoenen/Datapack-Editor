@@ -5,7 +5,6 @@
     "utils": "../common/utils-library.json"
   },
   "$body": { 
-    "$ref": "utils:value_or_array",
-    "element": { "$defRef": "item_modifier:item_modifier-body" }
+    "$defRef": "item_modifier:item_modifier-body_or_array"
   }
 } 

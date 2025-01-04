@@ -2,6 +2,7 @@
   "$schema": "dpe/json/schema/library",
   "$libraries": {
     "rawJsonText": "rawJsonText-library.json",
+    "item": "advancements/conditions/item.json",
     "predicate": "predicate-library.json",
     "loot_table": "loot_table-library.json",
     "number_provider": "utils/number_provider-library.json",
@@ -11,6 +12,12 @@
   },
   "$templates": {},
   "$definitions": {
+    
+    "item_modifier-body_or_array": { 
+      "$ref": "utils:value_or_array",
+      "element": { "$defRef": "item_modifier-body" }
+    },
+    
     "item_modifier-body": {
       "$type": "object",
       "properties": {
@@ -29,9 +36,11 @@
               "exploration_map": "If the origin is provided by  [[Loot table#Loot context types|loot context]], converts an empty map into an [[explorer map]] leading to a nearby generated structure.",
               "explosion_decay": "Removes some items from a stack, if the explosion ratius is provided by [[Loot table#Loot context types|loot context]]. Each item in the item stack has a chance of 1/explosion radius to be lost.",
               "fill_player_head": "Adds required item tags of a player head.",
+              "filtered": "Applies another function only to items that match item predicate.",
               "furnace_smelt": "Smelts the item as it would be in a furnace without changing its count.",
               "limit_count": "Limits the count of every item stack.",
               "looting_enchant": "Adjusts the stack size based on the level of the [[Looting]] enchantment on the {{cd|killer}} entity provided by [[Loot table#Loot context types|loot context]].",
+              "modify_contents": "Applies a function to every item inside an inventory component. If component does not exist, it is not added.",
               "reference": "Call sub-functions",
               "sequence": "Applies a list of functions",
               "set_attributes": "Add [[attribute|attribute modifiers]] to the item.",
@@ -41,11 +50,13 @@
               "set_contents": "Sets the contents of a container block item to a list of entries.",
               "set_count": "Sets the stack size.",
               "set_custom_data": "Sets the `minecraft:custom_data` component.",
+              "set_custom_model_data": "Sets the `minecraft:custom_model_data` component.",
               "set_damage": "Sets the item's damage value (durability).",
               "set_enchantments": "Modifies the item's enchantments. A book will convert to an [[enchanted book]].",
               "set_fireworks": "Sets `minecraft:fireworks` component.",
               "set_firework_explosion": "Sets `minecraft:firework_explosion` component.",
               "set_instrument": "Sets the item tags for instrument items to a random value from a tag.",
+              "set_item": "Replaces item type without changing count or components.",
               "set_loot_table": "Sets the loot table for a container block when placed and opened.",
               "set_lore": "Adds or changes the item's lore.",
               "set_name": "Adds or changes the item's custom name.",
@@ -79,9 +90,11 @@
         { "defRef": "%exploration_map", "decidingValues": [ "exploration_map" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%explosion_decay", "decidingValues": [ "explosion_decay" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%fill_player_head", "decidingValues": [ "fill_player_head" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%filtered", "decidingValues": [ "filtered" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%furnace_smelt", "decidingValues": [ "furnace_smelt" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%limit_count", "decidingValues": [ "limit_count" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%looting_enchant", "decidingValues": [ "looting_enchant" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%modify_contents", "decidingValues": [ "modify_contents" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%reference", "decidingValues": [ "reference" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%sequence", "decidingValues": [ "sequence" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_attributes", "decidingValues": [ "set_attributes" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
@@ -91,11 +104,13 @@
         { "defRef": "%set_contents", "decidingValues": [ "set_contents" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_count", "decidingValues": [ "set_count" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_custom_data", "decidingValues": [ "set_custom_data" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_custom_model_data", "decidingValues": [ "set_custom_model_data" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_damage", "decidingValues": [ "set_damage" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_enchantments", "decidingValues": [ "set_enchantments" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_fireworks", "decidingValues": [ "set_fireworks" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_firework_explosion", "decidingValues": [ "set_firework_explosion" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_instrument", "decidingValues": [ "set_instrument" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
+        { "defRef": "%set_item", "decidingValues": [ "set_item" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_loot_table", "decidingValues": [ "set_loot_table" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_lore", "decidingValues": [ "set_lore" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
         { "defRef": "%set_name", "decidingValues": [ "set_name" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] },
@@ -106,6 +121,7 @@
         { "defRef": "%toggle_tooltips", "decidingValues": [ "toggle_tooltips" ], "decidingProp": "function", "optionalPrefixes": [ "minecraft:" ] }
       ]
     },
+    
     "%apply_bonus": {
       "$type": "object",
       "properties": {
@@ -153,6 +169,7 @@
         }
       }
     },
+    
     "%copy_components": {
       "$type": "object",
       "properties": {
@@ -178,6 +195,7 @@
         }
       }
     },
+    
     "%copy_custom_data": {
       "$type": "object",
       "properties": {
@@ -263,6 +281,7 @@
         }
       }
     },
+    
     "%copy_name": {
       "$type": "object",
       "properties": {
@@ -272,6 +291,7 @@
         }
       }
     },
+    
     "%copy_state": {
       "$type": "object",
       "properties": {
@@ -291,6 +311,7 @@
         }
       }
     },
+    
     "%enchant_randomly": {
       "$type": "object",
       "properties": {
@@ -310,6 +331,7 @@
         }
       }
     },
+    
     "%enchant_with_levels": {
       "$type": "object",
       "properties": {
@@ -326,6 +348,7 @@
         }
       }
     },
+    
     "%exploration_map": {
       "$type": "object",
       "properties": {
@@ -356,10 +379,12 @@
         }
       }
     },
+    
     "%explosion_decay": {
       "$type": "object",
       "properties": {}
     },
+    
     "%fill_player_head": {
       "$type": "object",
       "properties": {
@@ -370,10 +395,28 @@
         }
       }
     },
+    
+    "%filtered": {
+      "$type": "object",
+      "properties": {
+        "item_filter": {
+          "optional": true,
+          "description": "Item predicate used to match items.",
+          "value": { "$defRef": "item:item" }
+        },
+        "modifier": {
+          "optional": true,
+          "description": "Functions to apply to matching items.",
+          "value": {"$defRef": "item_modifier-body_or_array"}
+        }
+      }
+    },
+    
     "%furnace_smelt": {
       "$type": "object",
       "properties": {}
     },
+    
     "%limit_count": {
       "$type": "object",
       "properties": {
@@ -407,6 +450,7 @@
         }
       }
     },
+    
     "%looting_enchant": {
       "$type": "object",
       "properties": {
@@ -421,6 +465,22 @@
         }
       }
     },
+    
+    "%modify_contents": {
+      "$type": "object",
+      "properties": {
+        "component": {
+          "description": "The target component to be filled with items. Existing contents will be replaced. `bundle_contents` and `charged_projectiles` will ignore empty stacks",
+          "value": { "$defRef": "utils:data_components_with_contnets" }
+        },
+        "modifier": {
+          "optional": true,
+          "description": "Functions to apply to matching items.",
+          "value": {"$defRef": "item_modifier-body_or_array"}
+        }
+      }
+    },
+    
     "%reference": {
       "$type": "object",
       "properties": {
@@ -447,6 +507,7 @@
         }
       }
     },
+    
     "%sequence": {
       "$type": "object",
       "properties": {
@@ -460,6 +521,7 @@
         }
       }
     },
+    
     "%set_attributes": {
       "$type": "object",
       "properties": {
@@ -508,13 +570,14 @@
           }
         },
         "replace": {
-          "description": "Set to `true` to replace the existing item attributes with the attributes in  modifiers. If `false`, the lines are appended to the list of existing attributes. Defaults to `true`.",
+          "description": "If `true`, the attributes given in `modifiers` replace the existing item attributes. Set to `false` to append to the list of existing attributes. Defaults to `true`.",
           "optional": true,
           "value": { "$type": "boolean" },
           "default": true
         }
       }
     },
+    
     "%set_banner_pattern": {
       "$type": "object",
       "properties": {
@@ -554,6 +617,7 @@
         }
       }
     },
+    
     "%set_book_cover": {
       "$type": "object",
       "properties": {
@@ -575,6 +639,7 @@
         }
       }
     },
+    
     "%set_components": {
       "$type": "object",
       "properties": {
@@ -585,24 +650,24 @@
         }
       }
     },
+    
     "%set_contents": {
       "$type": "object",
       "properties": {
         "entries": {
-          "optional": true,
           "description": "A list of [[Loot table|loot table entry producer]] to provide item stacks.",
           "value": {
             "$type": "array",
             "element": { "$defRef": "loot_table:entry_provider" }
           }
         },
-        "type": {
-          "optional": true,
-          "description": "the block entity type to be written in <code>BlockEntityTag.id</code>.",
-          "value": { "$type": "string" }
+        "component": {
+          "description": "The target component to be filled with items. Existing contents will be replaced. `bundle_contents` and `charged_projectiles` will ignore empty stacks",
+          "value": { "$defRef": "utils:data_components_with_contnets" }
         }
       }
     },
+    
     "%set_count": {
       "$type": "object",
       "properties": {
@@ -617,19 +682,27 @@
         }
       }
     },
+    
     "%set_custom_data": {
       "$type": "object",
       "properties": {
         "tag": {
-          "optional": true,
-          "description": "The NBT to merge onto the item's <code>tag</code> tag, within a JSON string. The outer braces <code>{ }</code> of the NBT must be present within this JSON string. Additional care is required when the NBT contains quotation marks <code>\"</code>, as they must be escaped from the JSON syntax with a backslash <code>\\</code>.",
-          "value": {
-            "$type": "string",
-            "type": "minecraft:nbt_compound_tag"
-          }
+          "description": "The data to merge onto the item's minecraft:custom_data component, either within a JSON string or as unflattened tags. That means that `{\"tag\": \"{a:1}\"}` and `{\"tag\": {\"a\":1}}` are equivalent",
+          "value": {"$defRef": "utils:nbt_sring_or_unflattened_tags"}
         }
       }
     },
+    
+    "%set_custom_model_data": {
+      "$type": "object",
+      "properties": {
+        "tag": {
+          "description": "Specifies the custom model data value.",
+          "value": {"$defRef": "number_provider:number_provider"}
+        }
+      }
+    },
+    
     "%set_damage": {
       "$type": "object",
       "properties": {
@@ -645,6 +718,7 @@
         }
       }
     },
+    
     "%set_enchantments": {
       "$type": "object",
       "properties": {
@@ -664,6 +738,7 @@
         }
       }
     },
+    
     "%set_fireworks": {
       "$type": "object",
       "properties": {
@@ -706,21 +781,30 @@
         }
       }
     },
+    
     "%set_firework_explosion": {
       "$type": "object",
       "inherits": [ { "defRef": "data_components:firework_explosion_data" } ],
       "properties": {}
     },
+    
     "%set_instrument": {
       "$type": "object",
       "properties": {
         "options": {
-          "optional": true,
           "description": "The resource location started with <code>#</code> of an instrument [[tag]], one of the listings is selected randomly.",
           "value": { "$ref": "utils:resource_location", "schema": "instrument"  }
         }
       }
     },
+    
+    "%set_item": {
+      "$type": "object",
+      "properties": {
+        "item": { "$ref": "utils:resource_location", "schema": "item"  }
+      }
+    },
+    
     "%set_loot_table": {
       "$type": "object",
       "properties": {
@@ -741,6 +825,7 @@
         }
       }
     },
+    
     "%set_lore": {
       "$type": "object",
       "properties": {
@@ -772,6 +857,7 @@
         }
       }
     },
+    
     "%set_name": {
       "$type": "object",
       "properties": {
@@ -799,6 +885,7 @@
         }
       }
     },
+    
     "%set_ominous_bottle_amplifier": {
       "$type": "object",
       "properties": {
@@ -807,6 +894,7 @@
         }
       }
     },
+    
     "%set_potion": {
       "$type": "object",
       "properties": {
@@ -817,6 +905,7 @@
         }
       }
     },
+    
     "%set_stew_effect": {
       "$type": "object",
       "properties": {
@@ -845,6 +934,7 @@
         }
       }
     },
+    
     "%set_written_book_pages": {
       "$type": "object",
       "properties": {
@@ -872,6 +962,7 @@
         }
       }
     },
+    
     "%toggle_tooltips": {
       "$type": "object",
       "properties": {
