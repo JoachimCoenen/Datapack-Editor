@@ -7,7 +7,7 @@ from base.model.parsing.parser import ParserBase
 from base.model.parsing.tree import Schema, Node
 from base.model.utils import LanguageId
 from base.plugin import PLUGIN_SERVICE, PluginBase
-
+from corePlugins.mcFunction import MC_FUNCTION_ID
 
 PREDICATE_ARGS_ID = LanguageId('PredicateArgs')
 
@@ -124,7 +124,7 @@ class DatapackVersionsPlugin(PluginBase):
 		from corePlugins.json import JSON_ID
 		return {JSON_ID: mappings}
 
-	def schemas(self) -> dict[str, Schema]:
+	def schemas(self) -> dict[LanguageId, dict[str, Schema]]:
 		schemas = {}
 
 		from corePlugins.datapackVersions.commands.v1_20_2_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_2
@@ -134,4 +134,4 @@ class DatapackVersionsPlugin(PluginBase):
 		schemas |= buildMCFunctionSchemas_1_20_2()  # legacy way of doing it.
 		schemas |= buildMCFunctionSchemas_1_20_3()  # legacy way of doing it.
 		schemas |= buildMCFunctionSchemas_1_20_5()  # legacy way of doing it.
-		return schemas
+		return {MC_FUNCTION_ID: schemas}

@@ -9,7 +9,7 @@ from base.model.project.project import ProjectAspect
 from base.model.project.projectCreator import ProjectCreator
 from base.model.utils import LanguageId
 from base.plugin import PLUGIN_SERVICE, PluginBase
-
+from corePlugins.json import JSON_ID
 
 newProjectDialog.DEFAULT_PROJECTS_LOCATION = os.path.expanduser('~/.dpe/projects').replace('\\', '/')
 
@@ -33,11 +33,12 @@ class DatapackPlugin(PluginBase):
 		from .settings import DatapackSettings
 		return [DatapackSettings]
 
-	def schemas(self) -> dict[str, Schema]:
+	def schemas(self) -> dict[LanguageId, dict[str, Schema]]:
 		from corePlugins.nbtJsonBase.schemaStore import STRUCTURE_SCHEMA_LOADER
 		resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
 		schemaPath = os.path.join(resourcesDir, 'dependencies.json')
-		return {'dpe:dependencies': STRUCTURE_SCHEMA_LOADER.loadSchema('dpe:dependencies', schemaPath)}
+		schemas = {'dpe:dependencies': STRUCTURE_SCHEMA_LOADER.loadSchema('dpe:dependencies', schemaPath)}
+		return {JSON_ID: schemas}
 
 	def schemaMappings(self) -> dict[LanguageId, list[SchemaMapping]]:
 		mappings = [
