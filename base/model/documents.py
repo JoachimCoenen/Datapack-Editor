@@ -726,7 +726,7 @@ class ParsedDocument(TextDocument):
 		self.requiresParsing = False
 		try:
 			schema = self.schema
-			language = schema.language if schema is not None else self.language
+			language = self.language
 			node, errors, parser = parseNPrepare(text, filePath=self.filePath, language=language, schema=schema, **self.parseKwArgs)
 			return node, errors
 		except Exception as e:

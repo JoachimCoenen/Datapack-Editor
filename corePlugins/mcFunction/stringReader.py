@@ -38,14 +38,19 @@ class StringReader(_Base):
 		return Span(begin, end)
 
 	def save(self) -> None:
+		""" see also: .save(), .mergeLastSave(), .rollback() """
 		self.lastCursors.push(self.cursor)
 
 	def mergeLastSave(self) -> None:
-		""" removes the last save, without resetting the cursor. """
+		"""
+		removes the last save, without resetting the cursor.
+		see also: .save(), .mergeLastSave(), .rollback()
+		"""
 		assert self.lastCursors
 		self.lastCursors.pop()
 
 	def rollback(self) -> None:
+		""" see also: .save(), .mergeLastSave(), .rollback() """
 		assert self.lastCursors
 		self.cursor = self.lastCursors.pop()
 

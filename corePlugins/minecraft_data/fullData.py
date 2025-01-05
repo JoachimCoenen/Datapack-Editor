@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Mapping, Optional, ClassVar
 
 from cat.utils import last
 from cat.utils.collections_ import FrozenDict
-from .customData import CustomMCData, Gamerule
+from .customData import CustomMCData, Gamerule, EntityVariants
 from .mcdAdapter import MCData, BlockStateType
 from .resourceLocation import ResourceLocation
 
@@ -31,8 +32,12 @@ class FullMCData:
 	structures: frozenset[ResourceLocation]
 	pointOfInterestTypes: frozenset[ResourceLocation]
 	damageTypes: frozenset[ResourceLocation]
+	itemComponents: frozenset[ResourceLocation]
+	itemSubPredicates: frozenset[ResourceLocation]
+	statisticTypes: frozenset[ResourceLocation]
+	entityVariants: EntityVariants
 
-	slots: FrozenDict[bytes, Optional[int]]
+	slots: FrozenDict[bytes, frozenset[bytes]]
 	blockStates: FrozenDict[ResourceLocation, list[BlockStateType]]
 	gamerules: FrozenDict[bytes, Gamerule]
 
@@ -77,6 +82,10 @@ def buildFullMCData(name: str, mcData: Optional[MCData], cuData: Optional[Custom
 		structures=cuData.structures,
 		pointOfInterestTypes=cuData.pointOfInterestTypes,
 		damageTypes=cuData.damageTypes,
+		itemComponents=cuData.itemComponents,
+		itemSubPredicates=cuData.itemSubPredicates,
+		statisticTypes=cuData.statisticTypes,
+		entityVariants=cuData.entityVariants,
 		slots=cuData.slots,
 		blockStates=mcData.blockStates,
 		gamerules=cuData.gamerules,

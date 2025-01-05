@@ -3,7 +3,7 @@ from typing import Optional, Sequence, cast
 
 from PyQt5.Qsci import QsciLexer, QsciLexerCustom, QsciScintilla
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor, QFont, QGuiApplication
 
 from base.gui.styler import DEFAULT_STYLE_ID, StyleId, StylerCtx, getStyler
 from base.model import theme
@@ -15,7 +15,7 @@ from base.model.theme import GlobalStyles, Style, StyleFont
 from base.model.utils import GeneralError, LanguageId, MDStr, NULL_POSITION, Position, addStyle, formatMarkdown
 from cat.GUI.components.codeEditor import AutoCompletionTree, CEPosition, CallTipInfo, CodeEditor, MyQsciAPIs
 from cat.utils import HTMLStr, override
-from cat.utils.logging_ import logWarning
+from cat.utils.logging_ import logWarning, logError
 from cat.utils.utils import CrashReportWrapped, runLaterSafe
 
 _SCI_STYLE_DEFAULT = StyleId(32)  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
@@ -123,6 +123,8 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 
 		for innerLanguage, styler in styler.innerStylers.items():
 			innerStyles = styles.getInnerLanguageStyles(innerLanguage)
+			if innerStyles is None:
+				continue
 			for name, styleId in styler.localStyles.items():
 				style = innerStyles.get(name)
 				if style is None:
@@ -260,6 +262,13 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
 	# @ProfiledFunction()
 	def actuallyStyleText(self, start: int, end: int):
+		documentText = self.getText()
+		lengthOfDocumentText = len(documentText) if documentText is not None else None
+		if self.editor().length() != lengthOfDocumentText:
+			# no need to style anything if the document text does not match the current text in the editor. This avoids unnecessary parsing.
+			# This also prevents this assertion failing when editing text at the very end of a document:
+			# Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= style.Length())] failed at ../../tmpym18yovx/QScintilla2/QScintilla_src-2.14.1/scintilla/src/CellBuffer.cpp 635
+			return
 		tree = self.getTree()
 		if tree is None:
 			return
@@ -454,12 +463,17 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		may be empty if the user has just entered a word separator.
 		"""
 		self.updateDocumentTree()
-		if (ctxProvider := self.contextProvider) is not None:
-			replaceCtx = context[-1] if context else ''
-			position = self.currentCursorPos
-			suggestions = ctxProvider.getSuggestions(position, replaceCtx)
-			suggestions2 = performFuzzyStrSearch(suggestions, replaceCtx)
-			return [sr.fe for sr in suggestions2.results]
+
+		try:
+			if (ctxProvider := self.contextProvider) is not None:
+				replaceCtx = context[-1] if context else ''
+				position = self.currentCursorPos
+				suggestions = ctxProvider.getSuggestions(position, replaceCtx)
+				suggestions2 = performFuzzyStrSearch(suggestions, replaceCtx)
+				return [sr.fe for sr in suggestions2.results]
+		except Exception as e:
+			logError(e)
+			return [f"<>ERROR: {e}! see logfile<>"]
 
 		return super().updateAutoCompletionList(context, aList)
 
@@ -479,7 +493,7 @@ class DocumentQsciAPIs(MyQsciAPIs):
 
 	@override
 	def indicatorClicked(self, cePosition: CEPosition, state: Qt.KeyboardModifiers) -> None:
-		if state != Qt.ControlModifier:
+		if QGuiApplication.keyboardModifiers() != Qt.ControlModifier:  # 'state' is broken on Wayland
 			return
 
 		if (ctxProvider := self.contextProvider) is not None:

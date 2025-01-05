@@ -1,0 +1,280 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt": "nbt-types.json"
+  },
+  
+  "$templates": {
+    "resource_location": {
+      "$params": {
+        "schema": { "type": "string" },
+        "allowTags": { "type": "boolean", "default": false },
+        "onlyTags": { "type": "boolean", "default": false },
+        "description": { "type": "string", "default": "A resource location in the form `namespace:path`." }
+      },
+      "$body": {
+        "$type": "string",
+        "type": "minecraft:resource_location",
+        "args": { "schema": { "$ref": "#schema" }, "allowTags": { "$ref": "#allowTags" }, "onlyTags": { "$ref": "#onlyTags" } },
+        "description": { "$ref": "#description" }
+      }
+    },
+
+    "resource_location_or_tag_or_list": {
+      "$params": {
+        "schema": { "type": "string" },
+        "description": { "type": "string", "default": "A resource location in the form `namespace:path`, a resource tag or a list if resource locations." }
+      },
+      "$body": { 
+        "$type": "union",
+        "options": [
+          {"$ref": "resource_location", "schema": {"$ref": "#schema"}, "allowTags": true, "description": {"$ref": "#description"}},
+          {
+            "$type": "array",
+            "element": {"$ref": "resource_location", "schema": {"$ref": "#schema"}}  // no tags allowed.
+          }
+        ],
+        "description": {"$ref": "#description"}
+      }
+    },
+
+    "value_or_array": {
+      "$params": {
+        "element": { "type": "object" }
+      },
+      "$body": { 
+        "$type": "union",
+        "options": [
+          { "$ref": "#element" },
+          {
+            "$type": "array",
+            "element": { "$ref": "#element" }
+          }
+        ]
+      }
+    },
+    
+    "val_or_range": {
+      "$params": {
+        "type": { "type": "string", "default": "integer" }
+      },
+      "$body": {
+        "$type": "union",
+        "options": [
+          {
+            "$type": { "$ref": "#type" }
+          },
+          {
+            "$ref": "range",
+            "type": { "$ref": "#type"}
+          }
+        ]
+      }
+    },
+
+    "range": {
+      "$params": {
+        "type": { "type": "string", "default": "integer" }
+      },
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "max": {
+            "optional": true,
+            "value": {
+              "$type": { "$ref": "#type" }
+            },
+            "description": "The maximum value."
+          },
+          "min": {
+            "optional": true,
+            "value": {
+              "$type": { "$ref": "#type" }
+            },
+            "description": "The minimum value."
+          }
+        }
+      }
+    }
+  },
+  
+  "$definitions": {
+
+    "object_any_content": {
+      "$type": "object",
+      "default-property": { "$type": "any" }
+    },
+    
+    "radians_angle": {
+      "$type": "float",
+      "description": "The angle in radians. \n- 360° = 2π radians ≈ 6.28 radians\n- 180° = π radians ≈ 3.14 radians\n- 90° = 0.5π radians ≈ 1.57 radians"
+    },
+    
+    "block_pos": {
+      "$type": "array",
+      "element": { "$type": "integer" },
+      "minCount": 3,
+      "maxCount": 3,
+      "description": "The block position. [X, Y, Z]"
+    },
+    
+    "firework_shape": {
+      "$type": "enum",
+      "description": "The shape of the explosion",
+      "options": {
+        "small_ball": "",
+        "large_ball": "",
+        "star": "",
+        "creeper": "",
+        "burst": ""
+      }
+    },
+    
+    "attribute_operations": {
+      "$type": "enum",
+      "description": "The operation of this attribute modifier. One of `add_value`, `add_multiplied_base`, or `add_multiplied_total`.",
+      "options": {
+        "add_value": "",
+        "add_multiplied_base": "",
+        "add_multiplied_total": ""
+      }
+      //"optionalPrefixes": ["minecraft:"] // maybe...?
+    },
+    
+    "armor_slots": {
+      "$type": "enum",
+      "options": {
+        "any": "",
+        "hand": "",
+        "mainhand": "",
+        "offhand": "",
+        "amor": "",
+        "feet": "",
+        "legs": "",
+        "chest": "",
+        "head": "",
+        "body": ""
+      }
+      //"optionalPrefixes": ["minecraft:"] // maybe...?
+    },
+    
+    "modify_mode": {
+      "$type": "enum",
+      "options": {
+        "append": "",
+        "insert": "",
+        "replace_all": "",
+        "replace_section": ""
+      }
+      //"optionalPrefixes": ["minecraft:"] // maybe...?
+    },
+    
+    "game_mode": {
+      "$type": "string",
+      "type": "game_mode"
+    },
+    
+    "nbt_path": {
+      "$type": "string",
+      "type": "minecraft:nbt_path"
+    },
+    
+    "advancement_id": {
+      "$type": "string",
+      "type": "dpe:target_selector_advancements"
+    },
+    
+    "advancement_criterion_id": {
+      "$type": "string",
+      "type": "dpe:target_selector_advancements_criterion"
+    },
+    
+    "scoreboard_objective": {
+      "$type": "string",
+      "type": "minecraft:objective"
+    },
+    
+    "nbt_sring_or_unflattened_tags": {
+      "$type": "union",
+      "options": [
+        {"$type": "string", "type": "minecraft:nbt_compound_tag"},
+        {"$defRef": "object_any_content"}
+      ]
+    },
+    
+    "data_components_with_contnets": {  // used by `set_contents` and `modify_contents` item modifiers.
+      "$type": "enum",
+      "options": {
+        "container": "",
+        "bundle_contents": "",
+        "charged_projectiles": ""
+      },
+      "optionalPrefixes": ["minecraft:"]
+    },
+
+    "data_components": {
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_item_stack_components"
+    },
+
+    "data_components_removable": { // can be prefixed with a '!'.
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_removable_item_stack_components"
+    },
+
+    "item_sub_predicates": {
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_item_sub_predicates"
+    },
+
+    "block_state": {
+      "$type": "object",
+      "properties": {
+        "Name": {"$ref": "resource_location", "schema": "block", "allowTags": false },
+        "Properties": {
+          "optional": true,
+          "value": {
+            "$type": "calculated",
+            "function": "corePlugins.datapackVersions.providers.propertiesFor_block_state_property",
+            "description": "Block state property key-value pair. The property must be possessed by the specified block."
+          }
+        }
+      }
+    },
+
+    "item_stack": { // corresponds to "Item format/ItemNoCount" in wiki
+      "$type": "object",
+      "properties": {
+        "id": {"$ref": "resource_location", "schema": "item", "allowTags": false },
+        "components": {
+          "optional": true,
+          "value": { "$defRef": "data_components" }
+        }
+      }
+    },
+
+    "item_stack_with_count": { // corresponds to "Item format/ItemNoSlot" in wiki
+      "$type": "object",
+      "inherits": [ {"defRef": "item_stack"} ],
+      "properties": {
+        "count": {
+          "optional": true,
+          "value": { "$type": "integer", "min": 0 },
+          "default": 1,
+          "description": "Optional. The amount of the item. Falls back to 1 if the field is absent."
+        }
+      }
+    },
+
+    "item_stack_with_slot": { // corresponds to "Item format/Item" in wiki. has both dlot and count.
+      "$type": "object",
+      "inherits": [ {"defRef": "item_stack_with_count"} ],
+      "properties": {
+        "slot": {
+          "value": { "$defRef": "nbt:byte" } // investigate: is this also true for json, or is minecraft:item_slot used?
+        }
+      }
+    }
+    
+  }
+}

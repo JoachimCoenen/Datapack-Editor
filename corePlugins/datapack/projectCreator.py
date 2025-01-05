@@ -20,7 +20,7 @@ from .datapackContents import NAME_SPACE_VAR
 from .dpVersions import getAllDPVersions
 from corePlugins.minecraft.resourceLocation import isNamespaceValid
 from gui.datapackEditorGUI import DatapackEditorGUI
-from ..json import JSON_ID
+from corePlugins.json import JSON_ID
 
 
 def newProjDirectoryPathValidator(path: str) -> Optional[pd.ValidatorResult]:

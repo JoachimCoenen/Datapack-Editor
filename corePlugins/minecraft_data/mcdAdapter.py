@@ -12,8 +12,9 @@ from cat.utils.logging_ import logWarning, logError, loggingIndentInfo
 from cat.utils.collections_ import FrozenDict
 from base.model.utils import MDStr
 from .resourceLocation import ResourceLocation
-from ..mcFunction.argumentTypes import ALL_NAMED_ARGUMENT_TYPES, makeLiteralsArgumentType
-from ..mcFunction.command import FilterArgumentInfo
+from corePlugins.mcFunction.argumentTypes import ALL_NAMED_ARGUMENT_TYPES, makeLiteralsArgumentType
+from corePlugins.mcFunction.command import ArgumentSchema
+from corePlugins.mcFunction.filterArgs import FilterArgumentInfo
 
 _MINECRAFT_DATA_REL_PATH: str = 'data/data/'
 _FILE_ABS_PATH: str = normalizeDirSeparatorsStr(os.path.dirname(__file__)).removesuffix('/') + '/'
@@ -41,8 +42,10 @@ def faiForBS(bs: BlockStateType) -> FilterArgumentInfo:
 
 	return FilterArgumentInfo(
 		name=bs.name,
-		type=argType,
+		valueSchema=ArgumentSchema(name=bs.name, type=argType),
+		description=""
 	)
+
 
 @dataclass
 class MCData:
@@ -192,5 +195,5 @@ def _loadRawData(dataPaths: dict[str, str], version: str) -> dict[str, Any]:
 			with open(path, encoding='utf-8') as fp:
 				data[filename] = json.load(fp)
 		except OSError as ex:
-			logWarning(ex, f"while loading data for Minecraft version '{version}'.")
+			logWarning(ex, f"while loading data for Minecraft version '{version}'.", includeTraceback=False)
 	return data

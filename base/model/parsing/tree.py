@@ -4,7 +4,7 @@ import functools as ft
 from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Collection, Iterable, Iterator, TypeVar, Generic, Optional, ClassVar, Protocol, Type
+from typing import Iterable, Iterator, TypeVar, Generic, Optional, ClassVar, Protocol, Type, Sequence
 
 from base.model.utils import Span, LanguageId
 
@@ -50,15 +50,25 @@ class Node(Generic[_TNode, _TSchema], ABC):
 
 	@property
 	@abstractmethod
-	def children(self) -> Collection[_TNode]:
+	def children(self) -> Sequence[_TNode]:
 		"""
+		The child Nodes in order of appearance.
 		:return: a collection of its children
 		"""
 		return ()
 
 	def walkTree(self) -> Iterator[_TNode]:
+		""" Walk over this node and all its children, in Depth First Order. """
 		yield self
 		yield from _walkTree(self.children)
+
+	@property
+	def foreignNodes(self) -> Sequence[Node | None]:
+		"""
+		The foreign Nodes in order of appearance. Can be used to simplify the implementation of syntax highlighting,
+		validation, code suggestions, etc. Override if necessary.
+		"""
+		return ()
 
 
 @dataclass

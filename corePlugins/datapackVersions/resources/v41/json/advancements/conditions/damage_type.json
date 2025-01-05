@@ -1,0 +1,46 @@
+{
+  "$schema": "dpe/json/schema/library",
+    "$libraries": {
+    "entity": "entity.json",
+    "utils": "../../../common/utils-library.json"
+  },
+  "$definitions": {
+    "damage_type": {
+      "$type": "object",
+      "properties": {
+        "direct_entity": {
+          "optional": true,
+          "value": { "$defRef": "entity:entity" },
+          "description": "The entity that was the direct cause of the damage."
+        },
+        
+        "source_entity": {
+          "optional": true,
+          "value": { "$defRef": "entity:entity" },
+          "description": "Checks the entity that was the source of the damage (for example: The skeleton that shot the arrow)."
+        },
+        
+        "tags": {
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "properties": {
+                "id": {
+                  "optional": false,
+                  "value": {"$ref": "utils:resource_location", "schema": "damage_type", "onlyTags": true }
+                },
+                "expected": {
+                  "optional": false,
+                  "value": { "$type": "boolean" }
+                }
+              }
+            }
+          },
+          "description": "An array of objects containing damage type tags that the type of the damage should be included in. "
+        }
+      }
+    }
+  }
+}

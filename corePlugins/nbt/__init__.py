@@ -22,7 +22,7 @@ class SNBTPlugin(PluginBase):
 		pass
 
 	def dependencies(self) -> set[str]:
-		return set()
+		return {'NbtJsonBasePlugin'}
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from .snbtParser import SNBTParser
@@ -34,7 +34,17 @@ class SNBTPlugin(PluginBase):
 		}
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
-		pass
+		from corePlugins.nbtJsonBase.context import StructureCtxProvider
+		from corePlugins.nbtJsonBase.core import StructureNode
+		from .tags import NBTNode
+
+		class NBTCtxProvider(StructureCtxProvider):
+			def __init__(self, tree: StructureNode, text: bytes):
+				super().__init__(tree, text, requiresStringQuotation=False)
+
+		return {
+			NBTNode: NBTCtxProvider
+		}
 
 	def documentTypes(self) -> list[DocumentTypeDescription]:
 		return [DocumentTypeDescription(

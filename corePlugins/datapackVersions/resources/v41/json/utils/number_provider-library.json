@@ -1,0 +1,186 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../../common/utils-library.json"
+  },
+  "$definitions": {
+
+    "constant_number": {
+      "$type": "union",
+      "options": [
+        { "$type": "float" },
+        { "$type": "integer" }
+      ]
+    },
+
+    "number_provider": {
+      "$type": "union",
+      "options": [
+        {"$defRef": "constant_number"},
+        {"$defRef": "%number_provider_complex"}
+      ]
+    },
+
+    "%number_provider_complex": {
+      "$type": "object",
+      "properties": {
+        "type": {
+          "description": "The number provider type.",
+          "optional": true,
+          "default": "uniform",
+          "value": {
+            "$type": "enum",
+            "options": {
+              "constant": "A constant value.",
+              "uniform": "A random number following a uniform distribution between two values (inclusive).",
+              "binomial": "A random number following a binomial distribution.",
+              "score": "To query and use a scoreboard value.",
+              "storage": "A value in command storage."
+            },
+            "optionalPrefixes": ["minecraft:"]
+          }
+        }
+      },
+      
+      "inherits": [
+        {"defRef": "%constant", "decidingValues": ["constant"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%uniform", "decidingValues": ["uniform"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%binomial", "decidingValues": ["binomial"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%score", "decidingValues": ["score"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%storage", "decidingValues": ["storage"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]}
+      ]
+    },
+
+    "%constant": {
+      "$type": "object",
+      "properties": {
+        "value": {
+          "description": "The exact value.",
+          "value": {"$defRef": "constant_number"}
+        }
+      }
+    },
+
+    "%uniform": {
+      "$type": "object",
+      "properties": {
+        "min": {
+          "description": "The minimum value.",
+          "value": {"$defRef": "number_provider"}
+        },
+        "max": {
+          "description": "The maximum value.",
+          "value": {"$defRef": "number_provider"}
+        }
+      }
+    },
+
+    "%binomial": {
+      "$type": "object",
+      "properties": {
+        "n": {
+          "description": "The amount of trials.",
+          "value": {"$defRef": "number_provider"}
+        },
+        "p": {
+          "description": "The probability of success on an individual trial.",
+          "value": {"$defRef": "number_provider"}
+        }
+      }
+    },
+
+    "%score": {
+      "$type": "object",
+      "properties": {
+        "target": {
+          "description": "To choose which player name or entity UUID to query.",
+          "value": {"$defRef": "%score_target"}
+        },
+        "score": {
+          "description": "The scoreboard objective to query on the selected player name or UUID.",
+          "value": {"$defRef": "utils:scoreboard_objective"}
+        },
+        "scale": {
+          "optional": true,
+          "default": 1.0,
+          "description": "The scoreboard objective to query on the selected player name or UUID.",
+          "value": {"$type": "float"}
+        }
+      }
+    },
+
+    "%storage": {
+      "$type": "object",
+      "properties": {
+        "storage": {
+          "description": "The resource location of the storage",
+          "value": {"$ref": "utils:resource_location", "schema": "command_storage"}
+        },
+        "path": {
+          "description": "The nbt path to the field in storage.",
+          "value": {"$defRef": "utils:nbt_path"}
+        }
+      }
+    },
+    
+    "loot_context_killer": {
+      "$type": "enum",
+      "options": {
+        "this": "the invoking entity",
+        "killer": "the entity that killed the invoking entity",
+        "direct_killer": "the entity that *directly* killed the invoking entity",
+        "killer_player": "only select the killer if they are a player"
+      },
+      "optionalPrefixes": ["minecraft:"]
+    },
+    
+    "loot_context": {
+      "$type": "enum",
+      "options": {
+        "block_entity": "the invoking block entity",
+        "this": "the invoking entity",
+        "killer": "the entity that killed the invoking entity",
+        "direct_killer": "the entity that *directly* killed the invoking entity",
+        "killer_player": "only select the killer if they are a player"
+      },
+      "optionalPrefixes": ["minecraft:"]
+    },
+    
+    "%score_target": {
+      "$type": "union",
+      "options": [
+        {"$defRef": "loot_context_killer"},
+        {"$defRef": "%score_target_complex"}
+      ]
+    },
+    
+    "%score_target_complex": {
+      "$type": "object",
+      "properties": {
+        "type": {
+          "value": {
+            "$type": "enum",
+            "options": {
+              "fixed": "manually specify a player name or UUID",
+              "context": "use an entity from loot context"
+            },
+            "optionalPrefixes": ["minecraft:"]
+          },
+          "description": "Set to `fixed` to manually specify a player name or UUID. Set to `context` to use an entity from loot context."
+        },
+        "name": {
+          "description": "Included only if type is set to `fixed`. Specifies the name of the player, or the entity's UUID (in hyphenated hexadecimal format) whose score to query.",
+          "decidingProp": "type",
+          "optionalPrefixes": ["minecraft:"],
+          "values": { "fixed": {"$type": "string"}}
+        },
+        "target": {
+          "description": "Included only if type is set to context. Specifies an entity from loot context to query the score of. Use `this` for the invoking entity, `killer` for the entity that killed the invoking entity, `direct_killer` for the entity that *directly* killed the invoking entity, or `player_killer` to select the killer only if they are a player.",
+          "decidingProp": "type",
+          "optionalPrefixes": ["minecraft:"],
+          "values": { "context": {"$defRef": "loot_context_killer"} }
+        }
+      }
+    }
+  }
+}

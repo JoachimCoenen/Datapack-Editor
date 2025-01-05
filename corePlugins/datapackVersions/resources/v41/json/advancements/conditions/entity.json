@@ -1,0 +1,224 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "location": "location.json",
+    "item": "item.json",
+    "type_specific": "type_specific.json",
+    "utils": "../../../common/utils-library.json"
+  },
+  "$definitions": {
+    "entity": {
+      "$type": "object",
+      "properties": {
+        "distance": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "absolute": {
+                "optional": true,
+                "value": { "$ref": "utils:range", "type": "float" },
+                "description": "Test the distance between the two points in 3D space."
+              },
+              "horizontal": {
+                "optional": true,
+                "value": { "$ref": "utils:range", "type": "float" },
+                "description": "Test the distance between the two points, ignoring the Y value."
+              },
+              "x": {
+                "optional": true,
+                "value": { "$ref": "utils:range", "type": "float" },
+                "description": "Test the absolute difference between the X-coordinates of the two points."
+              },
+              "y": {
+                "optional": true,
+                "value": { "$ref": "utils:range", "type": "float" },
+                "description": "Test the absolute difference between the Y-coordinates of the two points."
+              },
+              "z": {
+                "optional": true,
+                "value": { "$ref": "utils:range", "type": "float" },
+                "description": "Test the absolute difference between the Z-coordinates of the two points."
+              }
+            }
+          },
+          "description": "To test the distance to the entity this predicate is invoked upon. Passes if the calculated distance is between the entered <code>min</code> and <code>max</code>, inclusive."
+        },
+        "effects": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "null": {
+                "optional": true,
+                "value": {
+                  "$type": "object",
+                  "properties": {
+                    "ambient": {
+                      "optional": true,
+                      "value": { "$type": "boolean" },
+                      "description": "Test whether the effect is from a beacon."
+                    },
+                    "amplifier": {
+                      "optional": true,
+                      "value": { "$ref": "utils:val_or_range", "type": "integer" },
+                      "description": "Test if the effect's amplifier matches an exact value. Level I is represented by 0."
+                    },
+                    "duration": {
+                      "optional": true,
+                      "value": { "$ref": "utils:val_or_range", "type": "integer" },
+                      "description": "Test if the effect's remaining time (in ticks) matches an exact value."
+                    },
+                    "visible": {
+                      "optional": true,
+                      "value": { "$type": "boolean" },
+                      "description": "Test if the effect has visible particles."
+                    }
+                  }
+                },
+                "description": "A status effect that must be present."
+              }
+            },
+            "description": "<minecraft:effect_name>: None"
+          },
+          "description": "For testing the active [ [Effect|status effects] ] on the entity."
+        },
+        "equipment": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "mainhand": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's main hand."
+              },
+              "offhand": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's offhand."
+              },
+              "head": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's head armor slot."
+              },
+              "chest": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's chest armor slot."
+              },
+              "legs": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's legs armor slot."
+              },
+              "feet": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's feet armor slot."
+              },
+              "body": {
+                "optional": true,
+                "value": { "$defRef": "item:item" },
+                "description": "Test the item in the entity's body armor slot."
+              }
+            }
+          },
+          "description": "For testing the items that this entity holds in its equipment slots."
+        },
+        "flags": {
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "properties": {
+              "is_baby": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not a baby variant."
+              },
+              "is_on_fire": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not on fire."
+              },
+              "is_sneaking": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not sneaking."
+              },
+              "is_sprinting": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not sprinting."
+              },
+              "is_swimming": {
+                "optional": true,
+                "value": { "$type": "boolean" },
+                "description": "Test whether the entity is or is not swimming."
+              }
+            }
+          },
+          "description": "To test flags of the entity."
+        },
+        "location": {
+          "optional": true,
+          "value": { "$defRef": "location:location" },
+          "description": "Test properties of this entity's location."
+        },
+        "nbt": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:nbt_compound_tag"
+          },
+          "description": "An NBT string."
+        },
+        "passenger": {
+          "optional": true,
+          "value": { "$defRef": "entity" },
+          "description": "Test the entity directly riding this entity."
+        },
+        "slots": {
+          "optional": true,
+          "value": { 
+            "$type": "object",
+            "default-key": { "$type": "string", "type": "minecraft:item_slots" },
+            "default-property": { "$defRef": "item:item" }
+          },
+          "description": "Test properties of the block the entity is standing on, using a location predicate."
+        },
+        "stepping_on": {
+          "optional": true,
+          "value": { "$defRef": "location:location" },
+          "description": "Test properties of the block the entity is standing on, using a location predicate."
+        },
+        "team": {
+          "optional": true,
+          "value": { "$type": "string" },
+          "description": "Passes if the [ [Scoreboard#Teams|team] ] of this entity matches this string."
+        },
+        "type": {
+          "optional": true,
+          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "entity_type"},
+          "description": "Test this entity's type. Accepts an [ [Data values/Entity IDs|entity ID] ]."
+        },
+        "targeted_entity": {
+          "optional": true,
+          "value": { "$defRef": "entity" },
+          "description": "Test properties of the entity which this entity is targeting for attacks."
+        },
+        "vehicle": {
+          "optional": true,
+          "value": { "$defRef": "entity" },
+          "description": "Test properties of the vehicle entity that this entity is riding upon."
+        },
+        "type_specific": {
+          "optional": true,
+          "value": {"$defRef": "type_specific:type_specific"},
+          "description": "To test entity properties that can only be applied to certain entity types.  Supersedes <code>lightning_bolt</code>, <code>player</code>, <code>fishing_hook</code> and <code>catType</code>."
+        }
+      }
+    }
+  }
+}

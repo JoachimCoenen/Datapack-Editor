@@ -1,0 +1,33 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../../../common/utils-library.json"
+  },
+  "$definitions": {
+    "item": {
+      "$type": "object",
+      "properties": {
+        "count": {
+          "optional": true,
+          "value": { "$ref": "utils:val_or_range" },
+          "description": "Amount of the item."
+        },
+        "items": {
+          "optional": true,
+          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "item"},
+          "description": "A list of [ [Java Edition data values#Items|item IDs] ]."
+        },
+        "components": {
+          "optional": true,
+          "value": { "$defRef": "utils:data_components" },
+          "description": "Matches exact item component values. Each key in this object corresponds to a component to test, with its value as the desired data to compare."
+        },
+        "predicates": {
+          "optional": true,
+          "value": { "$defRef": "utils:item_sub_predicates" },
+          "description": "Matches item sub-predicates. "
+        }
+      }
+    }
+  }
+}

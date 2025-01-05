@@ -78,7 +78,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 					idxMap = idxMapBldr.completeIndexMapper(self.cursor + len(line) - nlLen, len(virtualLine) + cursorOffset)
 				else:
 					idxMap = self.indexMapper
-				reader = StringReader(virtualLine, self.line, self.lineStart, cursor, cursorOffset, idxMap, self.text)
+				reader = StringReader(virtualLine, self.line, self.lineStart, cursor, cursorOffset, idxMap, self.fullSource)
 				if (node := self.parseVirtualLine(reader)) is not None:
 					children.append(node)
 				cursor = 0
@@ -168,6 +168,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			if remaining is not None:
 				lastArg.next = makeParsedArgument(sr, None, value=remaining)
 				lastArg = lastArg.next
+				# sr.mergeLastSave()  # todo validate do we need something like this here?
 		else:
 			lastArg = commandArg
 			hasErrors = False  # ? is this right?
@@ -175,7 +176,9 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 				self._addExpectedArgumentError(sr)
 				hasErrors = True
 
-		sr.tryReadRemaining()
+		if sr.tryReadRemaining():
+			# sr.mergeLastSave()  # todo validate do we need something like this here?
+			pass
 
 		return True, commandArg, hasErrors, lastArg
 
@@ -208,6 +211,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			return None
 
 		argument = makeParsedArgument(sr, keywords[literal], value=literal)
+		sr.mergeLastSave()
 		return argument
 
 	def parseArguments(self, sr: StringReader, possibilities: Options) -> tuple[bool, Optional[ParsedArgument], bool, Optional[ParsedArgument]]:
@@ -228,7 +232,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 					lastArg.next = argument
 				lastArg = argument2
 
-			# if it's the first argument which did not match, there might be other possibilities, we do not know about here.
+			# if it's the first argument which did not match, there might be other possibilities that we do not know about here.
 			hasError |= firstArg is not None and not didMatch
 
 			if hasError or not didMatch:
@@ -254,7 +258,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		argument2: Optional[ParsedArgument] = argument
 		if argument is not None:
 			nextPossibilities = argument.schema.next
-			argument2.potentialNextSchemas += argument.schema.next.flattened
+			argument.potentialNextSchemas += argument.schema.next.flattened
 			didMatch = True
 		else:
 			nextPossibilities = ()
@@ -289,6 +293,8 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			argument = missingArgumentContext(sr, possibility, errorsIO=self.errors)
 		else:
 			argument = ctx.parse(sr, possibility, self.filePath, errorsIO=self.errors)
+			if argument is not None:
+				sr.mergeLastSave()
 		return argument is not None, argument, False, argument
 
 	def parse(self) -> Optional[MCFunction]:

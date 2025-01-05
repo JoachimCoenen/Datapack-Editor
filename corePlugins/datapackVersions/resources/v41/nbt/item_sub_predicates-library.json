@@ -1,0 +1,132 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../common/utils-library.json",
+    "item": "../json/advancements/conditions/item.json"
+  },
+  "$templates": {
+    "collection_predicate": {
+      "$params": {
+        "predicate": {"type": "object"}
+      },
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "contains": {
+            "optional": true,
+            "value": { 
+              "$type": "array",
+              "element": {"$ref": "#predicate"}
+            },
+            "description": "Checks damage value."
+          },
+          "size": {
+            "optional": true,
+            "value": { "$ref": "utils:val_or_range" },
+            "description": "Checks the total number of item stacks."
+          },
+          
+          "count": {
+            "optional": true,
+            "value": { 
+              "$type": "array",
+              "element": {
+                "$type": "object",
+                "properties": {
+                  "test": {"$ref": "#predicate"},
+                  "count": {"$ref": "utils:val_or_range"}
+                }
+              }
+            },
+            "description": "A collection predicate."
+          }
+        }
+      }
+    }
+  },
+  
+  "$definitions": {
+  
+    "item_stack_collection_predicate": {
+      "$ref": "collection_predicate",
+      "predicate": {"$defRef": "item:item"}
+    },
+    
+    "firework_explosion_predicate": {
+      "$type": "object",
+      "properties": {
+        "shape": {
+          "optional": true,
+          "value": {"$defRef": "utils:firework_shape"},
+          "description": "Checks the shape of explosion effect."
+        },
+        "has_trail": {
+          "optional": true,
+          "value": {"$type": "boolean"},
+          "description": "Checks whether or not the explosion has a trail effect."
+        },
+        "has_twinkle": {
+          "optional": true,
+          "value": {"$type": "boolean"},
+          "description": "Checks whether or not the explosion has a twinkle effect."
+        }
+      }
+    },
+    
+    "attribute_modifier_predicate": {
+      "$type": "object",
+      "properties": {
+        "attribute": {
+          "description": "Checks the shape of explosion effect.",
+          "optional": true,
+          "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "attribute"}
+        },
+        "id": {
+          "description": "Checks the namespaced ID of the attribute modifier.",
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": {"$type": "string"}
+          }
+        },
+        "amount": {
+          "description": "Checks the amount from the attribute modifier.",
+          "optional": true,
+          "value": {"$ref": "utils:range", "type": "float"}
+        },
+        "opertation": {
+          "description": "Checks the amount from the attribute modifier.",
+          "optional": true,
+          "value": {"$defRef": "utils:attribute_operations"}
+        },
+        "slot": {
+          "description": "Checks the slot of the attribute modifier.",
+          "optional": true,
+          "value": {"$defRef": "utils:armor_slots"}
+        }
+      }
+    }
+    
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

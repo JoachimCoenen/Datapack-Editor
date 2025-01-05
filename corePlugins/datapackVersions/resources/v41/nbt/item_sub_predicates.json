@@ -1,0 +1,206 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "item_sub_predicates": "item_sub_predicates-library.json",
+    "rawJsonText": "../json/rawJsonText-library.json",
+    "utils": "../common/utils-library.json"
+  },
+  "$templates": { },
+  
+  "$definitions": {
+  
+    "attribute_modifiers": {
+      "$type": "object",
+      "description": "Checks modifiers in the attribute_modifiers data component. ",
+      "properties": {
+        "modifiers": {
+          "optional": true,
+          "value": { "$ref": "item_sub_predicates:collection_predicate", "predicate": {"$defRef": "item_sub_predicates:attribute_modifier_predicate"} }
+        }
+      }
+    },
+  
+    "bundle_contents": {
+      "$type": "object",
+      "description": "Checks item stacks in the bundle_contents data component.",
+      "properties": {
+        "items": {
+          "optional": true,
+          "value": { "$defRef": "item_sub_predicates:item_stack_collection_predicate" }
+        }
+      }
+    },
+  
+    "container": {
+      "$type": "object",
+      "description": "Checks item stacks in the container data component.",
+      "properties": {
+        "items": {
+          "optional": true,
+          "value": { "$defRef": "item_sub_predicates:item_stack_collection_predicate" }
+        }
+      }
+    },
+    
+    "custom_data": {
+      "$type": "union",
+      "description": "Checks custom_data data component.",
+      "options": [
+        {"$defRef": "utils:nbt_sring_or_unflattened_tags"}
+      ]
+    },
+    
+    "damage": {
+      "$type": "object",
+      "description": "Checks remaining durability or damage value. Damage value is from the damage data component; remaining durability is the value max_damage data component minus damage value.",
+      "properties": {
+        "damage": {
+          "optional": true,
+          "value": { "$ref": "utils:val_or_range" },
+          "description": "Checks damage value."
+        },
+        "durability": {
+          "optional": true,
+          "value": { "$ref": "utils:val_or_range" },
+          "description": "Checks remaining durability."
+        }
+      }
+    },
+    
+    "enchantments": {
+      "$type": "array",
+      "description": "Checks enchantments on the item (enchantments in the enchantments data component).",
+      "element": {
+        "$type": "object",
+        "properties": {
+          "enchantment": {
+            "optional": true,
+            "value": {"$ref": "utils:resource_location", "schema": "enchantment" },
+            "description": "An [ [Java Edition data values#Enchantments|enchantment ID] ]."
+          },
+          "levels": {
+            "optional": true,
+            "value": { "$ref": "utils:val_or_range" },
+            "description": "The level of the enchantment."
+          }
+        }
+      }
+    },
+    
+    "firework_explosion": {
+      "$type": "object",
+      "inherits": [{"defRef": "item_sub_predicates:firework_explosion_predicate"}],
+      "properties": {}
+    },
+    
+    "fireworks": {
+      "$type": "object",
+      "description": "Checks explosion effects in the fireworks data component.",
+      "properties": {
+        "explosions": {
+          "description": "A collection predicate of explosion effect.",
+          "optional": true,
+          "value": {
+            "$ref": "item_sub_predicates:collection_predicate",
+            "predicate": {"$defRef": "item_sub_predicates:firework_explosion_predicate"}
+          }
+        },
+        "flight_duration": {
+          "optional": true,
+          "value": { "$ref": "utils:val_or_range" },
+          "description": "Checks the flight duration of this firework rocket, i.e. the number of gunpowders used to craft it."
+        }
+      }
+    },
+    
+    "potion_contents": {
+      "$ref": "utils:resource_location_or_tag_or_list", "schema": "potion"
+    },
+    
+    "stored_enchantments": {
+      "$type": "array",
+      "description": "Checks enchantments on an enchanted book (enchantments in the stored_enchantments data component).",
+      "element": {
+        "$type": "object",
+        "properties": {
+          "enchantment": {
+            "optional": true,
+            "value": {"$ref": "utils:resource_location", "schema": "enchantment" },
+            "description": "An [ [Java Edition data values#Enchantments|enchantment ID] ]."
+          },
+          "levels": {
+            "optional": true,
+            "value": { "$ref": "utils:val_or_range" },
+            "description": "The level of the enchantment."
+          }
+        }
+      }
+    },
+    
+    "trim": {
+      "$type": "object",
+      "description": "Checks the trim data component. ",
+      "properties": {
+        "material": {
+          "optional": true,
+          "value": { "$ref": "utils:resource_location_or_tag_or_list", "schema": "item" },
+          "description": "One or more trim material(s). If more than one trim material is specified, succeeds when any one of them matches the testing trim material."
+        },
+        "pattern": {
+          "optional": true,
+          "value": { "$ref": "utils:resource_location_or_tag_or_list", "schema": "item" },
+          "description": "One or more trim pattern(s). If more than one trim pattern is specified, succeeds when any one of them matches the testing trim pattern."
+        }
+      }
+    },
+    
+    "writable_book_content": {
+      "$type": "object",
+      "description": "Checks pages in the writable_book_content data component. Raw texts are checked instead of filtered texts.",
+      "properties": {
+        "pages": {
+          "optional": true,
+          "value": {
+            "$ref": "item_sub_predicates:collection_predicate",
+            "predicate": {"$type": "string"}
+          }
+        }
+      }
+    },
+    
+    "written_book_content": {
+      "$type": "object",
+      "description": "Checks written_book_content data component.",
+      "properties": {
+        "pages": {
+          "optional": true,
+          "value": {
+            "$ref": "item_sub_predicates:collection_predicate",
+            "predicate": {"$defRef": "rawJsonText:rawJsonText"}
+          }
+        },
+        "author": {
+          "description": "Matches the full string of author.",
+          "optional": true,
+          "value": { "$type": "string" }
+        },
+        "title": {
+          "description": "Matches the full string of title. Checks raw title instead of filtered title.",
+          "optional": true,
+          "value": { "$type": "string" }
+        },
+        "generation": {
+          "description": "Checks the number of times this written book has been copied. 0 = original, 1 = copy of original, 2 = copy of copy, 3 = tattered.",
+          "optional": true,
+          "value": { "$ref": "utils:val_or_range" }
+        },
+        "resolved": {
+          "description": "Checks whether the JSON text components have already been resolved (the `resolved` field in the data component is `true`).",
+          "optional": true,
+          "value": { "$type": "boolean" }
+        }
+      }
+    }
+    
+  }
+}

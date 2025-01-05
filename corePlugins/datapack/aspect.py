@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass, field, fields
 from typing import Optional, Callable, cast
 
+from base.model.application import getApp
 from cat.GUI import propertyDecorators as pd
 from cat.GUI.propertyDecorators import ValidatorResult
 from cat.Serializable.serializableDataclasses import catMeta
@@ -18,9 +19,9 @@ from base.model.utils import GeneralError, MDStr, NULL_SPAN, SemanticsError
 from .datapackContents import collectEntry
 from .dpVersions import getAllDPVersions, getDPVersion, DPVersion
 from corePlugins.json import JSON_ID
-from corePlugins.json.core import JsonData
 from corePlugins.minecraft.settings import MinecraftSettings, MinecraftVersion
 from corePlugins.minecraft_data.fullData import FullMCData, getFullMcData
+from corePlugins.nbtJsonBase.core import StructureDataNode
 
 
 def minecraftVersionValidator(version: str) -> Optional[pd.ValidatorResult]:
@@ -33,7 +34,7 @@ def minecraftVersionValidator(version: str) -> Optional[pd.ValidatorResult]:
 def datapackVersionValidator(version: str) -> Optional[pd.ValidatorResult]:
 	versions = getAllDPVersions()
 	if version not in versions:
-		return ValidatorResult(f"Datapack version '{version}' not supported by your current installation of {getApplicationSettings().applicationName}. You might need to update your installation or install a plugin.", 'warning')
+		return ValidatorResult(f"Datapack version '{version}' not supported by your current installation of {getApp().info.appName}. You might need to update your installation or install a plugin.", 'warning')
 	return None
 
 
@@ -65,7 +66,7 @@ class DatapackAspect(ProjectAspect):
 	def __post_init__(self):
 		self.analyzeFilesPart = AnalyzeFilesDatapackAspectPart(self)
 		self.dependenciesPart = DependenciesDatapackAspectPart(self)
-		self.projectInfoPart = ProjectInfoAspectPart[DatapackAspect](self)
+		self.projectInfoPart = ProjectInfoAspectPart(self)
 
 	dpVersion: str = field(
 		default_factory=lambda: last(sorted(getAllDPVersions().keys()), ''),  # by default selects the latest version
@@ -198,7 +199,7 @@ class DependenciesDatapackAspectPart(DependenciesAspectPart[DatapackAspect]):
 		dependencies: list[DependencyDescr] = []  # TODO: DependencyDescr(applicationSettings.minecraft.executable, 'minecraft', mandatory=True)]
 
 		filePath = (rootPath, fileName)
-		node: Optional[JsonData]
+		node: Optional[StructureDataNode]
 		try:
 			with ZipFilePool() as pool:
 				file = loadBinaryFile(filePath, pool)

@@ -267,105 +267,20 @@ MINECRAFT_ITEM_SLOT = ArgumentType(
 	description="Must be a string notation that refer to certain slots in the inventory.",
 	description2="""
 	{{see also|Commands/replaceitem}}
-	The slot reference is mapped to an integer.
-	
-	:::{| class="wikitable sortable" data-description="Slot mapping"
-	!Slot
-	!Valid ''slot_number''
-	!Mapped index
-	|-
-	|<code>armor.chest</code>
-	|
-	|align="center"|102
-	|-
-	|<code>armor.feet</code>
-	|
-	|align="center"|100
-	|-
-	|<code>armor.head</code>
-	|
-	|align="center"|103
-	|-
-	|<code>armor.legs</code>
-	|
-	|align="center"|101
-	|-
-	|<code>weapon</code>
-	|
-	|align="center"|98
-	|-
-	|<code>weapon.mainhand</code>
-	|
-	|align="center"|98
-	|-
-	|<code>weapon.offhand</code>
-	|
-	|align="center"|99
-	|-
-	|<code>container.''slot_number''</code>
-	|align="center"|0-53
-	|align="center"|0-53
-	|-
-	|<code>enderchest.''slot_number''</code>
-	|align="center"|0-26
-	|align="center"|200-226
-	|-
-	|<code>hotbar.''slot_number''</code>
-	|align="center"|0-8
-	|align="center"|0-8
-	|-
-	|<code>inventory.''slot_number''</code>
-	|align="center"|0-26
-	|align="center"|9-35
-	|-
-	|<code>horse.saddle</code><br/>
-	|
-	|align="center"|400
-	|-
-	|<code>horse.chest</code>
-	|
-	|align="center"|499
-	|-
-	|<code>horse.armor</code>
-	|
-	|align="center"|401
-	|-
-	|<code>horse.''slot_number''</code>
-	|align="center"|0-14
-	|align="center"|500-514
-	|-
-	|<code>villager.''slot_number''</code>
-	|align="center"|0-7
-	|align="center"|300-307
-	|}
-	
-	Then, restrictions are applied to mapped indexes.
-	
-	:::{| class="wikitable sortable" data-description="Restrictions"
-	!Mapped index
-	!Restrictions
-	|-
-	|0-53
-	|General inventories
-	|-
-	|98-103
-	|[[Mobs]], [[player]]s, and [[armor stand]]s
-	|-
-	|200-226
-	|[[Player]]s
-	|-
-	|300-307
-	|[[Villager]]s, [[pillager]]s
-	|-
-	|400-401
-	|[[Horse]]s, [[donkey]]s
-	|-
-	|499-514
-	|[[Donkey]]s with chest
-	|}""",
+	The slot reference is mapped to an integer.""",
 	examples="""
 	* {{cd|container.5}}
 	* {{cd|12}}
+	* {{cd|weapon}}""",
+)
+
+MINECRAFT_ITEM_SLOTS = ArgumentType(
+	name='minecraft:item_slots',
+	description="Must be a string notation that refer to certain slots in the inventory.",
+	description2="""""",
+	examples="""
+	* {{cd|container.*}}
+	* {{cd|container.5}}
 	* {{cd|weapon}}""",
 )
 
@@ -383,10 +298,17 @@ MINECRAFT_ITEM_STACK = ArgumentType(
 	* <code>stick{foo:bar}</code>""",
 )
 
+MINECRAFT_LOOT_MODIFIER = ArgumentType(
+	name='minecraft:loot_modifier',
+	description="",
+	description2="""Specifies a item modifier with a resource location or in SNBT format. Must be a valid item modifier definition in SNBT format, or a resource location of an existing item modifier (an entry in `minecraft:item_modifier` registry). For NBT tag, if it is a string tag, the tag is also parsed into a resource location and resolved into an existing item modifier; otherwise, the tag is parsed as a new item modifier definition.""",
+	examples="""""",
+)
+
 MINECRAFT_LOOT_TABLE = ArgumentType(
 	name='minecraft:loot_table',
-	description="{{Arg desc|je=resource_location}}",
-	description2="""resource location of a loot table.""",
+	description="",
+	description2="""Specifies a loot table with a resource location or in SNBT format. Must be a valid loot table definition in SNBT format, or a resource location of an existing loot table (an entry in `minecraft:loot_table` registry). For NBT tag, if it is a string tag, the tag is also parsed into a resource location and resolved into an existing loot table; otherwise, the tag is parsed as a new loot table definition.""",
 	examples="""""",
 )
 
@@ -494,13 +416,13 @@ MINECRAFT_PARTICLE = ArgumentType(
 	examples="""
 	* {{cd|foo}}
 	* {{cd|foo:bar}}
-	* {{cd|particle with options}}""",
+	* {{cd|dust{color:[1.0, 0.0, 0.0], scale:2.0}}}""",
 )
 
 MINECRAFT_PREDICATE = ArgumentType(
 	name='minecraft:predicate',
 	description="{{Arg desc|je=resource_location}}",
-	description2="""resource location of a predicate.""",
+	description2="""Specifies a predicate with a resource location or in SNBT format. Must be a valid predicate definition in SNBT format, or a resource location of an existing predicate (an entry in `minecraft:predicate` registry). For NBT tag, if it is a string tag, the tag is also parsed into a resource location and resolved into an existing predicate; otherwise, the tag is parsed as a new predicate definition.""",
 	examples="""""",
 )
 
@@ -678,6 +600,16 @@ ST_DPE_DATAPACK = ArgumentType(
 	jsonProperties="""""",
 )
 
+ST_DPE_HOSTNAME = ArgumentType(
+	name='dpe:hostname',
+	description="{{Arg desc|je=string}}",
+	description2="""A (server) hostname.""",
+	examples="""
+	* {{cd|localhost}}""",
+	jsonProperties="""""",
+)
+
+
 __all__ = [
 	'CHAT_COLORS',
 	'TEAM_COLORS',
@@ -704,7 +636,9 @@ __all__ = [
 	'MINECRAFT_ITEM_ENCHANTMENT',
 	'MINECRAFT_ITEM_PREDICATE',
 	'MINECRAFT_ITEM_SLOT',
+	'MINECRAFT_ITEM_SLOTS',
 	'MINECRAFT_ITEM_STACK',
+	'MINECRAFT_LOOT_MODIFIER',
 	'MINECRAFT_LOOT_TABLE',
 	'MINECRAFT_MESSAGE',
 	'MINECRAFT_MOB_EFFECT',
@@ -732,5 +666,7 @@ __all__ = [
 	'DPE_ADVANCEMENT',
 	'DPE_COMPARE_OPERATION',
 	'DPE_BIOME_ID',
+
 	'ST_DPE_DATAPACK',
+	'ST_DPE_HOSTNAME',
 ]

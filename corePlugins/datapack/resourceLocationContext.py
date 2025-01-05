@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Mapping, Collection, Optional
 
 from base.model.project.project import Root
-from .datapackContents import DatapackContents, RESOURCES, TAGS
-from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationNode, ResourceLocationContext, resourceLocationContext, MetaInfo
 from base.model.utils import GeneralError
+from corePlugins.minecraft.resourceLocation import ResourceLocation, ResourceLocationNode, ResourceLocationContext, \
+	resourceLocationContext, MetaInfo
+from corePlugins.minecraft_data.customData import EntityVariants
 from corePlugins.minecraft_data.fullData import FullMCData
+from .datapackContents import DatapackContents, RESOURCES, TAGS
 
 
 @dataclass
@@ -129,7 +131,7 @@ class SoundEventResourceLocationContext(SimpleResourceLocationContext1):
 @resourceLocationContext('stat_type', _indexPath=None, _tagsIndexPath=TAGS.STAT_TYPE)
 class StatTypeResourceLocationContext(SimpleResourceLocationContext1):
 	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
-		return ()
+		return mc.statisticTypes
 
 
 @resourceLocationContext('custom_stat', _indexPath=None, _tagsIndexPath=TAGS.CUSTOM_STAT)
@@ -535,6 +537,23 @@ class InstrumentContext(SimpleResourceLocationContext1):
 class DamageTypeContext(SimpleResourceLocationContext1):
 	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
 		return mc.damageTypes
+
+
+@resourceLocationContext('item_components', _indexPath=None, _tagsIndexPath=None)
+class ItemComponentContext(SimpleResourceLocationContext1):
+	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
+		return mc.itemComponents
+
+
+for field in fields(EntityVariants):
+	# todo add indexPath for wolf variants.
+	# todo add tagsIndexPath for all(?) variants.
+	@resourceLocationContext(f'{field.name}_variant', _indexPath=None, _tagsIndexPath=None, name=field.name)
+	@dataclass
+	class EntityVariantContext(SimpleResourceLocationContext1):
+		name: str
+		def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
+			return getattr(mc.entityVariants, self.name)
 
 
 @resourceLocationContext('any', name='resource_location')

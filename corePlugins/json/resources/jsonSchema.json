@@ -92,10 +92,12 @@
 				"options": [
 					{ "$ref": "#type" },
 					{ "$type": "object",
+						"defining-properties": ["$ref"],
 						"properties": {
 							"$ref": { "$type": "string", "type": "dpe:tmpl_ref" }
 						},
-						"default-property": { "$type": "any" } // todo add calculated properties for params.
+						"default-property": { "$type": "any" }, // todo add calculated properties for params.
+						"default-key": { "$type": "string", "type": "dpe:tmpl_ref_arg_keys" }
 					}
 				]
 			}
@@ -131,6 +133,7 @@
 	"$definitions": {
 		"%schema": {
 			"$type": "object",
+			"defining-properties": ["$type"],
 			"properties": {
 				"$type": {
 					"value": { "$ref": "orRef", "type": {
@@ -197,6 +200,22 @@
 						"object": { "$defRef": "propertyOrSchemaOrRef" }
 					}
 				},
+				"default-key": {
+					"optional": true,
+					"requires": ["default-property"],
+					"decidingProp": "$type",
+					"values": {
+						"object": { "$defRef": "schemaOrRef" }
+					}
+				},
+				"defining-properties": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"object": { "$defRef": "arrayOfStringOrRef" }
+					},
+					"description": "Used to help select the correct choice from a UnionSchema of ObjectSchemas. If any of the defining properties are given, then THIS must be the correct choice from the union.\n\nA defining property is not necessarily mandatory and missing defining properties do have no effect on the selected choice."
+				},
 				"properties": {
 					"description": "properties of the object",
 					"optional": true,
@@ -212,6 +231,32 @@
 					"decidingProp": "$type",
 					"values": {
 						"array": { "$defRef": "schemaOrRef" }
+					}
+				},
+				"minCount": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"array": {
+							"$type": "union",
+							"options": [
+								{ "$type": "null"},
+								{ "$type": "integer", "min": 0 }
+							]
+						}
+					}
+				},
+				"maxCount": {
+					"optional": true,
+					"decidingProp": "$type",
+					"values": {
+						"array": {
+							"$type": "union",
+							"options": [
+								{ "$type": "null"},
+								{ "$type": "integer", "min": 0 }
+							]
+						}
 					}
 				},
 				"options": {
@@ -259,7 +304,7 @@
 					"values": {
 						"string": { "$ref": "orRef", "type": {
 							"$type": "calculated",
-							"function": "corePlugins.json.jsonContext.getStringSchemaArgTypeArgsSchema"
+							"function": "corePlugins.nbtJsonBase.structureContextImpl.getStringSchemaArgTypeArgsSchema"
 						}}
 					}
 				},
@@ -291,6 +336,7 @@
 		
 		"property": {
 			"$type": "object",
+			"defining-properties": ["value", "values"],
 			"properties": {
 				"description": { "$ref": "descriptionProp" },
 				"deprecated": { "$ref": "deprecatedProp" },
@@ -342,6 +388,7 @@
 			 "options": [
 				{ "$defRef": "%schema" },
 				{ "$type": "object",
+					"defining-properties": ["$defRef"],
 					"properties": {
 						"$defRef": { "$type": "string", "type": "dpe:def_ref" }
 					}
@@ -352,8 +399,8 @@
 		"propertyOrSchemaOrRef": {
 			"$type": "union",
 			"options": [
-				{ "$defRef": "property" },
-				{ "$defRef": "schemaOrRef" }
+				{ "$defRef": "schemaOrRef" },
+				{ "$defRef": "property" }
 			]
 		},
 		

@@ -202,7 +202,7 @@ class MainWindow(CatFramelessWindowMixin, QMainWindow):  # QtWidgets.QWidget):
 			for id_, sideBar in enumerate(tabs):
 				with tabWidget.addView(sideBar.tabOptions, str(id_), seamless=True):
 					subGui = gui.editor(sideBar.content, model=None, seamless=True)
-					if id_ == tabWidget.selectedView:
+					if str(id_) == tabWidget.selectedView:
 						subGui.redrawLater()
 
 	def documentToolBarGUI(self, gui: DatapackEditorGUI, button, btnCorners, btnOverlap, btnMargins):

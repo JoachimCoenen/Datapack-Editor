@@ -1,0 +1,328 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "damage_type": "advancements/conditions/damage_type.json",
+    "entity": "advancements/conditions/entity.json",
+    "item": "advancements/conditions/item.json",
+    "location": "advancements/conditions/location.json",
+    "number_provider": "utils/number_provider-library.json",
+    "utils": "../common/utils-library.json"
+  },
+  "$definitions": {
+    "predicate-body": {
+      "$type": "union",
+      "options": [
+        { "$defRef": "single_predicate" },
+        {
+          "$type": "array",
+          "element": { "$defRef": "single_predicate" },
+          "description": "Multiple conditions may be entered into a single predicate by placing them into a JSON array."
+        }
+      ]
+    },
+    "single_predicate": {
+      "$type": "object",
+      "properties": {
+        "condition": {
+          "optional": false,
+          "value": {"$ref": "utils:resource_location", "schema": "condition", "description": "" },
+          "description": "The resource location of the condition type to check."
+        },
+        "terms": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": {
+            "any_of": { "$defRef": "predicate-body" },
+            "all_of": { "$defRef": "predicate-body" }
+          },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "Evaluates a list of conditions and passes if any one of them passes. Invokable from any context."
+        },
+        "term": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": { "inverted": { "$defRef": "single_predicate" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "The condition to be negated, following the same structure as outlined here, recursively."
+        },
+        "block": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": { "block_state_property": { "$defRef": "%%2!" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "A block ID. The test fails if the block doesn't match."
+        },
+        "properties": {
+          "optional": true,
+          "decidingProp": "condition",
+          "values": { "block_state_property": { "$defRef": "%%3!" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "(Optional) A map of block property names to values. All values are strings. The test fails if the block doesn't match."
+        },
+        "predicate": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": {
+            "damage_source_properties": { "$defRef": "predicate-damage_type" },
+            "entity_properties": { "$defRef": "predicate-entity_properties" },
+            "location_check": { "$defRef": "predicate-location_check" },
+            "match_tool": { "$defRef": "predicate-match_tool" }
+          },
+          "optionalPrefixes": ["minecraft:"]
+        },
+        "entity": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": {
+            "entity_properties": { "$defRef": "%%11!" },
+            "entity_scores": { "$defRef": "%%11!" }
+          },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "The entity to check. Set to `this` to use the entity that invoked this condition, `killer` for the killer of the `this` entity, or `killer_player` to only select the killer if they are a player."
+        },
+        "scores": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": { "entity_scores": { "$defRef": "%%19!" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "Scores to check. All specified scores must pass for the condition to pass."
+        },
+        "inverse": {
+          "optional": true,
+          "decidingProp": "condition",
+          "values": { "killed_by_player": { "$type": "boolean" } },
+          "optionalPrefixes": ["minecraft:"],
+          "default": false,
+          "description": "If true, the condition passes if killer_player is not available."
+        },
+        "offsetX": {
+          "optional": true,
+          "decidingProp": "condition",
+          "values": { "location_check": { "$type": "integer" }},
+          "optionalPrefixes": ["minecraft:"],
+          "description": "optional offsets to location"
+        },
+        "offsetY": {
+          "optional": true,
+          "decidingProp": "condition",
+          "values": { "location_check": { "$type": "integer" }},
+          "optionalPrefixes": ["minecraft:"],
+          "description": "optional offsets to location"
+        },
+        "offsetZ": {
+          "optional": true,
+          "decidingProp": "condition",
+          "values": { "location_check": { "$type": "integer" }},
+          "optionalPrefixes": ["minecraft:"],
+          "description": "optional offsets to location"
+        },
+        "chance": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": {
+            "random_chance": { "$defRef": "%%24!" },
+            "random_chance_with_looting": { "$defRef": "%%24!" }
+          },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "(Base-)Success rate as a number `0.0-1.0`."
+        },
+        "looting_multiplier": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": { "random_chance_with_looting": { "$defRef": "%%24!" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "Looting adjustment to the base success rate. Formula is `chance + (looting_level * looting_multiplier)`."
+        },
+        "name": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": { "reference": { "$defRef": "%%26!" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "The resource location of the predicate to invoke. A cyclic reference causes a parsing failure."
+        },
+        "enchantment": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": { "table_bonus": { "$defRef": "%%27!" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "Resource location of enchantment."
+        },
+        "chances": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": { "table_bonus": { "$defRef": "%%28!" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "List of probabilities for enchantment level, indexed from 0."
+        },
+        "value": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": {
+            "time_check": { "$defRef": "%%29!" },
+            "value_check": { "$defRef": "%%30!" }
+          },
+          "optionalPrefixes": ["minecraft:"]
+        },
+        "period": {
+          "optional": true,
+          "decidingProp": "condition",
+          "values": { "time_check": { "$type": "integer" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "If present, the game time is first reduced modulo the given number before being checked against value. For example, setting this to 24000 causes the checked time to be equal to the current daytime."
+        },
+        "range": {
+          "optional": false,
+          "decidingProp": "condition",
+          "values": { "value_check": { "$defRef": "%%32!" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "The number or range of numbers to compare  value against."
+        },
+        "raining": {
+          "optional": true,
+          "decidingProp": "condition",
+          "values": { "weather_check": { "$type": "boolean" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "If true, the condition passes only if it is raining or thundering."
+        },
+        "thundering": {
+          "optional": true,
+          "decidingProp": "condition",
+          "values": { "weather_check": { "$type": "boolean" } },
+          "optionalPrefixes": ["minecraft:"],
+          "description": "If true, the condition passes only if it is thundering."
+        }
+      },
+      "description": "The root element of the condition."
+    },
+    "%%2!": {"$ref": "utils:resource_location", "schema": "block", "allowTags": true },
+    "%%3!": {
+      "$type": "calculated",
+      "function": "corePlugins.datapackVersions.providers.propertiesFor_block_state_property"
+    },
+    "predicate-damage_type": {
+      "$type": "union",
+      "options": [
+        { "$defRef": "damage_type:damage_type" }
+      ],
+      "description": "Predicate applied to the damage source. Checks properties of damage source. Invokable from loot tables, and fails when invoked from anything else."
+    },
+    "predicate-entity_properties": {
+      "$type": "union",
+      "options": [ { "$defRef": "entity:entity" } ],
+      "description": "Predicate applied to entity, uses same structure as advancements."
+    },
+    "predicate-location_check": {
+      "$type": "union",
+      "options": [ { "$defRef": "location:location" } ],
+      "description": "Predicate applied to location, uses same structure as advancements."
+    },
+    "predicate-match_tool": {
+      "$type": "union",
+      "options": [ { "$defRef": "item:item" } ],
+      "description": "Predicate applied to item, uses same structure as advancements. "
+    },
+    "%%11!": {
+      "$type": "enum",
+      "options": {
+        "this": "the entity that invoked this condition",
+        "killer": "the killer of the `this` entity",
+        "killer_player": "only select the killer if they are a player"
+      },
+      "optionalPrefixes": ["minecraft:"]
+    },
+    "%%19!": {
+      "$type": "object",
+      "default-property": {
+        "optional": false,
+        "value": {
+          "$type": "union",
+          "options": [
+            {
+              "$type": "object",
+              "properties": {
+                "min": {
+                  "optional": false,
+                  "value": { "$defRef": "number_provider:number_provider" },
+                  "description": "Minimum score."
+                },
+                "max": {
+                  "optional": false,
+                  "value": { "$defRef": "number_provider:number_provider" },
+                  "description": "Maximum score."
+                }
+              },
+              "description": "Predicate applied to the damage source. Checks properties of damage source. Invokable from loot tables, and fails when invoked from anything else."
+            },
+            {
+              "$type": "integer",
+              "description": "Exact score"
+            }
+          ]
+        }
+      },
+      "properties": {}
+    },
+    "%%24!": {
+      "$type": "float",
+      "min": 0,
+      "max": 1
+    },
+    "%%26!": {"$ref": "utils:resource_location", "schema": "predicate", "description": "" },
+    "%%27!": {"$ref": "utils:resource_location", "schema": "enchantment", "description": "" },
+    "%%28!": {
+      "$type": "array",
+      "element": { "$type": "float" }
+    },
+    "%%29!": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "properties": {
+            "min": {
+              "optional": false,
+              "value": { "$defRef": "number_provider:number_provider" },
+              "description": "Minimum value."
+            },
+            "max": {
+              "optional": false,
+              "value": { "$defRef": "number_provider:number_provider" },
+              "description": "Maximum value."
+            }
+          },
+          "description": "The time to compare the game time against."
+        },
+        {
+          "$type": "integer",
+          "description": "The time to compare the game time against."
+        }
+      ]
+    },
+    "%%30!": {
+      "$type": "union",
+      "options": [ { "$defRef": "number_provider:number_provider" } ],
+      "description": "The number to test."
+    },
+    "%%32!": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "properties": {
+            "min": {
+              "optional": false,
+              "value": { "$defRef": "number_provider:number_provider" },
+              "description": "Minimum value."
+            },
+            "max": {
+              "optional": false,
+              "value": { "$defRef": "number_provider:number_provider" },
+              "description": "Maximum value."
+            }
+          }
+        },
+        { "$type": "integer" }
+      ]
+    }
+  }
+}

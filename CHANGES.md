@@ -1,3 +1,35 @@
+## 0.9.0-alpha
+### Features
+ * Added support for Minecraft versions 1.20.5 and 1.20.6.
+ * Added support for validation, code suggestions, and inline documentation in SNBT. JSON schemas are used. 
+ * Added validation, code suggestions, and inline documentation for particle configuration tags.
+ * Added validation, code suggestions, and inline documentation for item sub-predicates (in JSON, SNBT and MCFunction).
+ * Added syntax validation for data components.
+
+### Improvements
+ * Exceptions when collecting suggestions for autocompletion no longer crash the entire application.
+ * Improved suggestions inside incomplete JSON objects with union schemas.
+ * JSON schemas:
+   * Array schemas can now specify a `minCount` and a `maxCount`.
+   * Schemas can now be specified using both JSON or SNBT.
+   * Object schemas with a `"default-property"` can now also specify a `"default-key"` schema.
+   * Added suggestions for arguments of templates in schema definitions. 
+   * Finally added `markdown` StructureArgType. 
+   * Improved suggestions quality for property definitions in schema files. 
+
+### Fixes
+ * Fixed crash when attempting to load project with a datapack version that is not supported.
+ * Files with multiple periods in their name no longer indexed incorrectly.
+ * Fixed crash when styling a language with an inner language that has no styler associated.
+ * Fixed `Ctrl-Click` in documents not working on Wayland.
+ * Fixed app crashing with `Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= style.Length())] ...` when deleting multiple lines from a document, while scrolled to the very bottom.
+ * Fixed JSON parsing failing when the function for a calculated schema cannot be found.
+ * Fixed wrong code suggestions in JSON files when inside an unclosed array and the cursor is after the last element, but doesn't touch it.
+ * Fixed missing error message when a resource tag is used where only resource locations are allowed.
+ * Fixed Files tab not showing any projects after loading a new project.
+ * Fixed exception when parsing an empty JSON file on startup.
+
+
 ## 0.8.6-alpha
 ### Fixes
  * Fixed crash when attempting to highlight `execute if block ~ ~ ~`. (issue #52)

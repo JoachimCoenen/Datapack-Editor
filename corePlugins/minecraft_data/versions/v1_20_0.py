@@ -1,12 +1,12 @@
 """
-for Minecraft version 1.20 - 1.20.4
+for Minecraft version 1.20 - 1.20.5 (incomplete)
 """
 from dataclasses import replace
 
-from cat.utils.collections_ import FrozenDict
-from corePlugins.minecraft_data.customData import CustomMCData, Gamerule, buildGamerulesDict
-from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 from base.model.parsing.bytesUtils import strToBytes
+from cat.utils.collections_ import FrozenDict
+from corePlugins.minecraft_data.customData import CustomMCData, Gamerule, buildGamerulesDict, EntityVariants
+from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 from . import v1_18_0
 
 
@@ -191,24 +191,185 @@ _VERSION_1_20_0 = replace(
 		ResourceLocation.fromString('outside_border'),
 		ResourceLocation.fromString('generic_kill'),
 	}),
+	statisticTypes=frozenset({
+		ResourceLocation.fromString('custom'),
+		ResourceLocation.fromString('crafted'),
+		ResourceLocation.fromString('used'),
+		ResourceLocation.fromString('broken'),
+		ResourceLocation.fromString('mined'),
+		ResourceLocation.fromString('killed'),
+		ResourceLocation.fromString('picked_up'),
+		ResourceLocation.fromString('dropped'),
+		ResourceLocation.fromString('killed_by'),
+	}),
+	entityVariants=EntityVariants(
+		axolotl=frozenset({
+			ResourceLocation.fromString('lucy'),
+			ResourceLocation.fromString('wild'),
+			ResourceLocation.fromString('gold'),
+			ResourceLocation.fromString('cyan'),
+			ResourceLocation.fromString('blue'),
+		}),
+		boat=frozenset({
+			ResourceLocation.fromString('oak'),
+			ResourceLocation.fromString('spruce'),
+			ResourceLocation.fromString('birch'),
+			ResourceLocation.fromString('jungle'),
+			ResourceLocation.fromString('acacia'),
+			ResourceLocation.fromString('dark_oak'),
+			ResourceLocation.fromString('mangrove'),  # 1.19
+			ResourceLocation.fromString('bamboo'),  # 1.20
+			ResourceLocation.fromString('cherry'),  # 1.20
+		}),
+		cat=frozenset({
+			ResourceLocation.fromString('white'),
+			ResourceLocation.fromString('black'),
+			ResourceLocation.fromString('red'),
+			ResourceLocation.fromString('siamese'),
+			ResourceLocation.fromString('british_shorthair'),
+			ResourceLocation.fromString('calico'),
+			ResourceLocation.fromString('persian'),
+			ResourceLocation.fromString('ragdoll'),
+			ResourceLocation.fromString('tabby'),
+			ResourceLocation.fromString('all_black'),
+			ResourceLocation.fromString('jellie'),
+		}),
+		fox=frozenset({
+			ResourceLocation.fromString('red'),
+			ResourceLocation.fromString('snow'),
+		}),
+		frog=frozenset({
+			ResourceLocation.fromString('temperate'),
+			ResourceLocation.fromString('warm'),
+			ResourceLocation.fromString('cold'),
+		}),
+		horse=frozenset({
+			ResourceLocation.fromString('white'),
+			ResourceLocation.fromString('creamy'),
+			ResourceLocation.fromString('chestnut'),
+			ResourceLocation.fromString('brown'),
+			ResourceLocation.fromString('black'),
+			ResourceLocation.fromString('gray'),
+			ResourceLocation.fromString('darkbrown'),
+		}),
+		llama=frozenset({
+			ResourceLocation.fromString('creamy'),
+			ResourceLocation.fromString('white'),
+			ResourceLocation.fromString('brown'),
+			ResourceLocation.fromString('gray'),
+		}),
+		mooshroom=frozenset({
+			ResourceLocation.fromString('red'),
+			ResourceLocation.fromString('brown'),
+		}),
+		painting=frozenset({
+			ResourceLocation.fromString('kebab'),
+			ResourceLocation.fromString('aztec'),
+			ResourceLocation.fromString('alban'),
+			ResourceLocation.fromString('aztec2'),
+			ResourceLocation.fromString('bomb'),
+			ResourceLocation.fromString('plant'),
+			ResourceLocation.fromString('wasteland'),
+			ResourceLocation.fromString('meditative'),
+			ResourceLocation.fromString('wanderer'),
+			ResourceLocation.fromString('graham'),
+			ResourceLocation.fromString('prairie_ride'),
+			ResourceLocation.fromString('pool'),
+			ResourceLocation.fromString('courbet'),
+			ResourceLocation.fromString('sunset'),
+			ResourceLocation.fromString('sea'),
+			ResourceLocation.fromString('creebet'),
+			ResourceLocation.fromString('match'),
+			ResourceLocation.fromString('bust'),
+			ResourceLocation.fromString('stage'),
+			ResourceLocation.fromString('void'),
+			ResourceLocation.fromString('skull_and_roses'),
+			ResourceLocation.fromString('wither'),
+			ResourceLocation.fromString('baroque'),
+			ResourceLocation.fromString('humble'),
+			ResourceLocation.fromString('bouquet'),
+			ResourceLocation.fromString('cavebird'),
+			ResourceLocation.fromString('cotan'),
+			ResourceLocation.fromString('endboss'),
+			ResourceLocation.fromString('fern'),
+			ResourceLocation.fromString('owlemons'),
+			ResourceLocation.fromString('sunflowers'),
+			ResourceLocation.fromString('tides'),
+			ResourceLocation.fromString('backyard'),
+			ResourceLocation.fromString('pond'),
+			ResourceLocation.fromString('fighters'),
+			ResourceLocation.fromString('changing'),
+			ResourceLocation.fromString('finding'),
+			ResourceLocation.fromString('lowmist'),
+			ResourceLocation.fromString('passage'),
+			ResourceLocation.fromString('skeleton'),
+			ResourceLocation.fromString('donkey_kong'),
+			ResourceLocation.fromString('pointer'),
+			ResourceLocation.fromString('pigscene'),
+			ResourceLocation.fromString('burning_skull'),
+			ResourceLocation.fromString('orb'),
+			ResourceLocation.fromString('unpacked'),
+
+			ResourceLocation.fromString('earth'),  # 1.19
+			ResourceLocation.fromString('wind'),  # 1.19
+			ResourceLocation.fromString('fire'),  # 1.19
+			ResourceLocation.fromString('water'),  # 1.19
+		}),
+		parrot=frozenset({
+			ResourceLocation.fromString('red_blue'),
+			ResourceLocation.fromString('blue'),
+			ResourceLocation.fromString('green'),
+			ResourceLocation.fromString('yellow_blue'),
+			ResourceLocation.fromString('gray'),
+		}),
+		rabbit=frozenset({
+			ResourceLocation.fromString('brown'),
+			ResourceLocation.fromString('white'),
+			ResourceLocation.fromString('black'),
+			ResourceLocation.fromString('white_splotched'),
+			ResourceLocation.fromString('gold'),
+			ResourceLocation.fromString('salt'),
+			ResourceLocation.fromString('evil'),
+		}),
+		salmon=frozenset({
+			ResourceLocation.fromString('small'),
+			ResourceLocation.fromString('medium'),
+			ResourceLocation.fromString('large'),
+		}),
+		tropical_fish=frozenset({
+			ResourceLocation.fromString('flopper'),
+			ResourceLocation.fromString('glitter'),
+			ResourceLocation.fromString('betty'),
+			ResourceLocation.fromString('stripey'),
+			ResourceLocation.fromString('blockfish'),
+			ResourceLocation.fromString('clayfish'),
+			ResourceLocation.fromString('kob'),
+			ResourceLocation.fromString('snooper'),
+			ResourceLocation.fromString('brinely'),
+			ResourceLocation.fromString('sunstreak'),
+			ResourceLocation.fromString('dasher'),
+			ResourceLocation.fromString('spotty'),
+		}),
+		villager=frozenset({
+			ResourceLocation.fromString('desert'),
+			ResourceLocation.fromString('jungle'),
+			ResourceLocation.fromString('plains'),
+			ResourceLocation.fromString('savanna'),
+			ResourceLocation.fromString('snow'),
+			ResourceLocation.fromString('swamp'),
+			ResourceLocation.fromString('taiga'),
+		}),
+	),
 	# compiled from the Minecraft wiki:
 	slots=FrozenDict({
-		b'armor.chest':     102,
-		b'armor.feet':      100,
-		b'armor.head':      103,
-		b'armor.legs':      101,
-		b'weapon':          None, # ?????! it was 98,
-		b'weapon.mainhand': None, # ?????! it was 98,
-		b'weapon.offhand':  -106, # ?????! it was 99,
-		**{b'container.' + strToBytes(f'{sn}'):    0 + sn for sn in range(0, 53 + 1)},  # 0-53 	0-53
-		**{b'enderchest.' + strToBytes(f'{sn}'): 200 + sn for sn in range(0, 26 + 1)},  # 0-26 	200-226
-		**{b'hotbar.' + strToBytes(f'{sn}'):       0 + sn for sn in range(0, 8 + 1)},   # 0-8 	0-8
-		**{b'inventory.' + strToBytes(f'{sn}'):    9 + sn for sn in range(0, 26 + 1)},  # 0-26 	9-35
-		b'horse.saddle':    400,
-		b'horse.chest':     499,
-		b'horse.armor':     401,
-		**{b'horse.' + strToBytes(f'{sn}'):      500 + sn for sn in range(0, 14 + 1)},  # 0-14 	500-514
-		**{b'villager.' + strToBytes(f'{sn}'):   300 + sn for sn in range(0, 7 + 1)},   # 0-7 	300-307
+		b'armor': frozenset({b'chest', b'feet', b'head', b'legs'}),
+		b'weapon': frozenset({None, b'mainhand', b'offhand'}),
+		b'container': frozenset({strToBytes(f'{sn}')  for sn in range(0, 53 + 1)}),  # 0-53 	0-53
+		b'enderchest': frozenset({strToBytes(f'{sn}') for sn in range(0, 26 + 1)}),  # 0-26 	200-226
+		b'hotbar': frozenset({strToBytes(f'{sn}')     for sn in range(0, 8 + 1)}),   # 0-8 	    0-8
+		b'inventory': frozenset({strToBytes(f'{sn}')  for sn in range(0, 26 + 1)}),  # 0-26 	9-35
+		b'horse': frozenset({b'saddle', b'chest', b'armor'} | {strToBytes(f'{sn}') for sn in range(0, 14 + 1)}),  # 0-14 	500-514
+		b'villager': frozenset({strToBytes(f'{sn}') for sn in range(0, 7 + 1)}),   # 0-7 	300-307
 	}),
 	# compiled from the Minecraft wiki:
 	gamerules=buildGamerulesDict([
@@ -542,4 +703,119 @@ _VERSION_1_20_4 = replace(
 )
 
 
-ALL_VERSIONS: list[CustomMCData] = [_VERSION_1_20_0, _VERSION_1_20_1, _VERSION_1_20_2, _VERSION_1_20_3, _VERSION_1_20_4]
+_VERSION_1_20_5 = replace(
+	_VERSION_1_20_4,
+	name='1.20.5',
+	# compiled from the Minecraft wiki:
+	itemComponents=frozenset({
+		ResourceLocation.fromString('attribute_modifiers'),
+		ResourceLocation.fromString('banner_patterns'),
+		ResourceLocation.fromString('base_color'),
+		ResourceLocation.fromString('bees'),
+		ResourceLocation.fromString('block_entity_data'),
+		ResourceLocation.fromString('block_state'),
+		ResourceLocation.fromString('bucket_entity_data'),
+		ResourceLocation.fromString('bundle_contents'),
+		ResourceLocation.fromString('can_break'),
+		ResourceLocation.fromString('can_place_on'),
+		ResourceLocation.fromString('charged_projectiles'),
+		ResourceLocation.fromString('consumable'),
+		ResourceLocation.fromString('container'),
+		ResourceLocation.fromString('container_loot'),
+		ResourceLocation.fromString('custom_data'),
+		ResourceLocation.fromString('custom_model_data'),
+		ResourceLocation.fromString('custom_name'),
+		ResourceLocation.fromString('damage'),
+		ResourceLocation.fromString('damage_resistant'),
+		ResourceLocation.fromString('debug_stick_state'),
+		ResourceLocation.fromString('death_protection'),
+		ResourceLocation.fromString('dyed_color'),
+		ResourceLocation.fromString('enchantable'),
+		ResourceLocation.fromString('enchantment_glint_override'),
+		ResourceLocation.fromString('enchantments'),
+		ResourceLocation.fromString('entity_data'),
+		ResourceLocation.fromString('equippable'),
+		ResourceLocation.fromString('firework_explosion'),
+		ResourceLocation.fromString('fireworks'),
+		ResourceLocation.fromString('food'),
+		ResourceLocation.fromString('glider'),
+		ResourceLocation.fromString('hide_additional_tooltip'),
+		ResourceLocation.fromString('hide_tooltip'),
+		ResourceLocation.fromString('instrument'),
+		ResourceLocation.fromString('intangible_projectile'),
+		ResourceLocation.fromString('item_model'),
+		ResourceLocation.fromString('item_name'),
+		ResourceLocation.fromString('jukebox_playable'),
+		ResourceLocation.fromString('lock'),
+		ResourceLocation.fromString('lodestone_tracker'),
+		ResourceLocation.fromString('lore'),
+		ResourceLocation.fromString('map_color'),
+		ResourceLocation.fromString('map_decorations'),
+		ResourceLocation.fromString('map_id'),
+		ResourceLocation.fromString('max_damage'),
+		ResourceLocation.fromString('max_stack_size'),
+		ResourceLocation.fromString('note_block_sound'),
+		ResourceLocation.fromString('ominous_bottle_amplifier'),
+		ResourceLocation.fromString('pot_decorations'),
+		ResourceLocation.fromString('potion_contents'),
+		ResourceLocation.fromString('profile'),
+		ResourceLocation.fromString('rarity'),
+		ResourceLocation.fromString('recipes'),
+		ResourceLocation.fromString('repairable'),
+		ResourceLocation.fromString('repair_cost'),
+		ResourceLocation.fromString('stored_enchantments'),
+		ResourceLocation.fromString('suspicious_stew_effects'),
+		ResourceLocation.fromString('tool'),
+		ResourceLocation.fromString('tooltip_style'),
+		ResourceLocation.fromString('trim'),
+		ResourceLocation.fromString('unbreakable'),
+		ResourceLocation.fromString('use_cooldown'),
+		ResourceLocation.fromString('use_remainder'),
+		ResourceLocation.fromString('writable_book_content'),
+		ResourceLocation.fromString('written_book_content'),
+	}),
+	itemSubPredicates=frozenset({
+		ResourceLocation.fromString('attribute_modifiers'),
+		ResourceLocation.fromString('bundle_contents'),
+		ResourceLocation.fromString('container'),
+		ResourceLocation.fromString('custom_data'),
+		ResourceLocation.fromString('damage'),
+		ResourceLocation.fromString('enchantments'),
+		ResourceLocation.fromString('firework_explosion'),
+		ResourceLocation.fromString('fireworks'),
+		ResourceLocation.fromString('jukebox_playable'),
+		ResourceLocation.fromString('potion_contents'),
+		ResourceLocation.fromString('stored_enchantments'),
+		ResourceLocation.fromString('trim'),
+		ResourceLocation.fromString('writable_book_content'),
+		ResourceLocation.fromString('written_book_content'),
+	}),
+	# compiled from the Minecraft wiki:
+	slots=_VERSION_1_20_4.slots + {
+		b'armor': _VERSION_1_20_4.slots[b'armor'] | {b'body'},
+		b'horse': _VERSION_1_20_4.slots[b'horse'] - {b'armor'},
+		b'contents': frozenset({None}),
+
+	},
+	# compiled from the Minecraft wiki:
+	gamerules=_VERSION_1_20_4.gamerules | buildGamerulesDict([
+		Gamerule(  # 24w03a
+			name='spawnChunkRadius',
+			description="The size of the spawn chunks.\n" +
+						"- Possible values are `0` to `32`, where 0 completely disables the spawn chunks and `10` is equivalent to the spawnChunkRadius before 1.20.5." +
+						"- Default value is `2`, equivalent to 3x3 entity ticking chunks.",
+			type='brigadier:integer',
+			defaultValue='2',
+			args=dict(min=0, max=32)
+		),
+	])
+)
+
+
+_VERSION_1_20_6 = replace(
+	_VERSION_1_20_5,
+	name='1.20.6',
+)
+
+
+ALL_VERSIONS: list[CustomMCData] = [_VERSION_1_20_0, _VERSION_1_20_1, _VERSION_1_20_2, _VERSION_1_20_3, _VERSION_1_20_4, _VERSION_1_20_5, _VERSION_1_20_6]

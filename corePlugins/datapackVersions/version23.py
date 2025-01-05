@@ -1,11 +1,11 @@
 import os
 
-from corePlugins.datapack.datapackContents import RESOURCES, buildJsonMeta, EntryHandlerInfo, NAME_SPACE_VAR, DatapackContents, GenerationInfo, DefaultFileInfo, \
-	buildFunctionMeta, buildNbtMeta, buildEntryHandlers
+from corePlugins.datapack.datapackContents import RESOURCES, buildJsonMeta, EntryHandlerInfo, NAME_SPACE_VAR, \
+	DatapackContents, GenerationInfo, DefaultFileInfo, buildFunctionMeta, buildNbtMeta, buildEntryHandlers
 from corePlugins.datapack.dpVersions import DPVersion, registerDPVersion
-from corePlugins.json.core import JsonSchema
-from corePlugins.json.schemaStore import JSON_SCHEMA_LOADER
 from corePlugins.minecraft_data.fullData import getFullMcData
+from corePlugins.nbtJsonBase.core import StructureDataSchema
+from corePlugins.nbtJsonBase.schemaStore import STRUCTURE_SCHEMA_LOADER
 from .allVersions import REGISTRY_TAGS, WORLDGEN
 
 
@@ -203,19 +203,19 @@ DATAPACK_CONTENTS: list[EntryHandlerInfo] = [
 ]
 
 
-def loadJsonSchemas() -> dict[str, JsonSchema]:
+def loadJsonSchemas() -> dict[str, StructureDataSchema]:
 	resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
 	v23Dir = os.path.join(resourcesDir, "v23/")
 	v23Schemas = {
-		**JSON_SCHEMA_LOADER.loadSchemaLibrary('minecraft:tags', os.path.join(v23Dir, 'tags.json')),
-		'minecraft:raw_json_text': JSON_SCHEMA_LOADER.loadSchema('minecraft:raw_json_text', os.path.join(v23Dir, 'rawJsonText.json')),
-		'minecraft:raw_json_style': JSON_SCHEMA_LOADER.loadSchema('minecraft:raw_json_style', os.path.join(v23Dir, 'rawJsonStyle.json')),
-		'minecraft:predicate': JSON_SCHEMA_LOADER.loadSchema('minecraft:predicate', os.path.join(v23Dir, 'predicate.json')),
-		'minecraft:recipe': JSON_SCHEMA_LOADER.loadSchema('minecraft:recipe', os.path.join(v23Dir, 'recipe.json')),
-		'minecraft:pack': JSON_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v23Dir, 'pack.json')),
-		'minecraft:loot_table': JSON_SCHEMA_LOADER.loadSchema('minecraft:loot_table', os.path.join(v23Dir, 'loot_table.json')),
-		'minecraft:item_modifier': JSON_SCHEMA_LOADER.loadSchema('minecraft:item_modifier', os.path.join(v23Dir, 'item_modifier.json')),
-		'minecraft:advancement': JSON_SCHEMA_LOADER.loadSchema('minecraft:advancement', os.path.join(v23Dir, 'advancements/advancement.json')),  # advancement.json is for datapack version 23!
+		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:tags', os.path.join(v23Dir, 'tags.json')),
+		'minecraft:raw_json_text': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:raw_json_text', os.path.join(v23Dir, 'rawJsonText.json')),
+		'minecraft:raw_json_style': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:raw_json_style', os.path.join(v23Dir, 'rawJsonStyle.json')),
+		'minecraft:predicate': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:predicate', os.path.join(v23Dir, 'predicate.json')),
+		'minecraft:recipe': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:recipe', os.path.join(v23Dir, 'recipe.json')),
+		'minecraft:pack': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:pack', os.path.join(v23Dir, 'pack.snbt')),
+		'minecraft:loot_table': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:loot_table', os.path.join(v23Dir, 'loot_table.json')),
+		'minecraft:item_modifier': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:item_modifier', os.path.join(v23Dir, 'item_modifier.json')),
+		'minecraft:advancement': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:advancement', os.path.join(v23Dir, 'advancements/advancement.json')),  # advancement.json is for datapack version 23!
 	}
 	return v23Schemas
 
@@ -224,12 +224,13 @@ JSON_SCHEMAS = loadJsonSchemas()
 
 
 def buildVersion23() -> DPVersion:
-	from .commands.v1_20_3_schema import COMMANDS_V25
+	from .commands.v1_20_3_schema import COMMANDS_V26
 	return DPVersion(
 		name='23',
 		structure=buildEntryHandlers(DATAPACK_CONTENTS),
 		jsonSchemas=JSON_SCHEMAS,  # todo add schemata here, so they are synced to datapack version.
-		mcFunctionSchema=COMMANDS_V25.buildSchema(getFullMcData('1.20.3'))
+		snbtSchemas={},
+		mcFunctionSchema=COMMANDS_V26.buildSchema(getFullMcData('1.20.3'))
 	)
 
 
@@ -239,6 +240,7 @@ def buildVersion18() -> DPVersion:
 		name='18',
 		structure=buildEntryHandlers(DATAPACK_CONTENTS),
 		jsonSchemas=JSON_SCHEMAS,
+		snbtSchemas={},
 		mcFunctionSchema=COMMANDS.buildSchema(getFullMcData('1.20.2'))
 	)
 

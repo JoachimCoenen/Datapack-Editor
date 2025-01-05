@@ -1,0 +1,20 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  
+  "$templates": {},
+  
+  "$definitions": {
+    "byte":   { "$type": "integer", "min": -128,                 "max": 127 },
+    "short":  { "$type": "integer", "min": -32768,               "max": 32767 },
+    "int":    { "$type": "integer", "min": -2147483648,          "max": 2147483647 },
+    "long":   { "$type": "integer", "min": -9223372036854775808, "max": 9223372036854775807 },
+    "float":  { "$type": "float",   "min": -3.4E+38,  "max": 3.4E+38 },
+    "double": { "$type": "float",   "min": -1.7E+308, "max": 1.7E+308 },
+
+    "byte_array": { "$type": "array", "element": {"$defRef": "byte"} },
+    "int_array": { "$type": "array", "element": {"$defRef": "int"} },
+    "long_array": { "$type": "array", "element": {"$defRef": "long"} }
+    
+  }
+}

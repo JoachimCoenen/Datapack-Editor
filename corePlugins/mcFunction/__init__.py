@@ -11,6 +11,8 @@ from base.plugin import PLUGIN_SERVICE, PluginBase
 MC_FUNCTION_ID = LanguageId('MCFunction')
 MC_FUNCTION_DEFAULT_SCHEMA_ID = 'Minecraft'
 
+FILTER_ARGS_ID = LanguageId('FilterArg')
+
 
 def initPlugin() -> None:
 	PLUGIN_SERVICE.registerPlugin('McFunctionPlugin', McFunctionPlugin())
@@ -27,19 +29,19 @@ class McFunctionPlugin(PluginBase):
 
 	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
 		from .parser import MCFunctionParser
+		from .filterArgs import FilterArgumentsParser
 		return {
 			MC_FUNCTION_ID: MCFunctionParser,
+			FILTER_ARGS_ID: FilterArgumentsParser,
 		}
 
 	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
 		from .commandContext import CommandCtxProvider
 		from .command import CommandPart
+		from .filterArgs import FilterArgNode, FilterArgNodeCtxProvider
 		return {
 			CommandPart: CommandCtxProvider,
-			# MCFunction: CommandCtxProvider,
-			# ParsedComment: CommandCtxProvider,
-			# ParsedCommand: CommandCtxProvider,
-			# ParsedArgument: CommandCtxProvider,
+			FilterArgNode: FilterArgNodeCtxProvider,
 		}
 
 	def documentTypes(self) -> list[DocumentTypeDescription]:
@@ -52,5 +54,8 @@ class McFunctionPlugin(PluginBase):
 		)]
 
 	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
-		from .mcFunctionStyler import MCCommandStyler
-		return {MC_FUNCTION_ID: MCCommandStyler}
+		from .mcFunctionStyler import MCCommandStyler, FilterArgumentsStyler
+		return {
+			MC_FUNCTION_ID: MCCommandStyler,
+			FILTER_ARGS_ID: FilterArgumentsStyler,
+		}

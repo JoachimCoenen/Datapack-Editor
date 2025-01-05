@@ -1,32 +1,38 @@
 import re
 from math import inf
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Optional, ClassVar
 
 from base.model.messages import *
-from base.model.parsing.bytesUtils import bytesToStr, strToBytes
-from base.model.parsing.contextProvider import Suggestions, errorMsg, getClickableRanges, getSuggestions, onIndicatorClicked, validateTree
+from base.model.parsing.bytesUtils import bytesToStr, strToBytes, bytesOptToStr
+from base.model.parsing.contextProvider import Suggestions, errorMsg, CtxInfo
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
-from base.model.parsing.tree import Schema
+from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError, LanguageId, Message, Position, Span
 from cat.utils.collections_ import FrozenDict
+from cat.utils.logging_ import logError
 from corePlugins.mcFunction.argumentContextsImpl import ParsingHandler, checkArgumentContextsForRegisteredArgumentTypes
 from corePlugins.mcFunction.argumentTypes import makeLiteralsArgumentType
-from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, FALLBACK_FILTER_ARGUMENT_INFO, FilterArgumentInfo, ParsedArgument
-from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, missingArgumentParser
+from corePlugins.mcFunction.command import ArgumentSchema, CommandPart, ParsedArgument
+from corePlugins.mcFunction.commandContext import ArgumentContext, argumentContext, makeParsedArgument, \
+	missingArgumentParser, StructuredArgumentContext
+from corePlugins.mcFunction.filterArgs import FilterArgOptions, parseFilterArgsLike, FilterArgumentInfo, \
+	FALLBACK_FILTER_ARGUMENT_INFO
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocation, ResourceLocationNode, ResourceLocationSchema
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
 from corePlugins.nbt import SNBT_ID
 from corePlugins.nbt.path import NBTPathSchema, SNBT_PATH_ID
-from corePlugins.nbt.tags import NBTTagSchema
-from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag
+from .argumentParsersImpl import _parseVec, _readResourceLocation, tryReadNBTCompoundTag, tryReadNBTTag, readPredicateArgs
 from .argumentTypes import *
-from .argumentValues import BlockState, FilterArguments, ItemStack, TargetSelector
-from .filterArgs import FilterArgOptions, clickableRangesForFilterArgs, onIndicatorClickedForFilterArgs, parseFilterArgsLike, suggestionsForFilterArgs, validateFilterArgs
+from .argumentValues import BlockState, ItemStack, TargetSelector, ItemSlot, ResourceLocationOrInlineNBT, Particle
+from .itemComponents import ITEM_COMPONENT_ARG_OPTIONS
 from .targetSelector import TARGET_SELECTOR_ARG_OPTIONS
+from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgs
+from corePlugins.nbtJsonBase.core import STRUCTURE_ANY_SCHEMA
 
 OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be longer than 16 characters.", 0)
+MISSING_PARTICLE_CONFIGURATION_TAGS_MSG = Message("Missing particle configuration tags for particle '`{0}`'", 1)
 
 
 @argumentContext(MINECRAFT_DIMENSION.name, rlcSchema=ResourceLocationSchema('', 'dimension', allowTags=False))
@@ -35,9 +41,6 @@ OBJECTIVE_NAME_LONGER_THAN_16_MSG: Message = Message(f"Objective names cannot be
 @argumentContext(MINECRAFT_FUNCTION.name, rlcSchema=ResourceLocationSchema('', 'functions', allowTags=True))
 @argumentContext(MINECRAFT_ITEM_ENCHANTMENT.name, rlcSchema=ResourceLocationSchema('', 'enchantment', allowTags=False))
 @argumentContext(MINECRAFT_MOB_EFFECT.name, rlcSchema=ResourceLocationSchema('', 'mob_effect', allowTags=False))
-@argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle', allowTags=False))
-@argumentContext(MINECRAFT_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'predicate', allowTags=False))
-@argumentContext(MINECRAFT_LOOT_TABLE.name, rlcSchema=ResourceLocationSchema('', 'loot_table', allowTags=False))
 @argumentContext(MINECRAFT_OBJECTIVE_CRITERIA.name, rlcSchema=ResourceLocationSchema('', 'any', allowTags=False))  # TODO: add validation for objective_criteria
 @argumentContext(DPE_ADVANCEMENT.name, rlcSchema=ResourceLocationSchema('', 'advancement', allowTags=False))
 @argumentContext(DPE_BIOME_ID.name, rlcSchema=ResourceLocationSchema('', 'biome', allowTags=False))  # outdated. TODO: remove
@@ -55,7 +58,7 @@ class ResourceLocationLikeHandler(ParsingHandler):
 	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
 		return dict(ignoreTrailingChars=True)
 
-	def getErsatzNodeForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
 		return ResourceLocationNode.fromString(b'', Span(pos), self.getSchema(ai))
 
 
@@ -79,8 +82,36 @@ class ResourceLocationHandler(ParsingHandler):
 	def getParserKwArgs(self, ai: ArgumentSchema) -> dict[str, Any]:
 		return dict(ignoreTrailingChars=True)
 
-	def getErsatzNodeForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
 		return ResourceLocationNode.fromString(b'', Span(pos), self.getSchema(ai))
+
+
+@argumentContext(MINECRAFT_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'predicate', allowTags=False), nbtSchema='minecraft:predicate')
+@argumentContext(MINECRAFT_LOOT_TABLE.name, rlcSchema=ResourceLocationSchema('', 'loot_table', allowTags=False), nbtSchema='minecraft:loot_table')
+@argumentContext(MINECRAFT_LOOT_MODIFIER.name, rlcSchema=ResourceLocationSchema('', 'item_modifier', allowTags=False), nbtSchema='minecraft:item_modifier')
+class ResourceLocationOrSNBTHandler(StructuredArgumentContext):
+	def __init__(self, rlcSchema: ResourceLocationSchema, nbtSchema: str):
+		super().__init__()
+		self.rlcSchema: ResourceLocationSchema = rlcSchema
+		self.nbtSchema: str = nbtSchema
+
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		resLoc = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
+		if resLoc is not None:
+			value = ResourceLocationOrInlineNBT(resLoc=resLoc, nbt=None)
+			return makeParsedArgument(sr, ai, value=value)
+
+		nbtTagSchema = GLOBAL_SCHEMA_STORE.get(self.nbtSchema, LanguageId('SNBT'))
+		if nbtTagSchema is None:
+			nbtTagSchema = STRUCTURE_ANY_SCHEMA
+		nbt = tryReadNBTTag(sr, nbtTagSchema, filePath, errorsIO=errorsIO)
+		if nbt is not None:
+			value = ResourceLocationOrInlineNBT(resLoc=None, nbt=nbt)
+			return makeParsedArgument(sr, ai, value=value)
+		return None
+
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[ResourceLocationNode]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
 
 
 @argumentContext(MINECRAFT_ANGLE.name)
@@ -91,7 +122,7 @@ class AngleHandler(ArgumentContext):
 
 @argumentContext(MINECRAFT_BLOCK_STATE.name, rlcSchema=ResourceLocationSchema('', 'block', allowTags=False))
 @argumentContext(MINECRAFT_BLOCK_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'block', allowTags=True))
-class BlockStateHandler(ArgumentContext):
+class BlockStateHandler(StructuredArgumentContext[BlockState]):
 	def __init__(self, rlcSchema: ResourceLocationSchema):
 		super().__init__()
 		self.rlcSchema: ResourceLocationSchema = rlcSchema
@@ -108,7 +139,8 @@ class BlockStateHandler(ArgumentContext):
 				name='key',
 				type=makeLiteralsArgumentType(list(blockStates.keys())),
 			),
-			getArgsInfo=lambda key: blockStates.get(key.content, FALLBACK_FILTER_ARGUMENT_INFO)
+			getArgsInfo=lambda key: blockStates.get(key.content, FALLBACK_FILTER_ARGUMENT_INFO),
+			description=""
 		)  # todo: improve performance!
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
@@ -117,19 +149,19 @@ class BlockStateHandler(ArgumentContext):
 		if blockID is None:
 			return None
 		# block states:
-		states = None
 		if sr.tryPeek() == ord('['):
 			blockStatesDict = self._getBlockStatesDict(blockID)
 			blockStatesOptions = self._getBlockStatesArgOptions(blockStatesDict)
-			states: Optional[FilterArguments] = parseFilterArgsLike(sr, blockStatesOptions, filePath, errorsIO=errorsIO)
-			if states is not None:
-				sr.mergeLastSave()
-		if states is None:
-			states = FilterArguments()
+		else:
+			blockStatesOptions = self._getBlockStatesArgOptions({})
+
+		states = parseFilterArgsLike(sr, blockStatesOptions, filePath, errorsIO=errorsIO)
+		sr.mergeLastSave()
+
 		# data tags:
 		if sr.tryConsumeByte(ord('{')):
 			sr.cursor -= 1
-			nbt = tryReadNBTCompoundTag(sr, ai, filePath, errorsIO=errorsIO)
+			nbt = tryReadNBTCompoundTag(sr, STRUCTURE_ANY_SCHEMA, filePath, errorsIO=errorsIO)
 		else:
 			nbt = None
 		if nbt is not None:
@@ -138,66 +170,8 @@ class BlockStateHandler(ArgumentContext):
 		blockPredicate = BlockState(blockId=blockID, states=states, nbt=nbt)
 		return makeParsedArgument(sr, ai, value=blockPredicate)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		blockState: BlockState = node.value
-		if not isinstance(blockState, BlockState):
-			errorMsg(INTERNAL_ERROR_MSG, EXPECTED_BUT_GOT_MSG, 'BlockState', type(blockState).__name__, span=node.span, errorsIO=errorsIO)
-			return
-
-		validateTree(blockState.blockId, node.source, errorsIO)
-		validateFilterArgs(blockState.states, errorsIO)
-
-		if blockState.nbt is not None:
-			validateTree(blockState.nbt, node.source, errorsIO)
-
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		if node is None:
-			blockID = ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
-			return getSuggestions(blockID, b'', pos, replaceCtx)
-		blockState: BlockState = node.value
-		if not isinstance(blockState, BlockState):
-			return []
-
-		suggestions: Suggestions = []
-
-		blockID = blockState.blockId
-		argsStart = blockID.span.end
-
-		if pos.index >= argsStart.index and not (blockState.nbt is not None and blockState.nbt.span.__contains__(pos)) and (blockStatesDict := self._getBlockStatesDict(blockID)):
-			contextStr = node.source[argsStart.index:node.end.index]
-			relCursorPos = pos.index - argsStart.index
-			blockStatesOptions = self._getBlockStatesArgOptions(blockStatesDict)
-			suggestions += suggestionsForFilterArgs(blockState.states, contextStr, relCursorPos, pos, replaceCtx, blockStatesOptions)
-
-		if blockID.span.__contains__(pos):
-			suggestions += getSuggestions(blockState.blockId, node.source, pos, replaceCtx)
-
-		if blockState.nbt is not None and blockState.nbt.span.__contains__(pos):
-			suggestions += getSuggestions(blockState.nbt, node.source, pos, replaceCtx)
-
-		return suggestions
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		blockState: BlockState = node.value
-		if not isinstance(blockState, BlockState):
-			return None
-
-		ranges = []
-		ranges += getClickableRanges(blockState.blockId, node.source, node.span)
-		ranges += clickableRangesForFilterArgs(blockState.states)
-		if blockState.nbt is not None:
-			ranges += getClickableRanges(blockState.nbt, node.source, node.span)
-
-		return ranges
-
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
-		blockState: BlockState = node.value
-		if blockState.blockId.span.__contains__(position):
-			onIndicatorClicked(blockState.blockId, node.source, position)
-		elif blockState.nbt is not None and blockState.nbt.span.__contains__(position):
-			onIndicatorClicked(blockState.nbt, node.source, position)
-		else:
-			onIndicatorClickedForFilterArgs(blockState.states, position)
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
 
 
 @argumentContext(MINECRAFT_COLUMN_POS.name)
@@ -205,7 +179,7 @@ class ColumnPosHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return _parseVec(sr, ai, useFloat=False, count=2, notation=b'~')
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		return ['~ ~']
 
 
@@ -219,7 +193,7 @@ class ComponentHandler(ParsingHandler):
 
 
 @argumentContext(MINECRAFT_ENTITY.name)
-class EntityHandler(ArgumentContext):
+class EntityHandler(StructuredArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		# Must be a player name, a target selector or a UUID.
 		locator = sr.tryReadString()
@@ -229,38 +203,24 @@ class EntityHandler(ArgumentContext):
 			if variable is None:
 				return None
 			variable = bytesToStr(variable)
+
 			arguments = parseFilterArgsLike(sr, TARGET_SELECTOR_ARG_OPTIONS, filePath, errorsIO=errorsIO)
-			if arguments is None:
-				arguments = FilterArguments()
-			else:
-				sr.mergeLastSave()
+			sr.mergeLastSave()
+
 			locator = TargetSelector(variable=variable, arguments=arguments)
 
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		targetSelector: TargetSelector = node.value
-		if not isinstance(targetSelector, TargetSelector):
-			return
-		validateFilterArgs(targetSelector.arguments, errorsIO)
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		return None  # not needed
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	SELECTOR_SUGGESTIONS: ClassVar[Suggestions] = ['@a', '@e', '@s', '@p', '@r', ]
+
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		if node is None or pos.index - node.span.start.index < 2:
-			return ['@a', '@e', '@s', '@p', '@r', ]
-		targetSelector: TargetSelector = node.value
-		if not isinstance(targetSelector, TargetSelector):
-			return []
-		return suggestionsForFilterArgs(targetSelector.arguments, node.content[2:], pos.index - node.span.start.index - 2, pos, replaceCtx, TARGET_SELECTOR_ARG_OPTIONS)
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		targetSelector: TargetSelector = node.value
-		if not isinstance(targetSelector, TargetSelector):
-			return None
-		ranges = clickableRangesForFilterArgs(targetSelector.arguments)
-		return ranges
-
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
-		onIndicatorClickedForFilterArgs(node.value.arguments, position)
+			return self.SELECTOR_SUGGESTIONS
+		else:
+			return super().getSuggestions2(ai, node, pos, replaceCtx, info)
 
 
 _INTEGER_REGEX = r'-?[0-9]+'
@@ -327,7 +287,7 @@ class NumberRangeHandler(ArgumentContext):
 		elif (numberMax - numberMin + intAdjust) > maxSize:
 			errorMsg(RANGE_TOO_BIG_MSG, maxSize, span=node.span, errorsIO=errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		args = ai.args or FrozenDict.EMPTY
 		minVal = args.get('minVal', -inf)
 		maxVal = args.get('maxVal', +inf)
@@ -344,7 +304,7 @@ class NumberRangeHandler(ArgumentContext):
 
 		def addSuggestions(maxStr: str):
 			if noLowerBound:
-				suggestions.setdefault(f'...{maxStr}')
+				suggestions.setdefault(f'..{maxStr}')
 			if includeMinVal:
 				addSuggestion(minStr=f'{minVal}', maxStr=maxStr)
 			if includeMinZero:
@@ -366,96 +326,93 @@ class GameProfileHandler(ArgumentContext):
 		return EntityHandler().parse(sr, ai, filePath, errorsIO=errorsIO)
 
 
-@argumentContext(MINECRAFT_ITEM_SLOT.name)
+@argumentContext(MINECRAFT_ITEM_SLOT.name, allowWildcard=False)
+@argumentContext(MINECRAFT_ITEM_SLOTS.name, allowWildcard=True)
 class ItemSlotHandler(ArgumentContext):
+	def __init__(self, allowWildcard: bool):
+		super().__init__()
+		self.allowWildcard: bool = allowWildcard
+
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)?'))
+		if self.allowWildcard:
+			slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)*(?:\.\*?)?'))
+		else:
+			slot = sr.tryReadRegex(re.compile(rb'\w+(?:\.\w+)*\.?'))
+
 		if slot is None:
 			return None
-		return makeParsedArgument(sr, ai, value=slot)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		slot: str = node.value
-		if slot not in getCurrentFullMcData().slots:
-			errorMsg(UNKNOWN_MSG, "item slot",  slot, span=node.span, style='error', errorsIO=errorsIO)
+		slots = getCurrentFullMcData().slots
+		if slot not in slots:
+			slotType, _, slotNumber = slot.rpartition(b'.')
+		else:
+			slotType, slotNumber = slot, None
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		return [bytesToStr(slot) for slot in getCurrentFullMcData().slots.keys()]
+		isValid = slotType in slots and (slotNumber in slots[slotType] or (
+				self.allowWildcard and slotNumber == b'*')
+				and slots[slotType] and not (len(slots[slotType]) == 1 and None in slots[slotType])  # exclude those that do not have a slotNumber.
+		)
+		if not isValid:
+			errorMsg(UNKNOWN_MSG, "item slot", bytesToStr(slot), span=sr.currentSpan, style='error', errorsIO=errorsIO)
+
+		return makeParsedArgument(sr, ai, value=ItemSlot(bytesToStr(slotType), bytesOptToStr(slotNumber)))
+
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
+		slots = getCurrentFullMcData().slots
+		suggestions = [bytesToStr(slotType if not slotNumber else slotType + b'.' + slotNumber) for slotType, slotNumbers in slots.items() for slotNumber in slotNumbers]
+		if self.allowWildcard:
+			suggestions += [
+				bytesToStr(slotType + b'.*')
+				for slotType, slotNumbers in slots.items()
+				if slotNumbers and not (len(slotNumbers) == 1 and None in slotNumbers)  # exclude those that do not have a slotNumber.
+			]
+		return suggestions
 
 
-@argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=False))
-@argumentContext(MINECRAFT_ITEM_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=True))
-class ItemStackHandler(ArgumentContext):
-	def __init__(self, rlcSchema: ResourceLocationSchema):
+@argumentContext(MINECRAFT_ITEM_STACK.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=False), allowWildcard=False)
+@argumentContext(MINECRAFT_ITEM_PREDICATE.name, rlcSchema=ResourceLocationSchema('', 'item', allowTags=True), allowWildcard=True)
+class ItemStackHandler(StructuredArgumentContext[ItemStack]):
+	def __init__(self, rlcSchema: ResourceLocationSchema, allowWildcard: bool):
 		super().__init__()
 		self.rlcSchema: ResourceLocationSchema = rlcSchema
+		self.allowWildcard: bool = allowWildcard
 
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
-		# item_id{data_tags}
 		itemID = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
+		if itemID is None and self.allowWildcard and getCurrentFullMcData().name >= '1.20.5' and sr.tryPeek() == ord('*'):
+			sr.save()
+			sr.skip()
+			itemID = '*'
 		if itemID is None:
 			return None
 
-		# data tags:
-		if sr.tryConsumeByte(ord('{')):
-			sr.cursor -= 1
-			nbt = tryReadNBTCompoundTag(sr, ai, filePath, errorsIO=errorsIO)
+		if getCurrentFullMcData().name < '1.20.5':
+			# until 1.20.5 (excl.):
+			# data tags:
+			if sr.tryPeek() == ord('{'):
+				nbt = tryReadNBTCompoundTag(sr, STRUCTURE_ANY_SCHEMA, filePath, errorsIO=errorsIO)
+				if nbt is not None:
+					sr.mergeLastSave()
+			else:
+				nbt = None
+			itemComponents = None
 		else:
+			# since 1.20.5 (incl.):
+			# item Components:
+			itemComponents = readPredicateArgs(sr, ITEM_COMPONENT_ARG_OPTIONS, filePath, errorsIO=errorsIO)
+			if itemComponents is None:
+				currentPos = sr.currentPos
+				blockStatesOptions = ITEM_COMPONENT_ARG_OPTIONS
+				itemComponents = PredicateArgs(Span(currentPos), blockStatesOptions, [])
+			else:
+				sr.mergeLastSave()
 			nbt = None
-		if nbt is not None:
-			sr.mergeLastSave()
 
-		itemStack = ItemStack(itemId=itemID, nbt=nbt)
+		itemStack = ItemStack(itemId=itemID, nbt=nbt, components=itemComponents)
 		return makeParsedArgument(sr, ai, value=itemStack)
 
-	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
-		itemStack: ItemStack = node.value
-		if not isinstance(itemStack, ItemStack):
-			errorMsg(INTERNAL_ERROR_MSG, EXPECTED_BUT_GOT_MSG, 'ItemStack', type(itemStack).__name__, span=node.span, errorsIO=errorsIO)
-			return
-
-		validateTree(itemStack.itemId, node.source, errorsIO)
-		if itemStack.nbt is not None:
-			validateTree(itemStack.nbt, node.source, errorsIO)
-		return None
-
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		# return result
-		if node is None:
-			itemId = ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
-			return getSuggestions(itemId, b'', pos, replaceCtx)
-		itemStack: ItemStack = node.value
-		if not isinstance(itemStack, ItemStack):
-			return []
-
-		suggestions = []
-		if itemStack.itemId.span.__contains__(pos):
-			suggestions += getSuggestions(itemStack.itemId, node.source, pos, replaceCtx)
-
-		if itemStack.nbt is not None and itemStack.nbt.span.__contains__(pos):
-			suggestions += getSuggestions(itemStack.nbt, node.source, pos, replaceCtx)
-
-		return suggestions
-
-	def getClickableRanges(self, node: ParsedArgument) -> Optional[Iterable[Span]]:
-		itemStack: ItemStack = node.value
-		if not isinstance(itemStack, ItemStack):
-			return None
-
-		ranges = []
-		ranges += getClickableRanges(itemStack.itemId, node.source)
-
-		if itemStack.nbt is not None:
-			ranges += getClickableRanges(itemStack.nbt, node.source)
-
-		return ranges
-
-	def onIndicatorClicked(self, node: ParsedArgument, position: Position) -> None:
-		itemStack: ItemStack = node.value
-		if itemStack.itemId.span.__contains__(position):
-			onIndicatorClicked(itemStack.itemId, node.source, position)
-		elif itemStack.nbt is not None and itemStack.nbt.span.__contains__(position):
-			onIndicatorClicked(itemStack.nbt, node.source, position)
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
 
 
 @argumentContext(MINECRAFT_MESSAGE.name)
@@ -483,7 +440,7 @@ class NbtPathHandler(ParsingHandler):
 @argumentContext(MINECRAFT_NBT_TAG.name)
 class NbtTagHandler(ParsingHandler):
 	def getSchema(self, ai: ArgumentSchema) -> Optional[Schema]:
-		return NBTTagSchema('')
+		return STRUCTURE_ANY_SCHEMA
 
 	def getLanguage(self, ai: ArgumentSchema) -> LanguageId:
 		return SNBT_ID
@@ -504,6 +461,44 @@ class ObjectiveHandler(ArgumentContext):
 	def validate(self, node: ParsedArgument, errorsIO: list[GeneralError]) -> None:
 		if len(node.value) > 16 and getCurrentFullMcData().name < '1.18':
 			errorMsg(OBJECTIVE_NAME_LONGER_THAN_16_MSG, span=node.span, style='error', errorsIO=errorsIO)
+
+
+@argumentContext(MINECRAFT_PARTICLE.name, rlcSchema=ResourceLocationSchema('', 'particle', allowTags=False))
+class ParticleHandler(StructuredArgumentContext[Particle]):
+	def __init__(self, rlcSchema: ResourceLocationSchema):
+		super().__init__()
+		self.rlcSchema: ResourceLocationSchema = rlcSchema
+
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		# particle_id{configuration_tags}
+		particleId = _readResourceLocation(sr, filePath, self.rlcSchema, errorsIO=errorsIO)
+		if particleId is None:
+			return None
+
+		if getCurrentFullMcData().name >= '1.20.5':
+			# configuration tags:
+			nbtTagSchemaName = f'{particleId.actualNamespace}:particle_configuration_tags/{particleId.path}'
+			nbtTagSchema = GLOBAL_SCHEMA_STORE.get(nbtTagSchemaName, LanguageId('SNBT'))
+
+			if sr.tryPeek() == ord('{'):
+				if nbtTagSchema is None:
+					nbtTagSchema = STRUCTURE_ANY_SCHEMA
+
+				configurationTags = tryReadNBTCompoundTag(sr, nbtTagSchema, filePath, errorsIO=errorsIO)
+				if configurationTags is not None:
+					sr.mergeLastSave()
+			else:
+				if nbtTagSchema is not None:
+					errorMsg(MISSING_PARTICLE_CONFIGURATION_TAGS_MSG, particleId.asString, span=particleId.span, errorsIO=errorsIO)
+				configurationTags = None
+		else:
+			configurationTags = None
+
+		particle = Particle(particleId=particleId, configurationTags=configurationTags)
+		return makeParsedArgument(sr, ai, value=particle)
+
+	def getEmptyValueForSuggestions(self, ai: ArgumentSchema, pos: Position, replaceCtx: str) -> Optional[Node]:
+		return ResourceLocationNode.fromString(b'', Span(pos), self.rlcSchema)
 
 
 @argumentContext(MINECRAFT_ROTATION.name)
@@ -530,8 +525,8 @@ class ScoreHolderHandler(EntityHandler):
 				return None
 		return makeParsedArgument(sr, ai, value=locator)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
-		suggestions = super(ScoreHolderHandler, self).getSuggestions2(ai, node, pos, replaceCtx)
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
+		suggestions = super(ScoreHolderHandler, self).getSuggestions2(ai, node, pos, replaceCtx, info)
 		if node is None or (node.start.index - pos.index) <= 2:
 			suggestions.append('*')
 		return suggestions
@@ -608,6 +603,9 @@ class TimeHandler(ArgumentContext):
 				ticks = number * 20
 			case b'd':
 				ticks = number * 24_000  # 24 thousand
+			case _:
+				logError(f"cannot validate a {MINECRAFT_TIME.name} with unknown unit '{bytesOptToStr(unit)}'")
+				return
 
 		args = node.schema.args or FrozenDict.EMPTY
 		minVal = args.get('min', -inf)
@@ -616,7 +614,7 @@ class TimeHandler(ArgumentContext):
 		if not minVal <= ticks <= maxVal:
 			errorMsg(NUMBER_OUT_OF_BOUNDS_MSG, minVal, maxVal, span=node.span, errorsIO=errorsIO)
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		args = ai.args or FrozenDict.EMPTY
 		minVal = args.get('min', -inf)
 		maxVal = args.get('max', +inf)
@@ -675,7 +673,7 @@ class Vec2Handler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return _parseVec(sr, ai, useFloat=True, count=2, notation=b'~^')
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[ParsedArgument], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		return ['~ ~', '0 0']
 
 
@@ -688,12 +686,18 @@ class Vec3Handler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return _parseVec(sr, ai, useFloat=self.useFloat, count=3, notation=b'~^')
 
-	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions2(self, ai: ArgumentSchema, node: Optional[CommandPart], pos: Position, replaceCtx: str, info: CtxInfo[ParsedArgument]) -> Suggestions:
 		return ['~ ~ ~', '^ ^ ^', '0 0 0']
 
 
 @argumentContext(ST_DPE_DATAPACK.name)
 class StDpeDataPackHandler(ArgumentContext):
+	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
+		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
+
+
+@argumentContext(ST_DPE_HOSTNAME.name)
+class StDpeHostnameHandler(ArgumentContext):
 	def parse(self, sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[ParsedArgument]:
 		return missingArgumentParser(sr, ai, errorsIO=errorsIO)
 

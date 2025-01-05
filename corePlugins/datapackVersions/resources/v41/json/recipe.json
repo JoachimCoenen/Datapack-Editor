@@ -1,0 +1,167 @@
+{
+  "$schema": "dpe/json/schema",
+  "$meta": {
+    "last_mc_version_checked": "23w44a"
+  }, 
+  "$libraries": {
+    "serializers": "recipe/serializers.json"
+  },
+  "$body": { "$defRef": "recipe" },
+  "$templates": {},
+  "$definitions": {
+    "recipe": {
+      "$type": "object",
+      "inherits": [
+        {
+          "defRef": "serializers:cooking",
+          "decidingProp": "type",
+          "decidingValues": [
+            "blasting",
+            "campfire_cooking",
+            "smelting",
+            "smoking"
+          ],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:crafting_shaped",
+          "decidingProp": "type",
+          "decidingValues": ["crafting_shaped"],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:crafting_shapeless",
+          "decidingProp": "type",
+          "decidingValues": ["crafting_shapeless"],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:smithing_transform",
+          "decidingProp": "type",
+          "decidingValues": ["smithing_transform"],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:smithing_trim",
+          "decidingProp": "type",
+          "decidingValues": ["smithing_trim"],
+          "optionalPrefixes": ["minecraft:"]
+        },
+        {
+          "defRef": "serializers:stonecutting",
+          "decidingProp": "type",
+          "decidingValues": ["stonecutting"],
+          "optionalPrefixes": ["minecraft:"]
+        }
+      ],
+      "properties": {
+        "type": {
+          "description": "A [ [resource location] ] indicating the type of serializer of the recipe.",
+          "value": { 
+            "$type": "enum",
+            "options": {
+              "blasting": "",
+              "campfire_cooking": "",
+              "crafting_shaped": "",
+              "crafting_shapeless": "",
+              "smelting": "",
+              "smithing_transform": "",
+              "smithing_trim": "",
+              "smoking": "",
+              "stonecutting": "",
+              "crafting_special_armordye": "",
+              "crafting_special_bannerduplicate": "",
+              "crafting_special_bookcloning": "",
+              "crafting_special_firework_rocket": "",
+              "crafting_special_firework_star": "",
+              "crafting_special_firework_star_fade": "",
+              "crafting_special_mapcloning": "",
+              "crafting_special_mapextending": "",
+              "crafting_special_repairitem": "",
+              "crafting_special_shielddecoration": "",
+              "crafting_special_shulkerboxcoloring": "",
+              "crafting_special_tippedarrow": "",
+              "crafting_special_suspiciousstew": "",
+              "crafting_decorated_pot": ""
+            },
+            "optionalPrefixes": ["minecraft:"]
+          }
+        },
+        "category": { 
+          "description": "Crafting book category/tab this recipe will appear in",
+          "decidingProp": "type",
+          "values": {
+            "blasting": {"$defRef": "%smelting_categories"},
+            "campfire_cooking": {"$defRef": "%smelting_categories"},
+            "crafting_shaped": {"$defRef": "%crafting_categories"},
+            "crafting_shapeless": {"$defRef": "%crafting_categories"},
+            "smelting": {"$defRef": "%smelting_categories"},
+            // "smithing_transform": no category property supported,
+            // "smithing_trim": no category property supported,
+            "smoking": {"$defRef": "%smelting_categories"},
+            // "stonecutting": no category property supported,
+            "crafting_special_armordye": {"$defRef": "%crafting_categories"},
+            "crafting_special_bannerduplicate": {"$defRef": "%crafting_categories"},
+            "crafting_special_bookcloning": {"$defRef": "%crafting_categories"},
+            "crafting_special_firework_rocket": {"$defRef": "%crafting_categories"},
+            "crafting_special_firework_star": {"$defRef": "%crafting_categories"},
+            "crafting_special_firework_star_fade": {"$defRef": "%crafting_categories"},
+            "crafting_special_mapcloning": {"$defRef": "%crafting_categories"},
+            "crafting_special_mapextending": {"$defRef": "%crafting_categories"},
+            "crafting_special_repairitem": {"$defRef": "%crafting_categories"},
+            "crafting_special_shielddecoration": {"$defRef": "%crafting_categories"},
+            "crafting_special_shulkerboxcoloring": {"$defRef": "%crafting_categories"},
+            "crafting_special_tippedarrow": {"$defRef": "%crafting_categories"},
+            "crafting_special_suspiciousstew": {"$defRef": "%crafting_categories"},
+            "crafting_decorated_pot": {"$defRef": "%crafting_categories"}
+          },
+          "optionalPrefixes": ["minecraft:"],
+          "default": "misc",
+          "optional": true
+        },
+        "show_notification": { 
+          "description": "Determines if a notification is shown when unlocking this recipe.",
+          "value": {"$type": "boolean"},
+          "optional": true,
+          "default": true
+        },
+        "group": { 
+          "description": "A string identifier. Used to group multiple recipes together in the [ [recipe book] ].",
+          "decidingProp": "type",
+          "values": {
+            "blasting": {"$type": "string" },
+            "campfire_cooking": {"$type": "string" },
+            "crafting_shaped": {"$type": "string" },
+            "crafting_shapeless": {"$type": "string" },
+            "smelting": {"$type": "string" },
+            "smithing_transform": {"$type": "string" },
+            "smithing_trim": {"$type": "string" },
+            "smoking": {"$type": "string" },
+            "stonecutting": {"$type": "string" }
+          },
+          "optionalPrefixes": ["minecraft:"],
+          "optional": true
+        }
+      }
+    },
+    
+    "%crafting_categories": {
+      "$type": "enum",
+      "options": {
+        "building": "",
+        "redstone": "",
+        "equipment": "",
+        "misc": ""
+      }
+    },
+    
+    "%smelting_categories": {
+      "$type": "enum",
+      "options": {
+        "food": "",
+        "blocks": "",
+        "misc": ""
+      }
+    }
+  }
+}

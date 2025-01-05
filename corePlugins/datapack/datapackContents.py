@@ -224,7 +224,9 @@ def getEntryHandlerForFile(fullPath: FilePathTpl, handlersDict: EntryHandlers) -
 
 def getEntryHandlerForFile2(fullPath: FilePathTpl, nsHandlers: list[tuple[str | None, EntryHandlerInfo, str]]) -> tuple[ResourceLocation | None, EntryHandlerInfo] | None:
 	dpPath, filePath = fullPath
-	name = filePath.rpartition('/')[2].partition('.')[0]
+	name, extSeparator, ext = filePath.rpartition('/')[2].rpartition('.')
+	if not extSeparator:
+		name = ext
 
 	for namespace, handler, rest in nsHandlers:
 		if not filePath.endswith(handler.extension):

@@ -3,15 +3,12 @@ from __future__ import annotations
 from typing import Optional
 
 from base.model.parsing.tree import Node
-from cat.utils import first
 from base.gui.styler import StyleId
 from base.model.utils import LanguageId, Span
-from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
+from corePlugins.mcFunction.command import ParsedArgument
 from corePlugins.mcFunction.mcFunctionStyler import addSimpleArgumentStyler, argumentStyler, ArgumentStyler, StyleIds
 from .argumentTypes import *
-from .argumentValues import FilterArguments, ItemStack, BlockState, TargetSelector
 from .targetSelector import DPE_TARGET_SELECTOR_ADVANCEMENTS, DPE_TARGET_SELECTOR_ADVANCEMENTS_CRITERION, DPE_TARGET_SELECTOR_SCORES
-from ...mcFunction.argumentTypes import LiteralsArgumentType
 
 _allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
 	# BRIGADIER_BOOL.name:               StyleIds.Constant,
@@ -38,7 +35,10 @@ _allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
 	MINECRAFT_ITEM_ENCHANTMENT.name:   StyleIds.String,
 	MINECRAFT_ITEM_PREDICATE.name:     StyleIds.Complex,
 	MINECRAFT_ITEM_SLOT.name:          StyleIds.Constant,
+	MINECRAFT_ITEM_SLOTS.name:         StyleIds.Constant,
 	MINECRAFT_ITEM_STACK.name:         StyleIds.Complex,
+	MINECRAFT_LOOT_MODIFIER.name:      StyleIds.String,
+	MINECRAFT_LOOT_TABLE.name:         StyleIds.String,
 	MINECRAFT_MESSAGE.name:            StyleIds.String,
 	MINECRAFT_MOB_EFFECT.name:         StyleIds.String,
 	MINECRAFT_NBT_COMPOUND_TAG.name:   StyleIds.Complex,
@@ -81,6 +81,7 @@ addSimpleArgumentStyler(StyleIds.Constant, forArgTypes=[
 	MINECRAFT_COLOR,
 	MINECRAFT_ENTITY_ANCHOR,
 	MINECRAFT_ITEM_SLOT,
+	MINECRAFT_ITEM_SLOTS,
 	MINECRAFT_SCOREBOARD_SLOT,
 	MINECRAFT_SWIZZLE,
 	MINECRAFT_TEAM,
@@ -117,7 +118,6 @@ addSimpleArgumentStyler(StyleIds.String, forArgTypes=[
 	MINECRAFT_MOB_EFFECT,
 	MINECRAFT_OBJECTIVE,
 	MINECRAFT_OBJECTIVE_CRITERIA,
-	MINECRAFT_PREDICATE,
 	MINECRAFT_RESOURCE_LOCATION,
 	MINECRAFT_UUID,
 	DPE_ADVANCEMENT,
@@ -166,17 +166,10 @@ class SNBTStyler(ArgumentStyler):
 class ItemStackStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT')]
+		return [LanguageId('SNBT'), LanguageId('PredicateArgs')]
 
 	def style(self, argument: ParsedArgument) -> None:
-		value: ItemStack = argument.value
-		if not isinstance(value, ItemStack):
-			self.setStyling(argument.span.slice, StyleIds.Complex)
-			return
-
-		styleForeignNode2(self, value.itemId, value.itemId.span)
-		if value.nbt is not None:
-			styleForeignNode2(self, value.nbt, value.nbt.span)
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.Complex)
 
 
 @argumentStyler(MINECRAFT_BLOCK_STATE.name, forceOverride=True)
@@ -184,19 +177,10 @@ class ItemStackStyler(ArgumentStyler):
 class BlockStateStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT')]
+		return [LanguageId('SNBT'), LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
-		value: BlockState = argument.value
-		if not isinstance(value, BlockState):
-			self.setStyling(argument.span.slice, StyleIds.Complex)
-			return
-
-		styleForeignNode2(self, value.blockId, value.blockId.span)
-		if value.states:
-			styleFilterArgs(self, value.states)
-		if value.nbt is not None:
-			styleForeignNode2(self, value.nbt, value.nbt.span)
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.Complex)
 
 
 @argumentStyler(MINECRAFT_ENTITY.name, forceOverride=True)
@@ -205,17 +189,10 @@ class BlockStateStyler(ArgumentStyler):
 class EntityStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT')]
+		return [LanguageId('SNBT'), LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
-		value: TargetSelector = argument.value
-		if not isinstance(value, TargetSelector) or not value.arguments:
-			self.setStyling(argument.span.slice, StyleIds.TargetSelector)
-		else:
-			slice1 = slice(argument.span.start.index, first(value.arguments.values()).key.span.start.index)
-			self.setStyling(slice1, StyleIds.TargetSelector)
-			styleFilterArgs(self, value.arguments)
-			self.setStyling(argument.span.slice, StyleIds.TargetSelector)  # style all remaining characters
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.TargetSelector)
 
 
 @argumentStyler(DPE_TARGET_SELECTOR_SCORES.name, forceOverride=True)
@@ -224,20 +201,20 @@ class EntityStyler(ArgumentStyler):
 class TargetSelectorScoresStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
+		return [LanguageId('FilterArg')]
+
+	def style(self, argument: ParsedArgument) -> None:
+		styleForeignNode2(self, argument.value, argument.span)
+
+
+@argumentStyler(MINECRAFT_LOOT_TABLE.name, forceOverride=True)
+@argumentStyler(MINECRAFT_LOOT_MODIFIER.name, forceOverride=True)
+@argumentStyler(MINECRAFT_PARTICLE.name, forceOverride=True)
+@argumentStyler(MINECRAFT_PREDICATE.name, forceOverride=True)
+class StructuredNodeStyler(ArgumentStyler):
+	@classmethod
+	def localLanguages(cls) -> list[LanguageId]:
 		return []
 
 	def style(self, argument: ParsedArgument) -> None:
-		value: FilterArguments = argument.value
-		if value is not None:
-			styleFilterArgs(self, value)
-		self.setStyling(argument.span.slice, StyleIds.TargetSelector)  # style all remaining characters
-
-
-def styleFilterArgs(self: ArgumentStyler, filterArgs: FilterArguments):
-	for name, state in filterArgs.items():
-		if isinstance(state.key.schema, ArgumentSchema) and isinstance(state.key.schema.type, LiteralsArgumentType):
-			self.setStyling(state.key.span.slice, StyleIds.TargetSelector)
-		else:
-			self.commandStyler.styleArguments(state.key)
-		if state.value is not None:
-			self.commandStyler.styleArguments(state.value)
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.Complex)

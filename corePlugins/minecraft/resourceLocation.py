@@ -9,17 +9,21 @@ from base.model.parsing.parser import ParserBase
 from cat.GUI.components.codeEditor import AutoCompletionTree, buildSimpleAutoCompletionTree, choicesFromAutoCompletionTree
 from cat.utils import Deprecated
 from base.model.parsing.bytesUtils import bytesToStr
-from base.model.parsing.contextProvider import AddContextFunc, ContextProvider, Match, Context, Suggestions, AddContextToDictDecorator
+from base.model.parsing.contextProvider import AddContextFunc, ContextProvider, Match, Context, Suggestions, \
+	AddContextToDictDecorator, CtxInfo
 from base.model.parsing.tree import Schema, Node
 from base.model.pathUtils import FilePath, FilePathTpl
 from base.model.project.project import Root
 from base.model.session import getSession
-from base.model.utils import Span, Position, GeneralError, SemanticsError, MDStr, LanguageId
+from base.model.utils import Span, Position, GeneralError, SemanticsError, MDStr, LanguageId, Message
+from cat.utils.logging_ import logError
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData, FullMCData
 from corePlugins.minecraft_data.resourceLocation import isNamespaceValid, ResourceLocation, RESOURCE_LOCATION_PATTERN
 from base.model.messages import *
 
 RESOURCE_LOCATION_ID = LanguageId('minecraft:resource_location')
+
+TAGS_NOT_ALLOWED_MSG: Message = Message("Tags are not allowed here.", 0)
 
 
 @dataclass(slots=True)
@@ -75,8 +79,9 @@ class ResourceLocationParser(ParserBase[ResourceLocationNode, ResourceLocationSc
 			self.advanceLineCounterAndUpdatePos(self.length)
 			p3 = self.currentPos
 			self.errorMsg(TRAILING_NOT_ALLOWED_MSG, "characters", span=Span(p2, p3))
-
-		return ResourceLocationNode.fromString(location, Span(p1, p2), self.schema)
+		if location:
+			return ResourceLocationNode.fromString(location, Span(p1, p2), self.schema)
+		return None
 
 
 @dataclass
@@ -103,7 +108,10 @@ class ResourceLocationCtxProvider(ContextProvider[ResourceLocationNode]):
 	def getContext(self, node: ResourceLocationNode) -> Optional[Context]:
 		schema = node.schema
 		if isinstance(schema, ResourceLocationSchema):
-			return getResourceLocationContext(schema.name)
+			ctx = getResourceLocationContext(schema.name)
+			if ctx is None:
+				logError(f"no ResourceLocationSchema for schema '{schema.name}' found.")
+			return ctx
 		return None
 
 	def prepareTree(self, filePath: FilePath, errorsIO: list[GeneralError]) -> None:
@@ -156,13 +164,15 @@ class ResourceLocationContext(Context[ResourceLocationNode], ABC):
 				pointsToFile = False
 		object.__setattr__(node, 'pointsToFile', pointsToFile)
 		object.__setattr__(node, 'isValid', isValid)
-		if not isValid:
+		if node.isTag and not node.schema.allowTags and not node.schema.onlyTags:
+			errorsIO.append(SemanticsError(TAGS_NOT_ALLOWED_MSG.format(), node.span))
+		elif not isValid:
 			if node.isTag:
 				errorsIO.append(SemanticsError(UNKNOWN_MSG.format(f'{self.name} tag', node.asString), node.span, style='warning'))
 			else:
 				errorsIO.append(SemanticsError(UNKNOWN_MSG.format(self.name, node.asString), node.span))
 
-	def getSuggestions(self, node: ResourceLocationNode, pos: Position, replaceCtx: str) -> Suggestions:
+	def getSuggestions(self, node: ResourceLocationNode, pos: Position, replaceCtx: str, info: CtxInfo[ResourceLocationNode]) -> Suggestions:
 		if not self.checkCorrectNodeType(node, ResourceLocationNode):
 			return []
 		locations: list[ResourceLocation] = []

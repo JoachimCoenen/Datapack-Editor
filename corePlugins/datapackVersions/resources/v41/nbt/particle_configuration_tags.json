@@ -1,0 +1,144 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../common/utils-library.json"
+  },
+  "$templates": {
+    
+    "color_array": {
+      "$params": {},
+      "$body": {
+        "$type": "array",
+        "element": { "$type": "float", "min": 0, "max": 1 },
+        "minCount": 3,
+        "maxCount": 3,
+        "description": "Three floats representing the red, green, and blue components of the dust color. Each should be from 0 to 1. If any color value is less than 0 or higher than 1, the particle color is undefined behavior."
+      }
+    },
+    
+    "position_source_for_vibration": {
+      "$params": {},
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "type": { "$type": "enum", "options": { "block": "" } },
+          "pos": { "$defRef": "utils:block_pos" }
+        }
+      }
+    }
+    
+  },
+  
+  "$definitions": {
+    "block": {
+      "$type": "object",
+      "properties": {
+        "block_state": {
+          "$type": "union",
+          "options": [
+            {"$ref": "utils:resource_location", "schema": "block", "allowTags": false },
+            { "$defRef": "utils:block_state" }
+          ]
+        }
+      }
+    },
+    "block_marker": { "$defRef": "block"},
+    "dust_pillar": { "$defRef": "block"},
+    "falling_dust": { "$defRef": "block"},
+    
+    "dust": {
+      "$type": "object",
+      "properties": {
+        "color": { "$ref": "color_array" },
+        "scale": {
+          "$type": "float",
+          "description": "Controls the size scale multiplier and lifetime multiplier of the particle. The particle's lifetime is a random integer from 8 to 40 game ticks, then multiplied by this scale value, with a minimum of 1."
+        }
+      }
+    },
+    
+    "dust_color_transition": {
+      "$type": "object",
+      "properties": {
+        "from_color": { "$ref": "color_array" },
+        "to_color": { "$ref": "color_array" },
+        "scale": {
+          "$type": "float",
+          "description": "Controls the size scale multiplier and lifetime multiplier of the particle. The particle's lifetime is a random integer from 8 to 40 game ticks, then multiplied by this scale value, with a minimum of 1."
+        }
+      }
+    },
+    
+    "entity_effect": {
+      "$type": "object",
+      "properties": {
+        "color": {
+          "$type": "union",
+          "options": [
+            {
+              "$type": "array",
+              "element": { "$type": "float", "min": 0, "max": 1 },
+              "minCount": 4,
+              "maxCount": 4,
+              "description": "Four floats representing the red, green, blue, and alpha components of the color. Each should be from 0 to 1. If any color value is less than 0 or higher than 1, the particle color is undefined behavior."
+            },
+            { 
+              "$type": "integer", 
+              "min": 0, 
+              "max": 4294967295,
+              "description": "Decimal number representing the ARGB color, calculated using this formula: `Alpha<<24 + Red<<16 + Green<<8 + Blue`."
+            }
+          ]
+        }
+      }
+    },
+    
+    "item": {
+      "$type": "object",
+      "properties": {
+        "item": {
+          "$type": "union",
+          "options": [
+            { "$ref": "utils:resource_location", "schema": "item", "allowTags": false },
+            { "$defRef": "utils:item_stack" }
+          ]
+        }
+      }
+    },
+    
+    "sculk_charge": {
+      "$type": "object",
+      "properties": {
+        "roll": {
+          "value": { "$defRef": "utils:radians_angle" },
+          "description": "The angle the particle displays at in radians."
+        }
+      }
+    },
+    
+    "shriek": {
+      "$type": "object",
+      "properties": {
+        "delay": {
+          "value": { "$type": "integer", "min":0 },
+          "description": "The delay in ticks."
+        }
+      }
+    },
+    
+    "vibration": {
+      "$type": "object",
+      "properties": {
+        "destination": {
+          "value": { "$ref": "position_source_for_vibration" },
+          "description": "The destination. Can only use the `block` type."
+        },
+        "arrival_in_ticks": {
+          "value": { "$type": "integer", "min":0 },
+          "description": "The angle the particle displays at in radians"
+        }
+      }
+    }
+    
+  }
+}

@@ -1,0 +1,246 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "location": "location.json",
+    "item": "item.json",
+    "entity": "entity.json",
+    "utils": "../../../common/utils-library.json"
+  },
+  "$templates": {
+
+    "variant_option": {
+      "$params": {
+        "schema": { "type": "string" }
+      },
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "variant": {
+            "optional": true,
+            "value": {"$ref": "utils:resource_location", "schema": { "$ref": "#schema"}}
+          }
+        }
+      }
+    },
+
+    "variant_option_or_tag_or_list": {
+      "$params": {
+        "schema": { "type": "string" }
+      },
+      "$body": {
+        "$type": "object",
+        "properties": {
+          "variant": {
+            "optional": true,
+            "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": { "$ref": "#schema"}}
+          }
+        }
+      }
+    }
+
+  },
+  
+  "$definitions": {
+  
+    "type_specific": {
+      "$type": "object",
+      "properties": {
+        "type": {
+          "description": "Dictates which type-specific properties to test for.<p style=\"padding-block-end: 1em; margin: 0 0 0 0;\">The possible values for {{nbt|string|type}} and associated extra contents:</p>",
+          "value": {
+            "$type": "enum", 
+            "options": {
+              "axolotl":  "",
+              "boat": "",
+              "cat":  "",
+              "fox": "",
+              "frog":  "",
+              "horse": "",
+              "llama":  "",
+              "mooshroom": "",
+              "painting":  "",
+              "parrot": "",
+              "rabbit":  "",
+              "salmon": "",
+              "tropical_fish":  "",
+              "villager": "",
+              "wolf":  "",
+              "fishing_hook": "",
+              "lightning":  "",
+              "player": "",
+              "raider":  "",
+              "slime": ""
+            },
+            "optionalPrefixes": ["minecraft:"]
+          }
+        }
+      },
+      "inherits": [
+        {"defRef": "%axolotl", "decidingValues": ["axolotl"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%boat", "decidingValues": ["boat"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%cat", "decidingValues": ["cat"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%fox", "decidingValues": ["fox"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%frog", "decidingValues": ["frog"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%horse", "decidingValues": ["horse"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%llama", "decidingValues": ["llama"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%mooshroom", "decidingValues": ["mooshroom"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%painting", "decidingValues": ["painting"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%parrot", "decidingValues": ["parrot"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%rabbit", "decidingValues": ["rabbit"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%salmon", "decidingValues": ["salmon"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%tropical_fish", "decidingValues": ["tropical_fish"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%villager", "decidingValues": ["villager"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%wolf", "decidingValues": ["wolf"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%fishing_hook", "decidingValues": ["fishing_hook"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%lightning", "decidingValues": ["lightning"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%player", "decidingValues": ["player"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%raider", "decidingValues": ["raider"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]},
+        {"defRef": "%slime", "decidingValues": ["slime"], "decidingProp": "type", "optionalPrefixes": ["minecraft:"]}
+      ]
+    },
+  
+    "%axolotl": {"$ref": "variant_option", "schema": "axolotl_variant"},
+    "%boat": {"$ref": "variant_option", "schema": "boat_variant"},
+    "%cat": {"$ref": "variant_option_or_tag_or_list", "schema": "cat_variant"},
+    "%fox": {"$ref": "variant_option", "schema": "fox_variant"},
+    "%frog": {"$ref": "variant_option_or_tag_or_list", "schema": "frog_variant"},
+    "%horse": {"$ref": "variant_option", "schema": "horse_variant"},
+    "%llama": {"$ref": "variant_option", "schema": "llama_variant"},
+    "%mooshroom": {"$ref": "variant_option", "schema": "mooshroom_variant"},
+    "%painting": {"$ref": "variant_option", "schema": "painting_variant"},
+    "%parrot": {"$ref": "variant_option_or_tag_or_list", "schema": "parrot_variant"},
+    "%rabbit": {"$ref": "variant_option", "schema": "rabbit_variant"},
+    "%salmon": {"$ref": "variant_option", "schema": "salmon_variant"},
+    "%tropical_fish": {"$ref": "variant_option", "schema": "tropical_fish_variant"},
+    "%villager": {"$ref": "variant_option", "schema": "villager_variant"},
+    "%wolf": {"$ref": "variant_option_or_tag_or_list", "schema": "wolf_variant"},
+  
+    "%fishing_hook": {
+      "$type": "object",
+      "properties": {
+        "in_open_water": {
+          "description": "Whether the fishing hook was in open water.",
+          "optional": true,
+          "value": {"$type": "boolean"}
+        }
+      }
+    },
+  
+    "%lightning": {
+      "$type": "object",
+      "properties": {
+        "blocks_set_on_fire": {
+          "description": "Tests the number of blocks set on fire by this lightning bolt.",
+          "optional": true,
+          "value": {"$ref": "utils:val_or_range", "type": "integer"}
+        },
+        "entity_struck": {
+          "description": "Test the properties of entities struck by this lightning bolt. Passes if at least one of the struck entities matches the entered conditions.",
+          "optional": true,
+          "value": {"$defRef": "entity:entity"}
+        }
+      }
+    },
+  
+    "%player": {
+      "$type": "object",
+      "properties": {
+        "looking_at": {
+          "optional": true,
+          "value": {"$defRef": "entity:entity"}
+        },
+        "advancements": {
+          "description": "<advancement id>: To test the player's advancements.",
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "default-key": {"$defRef": "utils:advancement_id"},
+            "default-property": {
+              "$type": "union",
+              "options": [
+                { "$type": "boolean" },
+                {
+                  "$type": "object",
+                  "description": "<criterion id>: Key is one of the criteria of the advancement, value is `true` or `false` to test for completed/not completed respectively.",
+                  "default-key": {"$defRef": "utils:advancement_criterion_id"},
+                  "default-property": { "$type": "boolean" }
+                }
+              ]
+            }
+          }
+        },
+        "gamemode": {
+          "description": "Test the game mode of this player. Valid values are <code>survival</code>, <code>creative</code>, <code>adventure</code> and <code>spectator</code>.",
+          "optional": true,
+          "value": {"$defRef": "utils:game_mode"}
+        },
+        "level": {
+          "description": "Test if the experience level of this player matches an exact value or is between <code>min</code> and <code>max</code> values, inclusive.",
+          "optional": true,
+          "value": { "$ref": "utils:val_or_range", "type": "integer" }
+        },
+        "recipes": {
+          "description": "<recipe id>: Key is the recipe ID; value is true or false to test for known/unknown respectively.",
+          "optional": true,
+          "value": {
+            "$type": "object",
+            "default-key": {"$ref": "utils:resource_location", "schema": "recipe"},
+            "default-property": { "$type": "boolean" }
+          }
+        },
+        "stats": {
+          "optional": true,
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "properties": {
+                "type": {
+                  "description": "The statistic type. Valid values are <code>minecraft:custom</code>, <code>minecraft:crafted</code>, <code>minecraft:used</code>, <code>minecraft:broken</code>, <code>minecraft:mined</code>, <code>minecraft:killed</code>, <code>minecraft:picked_up</code>, <code>minecraft:dropped</code> and <code>minecraft:killed_by</code>.",
+                  "value": { "$ref": "utils:resource_location", "schema": "stat_type" }
+                },
+                "stat": {
+                  "description": "The statistic ID to test.",
+                  "value": { "$type": "string" }
+                },
+                "value": {
+                  "description": "Test if the value of the statistic matches an exact number.",
+                  "value": { "$ref": "utils:val_or_range", "type": "integer" }
+                }
+              },
+              "description": " A statistic to test."
+            }
+          }
+        }
+      }
+    },
+  
+    "%raider": {
+      "$type": "object",
+      "properties": {
+        "is_captain": {
+          "description": "Tests whether the raider is a captain.",
+          "optional": true,
+          "value": {"$type": "boolean"}
+        },
+        "has_raid": {
+          "description": "Tests whether the raider is part of a raid.",
+          "optional": true,
+          "value": {"$type": "boolean"}
+        }
+      }
+    },
+  
+    "%slime": {
+      "$type": "object",
+      "properties": {
+        "size": {
+          "description": "Tests the size of this slime.",
+          "optional": true,
+          "value": { "$ref": "utils:val_or_range", "type": "integer" }
+        }
+      }
+    }
+    
+  }
+}

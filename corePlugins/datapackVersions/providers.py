@@ -1,13 +1,15 @@
 from typing import Optional
 
-from base.model.utils import MDStr
+from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
+from base.model.utils import MDStr, LanguageId
 from corePlugins.mcFunction.argumentTypes import BRIGADIER_BOOL, BRIGADIER_INTEGER
 from corePlugins.minecraft.resourceLocation import ResourceLocation
-from corePlugins.json.core import *
+from corePlugins.nbt import SNBT_ID
+from corePlugins.nbtJsonBase.core import *
 from corePlugins.minecraft_data.fullData import getCurrentFullMcData
 
 
-def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[JsonObjectSchema]:
+def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[ObjectSchema]:
 	states = getCurrentFullMcData().blockStates.get(blockId)
 	if states is None:
 		return None
@@ -25,51 +27,87 @@ def _propertiesFromBlockStates(blockId: ResourceLocation) -> Optional[JsonObject
 			values = None
 
 		if values is not None:
-			value = JsonStringOptionsSchema(options={val: MDStr("") for val in values}, description=valueDescr, allowMultilineStr=False)
+			value = StringOptionsSchema(options={val: MDStr("") for val in values}, description=valueDescr, allowMultilineStr=False)
 		else:
-			value = JsonStringSchema(type=state.type, description=valueDescr, allowMultilineStr=False)
+			value = StringSchema(type=state.type, description=valueDescr, allowMultilineStr=False)
 
 		properties.append(PropertySchema(name=state.name, value=value, optional=True, description=state.description, allowMultilineStr=None))
 
-	return JsonObjectSchema(properties=properties, allowMultilineStr=None).finish()
+	return ObjectSchema(properties=properties, allowMultilineStr=None).finish()
 
 
-def propertiesFor_block_state_property(parent: JsonObject) -> Optional[JsonObjectSchema]:
+def propertiesFor_block_state_property(parent: ObjectNode) -> Optional[ObjectSchema]:
 	blockVal = parent.data.get('block', None)
-	if blockVal is None or not isinstance(blockVal.value, JsonString):
-		return JsonObjectSchema(properties=[], allowMultilineStr=None).finish()
+	if blockVal is None:
+		blockVal = parent.data.get('Name', None)  # for utils-library.json/block_state
+	if blockVal is None or not isinstance(blockVal.value, StringNode):
+		return ObjectSchema(properties=[], allowMultilineStr=None).finish()
 	else:
 		block = blockVal.value.data
 		block = ResourceLocation.fromString(block)
 		return _propertiesFromBlockStates(block)
 
 
-def _getTemplate(library: JsonObject, name: str) -> Optional[JsonObject]:
-	templatesProp = library.data.get('$templates')
-
-	if templatesProp is None or not isinstance(templatesProp.value, JsonObject):
-		return None
-	templateProp = templatesProp.value.data.get(name)
-	if templateProp is None or not isinstance(templateProp.value, JsonObject):
-		return None
-	return templateProp.value
+def _getStructureSchema(name: str, language: LanguageId) -> StructureDataSchema:
+	schema = GLOBAL_SCHEMA_STORE.get(name, language)
+	if schema is None:
+		schema = STRUCTURE_ANY_SCHEMA
+	return schema
 
 
-# def propertiesFor_ref(stack: list[JsonData]) -> Optional[JsonObjectSchema]:
-#
-# 	library = stack[-1]
-# 	if isinstance(stack[-1], JsonObject):
-# 		if isinstance(library, JsonObject):
-#
-# 			template = _getTemplate(library, name)
-#
-# 	blockVal = parent.data.get('block', None)
-# 	if blockVal is None or not isinstance(blockVal.value, JsonString):
-# 		return JsonObjectSchema(properties=[])
-# 	else:
-# 		block = blockVal.value.data
-# 		block = ResourceLocation.fromString(block)
-# 		return _propertiesFromBlockStates(block)
+def _propertiesForItemComponents(itemId: ResourceLocation | None, removable: bool) -> Optional[ObjectSchema]:
+	# todo: which items have which components?
+	allItemComponents = getCurrentFullMcData().itemComponents
+
+	properties = []
+	for itemComponent in allItemComponents:
+		name = f'{itemComponent.actualNamespace}:item_components/{itemComponent.path}'
+		value = _getStructureSchema(name, SNBT_ID)
+
+		properties.append(PropertySchema(name=itemComponent.asQualifiedString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+		if itemComponent.isMCNamespace:
+			properties.append(PropertySchema(name=itemComponent.asCompactString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+
+		if removable:
+			valueDescr: MDStr = MDStr("")
+			value2 = ObjectSchema(description=valueDescr, properties=[], allowMultilineStr=None)
+			properties.append(PropertySchema(name='!' + itemComponent.asQualifiedString, value=value2, optional=True, description=MDStr(''), allowMultilineStr=None))
+			if itemComponent.isMCNamespace:
+				properties.append(PropertySchema(name='!' + itemComponent.asCompactString, value=value2, optional=True, description=MDStr(''), allowMultilineStr=None))
+
+	return ObjectSchema(properties=properties, allowMultilineStr=None).finish()
+
+
+def _propertiesFor_item_stack_components(parent: ObjectNode, removable: bool) -> Optional[ObjectSchema]:
+	itemIdNode = parent.data.get('id', None)
+	if itemIdNode is None or not isinstance(itemIdNode.value, StringNode):
+		itemId = None
+	else:
+		itemId = ResourceLocation.fromString(itemIdNode.value.data)
+	return _propertiesForItemComponents(itemId, removable=removable)
+
+
+def propertiesFor_item_stack_components(parent: ObjectNode) -> Optional[ObjectSchema]:
+	return _propertiesFor_item_stack_components(parent, removable=False)
+
+
+def propertiesFor_removable_item_stack_components(parent: ObjectNode) -> Optional[ObjectSchema]:
+	return _propertiesFor_item_stack_components(parent, removable=True)
+
+
+def propertiesFor_item_sub_predicates(parent: ObjectNode) -> Optional[ObjectSchema]:
+	allItemSubPredicates = getCurrentFullMcData().itemSubPredicates
+
+	properties = []
+	for itemSubPredicate in allItemSubPredicates:
+		name = f'{itemSubPredicate.actualNamespace}:item_sub_predicates/{itemSubPredicate.path}'
+		value = _getStructureSchema(name, SNBT_ID)
+
+		properties.append(PropertySchema(name=itemSubPredicate.asQualifiedString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+		if itemSubPredicate.isMCNamespace:
+			properties.append(PropertySchema(name=itemSubPredicate.asCompactString, value=value, optional=True, description=MDStr(''), allowMultilineStr=None))
+
+	return ObjectSchema(properties=properties, allowMultilineStr=None).finish()
 
 
 def init() -> None:

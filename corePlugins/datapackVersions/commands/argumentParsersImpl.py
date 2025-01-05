@@ -1,15 +1,18 @@
 from typing import Optional, cast
 
 from base.model.parsing.bytesUtils import ORD_SPACE
+from corePlugins.datapackVersions import PREDICATE_ARGS_ID
+from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgOptions, PredicateArgs
 from corePlugins.mcFunction.argumentContextsImpl import parseFromStringReader
 from corePlugins.mcFunction.command import ArgumentSchema, ParsedArgument
 from corePlugins.mcFunction.commandContext import makeParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.nbt import SNBT_ID
 from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, ResourceLocationNode
-from corePlugins.nbt.tags import NBTTag, CompoundTag, NBTTagSchema
+from corePlugins.nbt.tags import CompoundTag, NBTNode
 from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError
+from corePlugins.nbtJsonBase.core import StructureDataSchema
 
 
 def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: bool, notation: bytes) -> Optional[ParsedArgument]:
@@ -43,15 +46,19 @@ def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: boo
 	return makeParsedArgument(sr, ai, value=tuple(vec))
 
 
-def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTTag]:
-	tag = cast(NBTTag, parseFromStringReader(
+def tryReadNBTTag(sr: StringReader, schema: StructureDataSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTNode]:
+	return cast(NBTNode, parseFromStringReader(
 		sr,
 		filePath=filePath,
 		language=SNBT_ID,
-		schema=NBTTagSchema(''),
+		schema=schema,
 		errorsIO=errorsIO,
 		ignoreTrailingChars=True
 	))
+
+
+def tryReadNBTCompoundTag(sr: StringReader, schema: StructureDataSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTNode]:
+	tag = tryReadNBTTag(sr, schema, filePath, errorsIO=errorsIO)
 	if tag is None:
 		return None
 
@@ -60,6 +67,16 @@ def tryReadNBTCompoundTag(sr: StringReader, ai: ArgumentSchema, filePath: FilePa
 	else:
 		sr.rollback()
 		return None
+
+
+def readPredicateArgs(sr: StringReader, schema: PredicateArgOptions, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[PredicateArgs]:
+	return cast(PredicateArgs, parseFromStringReader(
+		sr,
+		filePath=filePath,
+		language=PREDICATE_ARGS_ID,
+		schema=schema,
+		errorsIO=errorsIO,
+	))
 
 
 def _readResourceLocation(sr: StringReader, filePath: FilePath, schema: ResourceLocationSchema, *, errorsIO: list[GeneralError]) -> Optional[ResourceLocationNode]:

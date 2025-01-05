@@ -1,7 +1,15 @@
+from typing import Type
+
+from base.gui.styler import CatStyler
 from base.model.defaultSchemaProvider import SchemaMapping
-from base.model.parsing.tree import Schema
+from base.model.parsing.contextProvider import ContextProvider
+from base.model.parsing.parser import ParserBase
+from base.model.parsing.tree import Schema, Node
 from base.model.utils import LanguageId
 from base.plugin import PLUGIN_SERVICE, PluginBase
+from corePlugins.mcFunction import MC_FUNCTION_ID
+
+PREDICATE_ARGS_ID = LanguageId('PredicateArgs')
 
 
 def initPlugin() -> None:
@@ -14,12 +22,32 @@ class DatapackVersionsPlugin(PluginBase):
 		from . import providers
 		from . import contexts
 		from . import version23
+		from . import version41
 		version23.initVersion()
+		version41.initVersion()
 		from .commands import argumentContextsImpl
 		from .commands import argumentStylers
 
 	def dependencies(self) -> set[str]:
 		return {'DatapackPlugin', 'JsonPlugin', 'NbtPlugin', 'DatapackPlugin', 'MinecraftPlugin', 'McFunctionPlugin'}
+
+	def parsers(self) -> dict[LanguageId, Type[ParserBase]]:
+		from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgsParser
+		return {
+			PREDICATE_ARGS_ID: PredicateArgsParser,
+		}
+
+	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
+		from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgNode, PredicateArgNodeCtxProvider
+		return {
+			PredicateArgNode: PredicateArgNodeCtxProvider,
+		}
+
+	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
+		from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgumentsStyler
+		return {
+			PREDICATE_ARGS_ID: PredicateArgumentsStyler,
+		}
 
 	def schemaMappings(self) -> dict[LanguageId, list[SchemaMapping]]:
 		from corePlugins.datapackVersions.allVersions import REGISTRY_TAGS, WORLDGEN
@@ -96,13 +124,14 @@ class DatapackVersionsPlugin(PluginBase):
 		from corePlugins.json import JSON_ID
 		return {JSON_ID: mappings}
 
-	def schemas(self) -> dict[str, Schema]:
+	def schemas(self) -> dict[LanguageId, dict[str, Schema]]:
 		schemas = {}
 
 		from corePlugins.datapackVersions.commands.v1_20_2_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_2
 		from corePlugins.datapackVersions.commands.v1_20_3_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_3
+		from corePlugins.datapackVersions.commands.v1_20_5_schema import buildMCFunctionSchemas as buildMCFunctionSchemas_1_20_5
 
 		schemas |= buildMCFunctionSchemas_1_20_2()  # legacy way of doing it.
 		schemas |= buildMCFunctionSchemas_1_20_3()  # legacy way of doing it.
-		return schemas
-
+		schemas |= buildMCFunctionSchemas_1_20_5()  # legacy way of doing it.
+		return {MC_FUNCTION_ID: schemas}

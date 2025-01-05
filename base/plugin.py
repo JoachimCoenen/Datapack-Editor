@@ -122,12 +122,13 @@ class PluginService:
 
 		plugin.initPlugin()
 
-		schemas = plugin.schemas() or {}
-		for name, schema in schemas.items():
-			if schema is not None:
-				GLOBAL_SCHEMA_STORE.registerSchema(name, schema)
-			else:
-				logWarning(f"Schema with name'{name}' was null. it won't be added to the GLOBAL_SCHEMA_STORE.")
+		allSchemas = plugin.schemas() or {}
+		for languageId, schemas in allSchemas.items():
+			for name, schema in schemas.items():
+				if schema is not None:
+					GLOBAL_SCHEMA_STORE.registerSchema(name, schema, languageId)
+				else:
+					logWarning(f"Schema with name '{name}' for language '{languageId}' was null. it won't be added to the GLOBAL_SCHEMA_STORE.")
 
 		schemaMappings = plugin.schemaMappings() or {}
 		for languageId, mappings in schemaMappings.items():
@@ -226,7 +227,7 @@ class PluginBase(ABC):
 	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
 		return {}
 
-	def schemas(self) -> dict[str, Schema]:
+	def schemas(self) -> dict[LanguageId, dict[str, Schema]]:
 		return {}
 
 	def schemaMappings(self) -> dict[LanguageId, list[SchemaMapping]]:
