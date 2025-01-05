@@ -1,4 +1,4 @@
-## Next Version
+## 0.9.0-alpha
 ### Features
  * Added support for Minecraft versions 1.20.5 and 1.20.6.
  * Added support for validation, code suggestions, and inline documentation in SNBT. JSON schemas are used. 
