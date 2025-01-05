@@ -330,6 +330,7 @@ def build_attribute_args(_: FullMCData) -> list[CommandPartSchema]:
 				ArgumentSchema(
 					name='attribute',
 					type=MINECRAFT_RESOURCE_LOCATION,
+					args=dict(schema='attribute', allowTags=False),
 					next=Options([
 						KeywordSchema(
 							name='get',
