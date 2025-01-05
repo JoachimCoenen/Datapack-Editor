@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.20.3 (1.20.3-rc1)
+currently at minecraft version 1.20.3
 """
 
 import copy
@@ -16,22 +16,17 @@ from .v1_20_2_schema import CommandsCreator, getArgOptions
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_20_3 = getFullMcData('1.20.3')
-	schema_v23 = COMMANDS_V23.buildSchema(version1_20_3)
-	schema_v25 = COMMANDS_V25.buildSchema(version1_20_3)
 	schema_v26 = COMMANDS_V26.buildSchema(version1_20_3)
 	return {
-		'Minecraft 23w44a': schema_v23,
-		'Minecraft 23w46a': schema_v25,
-		'Minecraft 1.20.3-rc1': schema_v26,
 		'Minecraft 1.20.3': schema_v26,
 		'Minecraft 1.20.4': schema_v26
 	}
 
 
-COMMANDS_V23: CommandsCreator = copy.deepcopy(v1_20_2_schema.COMMANDS)
+COMMANDS_V26: CommandsCreator = copy.deepcopy(v1_20_2_schema.COMMANDS)
 
 
-@COMMANDS_V23.modify(name='execute')
+@COMMANDS_V26.modify(name='execute')
 def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	EXECUTE_INSTRUCTIONS: list[CommandPartSchema] = args
 	EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS = Options(ChainedList([TERMINAL], EXECUTE_INSTRUCTIONS))
@@ -61,7 +56,7 @@ def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[Co
 	return args
 
 
-@COMMANDS_V23.modify(name='return')
+@COMMANDS_V26.modify(name='return')
 def modify_return_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	args.extend([
 		KeywordSchema(
@@ -82,7 +77,7 @@ def modify_return_args(_: FullMCData, args: list[CommandPartSchema]) -> list[Com
 	return args
 
 
-@COMMANDS_V23.add(
+@COMMANDS_V26.add(
 	name='tick',
 	description="Control the ticking flow and measure the performance of the game. \nRequires elevated permissions (admins and above), and so it is not by default available in command blocks and data packs.",
 	opLevel=3
@@ -148,10 +143,7 @@ def build_tick_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-COMMANDS_V25: CommandsCreator = copy.deepcopy(COMMANDS_V23)
-
-
-@COMMANDS_V25.modify(name='scoreboard')
+@COMMANDS_V26.modify(name='scoreboard')
 def modify_scoreboard_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	NUMBER_FORMAT_OPTIONS = Options([
 		TERMINAL,
@@ -247,5 +239,3 @@ def modify_scoreboard_args(_: FullMCData, args: list[CommandPartSchema]) -> list
 
 	return args
 
-
-COMMANDS_V26: CommandsCreator = copy.deepcopy(COMMANDS_V25)

@@ -1,5 +1,5 @@
 """
-currently at minecraft version 1.20.3 (1.20.3-rc1)
+currently at minecraft version 1.20.6
 """
 
 import copy
@@ -16,37 +16,17 @@ from .v1_20_2_schema import CommandsCreator, getArgOptions
 
 def buildMCFunctionSchemas() -> dict[str, MCFunctionSchema]:
 	version1_20_5 = getFullMcData('1.20.5')
-	schema_v29 = COMMANDS_V29.buildSchema(version1_20_5)
-	schema_v30 = COMMANDS_V30.buildSchema(version1_20_5)
-	schema_v31 = COMMANDS_V31.buildSchema(version1_20_5)
-	schema_v33 = COMMANDS_V33.buildSchema(version1_20_5)
-	schema_v34 = COMMANDS_V34.buildSchema(version1_20_5)
-	schema_v36 = COMMANDS_V36.buildSchema(version1_20_5)
-	schema_v39 = COMMANDS_V39.buildSchema(version1_20_5)
 	schema_v41 = COMMANDS_V41.buildSchema(version1_20_5)
 	return {
-		'Minecraft 24w04a': schema_v29,
-		'Minecraft 24w05b': schema_v30,
-		'Minecraft 24w06a': schema_v31,
-		'Minecraft 24w09a': schema_v33,
-		'Minecraft 24w10a': schema_v34,
-		'Minecraft 24w12a': schema_v36,
-		'Minecraft 1.20.5-pre1': schema_v39,
 		'Minecraft 1.20.5': schema_v41,
 		'Minecraft 1.20.6': schema_v41
 	}
 
 
-COMMANDS_V27: CommandsCreator = copy.deepcopy(v1_20_3_schema.COMMANDS_V26)
+COMMANDS_V41: CommandsCreator = copy.deepcopy(v1_20_3_schema.COMMANDS_V26)
 
 
-COMMANDS_V28: CommandsCreator = copy.deepcopy(COMMANDS_V27)
-
-
-COMMANDS_V29: CommandsCreator = copy.deepcopy(COMMANDS_V28)
-
-
-@COMMANDS_V29.add(name='transfer', description="Triggers a transfer of a player to another server. Only exists on dedicated servers.")
+@COMMANDS_V41.add(name='transfer', description="Triggers a transfer of a player to another server. Only exists on dedicated servers.")
 def build_transfer_args(_: FullMCData) -> list[CommandPartSchema]:
 	return [
 		ArgumentSchema(
@@ -76,41 +56,21 @@ def build_transfer_args(_: FullMCData) -> list[CommandPartSchema]:
 	]
 
 
-COMMANDS_V30: CommandsCreator = copy.deepcopy(COMMANDS_V29)
-
-
-@COMMANDS_V30.modify(name='effect')
-def modify_effect_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
-	amplifierSchema = getArgOptions(args, 'give', 'targets', 'effect', 'DURATION', 'amplifier')
-	# Potion effect amplifiers are now restricted between 0 and 127.
-	amplifierSchema.args.update(dict(min=0, max=127))
-	return args
-
-
-COMMANDS_V31: CommandsCreator = copy.deepcopy(COMMANDS_V29)  # reverts changes in v30 (limiting of Potion effect amplifiers to 127)
-
-
-COMMANDS_V33: CommandsCreator = copy.deepcopy(COMMANDS_V31)
-
-
-@COMMANDS_V33.modify(name='playsound')
+@COMMANDS_V41.modify(name='playsound')
 def modify_playsound_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	getArgOptions(args, 'sound', 'source').next.all.insert(0, TERMINAL)
 	getArgOptions(args, 'sound').next.all.insert(0, TERMINAL)
 	return args
 
 
-@COMMANDS_V33.modify(name='attribute')
+@COMMANDS_V41.modify(name='attribute')
 def modify_attribute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	operationSchema = getArgOptions(args, 'target', 'attribute', 'modifier', 'add', 'uuid', 'name', 'value', 'operation')
 	operationSchema.type = makeLiteralsArgumentType([b'add_value', b'add_multiplied_total', b'add_multiplied_base'])
 	return args
 
 
-COMMANDS_V34: CommandsCreator = copy.deepcopy(COMMANDS_V33)
-
-
-@COMMANDS_V34.modify(name='execute')
+@COMMANDS_V41.modify(name='execute')
 def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	EXECUTE_INSTRUCTIONS: list[CommandPartSchema] = args
 	EXECUTE_INSTRUCTION_OR_TERMINAL_OPTIONS = Options(ChainedList([TERMINAL], EXECUTE_INSTRUCTIONS))
@@ -166,97 +126,7 @@ def modify_execute_args(_: FullMCData, args: list[CommandPartSchema]) -> list[Co
 	return args
 
 
-COMMANDS_V36: CommandsCreator = copy.deepcopy(COMMANDS_V34)
-
-
-@COMMANDS_V36.modify(name='particle')
-def modify_particle_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
-	# particle <name> [<pos>] [<delta> <speed> <count> [force|normal] [<viewers>]]
-	PARTICLE_ARGUMENT_OPTIONS = Options([
-		TERMINAL,
-		ArgumentSchema(
-			name='pos',
-			type=MINECRAFT_VEC3,
-			next=Options([
-				TERMINAL,
-				ArgumentSchema(
-					name='delta',
-					type=MINECRAFT_VEC3,
-					next=Options([
-						ArgumentSchema(
-							name='speed',
-							type=BRIGADIER_FLOAT,
-							next=Options([
-								ArgumentSchema(
-									name='count',
-									type=BRIGADIER_INTEGER,
-									next=Options([
-										TERMINAL,
-										ArgumentSchema(
-											name='display_mode',
-											type=makeLiteralsArgumentType([b'force', b'normal']),
-											next=Options([
-												TERMINAL,
-												ArgumentSchema(
-													name='viewers',
-													type=MINECRAFT_ENTITY
-												),
-											])
-										),
-									])
-								),
-							])
-						),
-					])
-				),
-			])
-		),
-	])
-	_SPECIAL_PARTICLES_LIST = [
-		KeywordSchema(
-			name='entity_effect',
-			next=Options([
-				ArgumentSchema(
-					name='red',
-					type=BRIGADIER_FLOAT,
-					next=Options([
-						ArgumentSchema(
-							name='green',
-							type=BRIGADIER_FLOAT,
-							next=Options([
-								ArgumentSchema(
-									name='blue',
-									type=BRIGADIER_FLOAT,
-									next=Options([
-										ArgumentSchema(
-											name='alpha',
-											type=BRIGADIER_FLOAT,
-											next=PARTICLE_ARGUMENT_OPTIONS
-										),
-									])
-								),
-							])
-						),
-					])
-				),
-			])
-		),
-	]
-	_SPECIAL_PARTICLES = []
-	for particle in _SPECIAL_PARTICLES_LIST:
-		_SPECIAL_PARTICLES.append(particle)
-		particle = copy.copy(particle)
-		particle.name = f'minecraft:{particle.name}'
-		_SPECIAL_PARTICLES.append(particle)
-	del _SPECIAL_PARTICLES_LIST
-
-	return _SPECIAL_PARTICLES + args
-
-
-COMMANDS_V39: CommandsCreator = copy.deepcopy(COMMANDS_V36)
-
-
-@COMMANDS_V39.modify(name='particle')
+@COMMANDS_V41.modify(name='particle')
 def modify_particle_args(_: FullMCData, args: list[CommandPartSchema]) -> list[CommandPartSchema]:
 	# particle <name> [<pos>] [<delta> <speed> <count> [force|normal] [<viewers>]]
 	# no special cases for some particles anymore.
@@ -308,6 +178,3 @@ def modify_particle_args(_: FullMCData, args: list[CommandPartSchema]) -> list[C
 			])
 		),
 	]
-
-
-COMMANDS_V41: CommandsCreator = copy.deepcopy(COMMANDS_V39)

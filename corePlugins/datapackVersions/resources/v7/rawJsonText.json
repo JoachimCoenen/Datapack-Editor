@@ -1,7 +1,0 @@
-{
-  "$schema": "dpe/json/schema",
-  "$libraries": {
-    "rawJsonText": "rawJsonText-library.json"
-  },
-  "$body": { "$defRef": "rawJsonText:rawJsonText" }
-}
