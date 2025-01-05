@@ -34,7 +34,8 @@
               "constant": "A constant value.",
               "uniform": "A random number following a uniform distribution between two values (inclusive).",
               "binomial": "A random number following a binomial distribution.",
-              "score": "To query and use a scoreboard value."
+              "score": "To query and use a scoreboard value.",
+              "storage": "A value in command storage."
             },
             "optionalPrefixes": ["minecraft:"]
           }

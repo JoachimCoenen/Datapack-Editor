@@ -138,7 +138,7 @@
     "worldgen/feature_size_type": { "$ref": "tags", "schema": "worldgen/feature_size_type" }, // Feature size type
     
     // additional tags:
-    "block_type": { "$defRef": "block"}, // alias
+    "block_type": { "$ref": "tags", "schema": "block_type" }, // block_type != block!
     "fluid_type": { "$defRef": "fluid"}, // alias
     "function": { "$ref": "tags", "schema": "functions" },
     "item_type": { "$defRef": "item"}, // alias
