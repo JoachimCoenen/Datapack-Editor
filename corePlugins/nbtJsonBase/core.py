@@ -658,6 +658,27 @@ def resolvePath[N: StructureNode[N]](data: StructureDataNode[N], path: tuple[str
 	return result
 
 
+def resolvePath2[R: StructureDataNode](data: StructureDataNode, path: tuple[str | int, ...], RCls: Type[R]) -> Optional[R]:
+	result = data
+	for item in path:
+		if isinstance(item, str):
+			if not isinstance(result, ObjectNode):
+				return None
+			prop = result.data.get(item)
+			if prop is None:
+				return None
+			result = prop.value
+		else:
+			if not isinstance(result, ListLikeNode):
+				return None
+			if item >= len(result.data):
+				return None
+			result = result.data[item]
+	if isinstance(result, RCls):
+		return result
+	return None
+
+
 def getEffectivePropertyValue(propertyName: str, jObject: ObjectNode) -> PyStructureValue:
 	dp = jObject.data.get(propertyName)
 	if dp is not None:
@@ -796,6 +817,7 @@ __all__ = [
 	'STRUCTURE_ILLEGAL_SCHEMA',
 
 	'resolvePath',
+	'resolvePath2',
 	'getEffectivePropertyValue',
 	'toPyValue',
 

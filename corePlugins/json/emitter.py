@@ -4,20 +4,22 @@ from collections import OrderedDict
 from functools import partial
 from typing import Any, Optional, Union, Type, Callable
 
-from cat.utils.collections_ import AddToDictDecorator
-from .core import *
+from cat.utils.collections_ import AddToDictDecorator, getIfKeyIssubclass
+
+from corePlugins.nbtJsonBase.core import StructureDataNode, BasicDataNode, ListLikeNode, ObjectNode, StructureProperty, \
+	StructureNode
 
 
 class ComplexEncoder(json.JSONEncoder):
 	def default(self, obj):
-		if isinstance(obj, JsonNode):
-			nh = _nodeHandlers[obj.typeName]
+		if isinstance(obj, StructureNode):
+			nh = getIfKeyIssubclass(_nodeHandlers, type(obj))
 			return nh(self, obj)
 		return super(ComplexEncoder, self).default(obj)
 
 
 def emitJson(
-		data: JsonData,
+		data: StructureDataNode,
 		*,
 		skipkeys: bool = False,
 		ensure_ascii: bool = True,
@@ -64,25 +66,22 @@ collapseSingleLineArray = partial(COLLAPSE_SINGLE_LINE_ARRAY.sub, r'[ \1 ]')
 COLLAPSE_SINGLE_LINE_OBJECT = re.compile(rf'\{{\s*("[^"\n]*"\s*:\s*{SIMPLE_VAL_REGEX})\s*\}}')
 collapseSingleLineObject = partial(COLLAPSE_SINGLE_LINE_OBJECT.sub, r'{ \1 }')
 
-_nodeHandlers: dict[str, Callable[[ComplexEncoder, JsonData], str]] = {}
+_nodeHandlers: dict[type, Callable[[ComplexEncoder, StructureDataNode], str]] = {}
 
 nodeHandler = AddToDictDecorator(_nodeHandlers)
 
 
-@nodeHandler('property')
-def propertyHandler(self: ComplexEncoder, node: JsonProperty) -> JsonData:  # tuple[str, JsonData]:
+@nodeHandler(StructureProperty)
+def propertyHandler(self: ComplexEncoder, node: StructureProperty) -> StructureDataNode:  # tuple[str, JsonData]:
 	return node.value
 
 
-@nodeHandler('object')
-def objectHandler(self: ComplexEncoder, node: JsonObject) -> OrderedDict[str, JsonData]:
+@nodeHandler(ObjectNode)
+def objectHandler(self: ComplexEncoder, node: ObjectNode) -> OrderedDict[str, StructureDataNode]:
 	return OrderedDict(node.data.items())
 
 
-@nodeHandler('array')
-@nodeHandler('string')
-@nodeHandler('boolean')
-@nodeHandler('number')
-@nodeHandler('null')
-def arrayHandler(self: ComplexEncoder, node: JsonArray) -> list[JsonData]:
+@nodeHandler(ListLikeNode)
+@nodeHandler(BasicDataNode)
+def arrayHandler(self: ComplexEncoder, node: StructureDataNode) -> list[StructureDataNode]:
 	return node.data
