@@ -193,6 +193,10 @@ class TmplRefStrContext(StringNodeContext):
 
 		if isinstance(definition, StructureNode):
 			description = resolvePath(definition, ("description",))
+			if description is None:
+				description = MDStr('')
+			else:
+				description = MDStr(str(description.data))
 		else:
 			description = node.parsedValue.definition.description
 
