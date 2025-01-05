@@ -1,5 +1,6 @@
 ## Next Version
 ### Features
+ * Added support for Minecraft versions 1.20.5 and 1.20.6.
  * Added support for validation, code suggestions, and inline documentation in SNBT. JSON schemas are used. 
  * Added validation, code suggestions, and inline documentation for particle configuration tags.
  * Added validation, code suggestions, and inline documentation for item sub-predicates (in JSON, SNBT and MCFunction).
