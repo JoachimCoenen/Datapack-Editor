@@ -238,11 +238,16 @@ class CreateNewDialogPage(DialogPage[CreateNewData]):
 class CreateFromExistingDialogPage(DialogPage[CreateFromExistingData]):
 	def onGUI(self, gui: DatapackEditorGUI) -> None:
 		# with gui.groupBox("Create From Existing"):
-		with gui.hLayout(), gui.hCentered():
+		with gui.hCentered2():
 			gui.title("To come in a future version.", wordWrap=False)
+		with gui.hCentered2():
+			gui.label("In the meantime use the [Open Existing] tab.", wordWrap=False)
 		with gui.hCentered2():
 			gui.title("😎")
 		gui.addVSpacer(0, SizePolicy.Expanding)  # preventVStretch
+
+	def validate(self) -> list[pd.ValidatorResult]:
+		return [pd.ValidatorResult("To come in a future version.", 'error')]
 
 	def acceptAction(self, gui: DatapackEditorGUI) -> None:
 		gui.showInformationDialog("Creating From Existing Project...", "Please stand by...")
