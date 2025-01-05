@@ -121,7 +121,6 @@ class FilterArgOptions(FilterArgSchemaBase):
 @dataclass
 class FilterArguments(FilterArgNode[FilterArgOptions]):
 	typeName: ClassVar[str] = 'FilterArguments'
-	source: bytes = field(repr=False)
 	arguments: OrderedMultiDict[bytes, FilterArgument]
 
 	@property
@@ -193,7 +192,7 @@ def parseFilterArgsLike(
 	if startC != endC:  # if we have filter args specified:
 		assert sr.text[startC] == options.openingOrd, f"start mismatch: {sr.text[startC:endC]=!r}, {chr(options.openingOrd)=!r}"
 
-	return FilterArguments(argsSpan, options, sr.fullSource, arguments)
+	return FilterArguments(argsSpan, options, arguments)
 
 
 def checkAndConsumeComma(options: FilterArgOptions, sr: StringReader, errorsIO: list[GeneralError]):
@@ -307,7 +306,7 @@ class FilterArgNodeCtxProvider(ContextProvider[FilterArgNode]):
 class FilterArgumentsContext(StructuredContext[FilterArguments]):
 	def getSuggestions(self, node: FilterArguments, pos: Position, replaceCtx: str, info: CtxInfo[FilterArguments]) -> Suggestions:
 		argsStart = node.span.start
-		contextStr = node.source[argsStart.index:node.span.end.index]
+		contextStr = info.ctxProvider.text[argsStart.index:node.span.end.index]
 		cursorPos = pos.index - argsStart.index
 
 		options: FilterArgOptions = node.schema
