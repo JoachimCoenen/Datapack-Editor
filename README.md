@@ -66,20 +66,19 @@ For Windows and Linux (Debian)
 * Windows
   * Download the zip file, extract it to an empty folder and run the `start.cmd` file.
   * Avast, AVG, and Zillya might label the windows executable as malware<sup>[[1]][virustotal_LINK]</sup>.
-    This is a **false positive** caused by the way this application has been packaged<sup>[[2]][pyinstaler_malware_LINK]</sup>. See issue [#51](https://github.com/JoachimCoenen/Datapack-Editor/issues/51).
+    This is a **false positive**<sup>[[2]][pyinstaler_malware_LINK]</sup>.
 * Linux
   * Download the zip file, extract it to an empty folder and run the `Datakack Editor` file.
 
 If you have any questions, problems or suggestions, feel free to create an [Issue][NewIssue_LINK]. 
 
 ## Screenshots 
-<img src="screenshots/mainWindow.png" alt="Main Window" width="49%"></img>
+<img src="screenshots/mianWindow_annotated.png" alt="Main Window annotated" width="49%"></img>
 <img src="screenshots/quickFind.png" alt="Quickly find and open a file" width="49%"></img>
 
 <img src="screenshots/createNewProject.png" alt="Create New Project Dialog" width="33%"></img>
 <img src="screenshots/search.png" alt="Search Dialog" width="32%"></img>
 <img src="screenshots/validateFiles.png" alt="Validate File" width="33%"></img>
-<img src="screenshots/mianWindow_annotated.png" alt="Main Window annotated" width="33%"></img>
 
 ## Disclaimer
 This program is not affiliated with Mojang Studios.  
