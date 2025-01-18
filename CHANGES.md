@@ -1,6 +1,9 @@
 ## next version
 ### Features
- * Added common unified style ids for syntax highlighting.
+ * Added common unified style ids for syntax highlighting. (issue #35)
+
+### Fixes
+ * Fixed drifting of encoded index when parsing nested JSON with a nesting depth > 2.
 
 
 ## 0.9.0-alpha

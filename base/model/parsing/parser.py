@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar, NamedTuple, Callable
+from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar, NamedTuple, Callable, cast
 
 from base.model.parsing.bytesConstants import WHITESPACE_CHARS
 from base.model.parsing.bytesUtils import bytesToStr
@@ -15,11 +16,18 @@ _TToken = TypeVar('_TToken', bound=TokenLike)
 _TNode = TypeVar('_TNode', bound=Node)
 _TSchema = TypeVar('_TSchema', bound=Schema)
 
-MarkerList = list[tuple[int, int]]
+type Marker = tuple[int, int]
+"""
+A (encPos, decPos) pair, where:
+	- enc: encoded = the index in user space (aka. string & index edited by the user)
+	- dec: decoded = the index in parser space (aka. string & index used by the parser)
+"""
+
+type MarkerList = list[Marker]
 """
 A List of (encPos, decPos) pairs, where:
-	- enc: encoded = the string (& indices) edited by the user
-	- dec: decoded = the string (& indices) used by the parser
+	- enc: encoded = the index in user space (aka. string & index edited by the user)
+	- dec: decoded = the index in parser space (aka. string & index used by the parser)
 """
 
 
@@ -46,20 +54,31 @@ class IndexMapper:
 	dec: decoded = the string (& indices) used by the parser
 	(encPos, decPos)
 	"""
-	_markers: MarkerList = field(default_factory=lambda: [(0, 0)], kw_only=True)
+	_markers: MarkerList = field(kw_only=True)
 	"""
 	list of (encPos, decPos) pairs, where:
 		- enc: encoded = the string (& indices) edited by the user
 		- dec: decoded = the string (& indices) used by the parser
 	"""
-	_isIdentity: bool = field(default=True, kw_only=True)
+	_isIdentity: bool = field(kw_only=True)
 	""" list of (encPos, decPos) pairs"""
 
 	IDENTITY_MAPPER: ClassVar[IndexMapper] = ...
 
+	def __post_init__(self):
+		assert self._markers  # make sure we have at least one marker!
+
 	@property
 	def isIdentity(self) -> bool:
 		return self._isIdentity
+
+	@property
+	def first(self) -> Marker:
+		return self._markers[0]
+
+	@property
+	def last(self) -> Marker:
+		return self._markers[-1]
 
 	def _findMarker(self, pos: int, toEnc: bool) -> int:
 		"""
@@ -133,7 +152,10 @@ class IndexMapper:
 		return self._mapPos(decPos, toEnc=True)
 
 
-IndexMapper.IDENTITY_MAPPER = IndexMapper(_markers=[])
+IndexMapper.IDENTITY_MAPPER = IndexMapper(
+	_markers=cast(MarkerList, ((0, 0),)),  # use a tuple[Marker] instead of a list ,so we do not accidentally modify it.
+	_isIdentity=True
+)
 
 
 @dataclass
@@ -151,11 +173,11 @@ class IndexMapBuilder:
 	_isIdentity: bool = field(default=True, init=False)
 
 	def __post_init__(self):
-		self._lastBaseMapIdx = self.baseMap.findMarkerIdxByDecPos(self.offset)  # our offset is a decPos as seen by our baseMap. (bud for us it's still a encPos)
+		self._lastBaseMapIdx = self.baseMap.findMarkerIdxByDecPos(self.offset)  # our offset is a decPos as seen by our baseMap. (but for us it's still a encPos)
 		self._lastEncPos = self.offset
 		self.addMarker(0, 0)
 
-	def _addActualMarker(self, marker: tuple[int, int]) -> None:
+	def _addActualMarker(self, marker: Marker) -> None:
 		if not self._markers or self._markers[-1] != marker:
 			if marker[0] != marker[1]:
 				self._isIdentity = False
@@ -173,6 +195,15 @@ class IndexMapBuilder:
 		for idx in range(self._lastBaseMapIdx + 1, baseIdx + 1):
 			baseMarker = self.baseMap._markers[idx]
 			actualBaseDec = mapRange(baseMarker[1], lastEncPos, encPos, lastMarker[1], decPos)
+
+			if lastMarker[1] == actualBaseDec:  # DEC idx match.
+				# We might need to discard this base marker, because it would accidentally map to a zero-width range.
+				# But keep the marker if the range was DELIBERATELY mapped to a zero-width range; i.e. we got the range mapping from the baseMap.
+				prevBaseMarker = self.baseMap._markers[idx - 1]
+				if (prevBaseMarker[0] != lastMarker[0]  # don't have same ENC idx
+				or prevBaseMarker[1] != baseMarker[1]):  # range WAS not mapped to a zero-width range
+					# zero-width range does not exist in baseMap, so it's accidental; discard the marker.
+					continue
 			self._addActualMarker((baseMarker[0], actualBaseDec))
 		self._lastBaseMapIdx = baseIdx
 
@@ -247,11 +278,23 @@ class _Base(ABC):
 		self.length = len(self.text)
 		self._idxMprIsIdentity = self.indexMapper.isIdentity
 
+	def getActualEncCursor(self, cursor: int) -> int:
+		"""returns the *actual* encoded cursor"""
+		if self._idxMprIsIdentity:
+			return cursor + self.cursorOffset
+		else:
+			return self.indexMapper.toEncoded(cursor + self.cursorOffset)
+
+	def getDecCursor(self, actualEncCursor: int) -> int:
+		"""returns the *actual* encoded cursor"""
+		if self._idxMprIsIdentity:
+			return actualEncCursor - self.cursorOffset
+		else:
+			return self.indexMapper.toDecoded(actualEncCursor) - self.cursorOffset
+
 	@property
 	def currentPos(self) -> Position:
-		actualCursor = self.cursor + self.cursorOffset
-		if not self._idxMprIsIdentity:
-			actualCursor = self.indexMapper.toEncoded(actualCursor)
+		actualCursor = self.getActualEncCursor(self.cursor)
 		return Position(self.line, actualCursor - self.lineStart, actualCursor)
 
 	def getCursorAndLine(self) -> tuple[int, int, int]:
@@ -436,7 +479,7 @@ def parse(
 	if parserCls is None:
 		return None, [ParsingError(MDStr(f"No Parser for language `{language}` registered."), span=NULL_SPAN, style='info')], None
 	if indexMapper is None:
-		indexMapper = IndexMapper()
+		indexMapper = IndexMapper.IDENTITY_MAPPER
 	if fullSource is None:
 		fullSource = text
 	parser: ParserBase = parserCls(text, line, lineStart, cursor, cursorOffset, indexMapper, fullSource, schema, filePath, **kwargs)

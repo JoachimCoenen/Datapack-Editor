@@ -130,7 +130,8 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 			return BooleanTag(current.span, None, False, content)
 		else:
 			self._next()
-			return StringTag(current.span, None, bytesToStr(content), content, content, self.indexMapper)
+			innerSlice = current.span.slice
+			return StringTag(current.span, None, bytesToStr(content), content, content, innerSlice, self.indexMapper)
 		
 	def parseBooleanTag(self) -> Optional[BooleanTag]:
 		current = self._current
@@ -206,13 +207,13 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 	def parseDoubleTag(self) -> Optional[DoubleTag]:
 		return self._parseNumberTagInternal(NUMBER_INFO[DoubleTag])
 
-	def unescapeQuotedString(self, string: bytes, span: Span) -> tuple[str, bytes, IndexMapper]:
+	def unescapeQuotedString(self, string: bytes, span: Span, innerSlice: slice) -> tuple[str, bytes, IndexMapper]:
 		hasEscapeSequence = b'\\' in string
 		quote: int = string[0]
 		quotesLen = 1
 
 		if hasEscapeSequence:
-			idxMapBldr = self._makeIndexMapBuilderForStr(span.start.index, quotesLen)
+			idxMapBldr = self._makeIndexMapBuilderForStr(innerSlice.start)
 
 			escapableChars = b'\\' + strToBytes(chr(quote))
 
@@ -258,7 +259,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 				value = ''
 
 			if not self._idxMprIsIdentity:
-				idxMapBldr = self._makeIndexMapBuilderForStr(span.start.index, quotesLen)
+				idxMapBldr = self._makeIndexMapBuilderForStr(innerSlice.start)
 				decPosLastChar = len(string)
 				encPosLastChar = decPosLastChar
 				idxMap = idxMapBldr.completeIndexMapper(encPosLastChar, decPosLastChar)
@@ -275,20 +276,32 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 
 		content: bytes = self._getContent(current)
 		if current.type == TokenType.QuotedString:
-			data, rawData, idxMap = self.unescapeQuotedString(content, current.span)
+			if self.indexMapper.isIdentity:
+				innerStart = current.span.start.index + 1
+				innerEnd = current.span.end.index - 1
+				innerSlice = slice(innerStart, innerEnd)
+			else:
+				innerStart = self.getActualEncCursor(self.getDecCursor(current.span.start.index) + 1)
+				innerEnd = self.getActualEncCursor(self.getDecCursor(current.span.end.index) - 1)
+				innerSlice = slice(innerStart, innerEnd)
+
+			data, rawData, idxMap = self.unescapeQuotedString(content, current.span, innerSlice)
+
 		elif (current.type == TokenType.String) or (acceptNumber and current.type == TokenType.Number):
 			data: str = bytesToStr(content)  # we're good
 			rawData: bytes = content
 			idxMap = self.indexMapper
+			innerSlice = current.span.slice
 		else:
 			self._error(EXPECTED_BUT_GOT_MSG.format('a String', wrapInMDCode(bytesToStr(content))), current)
 			return None  # oh, no!
 
 		self._next()
-		return StringTag(current.span, None, data, content, rawData, idxMap)
 
-	def _makeIndexMapBuilderForStr(self, contentStartIdx: int, decodedQuotesLen: int) -> IndexMapBuilder:
-		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(contentStartIdx) + decodedQuotesLen)  # + 1 because of opening quotation marks?
+		return StringTag(current.span, None, data, content, rawData, innerSlice, idxMap)
+
+	def _makeIndexMapBuilderForStr(self, contentStartIdx: int) -> IndexMapBuilder:
+		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(contentStartIdx))
 
 	def _parseListLike(self, delimiter: TokenType, closing: TokenType, parseItem: Callable[[], bool]) -> bool:
 		if self._current is not None and self._current.type is closing:

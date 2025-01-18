@@ -333,7 +333,7 @@ def parseNPrepare(
 		**kwargs
 	)
 	if node is not None:
-		prepareTree(node, text, filePath, errorsIO=errors)
+		prepareTree(node, fullSource or text, filePath, errorsIO=errors)
 	return node, errors, parser
 
 

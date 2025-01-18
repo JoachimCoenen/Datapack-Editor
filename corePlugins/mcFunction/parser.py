@@ -57,7 +57,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 			if lineContMatch is not None:
 				if not lasWasEscaped:
 					# we need a new IndexMapBuilder
-					idxMapBldr = IndexMapBuilder(self.indexMapper, self.cursorOffset)  # - self.cursorOffset)  # + 1 because of opening quotation marks?
+					idxMapBldr = IndexMapBuilder(self.indexMapper, self.cursorOffset)
 
 				lineContpos = lineContMatch.start(0)
 				virtualLine += strippedLine[:lineContpos]
@@ -116,7 +116,7 @@ class MCFunctionParser(ParserBase[MCFunction, MCFunctionSchema]):
 		)
 
 	def parseCommand(self, sr: StringReader) -> Optional[ParsedCommand]:
-		isTemplateCommand =  sr.tryConsumeByte(ord(b'$'))
+		isTemplateCommand = sr.tryConsumeByte(ord(b'$'))
 		startCursor = sr.cursor
 		startPos = sr.currentPos
 		sr.tryConsumeByte(ord(b'/'))

@@ -161,6 +161,8 @@ class StringNode[N: StructureNode[N]](BasicDataNode[N, str]):
 	data: str
 	rawData: bytes
 	""" The actual value of the string expressed in bytes. Not to be confused with field 'raw'. """
+	innerSlice: slice
+	""" The actual Span *inside* the quotes. """
 	indexMapper: IndexMapper
 	parsedValue: Optional[Any] = None
 

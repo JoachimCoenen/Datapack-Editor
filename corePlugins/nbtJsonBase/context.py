@@ -429,7 +429,7 @@ class ParsingStructureCtx(StringNodeContext, ABC):
 			line=node.span.start.line,
 			lineStart=node.span.start.index - node.span.start.column,  # not quite sure, yet...
 			cursor=0,
-			cursorOffset=node.indexMapper.toDecoded(node.span.start.index) + 1,  # + 1 in order to skip the quotation marks
+			cursorOffset=node.indexMapper.toDecoded(node.innerSlice.start),
 			indexMapper=node.indexMapper,
 			fullSource=info.ctxProvider.text,
 			**self.getParserKwArgs(node)

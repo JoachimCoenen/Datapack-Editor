@@ -278,8 +278,21 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		string = raw = token.value
 		hasEscapeSequence = b'\\' in string
 
+		# calculate innerSlice:
+		if False:  # todo uncomment when merging with SNBT parser: if (current.type == TokenType.String) or (acceptNumber and current.type == TokenType.Number):
+			innerSlice = token.span.slice
+		elif self.indexMapper.isIdentity:
+			innerStart = token.span.start.index + 1
+			innerEnd = token.span.end.index - 1
+			innerSlice = slice(innerStart, innerEnd)
+		else:
+			innerStart = self.getActualEncCursor(self.getDecCursor(token.span.start.index) + 1)
+			innerEnd = self.getActualEncCursor(self.getDecCursor(token.span.end.index) - 1)
+			innerSlice = slice(innerStart, innerEnd)
+
+		# unescapeQuotedString:
 		if hasEscapeSequence:
-			idxMapBldr = self.makeIndexMapBuilderForStr(token.span.start.index)
+			idxMapBldr = self.makeIndexMapBuilderForStr(innerSlice.start)
 
 			chars: bytes = b''  # list[str] = []
 			index = 1  # decoded index
@@ -342,17 +355,17 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 				value = ''
 
 			if not self._idxMprIsIdentity:
-				idxMapBldr = self.makeIndexMapBuilderForStr(token.span.start.index)
+				idxMapBldr = self.makeIndexMapBuilderForStr(innerSlice.start)
 				decPosLastChar = len(string)
 				encPosLastChar = decPosLastChar
 				idxMap = idxMapBldr.completeIndexMapper(encPosLastChar, decPosLastChar)
 			else:
 				idxMap = IndexMapper.IDENTITY_MAPPER
 
-		return JsonString(token.span, None, value, raw, string, idxMap)
+		return JsonString(token.span, None, value, raw, string, innerSlice, idxMap)
 
 	def makeIndexMapBuilderForStr(self, contentStartIdx: int) -> IndexMapBuilder:
-		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(contentStartIdx) + 1)  # + 1 because of opening quotation marks?
+		return IndexMapBuilder(self.indexMapper, self.indexMapper.toDecoded(contentStartIdx))
 
 	def parse_number(self) -> JsonNumber:
 		"""Parses a number out of a JSON token"""
