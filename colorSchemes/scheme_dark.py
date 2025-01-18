@@ -114,7 +114,7 @@ def invertLanguageIndicators(gs: dict[LanguageId, IndicatorStyle], blackColor: Q
 
 def invertIndicatorStyle(style: IndicatorStyle, blackColor: QColor, name: str) -> IndicatorStyle:
 	foreground = invert(style.foreground, blackColor=blackColor, name=f'{name}.foreground')
-	hoverForeground = style.hoverForeground#invert(style.hoverForeground, name=f'{name}.hoverForeground')
+	hoverForeground = invert(style.hoverForeground, blackColor=blackColor, name=f'{name}.hoverForeground')
 	outline = invert(style.outline, blackColor=blackColor, name=f'{name}.outline') if style.outline is not None else None
 	if _DO_PRINT: print("----------------")
 	return replace(style, foreground=foreground, hoverForeground=hoverForeground, outline=outline)
