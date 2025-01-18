@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
-from typing import Type, Optional, ClassVar
+from typing import Type, ClassVar
 
 from cat.utils import Decorator
 from cat.utils.collections_ import AddToDictDecorator
-from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StyleId
+from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StyleId, CommonStyleIds
 from . import MC_FUNCTION_ID
 from .argumentTypes import *
 from .command import CommandSchema, MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
@@ -14,48 +14,16 @@ from base.model.utils import LanguageId
 from .filterArgs import FilterArgNode, FilterArgument
 
 
-class StyleIds(StyleIdEnum):
-	Default = DEFAULT_STYLE_ID
-	Command = DEFAULT_STYLE_ID + 1
-	String = DEFAULT_STYLE_ID + 2
-	Number = DEFAULT_STYLE_ID + 3
-	Constant = DEFAULT_STYLE_ID + 4
-	TargetSelector = DEFAULT_STYLE_ID + 5
-	Operator = DEFAULT_STYLE_ID + 6
-	Keyword = DEFAULT_STYLE_ID + 7
-
-	Complex = DEFAULT_STYLE_ID + 8
-	Comment = DEFAULT_STYLE_ID + 9
-	Error = DEFAULT_STYLE_ID + 10
-
-	# KeyWord = 14
-	# Variable = 11
-	# BuiltinFunction = 17
-
-
-_allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
-	BRIGADIER_BOOL.name:               StyleIds.Constant,
-	BRIGADIER_DOUBLE.name:             StyleIds.Number,
-	BRIGADIER_FLOAT.name:              StyleIds.Number,
-	BRIGADIER_INTEGER.name:            StyleIds.Number,
-	BRIGADIER_LONG.name:               StyleIds.Number,
-	BRIGADIER_STRING.name:             StyleIds.String,
-}
-
-
 @dataclass
 class ArgumentStyler(ABC):
-	# innerStylers: dict[Type[Node], CatStyler]
 	commandStyler: MCCommandStyler
 	offset: int = field(init=False)
-	#setStyling: StylingFunc = field(init=False)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		self.offset = self.commandStyler.offset
-		#2self.setStyling = self.commandStyler.setStyling
 
-	def setStyling(self, span: slice, style: StyleIds) -> None:
-		self.commandStyler.setStyling(span, StyleId(style + self.offset))
+	def setStyling(self, span: slice, style: StyleId) -> None:
+		self.commandStyler.setStyling(span, style)
 
 	@classmethod
 	@abstractmethod
@@ -74,9 +42,9 @@ argumentStyler = Decorator(AddToDictDecorator(_argumentStylers))
 @dataclass
 class MCCommandStyler(CatStyler[CommandPart]):
 
-	@property
-	def styleIdEnum(self) -> Type[StyleIdEnum]:
-		return StyleIds
+	@classmethod
+	def usesCommonStyleIds(cls) -> bool:
+		return True
 
 	argumentStylers: dict[str, ArgumentStyler] = field(init=False, repr=False, compare=False)
 
@@ -88,7 +56,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		return list(set(localInnerLanguages))
 		# return [LanguageId('JSON')]
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		super(MCCommandStyler, self).__post_init__()
 		self.argumentStylers = {
 			name: argStylerCls(self) for name, argStylerCls in _argumentStylers.items()
@@ -122,7 +90,7 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		return end
 
 	def styleComment(self, comment: ParsedComment) -> int:
-		self.setStyling(comment.span.slice, StyleIds.Comment)
+		self.setStyling(comment.span.slice, CommonStyleIds.comment)
 		return comment.span.end.index
 
 	def styleCommand(self, command: ParsedCommand) -> int:
@@ -144,27 +112,26 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		schema = argument.schema
 
 		if isinstance(schema, KeywordSchema):
-			style = StyleIds.Keyword
+			style = CommonStyleIds.default
 		elif isinstance(schema, ArgumentSchema):
-			if isinstance(schema.type, LiteralsArgumentType):
-				style = StyleIds.Constant
+			typeName = schema.type.name
+			styler = self.argumentStylers.get(typeName, None)
+			if styler is not None:
+				styler.style(argument)
+				return span
+			elif isinstance(schema.type, LiteralsArgumentType):
+				style = CommonStyleIds.special_constant
 			else:
-				typeName = schema.type.name
-				styler = self.argumentStylers.get(typeName, None)
-				if styler is None:
-					style = StyleIds.Error
-				else:
-					styler.style(argument)
-					return span
+				style = CommonStyleIds.error
 		elif isinstance(schema, CommandSchema):
-			style = StyleIds.Command
+			style = CommonStyleIds.keyword
 		else:
-			style = StyleIds.Error
-		self.setStyling(span, StyleId(style.value + self.offset))
+			style = CommonStyleIds.error
+		self.setStyling(span, StyleId(style.value))
 		return span
 
 
-def addSimpleArgumentStyler(style: StyleIds, *, forArgTypes: list[ArgumentType]) -> None:
+def addSimpleArgumentStyler(style: StyleId, *, forArgTypes: list[ArgumentType]) -> None:
 	styleId = style
 
 	class SimpleArgumentStyler(ArgumentStyler):
@@ -181,18 +148,18 @@ def addSimpleArgumentStyler(style: StyleIds, *, forArgTypes: list[ArgumentType])
 		argumentStyler(argType.name)(SimpleArgumentStyler)
 
 
-addSimpleArgumentStyler(StyleIds.Constant, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.special_constant, forArgTypes=[
 	BRIGADIER_BOOL,
 ])
 
-addSimpleArgumentStyler(StyleIds.Number, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.number, forArgTypes=[
 	BRIGADIER_DOUBLE,
 	BRIGADIER_FLOAT,
 	BRIGADIER_INTEGER,
 	BRIGADIER_LONG,
 ])
 
-addSimpleArgumentStyler(StyleIds.String, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.string, forArgTypes=[
 	BRIGADIER_STRING,
 ])
 
@@ -204,9 +171,9 @@ class FilterArgumentsStyleIds(StyleIdEnum):
 @dataclass
 class FilterArgumentsStyler(CatStyler[FilterArgNode]):
 
-	@property
-	def styleIdEnum(self) -> Type[StyleIdEnum]:
-		return StyleIds
+	@classmethod
+	def usesCommonStyleIds(cls) -> bool:
+		return True
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
@@ -214,7 +181,6 @@ class FilterArgumentsStyler(CatStyler[FilterArgNode]):
 
 	def styleNode(self, node: FilterArgNode) -> int:
 		if node.typeName == FilterArgument.typeName:
-			return self.styleStructuredNodeForeignNodes(node, DEFAULT_STYLE_ID)  # StyleIds.TargetSelector)
+			return self.styleStructuredNodeForeignNodes(node, DEFAULT_STYLE_ID)
 		else:
-			return self.styleStructuredNodeChildNodes(node, DEFAULT_STYLE_ID)  # StyleIds.TargetSelector)
-
+			return self.styleStructuredNodeChildNodes(node, DEFAULT_STYLE_ID)

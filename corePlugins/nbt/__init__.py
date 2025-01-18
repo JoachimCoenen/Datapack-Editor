@@ -55,5 +55,5 @@ class SNBTPlugin(PluginBase):
 		)]
 
 	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
-		from .snbtStyler import SNBTStyler
-		return {SNBT_ID: SNBTStyler}
+		from corePlugins.nbtJsonBase.structureStyler import StructureStyler
+		return {SNBT_ID: StructureStyler}

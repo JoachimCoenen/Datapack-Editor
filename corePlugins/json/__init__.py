@@ -53,8 +53,8 @@ class JsonPlugin(PluginBase):
 		)]
 
 	def stylers(self) -> dict[LanguageId, Type[CatStyler]]:
-		from .jsonStyler import JsonStyler
-		return {JSON_ID: JsonStyler}
+		from corePlugins.nbtJsonBase.structureStyler import StructureStyler
+		return {JSON_ID: StructureStyler}
 
 	def schemas(self) -> dict[LanguageId, dict[str, Schema]]:
 		from corePlugins.nbtJsonBase.schemaStore import STRUCTURE_SCHEMA_LOADER

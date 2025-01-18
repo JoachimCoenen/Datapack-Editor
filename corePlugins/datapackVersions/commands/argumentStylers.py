@@ -3,80 +3,26 @@ from __future__ import annotations
 from typing import Optional
 
 from base.model.parsing.tree import Node
-from base.gui.styler import StyleId
+from base.gui.styler import CommonStyleIds
 from base.model.utils import LanguageId, Span
 from corePlugins.mcFunction.command import ParsedArgument
-from corePlugins.mcFunction.mcFunctionStyler import addSimpleArgumentStyler, argumentStyler, ArgumentStyler, StyleIds
+from corePlugins.mcFunction.mcFunctionStyler import addSimpleArgumentStyler, argumentStyler, ArgumentStyler
 from .argumentTypes import *
 from .targetSelector import DPE_TARGET_SELECTOR_ADVANCEMENTS, DPE_TARGET_SELECTOR_ADVANCEMENTS_CRITERION, DPE_TARGET_SELECTOR_SCORES
 
-_allArgumentTypeStyles: dict[str, Optional[StyleId]] = {
-	# BRIGADIER_BOOL.name:               StyleIds.Constant,
-	# BRIGADIER_DOUBLE.name:             StyleIds.Number,
-	# BRIGADIER_FLOAT.name:              StyleIds.Number,
-	# BRIGADIER_INTEGER.name:            StyleIds.Number,
-	# BRIGADIER_LONG.name:               StyleIds.Number,
-	# BRIGADIER_STRING.name:             StyleIds.String,
-	MINECRAFT_ANGLE.name:              StyleIds.Number,
-	MINECRAFT_BLOCK_POS.name:          StyleIds.Number,
-	MINECRAFT_BLOCK_PREDICATE.name:    StyleIds.Complex,
-	MINECRAFT_BLOCK_STATE.name:        StyleIds.Complex,
-	MINECRAFT_COLOR.name:              StyleIds.Constant,
-	MINECRAFT_COLUMN_POS.name:         StyleIds.Number,
-	MINECRAFT_COMPONENT.name:          StyleIds.Complex,
-	MINECRAFT_DIMENSION.name:          StyleIds.String,
-	MINECRAFT_ENTITY.name:             StyleIds.TargetSelector,
-	MINECRAFT_ENTITY_ANCHOR.name:      StyleIds.Constant,
-	MINECRAFT_ENTITY_SUMMON.name:      StyleIds.String,
-	MINECRAFT_FLOAT_RANGE.name:        StyleIds.Number,
-	MINECRAFT_FUNCTION.name:           StyleIds.String,
-	MINECRAFT_GAME_PROFILE.name:       StyleIds.TargetSelector,
-	MINECRAFT_INT_RANGE.name:          StyleIds.Number,
-	MINECRAFT_ITEM_ENCHANTMENT.name:   StyleIds.String,
-	MINECRAFT_ITEM_PREDICATE.name:     StyleIds.Complex,
-	MINECRAFT_ITEM_SLOT.name:          StyleIds.Constant,
-	MINECRAFT_ITEM_SLOTS.name:         StyleIds.Constant,
-	MINECRAFT_ITEM_STACK.name:         StyleIds.Complex,
-	MINECRAFT_LOOT_MODIFIER.name:      StyleIds.String,
-	MINECRAFT_LOOT_TABLE.name:         StyleIds.String,
-	MINECRAFT_MESSAGE.name:            StyleIds.String,
-	MINECRAFT_MOB_EFFECT.name:         StyleIds.String,
-	MINECRAFT_NBT_COMPOUND_TAG.name:   StyleIds.Complex,
-	MINECRAFT_NBT_PATH.name:           StyleIds.Complex,
-	MINECRAFT_NBT_TAG.name:            StyleIds.Complex,
-	MINECRAFT_OBJECTIVE.name:          StyleIds.String,
-	MINECRAFT_OBJECTIVE_CRITERIA.name: StyleIds.String,
-	MINECRAFT_OPERATION.name:          StyleIds.Operator,
-	MINECRAFT_PARTICLE.name:           StyleIds.Complex,
-	MINECRAFT_PREDICATE.name:          StyleIds.String,
-	MINECRAFT_RESOURCE_LOCATION.name:  StyleIds.String,
-	MINECRAFT_ROTATION.name:           StyleIds.Number,
-	MINECRAFT_SCORE_HOLDER.name:       StyleIds.TargetSelector,
-	MINECRAFT_SCOREBOARD_SLOT.name:    StyleIds.Constant,
-	MINECRAFT_SWIZZLE.name:            StyleIds.Constant,
-	MINECRAFT_TEAM.name:               StyleIds.Constant,
-	MINECRAFT_TIME.name:               StyleIds.Number,
-	MINECRAFT_UUID.name:               StyleIds.String,
-	MINECRAFT_VEC2.name:               StyleIds.Number,
-	MINECRAFT_VEC3.name:               StyleIds.Number,
-	DPE_ADVANCEMENT.name:              StyleIds.String,
-	DPE_COMPARE_OPERATION.name:        StyleIds.Operator,
-	DPE_BIOME_ID.name:                 StyleIds.String,
-}
 
-addSimpleArgumentStyler(StyleIds.Complex, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.special2, forArgTypes=[
 	MINECRAFT_BLOCK_PREDICATE,
 	MINECRAFT_BLOCK_STATE,
 	MINECRAFT_COMPONENT,
 	MINECRAFT_ITEM_PREDICATE,
 	MINECRAFT_ITEM_STACK,
 	MINECRAFT_NBT_COMPOUND_TAG,
-	MINECRAFT_NBT_PATH,
 	MINECRAFT_NBT_TAG,
 	MINECRAFT_PARTICLE,
 ])
 
-addSimpleArgumentStyler(StyleIds.Constant, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.special_constant, forArgTypes=[
 	# BRIGADIER_BOOL,
 	MINECRAFT_COLOR,
 	MINECRAFT_ENTITY_ANCHOR,
@@ -87,7 +33,7 @@ addSimpleArgumentStyler(StyleIds.Constant, forArgTypes=[
 	MINECRAFT_TEAM,
 ])
 
-addSimpleArgumentStyler(StyleIds.Number, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.number, forArgTypes=[
 	# BRIGADIER_DOUBLE,
 	# BRIGADIER_FLOAT,
 	# BRIGADIER_INTEGER,
@@ -103,28 +49,32 @@ addSimpleArgumentStyler(StyleIds.Number, forArgTypes=[
 	MINECRAFT_VEC3,
 ])
 
-addSimpleArgumentStyler(StyleIds.Operator, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.operator, forArgTypes=[
 	MINECRAFT_OPERATION,
 	DPE_COMPARE_OPERATION,
 ])
 
-addSimpleArgumentStyler(StyleIds.String, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.string, forArgTypes=[
 	# BRIGADIER_STRING,
+	MINECRAFT_MESSAGE,
+	MINECRAFT_NBT_PATH,
+	MINECRAFT_UUID,
+])
+
+addSimpleArgumentStyler(CommonStyleIds.content_locator, forArgTypes=[
 	MINECRAFT_DIMENSION,
 	MINECRAFT_ENTITY_SUMMON,
 	MINECRAFT_FUNCTION,
 	MINECRAFT_ITEM_ENCHANTMENT,
-	MINECRAFT_MESSAGE,
 	MINECRAFT_MOB_EFFECT,
 	MINECRAFT_OBJECTIVE,
 	MINECRAFT_OBJECTIVE_CRITERIA,
 	MINECRAFT_RESOURCE_LOCATION,
-	MINECRAFT_UUID,
 	DPE_ADVANCEMENT,
 	DPE_BIOME_ID,
 ])
 
-addSimpleArgumentStyler(StyleIds.TargetSelector, forArgTypes=[
+addSimpleArgumentStyler(CommonStyleIds.special1, forArgTypes=[
 	MINECRAFT_ENTITY,
 	MINECRAFT_GAME_PROFILE,
 	MINECRAFT_SCORE_HOLDER,
@@ -136,7 +86,7 @@ def styleForeignNode2(self: ArgumentStyler, value: Optional[Node], span: Span) -
 		idx = self.commandStyler.styleForeignNode(value)
 		if idx != value.span.start.index:
 			return
-	self.setStyling(span.slice, StyleIds.Complex)
+	self.setStyling(span.slice, CommonStyleIds.special2)
 
 
 @argumentStyler(MINECRAFT_COMPONENT.name, forceOverride=True)
@@ -169,7 +119,7 @@ class ItemStackStyler(ArgumentStyler):
 		return [LanguageId('SNBT'), LanguageId('PredicateArgs')]
 
 	def style(self, argument: ParsedArgument) -> None:
-		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.Complex)
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.content_locator)
 
 
 @argumentStyler(MINECRAFT_BLOCK_STATE.name, forceOverride=True)
@@ -180,7 +130,7 @@ class BlockStateStyler(ArgumentStyler):
 		return [LanguageId('SNBT'), LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
-		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.Complex)
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.content_locator)
 
 
 @argumentStyler(MINECRAFT_ENTITY.name, forceOverride=True)
@@ -192,7 +142,7 @@ class EntityStyler(ArgumentStyler):
 		return [LanguageId('SNBT'), LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
-		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.TargetSelector)
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.special1)
 
 
 @argumentStyler(DPE_TARGET_SELECTOR_SCORES.name, forceOverride=True)
@@ -217,4 +167,4 @@ class StructuredNodeStyler(ArgumentStyler):
 		return []
 
 	def style(self, argument: ParsedArgument) -> None:
-		self.commandStyler.styleStructuredNodeForeignNodes(argument, StyleIds.Complex)
+		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.content_locator)

@@ -1,74 +1,65 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar, Callable, Type
+from typing import ClassVar, Callable
 
 from cat.utils.collections_ import AddToDictDecorator
-from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum
+from base.gui.styler import CatStyler, CommonStyleIds, StyleId
 from .core import *
 from base.model.parsing.tree import Node
 from base.model.utils import LanguageId
 
 
-class StyleId(StyleIdEnum):
-	default = DEFAULT_STYLE_ID
-	null    = DEFAULT_STYLE_ID + 1
-	boolean = DEFAULT_STYLE_ID + 2
-	number  = DEFAULT_STYLE_ID + 3
-	string  = DEFAULT_STYLE_ID + 4
-	key     = DEFAULT_STYLE_ID + 5
-	invalid = DEFAULT_STYLE_ID + 6
-
-
 @dataclass
-class JsonStyler(CatStyler[JsonNode]):
+class StructureStyler(CatStyler[StructureNode]):
 
-	@property
-	def styleIdEnum(self) -> Type[StyleIdEnum]:
-		return StyleId
+	@classmethod
+	def usesCommonStyleIds(cls) -> bool:
+		""" override when CommonStyleIds are used"""
+		return True
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
 		return [LanguageId('SNBT'), LanguageId('MCFunction')]
 
-	_STYLERS: ClassVar[dict[str, Callable[[JsonStyler, JsonData], int]]] = {}
+	_STYLERS: ClassVar[dict[str, Callable[[StructureStyler, StructureDataNode], int]]] = {}
 	_Styler: ClassVar = AddToDictDecorator(_STYLERS)
 
 	def __post_init__(self):
-		super(JsonStyler, self).__post_init__()
-		self.DEFAULT_STYLE: StyleId = self.offset + StyleId.default.value
-		self.NULL_STYLE:    StyleId = self.offset + StyleId.null.value
-		self.BOOLEAN_STYLE: StyleId = self.offset + StyleId.boolean.value
-		self.NUMBER_STYLE:  StyleId = self.offset + StyleId.number.value
-		self.STRING_STYLE:  StyleId = self.offset + StyleId.string.value
-		self.KEY_STYLE:     StyleId = self.offset + StyleId.key.value
-		self.INVALID_STYLE: StyleId = self.offset + StyleId.invalid.value
+		super().__post_init__()
+		self.DEFAULT_STYLE: StyleId = CommonStyleIds.default
+		self.NULL_STYLE:    StyleId = CommonStyleIds.special_constant
+		self.BOOLEAN_STYLE: StyleId = CommonStyleIds.special_constant
+		self.NUMBER_STYLE:  StyleId = CommonStyleIds.number
+		self.STRING_STYLE:  StyleId = CommonStyleIds.string
+		self.KEY_STYLE:     StyleId = CommonStyleIds.key1
+		self.INVALID_STYLE: StyleId = CommonStyleIds.invalid
 
-	def styleNode(self, data: JsonData) -> int:
+	def styleNode(self, data: StructureDataNode) -> int:
 		return self._STYLERS[data.typeName](self, data)
 
-	@_Styler(JsonInvalid.typeName)
-	def styleInvalid(self, data: JsonInvalid) -> int:
+	@_Styler(InvalidNode.typeName)
+	def styleInvalid(self, data: InvalidNode) -> int:
 		self.setStyling(data.span.slice, self.INVALID_STYLE)
 		return data.span.end.index
 
-	@_Styler(JsonNull.typeName)
-	def styleNull(self, data: JsonNull) -> int:
+	@_Styler(NullNode.typeName)
+	def styleNull(self, data: NullNode) -> int:
 		self.setStyling(data.span.slice, self.NULL_STYLE)
 		return data.span.end.index
 
-	@_Styler(JsonBool.typeName)
-	def styleBool(self, data: JsonBool) -> int:
+	@_Styler(BooleanNode.typeName)
+	def styleBool(self, data: BooleanNode) -> int:
 		self.setStyling(data.span.slice, self.BOOLEAN_STYLE)
 		return data.span.end.index
 
-	@_Styler(JsonNumber.typeName)
-	def styleNumber(self, data: JsonNumber) -> int:
+	@_Styler(NumberNode.typeName)
+	def styleNumber(self, data: NumberNode) -> int:
 		self.setStyling(data.span.slice, self.NUMBER_STYLE)
 		return data.span.end.index
 
-	@_Styler(JsonString.typeName)
-	def styleString(self, data: JsonString) -> int:
+	@_Styler(StringNode.typeName)
+	def styleString(self, data: StringNode) -> int:
 		if data.parsedValue is not None and isinstance(data.parsedValue, Node):
 			beforeLen = slice(data.span.start.index, data.parsedValue.span.start.index)
 			self.setStyling(beforeLen, self.STRING_STYLE)
@@ -79,16 +70,16 @@ class JsonStyler(CatStyler[JsonNode]):
 			self.setStyling(data.span.slice, self.STRING_STYLE)
 		return data.span.end.index
 
-	@_Styler(JsonArray.typeName)
-	def styleArray(self, data: JsonArray) -> int:
+	@_Styler(ListLikeNode.typeName)
+	def styleArray(self, data: ListLikeNode) -> int:
 		return self.styleStructuredNodeChildNodes(data, self.DEFAULT_STYLE)
 
-	def styleKey(self, data: JsonString) -> int:
+	def styleKey(self, data: StringNode) -> int:
 		self.setStyling(data.span.slice, self.KEY_STYLE)
 		return data.span.end.index
 
-	@_Styler(JsonObject.typeName)
-	def styleObject(self, data: JsonObject) -> int:
+	@_Styler(ObjectNode.typeName)
+	def styleObject(self, data: ObjectNode) -> int:
 		lastPos = data.span.start.index
 		for prop in data.data.values():
 			self.setStyling(slice(lastPos, prop.key.span.start.index), self.DEFAULT_STYLE)
