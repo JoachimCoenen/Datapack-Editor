@@ -432,7 +432,7 @@ class DatapackEditorGUI(AutoGUI):
 
 		return filterContext.selectedValue, filterContext
 
-	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[IndexSpan], bool, bool, SearchOptions]:
+	def searchBar(self, text: Optional[str], searchExpr: Optional[str]) -> tuple[str, list[IndexSpan], bool, bool]:
 		def onGUI(gui: DatapackEditorGUI, text: Optional[str], searchExpr: Optional[str], outerGUI: DatapackEditorGUI) -> None:
 			with gui.vPanel(seamless=True):
 				parentShortcutDepth = 2
@@ -489,8 +489,7 @@ class DatapackEditorGUI(AutoGUI):
 			searchGUI.customData['searchExpr'], \
 			searchGUI.customData['searchResults'], \
 			searchGUI.customData['prevPressed'], \
-			searchGUI.customData['nextPressed'], \
-			searchGUI.customData['searchOptions']
+			searchGUI.customData['nextPressed']
 
 	@staticmethod
 	def getErrorIcon(style: str) -> Optional[QIcon]:
@@ -606,7 +605,7 @@ def drawCodeField(
 	with gui.vLayout(seamless=True):
 		# actual GUI:
 		with gui.hLayout(seamless=True):
-			searchExpr, searchResults, prevPressed, nextPressed, searchOptions = gui.searchBar(code, searchExpr=None)
+			searchExpr, searchResults, prevPressed, nextPressed = gui.searchBar(code, searchExpr=None)
 			highlightErrors = gui.toolButton(checked=highlightErrors, icon=icons.spellCheck, tip='highlight errors', checkable=True, overlap=(1, -1), roundedCorners=CORNERS.NONE)
 			if nextPressed or prevPressed:
 				forceLocate = True
@@ -617,7 +616,6 @@ def drawCodeField(
 			searchResults=searchResults,
 			prev=prevPressed,
 			next=nextPressed,
-			searchOptions=searchOptions,
 			returnCursorPos=True,
 			#onCursorPositionChanged=lambda a, b, g=gui: g.customData.__setitem__('currentCursorPos', (a, b)) ,
 			errors=errors if highlightErrors else [],
