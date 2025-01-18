@@ -3,10 +3,12 @@ from typing import Callable
 from PyQt5.QtGui import QColor
 
 from cat.GUI.components.catWidgetMixins import BaseColors
+from cat.GUI.components.codeEditor import IndicatorStyle, QSciIndicatorStyle
 from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, StyleIdEnum
 from base.model.utils import LanguageId
-from base.model.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, updateGlobalStylesToMatchUIColors, StyleFont
+from base.model.theme import addColorScheme, ColorScheme, Style, Styles, StylesModifier, GlobalStyles, \
+	updateGlobalStylesToMatchUIColors, StyleFont, SyntaxHighlightingStyles
 
 
 def initPlugin():
@@ -60,7 +62,53 @@ def buildColorScheme() -> ColorScheme:
 		caretLineStyle=Style(background=scheme.uiColors.Window),
 		whiteSpaceStyle=Style(foreground=lightGray)
 	)
+	scheme.syntaxHighlightingCommonStyles = SyntaxHighlightingStyles(
+		comment=         Style(foreground=QColor(0x7f, 0x7f, 0x7f), font=StyleFont(italic=True)),
+		keyword=         Style(foreground=QColor(0xb100d0), font=StyleFont(bold=False)),  # Style(foreground=QColor(0x88, 0x0a, 0xe8), font=StyleFont(bold=False)),
+		string=          Style(foreground=QColor(0x7f, 0x00, 0x00)),
+		number=          Style(foreground=QColor(0x00, 0x7f, 0x7f)),
+		specialConstant= Style(foreground=QColor(0x00, 0x00, 0xBf)),
+		key1=            Style(foreground=QColor(0x88, 0x0a, 0xe8)),
+		key2=            Style(foreground=QColor('plum')),
+		contentLocator=  Style(foreground=QColor(0x6f, 0x6f, 0x00)),
+		type=            Style(foreground=QColor(0xbf, 0x00, 0xbf)),#Style(foreground=QColor('darkorange')),
+		operator=        Style(foreground=QColor(0x00, 0x00, 0x00)),  # Style(foreground=QColor('limegreen')),
+		special1=        Style(foreground=QColor(0x00, 0x7f, 0x7f)),
+		special2=        Style(foreground=QColor('darkorange')),  # Style(foreground=QColor(0x80, 0x00, 0x80)),
+
+		error=           Style(foreground=QColor(0xff, 0x00, 0x00)),
+		invalid=         Style(foreground=QColor(0xff, 0x00, 0x00)),
+
+		xmlTag=          Style(foreground=QColor(0x00, 0x00, 0xbf)),
+		xmlAttribute=    Style(foreground=QColor(0x00, 0x80, 0x80)),
+	)
 	updateGlobalStylesToMatchUIColors(scheme)
+
+	colJson = lighten(scheme.syntaxHighlightingCommonStyles.string.foreground, 0.8)
+	colJson.setAlphaF(1 - 0.9)
+
+	colMCFunction = lighten(scheme.syntaxHighlightingCommonStyles.specialConstant.foreground, 0.75)
+	colMCFunction.setAlphaF(1 - 0.9)
+
+	colSNBT = lighten(QColor(0x7f, 0x7f, 0x00), 0.33)
+	colSNBT.setAlphaF(1 - 0.9)
+
+	scheme.languageIndicators = {
+		LanguageId('JSON'): IndicatorStyle(
+			style=QSciIndicatorStyle.StraightBoxIndicator,
+			drawUnder=True,
+			foreground=colJson,
+		),
+		LanguageId('MCFunction'): IndicatorStyle(
+			style=QSciIndicatorStyle.StraightBoxIndicator,
+			drawUnder=True,
+			foreground=colMCFunction,
+		),
+		LanguageId('SNBT'): IndicatorStyle(
+			style=QSciIndicatorStyle.StraightBoxIndicator,
+			drawUnder=True,
+			foreground=colSNBT,
+		)}
 
 	return scheme
 
@@ -80,7 +128,7 @@ DEFAULT_STYLE_STYLE = Style(
 
 
 def lighten(fg, lightness=.975):
-	return QColor.fromHslF(fg.hueF(), fg.saturationF(), lightness)
+	return QColor.fromHslF(fg.hslHueF(), fg.hslSaturationF(), lightness)
 
 
 @languageStyles(LanguageId('MCFunction'))
@@ -189,6 +237,3 @@ def addSNBTScheme():
 	}
 
 	return Styles(styles, innerLanguageStyleModifiers)
-
-
-print("scheme_default.py module says hi!")

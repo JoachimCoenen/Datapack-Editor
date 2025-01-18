@@ -28,6 +28,31 @@ else:
 		"""Enum where members are also (and must be) StyleIds"""
 
 
+class CommonStyleIds(StyleIdEnum):
+	default = DEFAULT_STYLE_ID
+	comment =          enum.auto()
+	keyword =          enum.auto()  # if | else | return
+	string =           enum.auto()
+	number =           enum.auto()
+	special_constant = enum.auto()  # e.g. true, false, null, ...
+	key1 =             enum.auto()  # in key-value pairs. e.g. JSON
+	key2 =             enum.auto()
+	content_locator =  enum.auto()  # e.g. ResourceLocation, TLTypeLiteral, ...
+	type =             enum.auto()  # e.g. int, string, dict, bool, ...
+	operator =         enum.auto()
+	special1 =         enum.auto()
+	special2 =         enum.auto()
+	error =            enum.auto()
+	invalid =          enum.auto()
+
+	xml_tag =          enum.auto()
+	xml_attribute =    enum.auto()
+
+
+class _CommonStyleIdsPlaceHolder(StyleIdEnum):
+	pass  # intentionally empty
+
+
 class StylingFunc(Protocol):
 	def __call__(self, span: slice, style: StyleId) -> None:
 		...
@@ -43,10 +68,17 @@ class CatStyler(Generic[_TNode], ABC):
 
 	def __post_init__(self) -> None:
 		self.setStyling = self.ctx.setStylingUtf8
+		if self.usesCommonStyleIds():
+			self.offset = DEFAULT_STYLE_ID
 
 	@classmethod
 	def create(cls: Type[_TStyler], ctx: StylerCtx, innerStylers: dict[LanguageId, CatStyler], offset: StyleId) -> _TStyler:
 		return cls(ctx, innerStylers, offset)
+
+	@classmethod
+	def usesCommonStyleIds(cls) -> bool:
+		""" override when CommonStyleIds are used"""
+		return False
 
 	@classmethod
 	@abstractmethod
@@ -54,9 +86,11 @@ class CatStyler(Generic[_TNode], ABC):
 		pass
 
 	@property
-	@abstractmethod
 	def styleIdEnum(self) -> Type[StyleIdEnum]:
-		raise NotImplementedError("styleIdEnum")
+		if self.usesCommonStyleIds():
+			return _CommonStyleIdsPlaceHolder
+		else:
+			raise NotImplementedError("styleIdEnum")
 
 	@property
 	def localStylesCount(self) -> int:
@@ -67,6 +101,7 @@ class CatStyler(Generic[_TNode], ABC):
 		pass
 
 	def styleForeignNode(self, node: Node) -> int:
+		self.ctx.setForeignLanguage(node.span.slice, node.language)
 		styler = self.innerStylers.get(type(node).language)
 		if styler is not None:
 			self.setStyling(slice(node.span.start.index, node.span.start.index), self.offset)
@@ -137,7 +172,7 @@ def createStyler(cls: Type[_TStyler], language: LanguageId, stylerCtx: StylerCtx
 
 	allStylers: dict[LanguageId, CatStyler] = {}
 
-	offset = 0
+	offset = len(CommonStyleIds)
 	for innerLanguage, stylerCls in sortedLanguageStylers:
 		if stylerCls is None:
 			logError(f"CatStyler: No Styler found for language {innerLanguage!r} while creating inner stylers for {cls}")
@@ -182,11 +217,16 @@ class StylerCtx(ABC):
 	def setStylingUtf8(self, span: slice, style: StyleId) -> None:
 		pass
 
+	@abstractmethod
+	def setForeignLanguage(self, span: slice, languageId: LanguageId) -> None:
+		pass
+
 
 __all__ = [
 	'StyleId',
 	'DEFAULT_STYLE_ID',
 	'StyleIdEnum',
+	'CommonStyleIds',
 	'CatStyler',
 	'registerStyler',
 	'getStylerCls',

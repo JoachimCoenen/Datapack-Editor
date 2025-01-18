@@ -10,6 +10,7 @@ from typing import TypeVar, Generic, Union, Optional, Iterable
 from PyQt5.QtGui import QFont, QColor
 
 from cat.GUI.components.catWidgetMixins import BaseColors
+from cat.GUI.components.codeEditor import IndicatorStyle
 from cat.processFiles import processRecursively
 from cat.utils import getExePath
 from cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
@@ -146,18 +147,41 @@ def updateGlobalStylesToMatchUIColors(scheme: ColorScheme):
 	uic = scheme.uiColors
 	gls = scheme.globalStyles
 	scheme.globalStyles = GlobalStyles(
-		defaultStyle         =gls.defaultStyle         | Style(foreground=uic.Text, background=uic.Input),
-		lineNumberStyle      =gls.lineNumberStyle      | Style(background=uic.Window),
-		braceLightStyle      =gls.braceLightStyle      | Style(),
-		braceBadStyle        =gls.braceBadStyle        | Style(),
-		controlCharStyle     =gls.controlCharStyle     | Style(foreground=uic.Icon),
-		indentGuideStyle     =gls.indentGuideStyle     | Style(),
-		calltipStyle         =gls.calltipStyle         | Style(foreground=uic.Border, background=uic.Window),
-		foldDisplayTextStyle =gls.foldDisplayTextStyle | Style(),
-		caretLineStyle       =gls.caretLineStyle       | Style(background=uic.Window),
-		caretStyle           =gls.caretStyle           | Style(background=uic.Text),
-		whiteSpaceStyle      =gls.whiteSpaceStyle      | Style(),
+		defaultStyle         = gls.defaultStyle         | Style(foreground=uic.Text, background=uic.Input),
+		lineNumberStyle      = gls.lineNumberStyle      | Style(background=uic.Window),
+		braceLightStyle      = gls.braceLightStyle      | Style(),
+		braceBadStyle        = gls.braceBadStyle        | Style(),
+		controlCharStyle     = gls.controlCharStyle     | Style(foreground=uic.Icon),
+		indentGuideStyle     = gls.indentGuideStyle     | Style(),
+		calltipStyle         = gls.calltipStyle         | Style(foreground=uic.Border, background=uic.Window),
+		foldDisplayTextStyle = gls.foldDisplayTextStyle | Style(),
+		caretLineStyle       = gls.caretLineStyle       | Style(background=uic.Window),
+		caretStyle           = gls.caretStyle           | Style(background=uic.Text),
+		whiteSpaceStyle      = gls.whiteSpaceStyle      | Style(),
 	)
+
+
+@dataclass
+class SyntaxHighlightingStyles:
+	# default: Style see GlobalStyles.defaultStyle
+	comment: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	keyword: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # if | else | return
+	string: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	number: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	specialConstant: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # e.g. true, false, null, ...
+	key1: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # in key-value pairs. e.g. JSON
+	key2: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	contentLocator: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # e.g. ResourceLocation, TLTypeLiteral, ...
+	type: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # e.g. int, string, dict, bool, ...
+	operator: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	special1: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	special2: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+
+	error: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	invalid: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+
+	xmlTag: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	xmlAttribute: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 
 
 @dataclass
@@ -168,11 +192,13 @@ class ColorScheme:
 	localFallbackSchemes: list[ColorScheme] = field(init=False, default_factory=list)
 	allFallbackSchemes: list[ColorScheme] = field(init=False, default_factory=list)
 
-	globalStyles: GlobalStyles = field(default_factory=GlobalStyles)
-
 	uiColors: Optional[BaseColors] = None
+	globalStyles: GlobalStyles = field(default_factory=GlobalStyles)
+	syntaxHighlightingCommonStyles: SyntaxHighlightingStyles = field(default_factory=SyntaxHighlightingStyles)
+	languageIndicators: dict[LanguageId, IndicatorStyle] = field(default_factory=dict)
 
 	# styles: dict[LanguageId, dict[str, Style]] = field(default_factory=dict)
+	styles2: dict[LanguageId, Styles] = field(default_factory=dict)
 
 	def deferredInit1(self) -> None:
 		"""
@@ -210,7 +236,6 @@ class ColorScheme:
 		allFbs = collectAndSemiTopolSortAllNodes([self], attrgetter('localFallbackSchemes'), attrgetter('name'))
 		self.allFallbackSchemes = allFbs
 
-	styles2: dict[LanguageId, Styles] = field(default_factory=dict)
 
 	def getLocalStyles2(self, language: LanguageId) -> Optional[Styles]:
 		return self.styles2.get(language)

@@ -5,15 +5,16 @@ from PyQt5.Qsci import QsciLexer, QsciLexerCustom, QsciScintilla
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QFont, QGuiApplication
 
-from base.gui.styler import DEFAULT_STYLE_ID, StyleId, StylerCtx, getStyler
+from base.gui.styler import DEFAULT_STYLE_ID, StyleId, StylerCtx, getStyler, CommonStyleIds
 from base.model import theme
 from base.model.documents import TextDocument
 from base.model.parsing.contextProvider import ContextProvider, getContextProvider
 from base.model.parsing.tree import Node
 from base.model.searchUtils import performFuzzyStrSearch
-from base.model.theme import GlobalStyles, Style, StyleFont
+from base.model.theme import GlobalStyles, Style, StyleFont, SyntaxHighlightingStyles
 from base.model.utils import GeneralError, LanguageId, MDStr, NULL_POSITION, Position, addStyle, formatMarkdown
-from cat.GUI.components.codeEditor import AutoCompletionTree, CEPosition, CallTipInfo, CodeEditor, MyQsciAPIs
+from cat.GUI.components.codeEditor import AutoCompletionTree, CEPosition, CallTipInfo, CodeEditor, MyQsciAPIs, \
+	IndexSpan, IndicatorStyle
 from cat.utils import HTMLStr, override
 from cat.utils.logging_ import logWarning, logError
 from cat.utils.utils import CrashReportWrapped, runLaterSafe
@@ -82,11 +83,13 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		# Initialize all style colors
 		self._document: Optional[TextDocument] = None
 		self._lastStylePos: int = 0
+		self._languageIndicators: dict[LanguageId, int] = {}
 		self._api: DocumentQsciAPIs = DocumentQsciAPIs(self)
 		self._api.prepare()
 		self.setAPIs(self._api)
 
 		self.initStyles(self.getStyles(), overwriteDefaultStyle=True)
+		self.initLanguageIndicators(self.getLanguageIndicators())
 
 	def autoCompletionTree(self) -> AutoCompletionTree:
 		return self._api.autoCompletionTree
@@ -109,6 +112,8 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		styleMap = {}  # {DEFAULT_STYLE_ID: scheme.defaultStyle}
 		self.addGlobalStyles(scheme.globalStyles, styleMap)
 
+		self.addCommonStyles(scheme.syntaxHighlightingCommonStyles, styleMap)
+
 		languageId = self.languageId
 		if languageId is None:
 			return styleMap
@@ -117,7 +122,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		if styles is None:
 			return styleMap
 
-		styler = getStyler(languageId, StylerCtxQScintilla(DEFAULT_STYLE_ID, 0, 0, self))
+		styler = getStyler(languageId, StylerCtxQScintilla(DEFAULT_STYLE_ID, 0, 0, self._languageIndicators, self))
 		if styler is None:
 			return styleMap
 
@@ -135,6 +140,9 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 				styleMap[styleId] = style
 		return styleMap
 
+	def getLanguageIndicators(self) -> dict[LanguageId, IndicatorStyle]:
+		return theme.currentColorScheme().languageIndicators
+
 	def addGlobalStyles(self, globalStyles: GlobalStyles, styleMap: dict[int, Style]):
 		revOffset = -_SCI_STYLE_FIRST_USER_STYLE
 		styleMap[DEFAULT_STYLE_ID] = globalStyles.defaultStyle
@@ -150,6 +158,24 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		styleMap[_CAT_STYLE_CARETLINE] = globalStyles.caretLineStyle
 		styleMap[_CAT_STYLE_CARET] = globalStyles.caretStyle
 		styleMap[_CAT_STYLE_WHITE_SPACE] = globalStyles.whiteSpaceStyle
+
+	def addCommonStyles(self, commonStyles: SyntaxHighlightingStyles, styleMap: dict[int, Style]):
+		styleMap[CommonStyleIds.comment.value] = commonStyles.comment
+		styleMap[CommonStyleIds.keyword.value] = commonStyles.keyword
+		styleMap[CommonStyleIds.string.value] = commonStyles.string
+		styleMap[CommonStyleIds.number.value] = commonStyles.number
+		styleMap[CommonStyleIds.special_constant.value] = commonStyles.specialConstant
+		styleMap[CommonStyleIds.key1.value] = commonStyles.key1
+		styleMap[CommonStyleIds.key2.value] = commonStyles.key2
+		styleMap[CommonStyleIds.content_locator.value] = commonStyles.contentLocator
+		styleMap[CommonStyleIds.type.value] = commonStyles.type
+		styleMap[CommonStyleIds.operator.value] = commonStyles.operator
+		styleMap[CommonStyleIds.special1.value] = commonStyles.special1
+		styleMap[CommonStyleIds.special2.value] = commonStyles.special2
+		styleMap[CommonStyleIds.error.value] = commonStyles.error
+		styleMap[CommonStyleIds.invalid.value] = commonStyles.invalid
+		styleMap[CommonStyleIds.xml_tag.value] = commonStyles.xmlTag
+		styleMap[CommonStyleIds.xml_attribute.value] = commonStyles.xmlAttribute
 
 	def setCaretLineStyle(self, style: Style):
 		editor: CodeEditor = self.editor()
@@ -213,9 +239,18 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 			else:
 				self.initStyle(actualStyle, tokenType)
 
+	def initLanguageIndicators(self, indicators: dict[LanguageId, IndicatorStyle]) -> None:
+		self._languageIndicators = {languageId: i for i, languageId in enumerate(indicators.keys())}
+		editor: CodeEditor = self.editor()
+		if editor is not None:
+			editor.initIndicatorStyles({
+				i: indicators[languageId] for languageId, i in self._languageIndicators.items()
+			})
+
 	def setDefaultFont(self, font: QFont):
 		super().setDefaultFont(font)
 		self.initStyles(self.getStyles(), overwriteDefaultStyle=True)
+		self.initLanguageIndicators(self.getLanguageIndicators())
 
 	def setFont(self, font: QFont, style=-1):
 		super().setFont(font, style)
@@ -249,6 +284,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		self._lastStylePos = pos
 		super(DocumentLexer, self).startStyling(pos)
 
+	@CrashReportWrapped
 	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
 	# @ProfiledFunction()
 	def styleText(self, start: int, end: int):
@@ -273,7 +309,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		if tree is None:
 			return
 
-		stylerCtx = StylerCtxQScintilla(DEFAULT_STYLE_ID, start, end, self)
+		stylerCtx = StylerCtxQScintilla(DEFAULT_STYLE_ID, start, end, self._languageIndicators, self)
 		styler = getStyler(tree.language, stylerCtx)
 		if styler is not None:
 			self.startStyling(start)
@@ -296,6 +332,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 @dataclass
 class StylerCtxQScintilla(StylerCtx):
 	_lastStylePos: int = field(init=False)
+	languageIndicators: dict[LanguageId, int]
 	lexer: QsciLexerCustom
 
 	def __post_init__(self):
@@ -317,6 +354,12 @@ class StylerCtxQScintilla(StylerCtx):
 			assert length >= 0, (length, style)
 			self.lexer.setStyling(length, _SCI_STYLE_FIRST_USER_STYLE + style)
 			self._lastStylePos = span.stop
+
+	def setForeignLanguage(self, span: slice, languageId: LanguageId) -> None:
+		editor: CodeEditor = self.lexer.editor()
+		if editor is not None:
+			if (indicator := self.languageIndicators.get(languageId)) is not None:
+				editor.fillIndicatorRangeIndex(span.start, span.stop, indicator)
 
 
 @dataclass
@@ -478,17 +521,11 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		return super().updateAutoCompletionList(context, aList)
 
 	@override
-	def getClickableRanges(self) -> list[tuple[CEPosition, CEPosition]]:
+	def getClickableRanges(self) -> list[IndexSpan]:
 		editor = self._editor
 		if editor is not None and (ctxProvider := self.contextProvider) is not None:
 			ranges = ctxProvider.getClickableRanges()
-			return [
-				(
-					editor.cePositionFromIndex(r.start.index),
-					editor.cePositionFromIndex(r.end.index)
-				)
-				for r in ranges
-			]
+			return [IndexSpan(r.start.index, r.end.index) for r in ranges]
 		return []
 
 	@override

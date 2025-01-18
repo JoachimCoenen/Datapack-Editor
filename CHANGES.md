@@ -1,3 +1,8 @@
+## next version
+### Features
+ * Added common unified style ids for syntax highlighting.
+
+
 ## 0.9.0-alpha
 ### Features
  * Added support for Minecraft versions 1.20.5 and 1.20.6.
