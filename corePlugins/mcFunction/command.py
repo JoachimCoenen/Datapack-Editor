@@ -116,7 +116,7 @@ class ArgumentSchema(CommandPartSchema):
 
 	subType: Optional[ArgumentType] = field(default=None)
 	args: Optional[dict[str, Union[Any, None]]] = field(default=None)
-	next: Options = field(default_factory=list)
+	next: Options = field(default_factory=list, repr=False)
 
 	@property
 	def asString(self) -> str:
@@ -127,8 +127,8 @@ class ArgumentSchema(CommandPartSchema):
 
 @dataclass
 class SwitchSchema(CommandPartSchema):
-	options: Options = field(default_factory=list)
-	next: Options = field(default_factory=list)
+	options: Options = field(default_factory=list, repr=False)
+	next: Options = field(default_factory=list, repr=False)
 	isPotentiallyEmpty: bool = field(init=False)
 
 	def finish(self):
@@ -205,7 +205,7 @@ class CommandSchema(CommandPartSchema):
 	deprecatedVersion: Optional[str] = field(default=None)
 	deprecatedComment: str = field(default='')
 
-	next: Options = field(default_factory=list)
+	next: Options = field(default_factory=list, repr=False)
 
 	@property
 	def asString(self) -> str:
@@ -222,7 +222,7 @@ class CommentSchema(CommandPartSchema):
 
 @dataclass
 class MCFunctionSchema(CommandPartSchema):
-	commands: dict[bytes, CommandSchema] = field(default_factory=dict)
+	commands: dict[bytes, CommandSchema] = field(default_factory=dict, repr=False)
 
 	@property
 	def asString(self) -> str:
@@ -237,7 +237,7 @@ class CommandPart(Node['CommandPart', _TCommandPartSchema], Generic[_TCommandPar
 	source: bytes = field(repr=False)
 	content: bytes = field(repr=False)
 
-	potentialNextSchemas: list[CommandPartSchema] = field(default_factory=list, init=False)
+	potentialNextSchemas: list[CommandPartSchema] = field(default_factory=list, init=False, repr=False)
 
 	_next: Optional[CommandPart] = field(default=None, init=False)
 	_prev: Optional[CommandPart] = field(default=None, init=False, repr=False)
