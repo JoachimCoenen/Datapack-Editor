@@ -60,6 +60,7 @@ def _enrichListLikeWithSchema(data: ListLikeNode, schema: ListLikeSchema) -> int
 
 def _enrichObjectWithSchema(data: ObjectNode, schema: ObjectSchema) -> int:
 	# 2 = OK, 1 = Maybe, 0 = No
+	# todo: don't know how to properly incorporate exclusionGroups...
 	needsAMandatory = False
 	atLeastOneMandatory = False
 	allMandatory = True

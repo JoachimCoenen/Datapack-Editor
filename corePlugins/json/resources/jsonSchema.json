@@ -379,6 +379,10 @@
 				"hates": {
 					"optional": true,
 					"value": { "$defRef": "arrayOfStringOrRef" }
+				},
+				"exclusionGroups": {
+					"optional": true,
+					"value": { "$defRef": "arrayOfStringOrRef" }
 				}
 			}
 		},

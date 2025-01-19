@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from _weakref import ref, ReferenceType
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass, field
 from math import inf
 from types import NoneType
-from typing import ClassVar, Optional, Collection, Any, Type, Sequence, Callable, Mapping, overload, Iterator
+from typing import ClassVar, Optional, Collection, Any, Type, Sequence, Callable, Mapping, overload, Iterator, \
+	AbstractSet
 
 from better_orderedmultidict import OrderedMultiDict
 from recordclass import as_dataclass
@@ -387,6 +389,21 @@ def getDecidingPropValue[N: StructureNode[N]](decidingProp: DecidingPropRef, par
 
 
 class PropertySchema(StructureSchema):
+	"""
+	Property of an Object.
+	Properties that are part of an ExclusionGroup are all treated as mandatory if at least one valid property is mandatory.
+
+	A property `P` is considered only iff:
+		- none of the properties `P` hates exists. (PropertySchema.hates, deprecated)
+		- AND `P` has a valid value definition.
+	`P` has a valid value definition iff:
+		- `P` has no PropertySchema.decidingProp.
+		- OR `P` has a PropertySchema.decidingProp AND it has a valid value definition for the value of the given decidingProp. (PropertySchema.values)
+
+	`.requires`: has no effect on whether a property is considered.
+
+	`.exclusionGroup`: can be used to force only one of multiple properties. (see also documentation on class ExclusionGroup).
+	"""
 	DATA_TYPE: ClassVar[Type[StructureNode]] = StructureProperty
 	typeName: ClassVar[str] = 'property'
 
@@ -402,6 +419,7 @@ class PropertySchema(StructureSchema):
 			values: dict[PyStructureSimpleValue | tuple[PyStructureSimpleValue, ...], StructureDataSchema] = None,
 			requires: Optional[tuple[str, ...]] = None,
 			hates: tuple[str, ...] = (),
+			exclusionGroups: tuple[str, ...] = (),
 			deprecated: bool = False,
 			allowMultilineStr: Optional[bool]):
 		super(PropertySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
@@ -417,6 +435,7 @@ class PropertySchema(StructureSchema):
 			requires = (requires,)
 		self.requires: tuple[str, ...] = requires
 		self.hates: tuple[str, ...] = hates
+		self.exclusionGroups: tuple[str, ...] = exclusionGroups
 		if values is not None:
 			for key, val in values.items():
 				if isinstance(key, tuple):
@@ -428,6 +447,17 @@ class PropertySchema(StructureSchema):
 	@property
 	def mandatory(self) -> bool:
 		return not self.optional
+
+	def isMissingRequiredProp(self, parent: ObjectNode) -> bool:
+		return self.requires and all(p not in parent.data for p in self.requires)
+
+	def hasIncompatibleProp(self, parent: ObjectNode) -> bool:
+		return self.hates and any(p in parent.data for p in self.hates)
+
+	def isConsidered(self, parent: ObjectNode) -> bool:
+		missingRequiredProp = self.requires and all(p not in parent.data for p in self.requires)
+		hasIncompatibleProp = self.hates and any(p in parent.data for p in self.hates)
+		return not missingRequiredProp and not hasIncompatibleProp and self.getValueSchemaForParent(parent) is not None
 
 	def getValueSchemaForParent(self, parent: ObjectNode) -> Optional[StructureDataSchema]:
 		decidingProp = self.decidingProp
@@ -443,6 +473,27 @@ class PropertySchema(StructureSchema):
 			selectedSchema = self.value
 
 		return resolveCalculatedSchema(selectedSchema, parent)
+
+
+@dataclass(frozen=True, slots=True)
+class ExclusionGroup:
+	"""
+	Properties that are part of an ExclusionGroup are all treated as mandatory if at least one *considered* property is mandatory.
+	(For a definition of *considered* see class PropertySchema.)
+
+	If there is no mandatory *considered* property, the properties of ExclusionGroup are optional (no surprises here...)/
+	"""
+	props: frozenset[str]
+	"""All properties in the exclusion group"""
+	mandatoryProps: frozenset[str]
+	"""Any properties that could make this ExclusionGroup mandatory."""
+
+
+@dataclass
+class Inheritance:
+	schema: ObjectSchema
+	decidingProp: Optional[DecidingPropRef] = None
+	decidingValues: tuple[str, ...] = ()
 
 
 class ObjectSchema(StructureDataSchema):
@@ -461,6 +512,8 @@ class ObjectSchema(StructureDataSchema):
 		"""
 		self.properties: list[PropertySchema] = properties
 		self.propertiesDict: Mapping[str, PropertySchema] = {}
+		self.exclusionGroups: Mapping[str, ExclusionGroup] = {}
+		"""Not every property in an exclusion group might be mandatory"""
 		self.anythingProp: Optional[PropertySchema] = None
 		self.anythingKey: Optional[StringSchema] = None
 		"""Specialized key schema that can be applied together with anythingProp."""
@@ -469,92 +522,10 @@ class ObjectSchema(StructureDataSchema):
 
 	def finish(self) -> ObjectSchema:
 		if not self.isFinished:
-			self.propertiesDict, self.anythingProp = self._buildPropertiesDict()
+			self.propertiesDict, self.anythingProp = _buildPropertiesDict(self.inherits, self.properties)
+			self.exclusionGroups = _buildExclusionGroups(self.propertiesDict)
 			self.isFinished = True
 		return self
-
-	def _buildPropertiesDict(self) -> tuple[Mapping[str, PropertySchema], Optional[PropertySchema]]:
-		propsDict: dict[str, PropertySchema] = dict()
-		anythingProp = None
-
-		for inherit in self.inherits:
-			if not inherit.schema.isFinished:
-				inherit.schema.finish()
-			if inherit.decidingProp is None:
-				for prop in inherit.schema.propertiesDict.values():
-					anythingProp = self._addProp(anythingProp, prop, propsDict)
-			else:
-				for prop in inherit.schema.propertiesDict.values():
-					assert prop.value is not None
-					newProp = PropertySchema(
-						name=prop.name,
-						description=prop.description,
-						value=None,
-						optional=prop.optional,
-						default=prop.default,
-						decidingProp=inherit.decidingProp,
-						values={dVal: prop.value for dVal in inherit.decidingValues},
-						requires=prop.requires,
-						hates=prop.hates,
-						deprecated=prop.deprecated,
-						allowMultilineStr=None,
-					)
-					newProp.setSpan(prop.span, prop.filePath)
-					anythingProp = self._addProp(anythingProp, newProp, propsDict)
-
-		for prop in self.properties:
-			anythingProp = self._addProp(anythingProp, prop, propsDict)
-		return propsDict, anythingProp
-
-	def _addProp(self, anythingProp: Optional[PropertySchema], prop: PropertySchema, propsDict: dict[str, PropertySchema]) -> Optional[PropertySchema]:
-		if prop.name is Anything:
-			# quietly overwrite:
-			# if anythingProp is not None:
-			# 	raise ValueError(f"ObjectSchema.properties contains duplicate anything Property")
-			anythingProp = prop
-		else:
-			# quietly overwrite:
-			# if prop.name in propsDict:
-			# 	raise ValueError(f"ObjectSchema.properties contains duplicate names {prop.name!r}")
-			if (origProp := propsDict.get(prop.name)) is not None:
-				prop = self._joinProps(origProp, prop)
-
-			propsDict[prop.name] = prop
-		return anythingProp
-
-	@staticmethod
-	def _joinProps(prop1: PropertySchema, prop2: PropertySchema) -> PropertySchema:
-		if prop1.decidingProp != prop2.decidingProp:
-			logWarning(f"Cannot join properties with differing deciding props [{prop1.decidingProp}, {prop2.decidingProp}]. prop.name = {prop1.name!r}, locations = [({prop1.filePath!r}, {prop1.span}), ({prop2.filePath!r}, {prop2.span})]")
-			return prop2
-		if prop1.decidingProp is not None:
-			values = prop1.values.copy()
-			for decVal, val in prop2.values.items():
-				if decVal in values:
-					val = UnionSchema(description=MDStr(''), options=[values[decVal], val], allowMultilineStr=None)
-				values[decVal] = val
-			value = None
-		else:
-			values = None
-			value = UnionSchema(description=MDStr(''), options=[prop1.value, prop2.value], allowMultilineStr=None)
-		newProp = PropertySchema(
-			name=prop1.name,
-			description=prop1.description,
-			value=value,
-			optional=prop1.optional,
-			default=prop1.default,
-			decidingProp=prop1.decidingProp,
-			values=values,
-			requires=prop1.requires,
-			hates=prop1.hates,
-			deprecated=prop1.deprecated,
-			allowMultilineStr=None,
-		)
-		if prop2.filePath:
-			newProp.setSpan(prop2.span, prop2.filePath)
-		else:
-			newProp.setSpan(prop1.span, prop1.filePath)
-		return newProp
 
 	def getSchemaForProp(self, name: str) -> Optional[PropertySchema]:
 		return self.propertiesDict.get(name, self.anythingProp)
@@ -573,11 +544,125 @@ class ObjectSchema(StructureDataSchema):
 		return keySchema, propSchema, valueSchema
 
 
-@dataclass
-class Inheritance:
-	schema: ObjectSchema
-	decidingProp: Optional[DecidingPropRef] = None
-	decidingValues: tuple[str, ...] = ()
+def _buildExclusionGroups(properties: Mapping[str, PropertySchema]) -> Mapping[str, ExclusionGroup]:
+	exclusionGroups: defaultdict[str, list[PropertySchema]] = defaultdict(list)
+
+	for prop in properties.values():
+		for name in prop.exclusionGroups:
+			exclusionGroups[name].append(prop)
+
+	return {
+		name: ExclusionGroup(
+			frozenset({prop.name for prop in exclusions}),
+			frozenset({prop.name for prop in exclusions if not prop.optional})
+		)
+		for name, exclusions in exclusionGroups.items()
+	}
+
+
+def _buildPropertiesDict(inherits: list[Inheritance], properties: list[PropertySchema]) -> tuple[Mapping[str, PropertySchema], Optional[PropertySchema]]:
+	propsDict: dict[str, PropertySchema] = dict()
+	anythingProp = None
+
+	for inherit in inherits:
+		if not inherit.schema.isFinished:
+			inherit.schema.finish()
+		if inherit.decidingProp is None:
+			for prop in inherit.schema.propertiesDict.values():
+				anythingProp = _addProp(anythingProp, prop, propsDict)
+		else:
+			for prop in inherit.schema.propertiesDict.values():
+				assert prop.value is not None
+				newProp = PropertySchema(
+					name=prop.name,
+					description=prop.description,
+					value=None,
+					optional=prop.optional,
+					default=prop.default,
+					decidingProp=inherit.decidingProp,
+					values={dVal: prop.value for dVal in inherit.decidingValues},
+					requires=prop.requires,
+					hates=prop.hates,
+					exclusionGroups=prop.exclusionGroups,
+					deprecated=prop.deprecated,
+					allowMultilineStr=None,
+				)
+				newProp.setSpan(prop.span, prop.filePath)
+				anythingProp = _addProp(anythingProp, newProp, propsDict)
+
+	for prop in properties:
+		anythingProp = _addProp(anythingProp, prop, propsDict)
+	return propsDict, anythingProp
+
+
+def _addProp(anythingProp: Optional[PropertySchema], prop: PropertySchema, propsDict: dict[str, PropertySchema]) -> Optional[PropertySchema]:
+	if prop.name is Anything:
+		# quietly overwrite:
+		# if anythingProp is not None:
+		# 	raise ValueError(f"ObjectSchema.properties contains duplicate anything Property")
+		anythingProp = prop
+	else:
+		# quietly overwrite:
+		# if prop.name in propsDict:
+		# 	raise ValueError(f"ObjectSchema.properties contains duplicate names {prop.name!r}")
+		if (origProp := propsDict.get(prop.name)) is not None:
+			prop = _joinProps(origProp, prop)
+
+		propsDict[prop.name] = prop
+	return anythingProp
+
+
+def _checkPropsNotDiffering(prop1: PropertySchema, prop2: PropertySchema, attribute: str) -> bool:
+	val1 = getattr(prop1, attribute)
+	val2 = getattr(prop2, attribute)
+	if val1 != val2:
+		logWarning(f"Properties have differing '{attribute}' value [{val1}, {val2}]. prop.name = {prop1.name!r}, locations = [({prop1.filePath!r}, {prop1.span}), ({prop2.filePath!r}, {prop2.span})]")
+		return False
+	return True
+
+
+def _joinProps(prop1: PropertySchema, prop2: PropertySchema) -> PropertySchema:
+	if prop1.decidingProp != prop2.decidingProp:
+		logWarning(f"Cannot join properties with differing deciding props [{prop1.decidingProp}, {prop2.decidingProp}]. prop.name = {prop1.name!r}, locations = [({prop1.filePath!r}, {prop1.span}), ({prop2.filePath!r}, {prop2.span})]")
+		return prop2
+	_checkPropsNotDiffering(prop1, prop2, 'optional')
+	_checkPropsNotDiffering(prop1, prop2, 'default')
+	_checkPropsNotDiffering(prop1, prop2, 'requires')
+	_checkPropsNotDiffering(prop1, prop2, 'hates')
+	_checkPropsNotDiffering(prop1, prop2, 'deprecated')
+
+	if prop1.decidingProp is not None:
+		values = prop1.values.copy()
+		for decVal, val in prop2.values.items():
+			if decVal in values:
+				val = UnionSchema(description=MDStr(''), options=[values[decVal], val], allowMultilineStr=None)
+			values[decVal] = val
+		value = None
+	else:
+		values = None
+		value = UnionSchema(description=MDStr(''), options=[prop1.value, prop2.value], allowMultilineStr=None)
+
+	exclusionGroups = tuple({*prop1.exclusionGroups, *prop2.exclusionGroups})
+
+	newProp = PropertySchema(
+		name=prop1.name,
+		description=prop1.description,
+		value=value,
+		optional=prop1.optional,
+		default=prop1.default,
+		decidingProp=prop1.decidingProp,
+		values=values,
+		requires=prop1.requires,
+		hates=prop1.hates,
+		exclusionGroups=exclusionGroups,
+		deprecated=prop1.deprecated,
+		allowMultilineStr=None,
+	)
+	if prop2.filePath:
+		newProp.setSpan(prop2.span, prop2.filePath)
+	else:
+		newProp.setSpan(prop1.span, prop1.filePath)
+	return newProp
 
 
 class UnionSchema(StructureDataSchema):

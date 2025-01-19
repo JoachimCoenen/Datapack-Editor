@@ -2,6 +2,7 @@
 ### Features
  * Added common unified style ids for syntax highlighting. (issue #35)
  * Added ability to customize default indicator styles. (issue #35)
+ * JSON & SNBT schemas: Properties now support exclusion groups.
 
 ### Improvements
  * Improved visibility of indicators (search result, matched brace, etc.) in dark mode.
@@ -21,7 +22,7 @@
 ### Improvements
  * Exceptions when collecting suggestions for autocompletion no longer crash the entire application.
  * Improved suggestions inside incomplete JSON objects with union schemas.
- * JSON schemas:
+ * JSON & SNBT schemas:
    * Array schemas can now specify a `minCount` and a `maxCount`.
    * Schemas can now be specified using both JSON or SNBT.
    * Object schemas with a `"default-property"` can now also specify a `"default-key"` schema.

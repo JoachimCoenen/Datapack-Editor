@@ -369,6 +369,7 @@ def propertyHandler(self: SchemaBuilder, name: str | Anything, node: JObject) ->
 		decidingProp = None
 		requires = ()
 		hates = ()
+		exclusionGroups = ()
 		deprecated = False
 		allowMultilineStr = None
 		valuesNode = None
@@ -386,6 +387,7 @@ def propertyHandler(self: SchemaBuilder, name: str | Anything, node: JObject) ->
 		# requires = tuple(reader.checkType(fromRef(data), StringNode).n.data for data in reqVal)
 		requires = tuple(elem.n.data for elem in reader.optListLikeVal2(node, 'requires', StringNode))
 		hates = tuple(elem.n.data for elem in reader.optListLikeVal2(node, 'hates', StringNode))
+		exclusionGroups = tuple(elem.n.data for elem in reader.optListLikeVal2(node, 'exclusionGroups', StringNode))
 
 		valueNode = reader.optObject(node, 'value')
 		valuesNode = reader.optObject(node, 'values')
@@ -429,6 +431,7 @@ def propertyHandler(self: SchemaBuilder, name: str | Anything, node: JObject) ->
 		values=values,
 		requires=requires,
 		hates=hates,
+		exclusionGroups=exclusionGroups,
 		deprecated=deprecated,
 		allowMultilineStr=allowMultilineStr
 	), finisher
