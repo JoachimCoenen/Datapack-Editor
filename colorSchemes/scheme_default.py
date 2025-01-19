@@ -49,7 +49,7 @@ def buildColorScheme() -> ColorScheme:
 	lightGray = QColor('#b4b4b4')
 	scheme.globalStyles = GlobalStyles(
 		defaultStyle=Style(foreground=scheme.uiColors.Text, background=scheme.uiColors.Input),
-		lineNumberStyle=Style(background=scheme.uiColors.Window),
+		lineNumberStyle=Style(foreground=QColor(0x7f, 0x7f, 0x7f), background=scheme.uiColors.Window),
 		braceLightStyle=Style(),
 		braceBadStyle=Style(foreground=QColor('red')),
 		controlCharStyle=Style(foreground=scheme.uiColors.Icon),

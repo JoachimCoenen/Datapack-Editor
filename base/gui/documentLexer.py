@@ -32,12 +32,14 @@ _SCI_STYLE_FIRST_USER_STYLE = _SCI_STYLE_LASTPREDEFINED + 1
 _CAT_STYLE_CARETLINE = StyleId(-257)
 _CAT_STYLE_CARET = StyleId(-258)
 _CAT_STYLE_WHITE_SPACE = StyleId(-300)
+_CAT_STYLE_FOLD_MARGIN = StyleId(-301)
 
 _SC_ELEMENT_WHITE_SPACE = 60
 _SC_ELEMENT_WHITE_SPACE_BACK = 61
 
 _CAT_SCI_ELEMENT_COLOR_IDS = {
-	_CAT_STYLE_WHITE_SPACE: (_SC_ELEMENT_WHITE_SPACE, _SC_ELEMENT_WHITE_SPACE_BACK)
+	_CAT_STYLE_WHITE_SPACE: (_SC_ELEMENT_WHITE_SPACE, _SC_ELEMENT_WHITE_SPACE_BACK),
+	_CAT_STYLE_FOLD_MARGIN: (None, None)
 }
 
 
@@ -158,6 +160,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		styleMap[_CAT_STYLE_CARETLINE] = globalStyles.caretLineStyle
 		styleMap[_CAT_STYLE_CARET] = globalStyles.caretStyle
 		styleMap[_CAT_STYLE_WHITE_SPACE] = globalStyles.whiteSpaceStyle
+		styleMap[_CAT_STYLE_FOLD_MARGIN] = globalStyles.lineNumberStyle
 
 	def addCommonStyles(self, commonStyles: SyntaxHighlightingStyles, styleMap: dict[int, Style]):
 		styleMap[CommonStyleIds.comment.value] = commonStyles.comment
@@ -193,6 +196,8 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 			if styleId == _CAT_STYLE_WHITE_SPACE:
 				editor.SendScintilla(CodeEditor.SCI_SETWHITESPACEFORE, True, _qColorToSciRGB(style.foreground))
 				editor.SendScintilla(CodeEditor.SCI_SETWHITESPACEBACK, False, _qColorToSciRGB(style.background))
+			elif styleId == _CAT_STYLE_FOLD_MARGIN:
+				editor.setFoldMarginColors(style.background, style.background)
 			else:
 				elementIds = _CAT_SCI_ELEMENT_COLOR_IDS[styleId]
 				if elementIds[0] is not None:
