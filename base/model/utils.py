@@ -210,7 +210,7 @@ wrapInMDCode = wrapInMarkdownCode  # an alias
 
 def addStyle(message: str, /, style: str) -> MDStr | HTMLStr:
 	from cat.GUI import PythonGUI
-	md = f'<div style="{PythonGUI.helpBoxStyles[style]}">{message}</div>'
+	md = f'<div style="{PythonGUI.helpBoxStyles[style]()}">{message}</div>'
 	return MDStr(md)
 
 
