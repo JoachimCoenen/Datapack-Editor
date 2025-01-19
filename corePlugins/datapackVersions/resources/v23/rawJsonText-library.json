@@ -2,7 +2,7 @@
   "$schema": "dpe/json/schema/library",
   "$meta": {
     "last_mc_version_checked": "23w44a"
-  }, 
+  },
   "$definitions": {
     "rawJsonText": {
       "$type": "union",
@@ -39,43 +39,20 @@
       "inherits": [
         {"defRef": "%formatting"},
         {"defRef": "%interactivity"},
-        {
-          "defRef": "%type_text",
-          "decidingProp": "type",
-          "decidingValues": ["text", ""]
-        },
-        {
-          "defRef": "%type_translatable",
-          "decidingProp": "type",
-          "decidingValues": ["translatable", ""]
-        },
-        {
-          "defRef": "%type_score",
-          "decidingProp": "type",
-          "decidingValues": ["score", ""]
-        },
-        {
-          "defRef": "%type_selector",
-          "decidingProp": "type",
-          "decidingValues": ["selector", ""]
-        },
-        {
-          "defRef": "%type_keybind",
-          "decidingProp": "type",
-          "decidingValues": ["keybind", ""]
-        },
-        {
-          "defRef": "%type_nbt",
-          "decidingProp": "type",
-          "decidingValues": ["nbt", ""]
-        }
+
+        {"defRef": "%type_text"},
+        {"defRef": "%type_translatable"},
+        {"defRef": "%type_score"},
+        {"defRef": "%type_selector"},
+        {"defRef": "%type_keybind"},
+        {"defRef": "%type_nbt"}
       ]
     },
     "%type_text": {
       "$type": "object",
       "properties": {
         "text": {
-          "optional": true,
+          "exclusionGroups": ["content"],
           "value": { "$type": "string" },
           "description": "A string containing plain text to display directly. Can also be a number or boolean that is displayed directly."
         }
@@ -85,7 +62,7 @@
       "$type": "object",
       "properties": {
         "translate": {
-          "optional": true,
+          "exclusionGroups": ["content"],
           "value": { "$type": "string" },
           "description": "A translation identifier, corresponding to the identifiers found in loaded language files. Displayed as the corresponding text in the player's selected language. If no corresponding translation can be found, the identifier itself is used as the translated text."
         },
@@ -111,7 +88,7 @@
       "$type": "object",
       "properties": {
         "score": {
-          "optional": true,
+          "exclusionGroups": ["content"],
           "value": {
             "$type": "object",
             "properties": {
@@ -130,11 +107,6 @@
                   "type": "minecraft:objective"
                 },
                 "description": "The internal name of the objective to display the player's score in."
-              },
-              "value": {
-                "optional": true,
-                "value": { "$type": "string" },
-                "description": "If present, this value is displayed regardless of what the score would have been."
               }
             },
             "description": "Displays a score holder's current score in an objective. Displays nothing if the given score holder or the given objective do not exist, or if the score holder is not tracked in the objective. "
@@ -147,7 +119,7 @@
       "$type": "object",
       "properties": {
         "selector": {
-          "optional": true,
+          "exclusionGroups": ["content"],
           "value": {
             "$type": "string",
             "type": "minecraft:target_selector"
@@ -161,6 +133,7 @@
             "selector",
             "nbt"
           ],
+          "default": {"color": "gray", "text": ", "},
           "description": "Defaults to `{\"color\": \"gray\", \"text\": \", \"}`. A raw JSON text component. Used as the separator between different names, if the component selects multiple entities."
         }
       }
@@ -169,7 +142,7 @@
       "$type": "object",
       "properties": {
         "keybind": {
-          "optional": true,
+          "exclusionGroups": ["content"],
           "value": { "$type": "string", "type": "minecraft:keybind_identifier" },
           "description": "A keybind identifier, to be displayed as the name of the button that is currently bound to that action. For example, `{\"keybind\": \"key.inventory\"}` displays `\"e\"` if the player is using the default control scheme."
         }
@@ -178,18 +151,18 @@
     "%type_nbt": {
       "$type": "object",
       "properties": {
-        "source ": {
-          "optional": true,
-          "value": { "$type": "enum", "options": { "block": "", "entity": "", "storage": "" }},
-          "description": "corresponding to the source of the NBT data."
-        },
         "nbt": {
-          "optional": true,
+          "exclusionGroups": ["content"],
           "value": {
             "$type": "string",
             "type": "minecraft:nbt_path"
           },
           "description": "The NBT path used for looking up NBT values from an entity, block entity, or storage. Requires one of `block`, `entity`, or `storage`. Having more than one is allowed, but only one is used."
+        },
+        "source ": {
+          "optional": true,
+          "value": { "$type": "enum", "options": { "block": "", "entity": "", "storage": "" }},
+          "description": "corresponding to the source of the NBT data."
         },
         "interpret": {
           "optional": true,
@@ -207,37 +180,37 @@
           ],
           "description": "Defaults to `{\"color\": \"gray\", \"text\": \", \"}`. A raw JSON text component. Used as the separator between different names, if the component selects multiple entities."
         },
-          "block": {
-            "optional": true,
-            "value": {
-              "$type": "string",
-              "type": "minecraft:block_pos"
-            },
-            "requires": [ "nbt" ],
-            "description": "A string specifying the coordinates of the block entity from which the NBT value is obtained. The coordinates can be absolute, relative, or local. Ignored if `nbt` is not present."
+        "block": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:block_pos"
           },
-          "entity": {
-            "optional": true,
-            "value": {
-              "$type": "string",
-              "type": "minecraft:target_selector"
-            },
-            "requires": [ "nbt" ],
-            "description": "A string specifying the target selector for the entity or entities from which the NBT value is obtained. Ignored if `nbt` is not present."
+          "requires": [ "nbt" ],
+          "description": "A string specifying the coordinates of the block entity from which the NBT value is obtained. The coordinates can be absolute, relative, or local. Ignored if `nbt` is not present."
+        },
+        "entity": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:target_selector"
           },
-          "storage": {
-            "optional": true,
-            "value": {
-              "$type": "string",
-              "type": "minecraft:resource_location",
-              "args": { "schema": "command_storage" }
-            },
-            "requires": [ "nbt" ],
-            "description": "A string specifying the namespaced ID of the command storage from which the NBT value is obtained. Ignored if `nbt` is not present."
-          }
+          "requires": [ "nbt" ],
+          "description": "A string specifying the target selector for the entity or entities from which the NBT value is obtained. Ignored if `nbt` is not present."
+        },
+        "storage": {
+          "optional": true,
+          "value": {
+            "$type": "string",
+            "type": "minecraft:resource_location",
+            "args": { "schema": "command_storage" }
+          },
+          "requires": [ "nbt" ],
+          "description": "A string specifying the namespaced ID of the command storage from which the NBT value is obtained. Ignored if `nbt` is not present."
+        }
       }
     },
-    
+
     "%formatting": {
       "$type": "object",
       "properties": {

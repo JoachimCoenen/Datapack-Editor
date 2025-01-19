@@ -9,6 +9,7 @@
 
 ### Fixes
  * Fixed drifting of encoded index when parsing nested JSON with a nesting depth > 2.
+ * Fixed `content` fields in raw JSON text not being mandatory.
 
 
 ## 0.9.0-alpha
