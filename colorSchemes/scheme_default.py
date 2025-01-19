@@ -1,12 +1,10 @@
-from typing import Callable
-
 from PyQt5.QtGui import QColor
 
 from cat.GUI.components.catWidgetMixins import BaseColors
 from cat.GUI.components.codeEditor import IndicatorStyle, QSciIndicatorStyle
 from base.model.utils import LanguageId
 from base.model.theme import addColorScheme, ColorScheme, Style, GlobalStyles, updateGlobalStylesToMatchUIColors, \
-	StyleFont, SyntaxHighlightingStyles
+	StyleFont, SyntaxHighlightingStyles, IndicatorStyles
 
 
 def initPlugin():
@@ -38,11 +36,14 @@ def buildColorScheme() -> ColorScheme:
 		HighlightedText=QColor('#ffffff'),
 		ButtonText=QColor('#202020'),
 
-		ToolTip=QColor('#ffffdc'),
+		ToolTip=QColor('#f0f0f0'),
 		ToolTipText=QColor('#000000'),
 
 		Link=QColor('#0000ff'),
 		LinkVisited=QColor('#ff00ff'),
+
+		ErrorText=QColor('#ff0000'),
+		WarningText=QColor('#7f7f00'),
 	)
 	
 	lightGray = QColor('#b4b4b4')
@@ -79,6 +80,48 @@ def buildColorScheme() -> ColorScheme:
 		xmlAttribute=    Style(foreground=QColor(0x00, 0x80, 0x80)),
 	)
 	updateGlobalStylesToMatchUIColors(scheme)
+
+	scheme.indicatorStyles = IndicatorStyles(
+		error=IndicatorStyle(
+			style=QSciIndicatorStyle.SquiggleIndicator,
+			drawUnder=True,
+			foreground=QColor(0xFF0000),
+		),
+		warning=IndicatorStyle(
+			style=QSciIndicatorStyle.SquiggleIndicator,
+			drawUnder=True,
+			foreground=QColor(0x9F8800),
+		),
+		info=IndicatorStyle(
+			style=QSciIndicatorStyle.SquiggleIndicator,
+			drawUnder=True,
+			foreground=QColor(0x0072FF),
+		),
+		fallback=IndicatorStyle(
+			style=QSciIndicatorStyle.SquiggleIndicator,
+			drawUnder=True,
+			foreground=QColor(0x3D8C52),
+		),
+		search_result=IndicatorStyle(
+			style=QSciIndicatorStyle.StraightBoxIndicator,
+			drawUnder=True,
+			foreground=QColor(0x2F, 0x8C, 0x48, 0x48),
+			outline=   QColor(0x3D, 0x8C, 0x52, 0x79)
+		),
+		matched_brace=IndicatorStyle(
+			style=QSciIndicatorStyle.StraightBoxIndicator,
+			drawUnder=True,
+			foreground=QColor(0x00, 0x6F, 0xCC, 0x28),
+			outline=   QColor(0x1D, 0x2D, 0x9C, 0x79)
+		),
+		# link=IndicatorStyle(
+		# 	style=QSciIndicatorStyle.HiddenIndicator,
+		# 	hoverStyle=QSciIndicatorStyle.PlainIndicator,
+		# 	drawUnder=True,
+		# 	foreground=     QColor(0x0072FF),
+		# 	hoverForeground=QColor(0x0000FF),
+		# )
+	)
 
 	colJson = lighten(scheme.syntaxHighlightingCommonStyles.string.foreground, 0.8)
 	colJson.setAlphaF(1 - 0.9)

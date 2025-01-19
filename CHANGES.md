@@ -1,6 +1,10 @@
 ## next version
 ### Features
  * Added common unified style ids for syntax highlighting. (issue #35)
+ * Added ability to customize default indicator styles. (issue #35)
+
+### Improvements
+ * Improved visibility of indicators (search result, matched brace, etc.) in dark mode.
 
 ### Fixes
  * Fixed drifting of encoded index when parsing nested JSON with a nesting depth > 2.

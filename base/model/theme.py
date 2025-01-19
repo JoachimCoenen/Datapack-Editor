@@ -129,6 +129,17 @@ def mergeStyle(style: Style, overridingStyle: Style) -> Style:
 
 
 @dataclass
+class IndicatorStyles:
+	error: IndicatorStyle | None = field(default=None)
+	warning: IndicatorStyle | None = field(default=None)
+	info: IndicatorStyle | None = field(default=None)
+	fallback: IndicatorStyle | None = field(default=None)
+	search_result: IndicatorStyle | None = field(default=None)
+	matched_brace: IndicatorStyle | None = field(default=None)
+	# link: IndicatorStyle | None = field(default=None)
+
+
+@dataclass
 class GlobalStyles:
 	defaultStyle: Style = field(default_factory=lambda: replace(DEFAULT_STYLE_STYLE))
 	lineNumberStyle: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
@@ -193,6 +204,7 @@ class ColorScheme:
 	allFallbackSchemes: list[ColorScheme] = field(init=False, default_factory=list)
 
 	uiColors: Optional[BaseColors] = None
+	indicatorStyles: IndicatorStyles = field(default_factory=IndicatorStyles)
 	globalStyles: GlobalStyles = field(default_factory=GlobalStyles)
 	syntaxHighlightingCommonStyles: SyntaxHighlightingStyles = field(default_factory=SyntaxHighlightingStyles)
 	languageIndicators: dict[LanguageId, IndicatorStyle] = field(default_factory=dict)
@@ -235,7 +247,6 @@ class ColorScheme:
 		"""
 		allFbs = collectAndSemiTopolSortAllNodes([self], attrgetter('localFallbackSchemes'), attrgetter('name'))
 		self.allFallbackSchemes = allFbs
-
 
 	def getLocalStyles2(self, language: LanguageId) -> Optional[Styles]:
 		return self.styles2.get(language)
@@ -333,9 +344,20 @@ def currentColorScheme() -> ColorScheme:
 
 
 def currentColorSchemeUpdated() -> None:
-	from cat.GUI.components import catWidgetMixins
+	from cat.GUI.components import catWidgetMixins, codeEditor
 	uiColors = currentColorScheme().uiColors
 	catWidgetMixins.setGUIColors(uiColors)
+	indicatorStyles = currentColorScheme().indicatorStyles
+	indicatorStyles = {
+		codeEditor.CatIndicatorIds.CAT_ERROR:         indicatorStyles.error,
+		codeEditor.CatIndicatorIds.CAT_WARNING:       indicatorStyles.warning,
+		codeEditor.CatIndicatorIds.CAT_INFO:          indicatorStyles.info,
+		codeEditor.CatIndicatorIds.CAT_FALLBACK:      indicatorStyles.fallback,
+		codeEditor.CatIndicatorIds.CAT_SEARCH_RESULT: indicatorStyles.search_result,
+		codeEditor.CatIndicatorIds.CAT_MATCHED_BRACE: indicatorStyles.matched_brace,
+		# codeEditor.CatIndicatorIds.CAT_LINK:          indicatorStyles.link,
+	}
+	codeEditor.setIndicatorStyles({styleId: style for styleId, style in indicatorStyles.items() if style is not None})
 
 
 def setCurrentColorScheme(name: str) -> None:

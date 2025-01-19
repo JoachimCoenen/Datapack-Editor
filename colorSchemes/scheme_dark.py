@@ -5,7 +5,7 @@ from typing import Callable
 from PyQt5.QtGui import QColor, qGray
 
 from base.model.theme import addColorScheme, ColorScheme, Style, StylesModifier, updateGlobalStylesToMatchUIColors, \
-	GlobalStyles, SyntaxHighlightingStyles
+	GlobalStyles, SyntaxHighlightingStyles, IndicatorStyles
 from base.model.utils import LanguageId
 from cat.GUI.components.catWidgetMixins import BaseColors
 from cat.GUI.components.codeEditor import IndicatorStyle
@@ -33,6 +33,8 @@ def buildColorScheme() -> ColorScheme:
 	scheme.globalStyles.defaultStyle |= Style(background=scheme.uiColors.Window)
 
 	scheme.syntaxHighlightingCommonStyles = invertCommonStyles(lightScheme.syntaxHighlightingCommonStyles, blackColor)
+
+	scheme.indicatorStyles = invertIndicatorStyles(lightScheme.indicatorStyles, blackColor)
 
 	scheme.languageIndicators = invertLanguageIndicators(lightScheme.languageIndicators, blackColor)
 
@@ -62,6 +64,7 @@ def invertUIColors(uiColors: BaseColors, blackColor: QColor) -> BaseColors:
 	inverted2.Panel = lighter
 	inverted2.Input = lighter
 	inverted2.Button = lighter
+	inverted2.ToolTip = darker
 
 	highlight = applyGamma(uiColors.Highlight, toPhysicalValue)
 	lightHighlight = applyGamma(uiColors.LightHighlight, toPhysicalValue)
@@ -101,6 +104,14 @@ def invertCommonStyles(gs: SyntaxHighlightingStyles, blackColor: QColor) -> Synt
 	inverted = {
 		f.name: invertStyle(getattr(gs, f.name), blackColor, f'CommonStyles:{f.name}')
 		for f in fields(SyntaxHighlightingStyles)
+	}
+	return replace(gs, **inverted)
+
+
+def invertIndicatorStyles(gs: IndicatorStyles, blackColor: QColor) -> IndicatorStyles:
+	inverted = {
+		f.name: invertIndicatorStyle(getattr(gs, f.name), blackColor, f'IndicatorStyles:{f.name}')
+		for f in fields(IndicatorStyles)
 	}
 	return replace(gs, **inverted)
 
