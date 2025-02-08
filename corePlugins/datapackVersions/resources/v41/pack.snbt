@@ -2,7 +2,7 @@
 	"$schema": "dpe/json/schema",
 	"$libraries": {
 		rawJsonText: "rawJsonText-library.json",
-		utils: "../common/utils-library.json",
+		utils: "utils/utils-library.json",
 	},
 	description: "Configuration file defining the metadata of a data pack for Minecraft.",
 	

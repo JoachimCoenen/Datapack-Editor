@@ -9,7 +9,7 @@
     "location": "conditions/location.json",
     "distance": "conditions/distance.json",
     "predicate": "../predicate-library.json",
-    "utils": "../../common/utils-library.json"
+    "utils": "../utils/utils-library.json"
   },
   "$body": { "$defRef": "advancement" },
   "$templates": {},

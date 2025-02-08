@@ -13,7 +13,7 @@ def initVersion() -> None:
 
 def loadJsonSchemas() -> dict[str, StructureDataSchema]:
 	resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
-	v41Dir = os.path.join(resourcesDir, "v41/json")
+	v41Dir = os.path.join(resourcesDir, "v41")
 	v41Schemas = {
 		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:tags', os.path.join(v41Dir, 'tags.json')),
 		'minecraft:raw_json_text': STRUCTURE_SCHEMA_LOADER.loadSchema('minecraft:raw_json_text', os.path.join(v41Dir, 'rawJsonText.json')),
@@ -27,13 +27,8 @@ def loadJsonSchemas() -> dict[str, StructureDataSchema]:
 
 		# **STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:particle_configuration_tags', os.path.join(v41Dir, 'particle_configuration_tags.json')),  # todo DBG remove again
 	}
-	return v41Schemas
 
-
-def loadNBTSchemas() -> dict[str, StructureDataSchema]:
-	resourcesDir = os.path.join(os.path.dirname(__file__), "resources/")
-	v41Dir = os.path.join(resourcesDir, "v41/nbt")
-	v41Schemas = {
+	v41Schemas |= {
 		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:particle_configuration_tags', os.path.join(v41Dir, 'particle_configuration_tags.json')),
 		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:item_sub_predicates', os.path.join(v41Dir, 'item_sub_predicates.json')),
 	}
@@ -41,7 +36,7 @@ def loadNBTSchemas() -> dict[str, StructureDataSchema]:
 
 
 JSON_SCHEMAS = loadJsonSchemas()
-SNBT_SCHEMAS = loadNBTSchemas()
+SNBT_SCHEMAS = JSON_SCHEMAS
 
 
 def buildVersion41() -> DPVersion:

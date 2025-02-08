@@ -4,7 +4,7 @@
     "location": "location.json",
     "item": "item.json",
     "type_specific": "type_specific.json",
-    "utils": "../../../common/utils-library.json"
+    "utils": "../../utils/utils-library.json"
   },
   "$definitions": {
     "entity": {

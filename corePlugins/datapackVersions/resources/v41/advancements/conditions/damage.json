@@ -3,7 +3,7 @@
   "$libraries": {
     "damage_type": "damage_type.json",
     "entity": "entity.json",
-    "utils": "../../../common/utils-library.json"
+    "utils": "../../utils/utils-library.json"
   },
   "$definitions": {
     "damage": {

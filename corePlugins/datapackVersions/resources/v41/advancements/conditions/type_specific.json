@@ -4,7 +4,7 @@
     "location": "location.json",
     "item": "item.json",
     "entity": "entity.json",
-    "utils": "../../../common/utils-library.json"
+    "utils": "../../utils/utils-library.json"
   },
   "$templates": {
 

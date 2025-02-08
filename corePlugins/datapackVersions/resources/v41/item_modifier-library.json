@@ -6,9 +6,9 @@
     "predicate": "predicate-library.json",
     "loot_table": "loot_table-library.json",
     "number_provider": "utils/number_provider-library.json",
-    "data_components": "../nbt/data_components-library.json",
-    "utils": "../common/utils-library.json",
-    "nbt": "../common/nbt-types.json"
+    "data_components": "nbt/data_components-library.json",
+    "utils": "utils/utils-library.json",
+    "nbt": "utils/nbt-types.json"
   },
   "$templates": {},
   "$definitions": {

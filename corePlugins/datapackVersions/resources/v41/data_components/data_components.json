@@ -2,9 +2,9 @@
   "$schema": "dpe/json/schema/library",
   "$libraries": {
     "data_components": "data_components-library.json",
-    "rawJsonText": "../json/rawJsonText-library.json",
-    "utils": "../common/utils-library.json",
-    "nbt": "../common/nbt-types.json"
+    "rawJsonText": "../rawJsonText-library.json",
+    "utils": "../utils/utils-library.json",
+    "nbt": "../utils/nbt-types.json"
   },
   "$templates": { },
   

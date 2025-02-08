@@ -2,7 +2,7 @@
   "$schema": "dpe/json/schema/library",
     "$libraries": {
     "entity": "entity.json",
-    "utils": "../../../common/utils-library.json"
+    "utils": "../../utils/utils-library.json"
   },
   "$definitions": {
     "damage_type": {

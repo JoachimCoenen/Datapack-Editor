@@ -1,8 +1,8 @@
 {
   "$schema": "dpe/json/schema/library",
   "$libraries": {
-    "nbt": "../common/nbt-types.json",
-    "utils": "../common/utils-library.json"
+    "nbt": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json"
   },
   "$templates": { },
   

@@ -2,8 +2,8 @@
   "$schema": "dpe/json/schema/library",
   "$libraries": {
     "item_sub_predicates": "item_sub_predicates-library.json",
-    "rawJsonText": "../json/rawJsonText-library.json",
-    "utils": "../common/utils-library.json"
+    "rawJsonText": "../rawJsonText-library.json",
+    "utils": "../utils/utils-library.json"
   },
   "$templates": { },
   

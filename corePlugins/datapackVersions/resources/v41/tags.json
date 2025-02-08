@@ -1,6 +1,6 @@
 {
   "$schema": "dpe/json/schema/library",  "$libraries": {
-    "utils": "../common/utils-library.json"
+    "utils": "utils/utils-library.json"
   },
   "$templates": {
     "tags": {

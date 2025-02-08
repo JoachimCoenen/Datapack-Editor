@@ -4,7 +4,7 @@
     "last_mc_version_checked": "23w44a"
   },
   "$libraries": {
-    "utils": "../common/utils-library.json"
+    "utils": "utils/utils-library.json"
   },
   "$definitions": {
     "rawJsonText": {

@@ -6,7 +6,7 @@
     "item": "advancements/conditions/item.json",
     "location": "advancements/conditions/location.json",
     "number_provider": "utils/number_provider-library.json",
-    "utils": "../common/utils-library.json"
+    "utils": "utils/utils-library.json"
   },
   "$definitions": {
     "predicate-body": {
