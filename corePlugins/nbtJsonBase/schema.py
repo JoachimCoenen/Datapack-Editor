@@ -17,6 +17,9 @@ def _enrichWithSchemaInternal(data: StructureDataNode, schema: StructureDataSche
 	if isinstance(schema, UnionSchema):
 		return _enrichWithUnionSchema(data, schema)
 
+	if schema is None:
+		return 0
+
 	if schema.typeName == 'any':
 		_enrichWithAnySchema(data)
 		return 2

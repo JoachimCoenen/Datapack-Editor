@@ -11,6 +11,8 @@
  * Fixed drifting of encoded index when parsing nested JSON with a nesting depth > 2.
  * Fixed `content` fields in raw JSON text not being mandatory.
  * Fixed wrong color of fold margin in dark mode.
+ * Fixed JSON parser failing to parse constants when the JSON is an inner language.
+ * Fixed JSON validation failing when a string schema is missing its `args` definition.
 
 
 ## 0.9.0-alpha

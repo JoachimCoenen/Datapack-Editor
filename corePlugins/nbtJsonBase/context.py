@@ -160,7 +160,10 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 	def _suggestionsForUnionSchema(self, schema: UnionSchema, contained: list[StructureNode], data: bytes):
 		gsfs = functools.partial(self.getSuggestionsForSchema, contained=contained, data=data)
 		if contained:
-			return list(flatmap(gsfs, _flattenOptions(schema, contained[-1])))  # maybe contained[-2]??
+			parent = contained[-1] # maybe contained[-2]??
+			if isinstance(parent, StructureProperty):  # keep it safe...
+				parent = contained[-2]
+			return list(flatmap(gsfs, _flattenOptions(schema, parent)))
 		else:
 			return list(flatmap(gsfs, schema.options))
 
@@ -388,12 +391,14 @@ def validateSimpleSchemaArgs(
 	elif isinstance(expectedArgs, IllegalSchema):
 		if argsNode is not None and argsNode.data:
 			return [SemanticsError(MDStr(f"Unexpected arguments for type '{type_.name}'."), argsNode.span, style='warning')]
-	else:
+	elif argsNode is not None:
 		enrichWithSchema(argsNode.n, expectedArgs)
 		errors = []
 		prepareTree(argsNode.n, b'', filePath, errorsIO=errors)
 		validateTree(argsNode.n, b'', errorsIO=errors)
 		return errors
+	else:
+		return []
 
 
 __structureStringContexts: dict[str, StringNodeContext] = {}

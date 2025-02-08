@@ -194,11 +194,12 @@ class JsonTokenizer(TokenizerBase[Token]):
 	def extract_special(self) -> Token:
 		"""Extracts true, false and null from JSON string"""
 		start = self.currentPos
+		startCursor = self.cursor
 		self.cursor += 1  # first letter
 		while self.cursor < self.length and (self.text[self.cursor] in ASCII_LOWERCASE_RANGE or self.text[self.cursor] in ASCII_UPPERCASE_RANGE):
 			self.cursor += 1
 
-		word = self.text[start.index - self.cursorOffset:self.cursor]
+		word = self.text[startCursor:self.cursor]
 		tkType = _TOKEN_TYPE_FOR_SPECIAL.get(word, TokenType.invalid)
 		if tkType is TokenType.invalid:
 			if self.cursor < self.length and self.text[self.cursor] == ORD_DOUBLE_QUOTE:
