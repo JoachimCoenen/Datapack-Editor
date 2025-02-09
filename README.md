@@ -50,12 +50,12 @@ For Windows and Linux (Debian)
 | Save current file          | `Ctrl`+`S`         |                                                                                           |
 | Save as                    | `Ctrl`+`Shift`+`S` |                                                                                           |
 
-| Action                   | Shortcut       |
-|--------------------------|----------------|
-| Duplicate line           | `Ctrl`+`D`     |
-| Find in current document | `Ctrl`+`F`     |
-| Trigger code suggestions | `Ctrl`+`Space` |
-| Show call tips           | `Ctrl`+`K`     |
+| Action                      | Shortcut       |
+|-----------------------------|----------------|
+| Trigger code suggestions    | `Ctrl`+`Space` |
+| Show call tips              | `Ctrl`+`K`     |
+| Find in current document    | `Ctrl`+`F`     |
+| Duplicate line or selection | `Ctrl`+`D`     |
 
 
 ## Download & Install
@@ -69,8 +69,13 @@ For Windows and Linux (Debian)
     This is a **false positive**<sup>[[2]][pyinstaler_malware_LINK]</sup>.
 * Linux
   * Download the zip file, extract it to an empty folder and run the `Datakack Editor` file.
+* macOS (experimental)
+  * You will have to build the app yourself. See [Building Datapack Editor](#building-datapack-editor).
 
 If you have any questions, problems or suggestions, feel free to create an [Issue][NewIssue_LINK]. 
+
+## Building Datapack Editor
+You can also build the app yourself following these [build instructions][Documentation_build_LINK].
 
 ## Screenshots 
 <img src="screenshots/mianWindow_annotated.png" alt="Main Window annotated" width="49%"></img>
@@ -102,3 +107,4 @@ Some contents in the program are from the Minecraft Wiki (see [Minecraft Wiki:Ge
 [virustotal_LINK]:               https://www.virustotal.com/gui/file/c7ed215e40289939f47a5cb6563ee3369959481af54ab0a2bc3f2f03f4705e75  "Virus Total results"
 [pyinstaler_malware_LINK]:       https://github.com/pyinstaller/pyinstaller/issues/5854  "pyinstaler issue #5854"
 
+[Documentation_build_LINK]:      documentation/build.md  "build instructions"
