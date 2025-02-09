@@ -1,5 +1,18 @@
+if [ ! -d ".git" ]
+then
+  echo "you are not in the top-most folder of the project. execute the script from the top-most folder using:"
+  echo ">> ./housekeeping/build_app.sh"
+  exit 1
+fi
+if [ ! -d ".venv" ]
+then
+  echo "you are missing a virtual environment for python. You can create one using:"
+  echo ">> ./housekeeping/create_virtual_env.sh"
+  exit 1
+fi
+
 source .venv/bin/activate  # select virtual environment
-#pip install PyQt5 QScintilla QtAwesome recordclass timerit watchdog markdown nbtlib
+
 mkdir build
 cd build || exit
 #DANGER!
