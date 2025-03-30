@@ -1,3 +1,4 @@
+import os.path
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Iterable
@@ -90,14 +91,16 @@ class LibPathStrContext(StringNodeContext):
 		if isinstance(libraryPath, StringNode):
 			library = _getLibrary(dirPath, libraryPath.data)
 			libraryFilePath = library.filePath
+			isValid = library.exists
 		else:
 			libraryFilePath = None
-		node.parsedValue = tree, libraryFilePath, dirPath
+			isValid = False
+		node.parsedValue = tree, libraryFilePath, dirPath, isValid
 
 	def validate(self, node: StringNode, errorsIO: list[GeneralError]) -> None:
 		if isinstance(node.schema, StringSchema):
 			pass
-		if node.parsedValue is None or node.parsedValue[1] is None:
+		if node.parsedValue is None or node.parsedValue[1] is None or not node.parsedValue[3]:
 			errorsIO.append(SemanticsError(UNKNOWN_MSG.format("library", node.data), node.span))
 
 	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:

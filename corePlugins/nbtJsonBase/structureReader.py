@@ -67,6 +67,7 @@ class SchemaLibrary:
 	templates: dict[str, SchemaTemplate]  # = field(default_factory=dict, init=False)
 	additional: dict[str, Any]  # = field(default_factory=dict, init=False)
 	filePath: str
+	exists: bool
 
 	def __post_init__(self):
 		self.additional.setdefault('definitions', {})

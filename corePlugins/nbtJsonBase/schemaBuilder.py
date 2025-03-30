@@ -60,7 +60,8 @@ class SchemaBuilder:
 			libraries=cast(dict[str, SchemaLibrary], ctx.libraries),
 			templates={},
 			additional={},
-			filePath=filePath
+			filePath=filePath,
+			exists=True
 		)
 
 		def _parseLibraryPartial1() -> Doer1:
@@ -344,7 +345,7 @@ class SchemaBuilderOrchestrator:
 				library, partial = None, Doer2.NOP
 
 		if library is None:
-			library = SchemaLibrary(MDStr(''), {}, {}, {}, fullPath)
+			library = SchemaLibrary(MDStr(''), {}, {}, {}, fullPath, exists=False)
 
 		return library, partial.wrapExc(self.errors[fullPath])
 
