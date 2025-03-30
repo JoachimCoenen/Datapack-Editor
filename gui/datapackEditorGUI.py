@@ -20,11 +20,11 @@ from base.model.parsing.bytesUtils import strToBytes
 from base.model.pathUtils import FilePath, unitePath
 from base.model.searchUtils import autocompleteFromList, FilterStr, filterStrChoices
 from base.model.utils import GeneralError
-from cat.GUI import Style, RoundedCorners, Overlap, CORNERS, TreeBuilderABC
+from cat.GUI import Style, RoundedCorners, Overlap, CORNERS
 from cat.GUI.autoGUI import AutoGUI
 from cat.GUI.components.Widgets import CatTextField, HTMLDelegate
 from cat.GUI.components.codeEditor import SearchOptions, SearchMode, QsciBraceMatch, IndexSpan
-from cat.GUI.components.treeBuilders import DataListBuilder
+from cat.GUI.components.treeBuilders import DataListBuilder, DataTreeBuilderNode
 from cat.GUI.decoratorDrawers import registerDecoratorDrawer, InnerDrawPropertyFunc
 from cat.GUI.enums import ResizeMode, SizePolicy
 from cat.GUI.pythonGUI import MenuItemData
@@ -348,8 +348,8 @@ class DatapackEditorGUI(AutoGUI):
 	def filteredTree(
 			self,
 			context: SearchableListContext[_TT],
-			treeBuilder: TreeBuilderABC[_TT],
-			headerBuilder: Optional[TreeBuilderABC[_T2]] = None,
+			treeBuilder: DataTreeBuilderNode[_TT],
+			headerBuilder: Optional[DataTreeBuilderNode[_T2]] = None,
 			*,
 			headerVisible: bool | EllipsisType = ...,
 			loadDeferred: bool = True,
@@ -387,9 +387,9 @@ class DatapackEditorGUI(AutoGUI):
 			self,
 			allChoices: Sequence[_TT],
 			filterContext: Optional[SearchableListContext[_TR]],
-			treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]],
+			treeBuilderBuilder: Callable[[list[_TR]], DataTreeBuilderNode[_TR]],
 			*,
-			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
+			headerBuilderBuilder: Callable[[], Optional[DataTreeBuilderNode[_T2]]] = None,
 			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
 			filterFunc: Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
 			isRegex: bool = False,
@@ -632,17 +632,17 @@ class EditableSerializableDataclassList(PropertyDecorator):
 	def __init__(
 			self,
 			name: str,
-			treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]],
+			treeBuilderBuilder: Callable[[list[_TR]], DataTreeBuilderNode[_TR]],
 			*,
-			headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = None,
+			headerBuilderBuilder: Callable[[], Optional[DataTreeBuilderNode[_T2]]] = None,
 			getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = lambda x: x,  # : Callable[[-_TT], Iterable[str]]
 			filterFunc: Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TR]]] = filterStrChoices,  # : Callable[[FilterStr, -_TT], _TR]
 			dialogWidth: Optional[int] = None, dialogHeight: Optional[int] = None,
 	):
 		super().__init__()
 		self.name: str = name
-		self.treeBuilderBuilder: Callable[[list[_TR]], TreeBuilderABC[_TR]] = treeBuilderBuilder
-		self.headerBuilderBuilder: Callable[[], Optional[TreeBuilderABC[_T2]]] = headerBuilderBuilder
+		self.treeBuilderBuilder: Callable[[list[_TR]], DataTreeBuilderNode[_TR]] = treeBuilderBuilder
+		self.headerBuilderBuilder: Callable[[], Optional[DataTreeBuilderNode[_T2]]] = headerBuilderBuilder
 		self.getStrChoices: Callable[[Iterable[_TT]], Iterable[str]] = getStrChoices
 		self.filterFunc: Callable[[FilterStr, Collection[_TT]], tuple[int, int, Collection[_TR]]] = filterFunc
 		self.dialogWidth: Optional[int] = dialogWidth
