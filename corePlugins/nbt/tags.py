@@ -6,28 +6,29 @@ from typing import ClassVar
 
 from base.model.parsing.tree import Node
 from base.model.utils import LanguageId
-from corePlugins.nbtJsonBase.core import *
+from corePlugins.nbtJsonBase.core import StructureDataNode, InvalidNode, BooleanNode, NumberNode, StringNode, \
+	ListLikeNode, StructureProperty, ObjectNode, StructureSchema
 
 
 @dataclass
 class NBTNode(Node['NBTNode', StructureSchema], ABC):
-	language: ClassVar[LanguageId] = 'SNBT'
+	language: ClassVar[LanguageId] = LanguageId('SNBT')
 
 
 @dataclass
-class InvalidTag(NBTNode, InvalidNode[NBTNode]):
+class InvalidTag(NBTNode, InvalidNode):
 	pass
 
 
 @dataclass
-class BooleanTag(NBTNode, BooleanNode[NBTNode]):
+class BooleanTag(NBTNode, BooleanNode):
 	pass
 
 
 @dataclass
-class NumberTag[T](NBTNode, NumberNode[NBTNode, T]):
+class NumberTag[T: int | float](NBTNode, NumberNode[T]):
 	# typeName: ClassVar[str] = 'number_tag'
-	pass  # data: _TT
+	pass  # data: T
 
 
 @dataclass
@@ -61,27 +62,27 @@ class DoubleTag(NumberTag[float]):
 
 
 @dataclass
-class StringTag(NBTNode, StringNode[NBTNode]):
+class StringTag(NBTNode, StringNode):
 	pass
 
 
 @dataclass
-class ListTag(NBTNode, ListLikeNode[NBTNode, StructureDataNode]):
+class ListTag(NBTNode, ListLikeNode[StructureDataNode]):
 	pass
 
 
 @dataclass
-class NBTProperty(NBTNode, StructureProperty[NBTNode]):
+class NBTProperty(NBTNode, StructureProperty):
 	pass
 
 
 @dataclass
-class CompoundTag(NBTNode, ObjectNode[NBTNode]):
+class CompoundTag(NBTNode, ObjectNode):
 	pass
 
 
 @dataclass
-class ArrayTag[T2](NBTNode, ListLikeNode[NBTNode, T2]):
+class ArrayTag[T2: StructureDataNode](NBTNode, ListLikeNode[T2]):
 	data: list[T2]
 
 

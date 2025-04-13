@@ -1,7 +1,8 @@
-from .core import *
+from .core import StructureDataNode, ListLikeNode, StructureProperty, ObjectNode, StructureDataSchema, ListLikeSchema, \
+	KeySchema, ObjectSchema, UnionSchema, resolveCalculatedSchema, STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA
 
 
-def enrichWithSchema(data: StructureDataNode, schema: StructureDataSchema) -> bool:
+def enrichWithSchema(data: StructureDataNode, schema: StructureDataSchema | None) -> bool:
 	# data.schema = schema
 	if schema is not None:
 		return _enrichWithSchemaInternal(data, schema) > 0
@@ -13,27 +14,27 @@ def enrichWithSchema(data: StructureDataNode, schema: StructureDataSchema) -> bo
 
 def _enrichWithSchemaInternal(data: StructureDataNode, schema: StructureDataSchema) -> int:
 	# 2 = OK, 1 = Maybe, 0 = No
-	schema = resolveCalculatedSchema(schema, data.parent)
-	if isinstance(schema, UnionSchema):
-		return _enrichWithUnionSchema(data, schema)
+	resolvedSchema = resolveCalculatedSchema(schema, data.parent)
+	if isinstance(resolvedSchema, UnionSchema):
+		return _enrichWithUnionSchema(data, resolvedSchema)
 
-	if schema is None:
+	if resolvedSchema is None:
 		return 0
 
-	if schema.typeName == 'any':
+	if resolvedSchema.typeName == 'any':
 		_enrichWithAnySchema(data)
 		return 2
 
 	dataType = type(data)
-	if issubclass(dataType, schema.DATA_TYPE):
-		data.schema = schema
-		if isinstance(data, ListLikeNode) and isinstance(schema, ListLikeSchema):
-			return _enrichListLikeWithSchema(data, schema)
-		elif isinstance(data, ObjectNode) and isinstance(schema, ObjectSchema):
-			return _enrichObjectWithSchema(data, schema)
+	if issubclass(dataType, resolvedSchema.DATA_TYPE):
+		data.schema = resolvedSchema
+		if isinstance(data, ListLikeNode) and isinstance(resolvedSchema, ListLikeSchema):
+			return _enrichListLikeWithSchema(data, resolvedSchema)
+		elif isinstance(data, ObjectNode) and isinstance(resolvedSchema, ObjectSchema):
+			return _enrichObjectWithSchema(data, resolvedSchema)
 		return 2
 	# elif dataType is JsonInvalid:
-	# 	data.schema = schema
+	# 	data.schema = resolvedSchema
 	return 0
 
 
@@ -65,7 +66,7 @@ def _enrichObjectWithSchema(data: ObjectNode, schema: ObjectSchema) -> int:
 	# 2 = OK, 1 = Maybe, 0 = No
 	# todo: don't know how to properly incorporate exclusionGroups...
 	needsAMandatory = False
-	atLeastOneMandatory = False
+	hasAtLeastOneMandatory = False
 	allMandatory = True
 	hasDefiningProp = not schema.definingProps.isdisjoint(data.data.keys())
 	if not hasDefiningProp:
@@ -74,24 +75,24 @@ def _enrichObjectWithSchema(data: ObjectNode, schema: ObjectSchema) -> int:
 				if any(r in data.data for r in prop.hates):
 					continue
 				needsAMandatory = True
-				if prop.name in data.data:
-					atLeastOneMandatory = True
+				if prop.name in data.data:  # type: ignore  # mypy gets confused by `Anything`
+					hasAtLeastOneMandatory = True
 				if not all(r in data.data for r in prop.requires):
 					continue
-				if prop.name not in data.data:
+				if prop.name not in data.data:  # type: ignore  # mypy gets confused by `Anything`
 					allMandatory = False
 
-		atLeastOneMandatory = atLeastOneMandatory or not needsAMandatory  # treat atLeastOneMandatory as True if nothing in the schema is mandatory.
+		hasAtLeastOneMandatory = hasAtLeastOneMandatory or not needsAMandatory  # treat hasAtLeastOneMandatory as True if nothing in the schema is mandatory.
 
 	atLeastOneOK = False
 	allOK = True
-	for name, prop in data.data.items():
-		if _enrichProperty(name, prop, schema, data):
+	for name, prop2 in data.data.items():
+		if _enrichProperty(name, prop2, schema, data):
 			atLeastOneOK = True
 		else:
 			allOK = False
 
-	return 2 if hasDefiningProp or (allOK and allMandatory) else (1 if atLeastOneOK and atLeastOneMandatory else 0)
+	return 2 if hasDefiningProp or (allOK and allMandatory) else (1 if atLeastOneOK and hasAtLeastOneMandatory else 0)
 
 
 def _enrichProperty(name: str, prop: StructureProperty, parentSchema: ObjectSchema, parent: ObjectNode) -> bool:

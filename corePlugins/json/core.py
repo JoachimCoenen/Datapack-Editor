@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+from abc import ABC
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -8,7 +9,8 @@ from recordclass import as_dataclass
 
 from base.model.parsing.tree import LanguageId2, Node
 from base.model.utils import LanguageId, Span
-from corePlugins.nbtJsonBase.core import *
+from corePlugins.nbtJsonBase.core import StructureDataNode, InvalidNode, NullNode, BooleanNode, NumberNode, StringNode, \
+	ListLikeNode, StructureProperty, ObjectNode, StructureSchema
 
 
 class TokenType(enum.Enum):
@@ -74,59 +76,57 @@ class Token:
 
 
 @dataclass
-class JsonNode(Node['JsonNode', StructureSchema]):
-	language: ClassVar[LanguageId] = 'JSON'
+class JsonNode(Node['JsonNode', StructureSchema], ABC):
+	language: ClassVar[LanguageId] = LanguageId('JSON')
 
 
 @dataclass
-class JsonInvalid(JsonNode, InvalidNode[JsonNode]):
+class JsonInvalid(JsonNode, InvalidNode):
 	pass
 
 
 @dataclass
-class JsonNull(JsonNode, NullNode[JsonNode]):
+class JsonNull(JsonNode, NullNode):
 	pass
 
 
 @dataclass(unsafe_hash=True, order=True)
-class JsonBool(JsonNode, BooleanNode[JsonNode]):
+class JsonBool(JsonNode, BooleanNode):
 	pass
 
 
 @dataclass(unsafe_hash=True, order=True)
-class JsonNumber(JsonNode, NumberNode[JsonNode, float]):
+class JsonNumber(JsonNode, NumberNode[float]):
 	pass
 
 
 @dataclass(unsafe_hash=True, order=True)
-class JsonString(JsonNode, StringNode[JsonNode]):
+class JsonString(JsonNode, StringNode):
 	pass
 
 
 @dataclass
-class JsonArray(JsonNode, ListLikeNode[JsonNode, StructureDataNode]):
+class JsonArray(JsonNode, ListLikeNode[StructureDataNode]):
 	pass
 
 
 @dataclass
-class JsonProperty(JsonNode, StructureProperty[JsonNode]):
+class JsonProperty(JsonNode, StructureProperty):
 	pass
 
 
 @dataclass
-class JsonObject(JsonNode, ObjectNode[JsonNode]):
+class JsonObject(JsonNode, ObjectNode):
 	pass
 
 
-JSON_ID2: LanguageId2[JsonNode] = LanguageId2('JSON', JsonNode)
+JSON_ID2: LanguageId2 = LanguageId2('JSON', JsonNode)
 
 
 __all__ = [
-
 	'TokenType',
 	'VALUE_TOKENS',
 	'Token',
-
 
 	'JsonNode',
 	'JsonInvalid',

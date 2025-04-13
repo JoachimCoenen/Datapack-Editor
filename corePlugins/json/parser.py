@@ -7,13 +7,14 @@ from typing import Any, Optional, AbstractSet, Callable, cast
 from cat.utils import CachedProperty
 from cat.utils.collections_ import OrderedMultiDict
 from cat.utils.profiling import ProfiledFunction
-from .core import *
+from .core import TokenType, Token, JsonNode, JsonInvalid, JsonNull, JsonBool, JsonNumber, JsonString, JsonArray, \
+	JsonObject, JsonProperty
 from .lexer import JsonTokenizer
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, strToBytes, ORD_BACKSLASH, ORD_u, ORD_DOUBLE_QUOTE, ORD_SINGLE_QUOTE, ORD_MINUS
 from base.model.parsing.parser import ParserBase, IndexMapBuilder, IndexMapper
 from base.model.utils import Span, MDStr, Message, NULL_SPAN, Position
-from corePlugins.nbtJsonBase.core import StructureSchema, KeySchema, StructureDataNode, StructureValue
+from corePlugins.nbtJsonBase.core import KeySchema, StructureDataNode, StructureProperty, StructureDataSchema
 from corePlugins.nbtJsonBase.schema import pathify, enrichWithSchema
 
 ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG = Message("JSON standard allows only double quoted string as property key", 0)
@@ -37,16 +38,16 @@ _BOOLEAN_TOKENS = {
 
 
 @dataclass
-class JsonParser(ParserBase[JsonNode, StructureSchema]):
+class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 
 	_waitingForClosing: dict[TokenType, int] = field(default_factory=lambda: defaultdict(int), init=False)
 	# tokens: deque[Token] = field(init=False)
 	_tokenizer: JsonTokenizer = field(init=False)
 	_current: Token = field(init=False)
 	_eofToken: Token = field(init=False)
-	_last: Optional[Token] = field(init=False, default=None)
+	_last: Token = field(init=False)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		super().__post_init__()
 		allowMultilineStr = True or self.schema is not None and self.schema.allowMultilineStr
 		self._tokenizer = JsonTokenizer(
@@ -65,7 +66,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		self._current = cast(Any, None)
 		self._next()  # sets self._current, self._last
 
-	def tokenize(self):
+	def tokenize(self) -> tuple[list[Token], Token]:
 		tokens = []
 		while (tkn := self._tokenizer.nextToken()).type is not TokenType.eof:
 			tokens.append(tkn)
@@ -138,7 +139,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		"""Parses an object out of JSON tokens"""
 		valueTokens = {*self._PARSERS.keys(), TokenType.invalid, TokenType.colon}
 		goodValueTokens = {TokenType.string}
-		objData: OrderedMultiDict[str, JsonProperty] = OrderedMultiDict()
+		objData: OrderedMultiDict[str, StructureProperty] = OrderedMultiDict()
 
 		def parse_property() -> None:
 			nonlocal objData
@@ -146,16 +147,16 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 			token = self._last
 			# parse KEY:
 			if token.type == TokenType.string:
-				key = self.parse_string()
+				key: JsonString = self.parse_string()
 			elif token.type in self._PARSERS.keys():
-				key = self._internalParseTokens()
+				key = self._internalParseTokens()  # type: ignore
 				if key.typeName != JsonString.typeName:
 					self.errorMsg(ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG, span=key.span)
-					key = JsonInvalid(key.span, None, bytesToStr(self.text[key.span.slice]))
+					key = JsonInvalid(key.span, None, bytesToStr(self.text[key.span.slice]))  # type: ignore
 			elif token.type == TokenType.invalid:
-				key = self.parse_invalid()
+				key = self.parse_invalid()  # type: ignore
 			elif token.type == TokenType.colon:
-				key = JsonInvalid(Span(token.span.start), None, '')
+				key = JsonInvalid(Span(token.span.start), None, '')  # type: ignore
 				colonAlreadySeen = True
 			else:
 				assert False, f"invalid state: invalid TokenType {token.type} for property"
@@ -165,7 +166,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 				token = self.accept(TokenType.colon, advanceIfBad=False)
 
 			if token.type is not TokenType.colon:
-				value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
+				value: StructureDataNode = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
 				objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
 				return
 
@@ -212,7 +213,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		"""
 		delimiterOrClosing = {delimiter, closing}
 
-		def tryParseItem(goodTokens):
+		def tryParseItem(goodTokens) -> None:
 			if self.tryAcceptAnyOf(valueTokens) is not None:
 				parseItem()
 			else:  # force error but don't consume:
@@ -260,7 +261,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		"""Parses an array out of JSON tokens"""
 		valueTokens = {*self._PARSERS.keys(), TokenType.invalid}
 		goodValueTokens = {*self._PARSERS.keys()}
-		arrayData: list[StructureDataNode[JsonNode]] = []
+		arrayData: list[StructureDataNode] = []
 
 		def parse_element() -> None:
 			nonlocal arrayData
@@ -377,7 +378,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 			else:
 				valToCHeck = token.value
 			if valToCHeck.isdigit():
-				number = int(token.value)
+				number: int | float = int(token.value)
 			else:
 				number = float(token.value)
 			return JsonNumber(token.span, None, number, token.value)
@@ -403,7 +404,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		return JsonInvalid(token.span, None, bytesToStr(token.value))
 
 	@CachedProperty
-	def _PARSERS(self) -> dict[TokenType, Callable[[], StructureDataNode[JsonNode, StructureValue[JsonNode]]]]:
+	def _PARSERS(self) -> dict[TokenType, Callable[[], StructureDataNode]]:
 		return {
 			TokenType.left_bracket: self.parse_array2,
 			TokenType.left_brace: self.parse_object2,
@@ -413,7 +414,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 			TokenType.null: self.parse_null,
 		}
 
-	def _internalParseTokens(self) -> StructureDataNode[JsonNode, StructureValue[JsonNode]]:
+	def _internalParseTokens(self) -> StructureDataNode:
 		"""Recursive JSON parse implementation"""
 		token = self._last
 		parser = self._PARSERS.get(token.type)
@@ -423,7 +424,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		else:
 			return JsonInvalid(token.span, None, bytesToStr(token.value))
 
-	def parseJsonTokens(self) -> Optional[StructureDataNode[JsonNode, StructureValue[JsonNode]]]:
+	def parseJsonTokens(self) -> Optional[StructureDataNode]:
 		"""Recursive JSON parse implementation"""
 		token = self.acceptAnyOf(self._PARSERS.keys())
 		if token.type is not TokenType.eof:
@@ -435,7 +436,7 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		return data
 
 	@ProfiledFunction(enabled=False)
-	def parse(self) -> Optional[StructureDataNode[JsonNode, StructureValue[JsonNode]]]:
+	def parse(self) -> Optional[StructureDataNode]:
 		"""Parses a JSON string into a Python object"""
 		value = self.parseJsonTokens()
 
@@ -449,7 +450,3 @@ class JsonParser(ParserBase[JsonNode, StructureSchema]):
 		self.line = self._tokenizer.line
 		self.lineStart = self._tokenizer.lineStart
 		return value
-
-
-def init():
-	pass

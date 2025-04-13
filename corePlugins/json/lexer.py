@@ -1,6 +1,6 @@
 """Lexer functions, loosely based on www.github.com/tusharsadhwani/json_parser"""
 from dataclasses import dataclass, field
-from typing import Optional, Callable
+from typing import Callable
 
 from cat.utils import CachedProperty
 from base.model.parsing.bytesUtils import CR_LF, DIGITS_RANGE, WHITESPACE, ASCII_LOWERCASE_RANGE, ASCII_UPPERCASE_RANGE, bytesToStr, ASCII_LETTERS, WHITESPACE_NO_LF, ORD_LF, \
@@ -237,14 +237,14 @@ class JsonTokenizer(TokenizerBase[Token]):
 		return self.addToken2(start, char, _TOKEN_TYPE_FOR_OPERATOR[char])
 
 	@CachedProperty
-	def _TOKEN_EXTRACTORS_BY_CHAR(self) -> dict[str, Callable[[], Token]]:
+	def _TOKEN_EXTRACTORS_BY_CHAR(self) -> dict[int, Callable[[], Token]]:
 		return {
 			**{c: self.extract_string for c in b'"\''},
 			**{c: self.extract_special for c in ASCII_LETTERS},  # 'e' & 'E' will be replaced again with 'e': extract_number,
 			**{c: self.extract_number for c in b'0123456789+-.eE'},
 		}
 
-	def nextToken(self) -> Optional[Token]:
+	def nextToken(self) -> Token:
 		self.consumeWhitespace()
 		if not self.cursor < self.length:
 			return self.addToken2(self.currentPos, b'', TokenType.eof)

@@ -105,7 +105,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 		self._next()
 		return True
 
-	def parseNBTTag(self) -> Optional[StructureDataNode[NBTNode, StructureValue[NBTNode]]]:
+	def parseNBTTag(self) -> Optional[StructureDataNode]:
 		current = self._current
 		if current is None:
 			self._error(EXPECTED_BUT_GOT_MSG_RAW.format("a NBTTag", 'end of str'), self._last)
@@ -322,7 +322,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 		if not self._consumeToken(TokenType.List):
 			return None
 		openingToken = self._last
-		values = list[StructureDataNode[NBTNode, StructureValue[NBTNode]]]()
+		values = list[StructureDataNode]()
 		tagType: Optional[Type[NBTNode]] = None
 
 		def parseItem() -> bool:

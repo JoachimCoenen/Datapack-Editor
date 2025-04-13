@@ -5,9 +5,8 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
 from math import inf
-from types import NoneType
-from typing import ClassVar, Optional, Collection, Any, Type, Sequence, Callable, Mapping, overload, Iterator, \
-	AbstractSet
+from typing import ClassVar, Collection, Any, Type, Sequence, Callable, Mapping, overload, Iterator, AbstractSet, Protocol
+
 
 from better_orderedmultidict import OrderedMultiDict
 from recordclass import as_dataclass
@@ -16,29 +15,29 @@ from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.parser import IndexMapper
 from base.model.parsing.tree import Node, Schema
 from base.model.utils import LanguageId, MDStr, Span, NULL_SPAN
-from cat.utils import CachedProperty, Anything
+from cat.utils import CachedProperty, Anything, Nothing
 from cat.utils.collections_ import AddToDictDecorator
 from cat.utils.collections_.collections_ import IfKeyIssubclassGetter
 from cat.utils.logging_ import logWarning
 
 
-type ListLike[T: StructureDataNode] = list[T]
-type Object[N: StructureNode[N]] = OrderedMultiDict[str, StructureProperty[N]]
-type StructureValue[N: StructureNode[N]] = NoneType | bool | int | float | str | ListLike[StructureDataNode[N]] | Object[N]
+type ListLike[T: StructureDataNode] = Sequence[T]
+type Object = OrderedMultiDict[str, StructureProperty]
+type StructureValue = None | bool | int | float | str | ListLike[StructureDataNode] | Object
 
 
 type PyStructureList = list['PyStructureValue']
 type PyStructureObject = dict[str, 'PyStructureValue']
-type PyStructureSimpleValue = NoneType | bool | int | float | str
+type PyStructureSimpleValue = None | bool | int | float | str
 type PyStructureValue = PyStructureSimpleValue | PyStructureList | PyStructureObject
 
 
 @dataclass
-class StructureNode[N: 'StructureNode[N]'](Node[N, 'StructureSchema']):  # should also inherit ABC, but that creates an inconsistent method resolution order (MRO).
+class StructureNode(Node['StructureNode', 'StructureSchema']):  # should also inherit ABC, but that creates an inconsistent method resolution order (MRO).
 	typeName: ClassVar[str] = 'structure_node'
-	language: ClassVar[LanguageId] = 'Structure'
+	language: ClassVar[LanguageId] = LanguageId('Structure')
 
-	schema: Optional[StructureSchema] = field(hash=False, compare=False)
+	schema: StructureSchema | None = field(hash=False, compare=False)
 
 	def walkTree(self) -> Iterator[StructureNode]:
 		yield self
@@ -61,26 +60,26 @@ def _walkChildren(children: Collection[StructureNode]) -> Iterator[StructureNode
 
 
 @dataclass
-class StructureDataNode[N: StructureNode[N], T: StructureValue[N]](StructureNode[N]):  # should also inherit ABC, but that creates an inconsistent method resolution order (MRO).
+class StructureDataNode[T: StructureValue](StructureNode):  # should also inherit ABC, but that creates an inconsistent method resolution order (MRO).
 	typeName: ClassVar[str] = 'structure_node'
 	data: T
 	path: str = field(default='', init=False)
-	_parent: Optional[ReferenceType[ObjectNode[N] | ListLikeNode[N, StructureDataNode[N]]]] = field(default=None, init=False)
+	_parent: ReferenceType[ObjectNode] | ReferenceType[ListLikeNode[StructureDataNode]] | None = field(default=None, init=False)
 
-	schema: Optional[StructureDataSchema] = field(hash=False, compare=False)
+	schema: StructureDataSchema | None = field(hash=False, compare=False)
 
 	@property
-	def parent(self) -> Optional[ObjectNode[N] | ListLikeNode[N, StructureDataNode[N]]]:
-		return self._parent and self._parent()
+	def parent(self) -> ObjectNode | ListLikeNode[StructureDataNode] | None:
+		return self._parent() if self._parent else None
 
 
 @dataclass
-class InvalidNode[N: StructureNode[N]](StructureDataNode[N, str]):
+class InvalidNode(StructureDataNode[str]):
 	typeName: ClassVar[str] = 'invalid'
 	data: str
 
 	@property
-	def children(self) -> Collection[N]:
+	def children(self) -> Sequence[StructureNode]:
 		return ()
 
 	def asString(self) -> bytes:
@@ -88,14 +87,14 @@ class InvalidNode[N: StructureNode[N]](StructureDataNode[N, str]):
 
 
 @dataclass
-class BasicDataNode[N: StructureNode[N], T](StructureDataNode[N, T]):
+class BasicDataNode[T: StructureValue](StructureDataNode[T]):
 	# typeName: ClassVar[str] = 'basic_data_node'
 	data: T
 	raw: bytes
 	"""The raw value as read from the bytes, without any parsing, escape sequence processing, etc"""
 
 	@property
-	def children(self) -> Collection[N]:
+	def children(self) -> Sequence[StructureNode]:
 		return ()
 
 	def asString(self) -> bytes:
@@ -103,20 +102,20 @@ class BasicDataNode[N: StructureNode[N], T](StructureDataNode[N, T]):
 
 
 @dataclass
-class NullNode[N: StructureNode[N]](BasicDataNode[N, None]):
+class NullNode(BasicDataNode[None]):
 	typeName: ClassVar[str] = 'null'
 	data: None = None
 	raw: bytes = b'null'
 
 
 @dataclass
-class BooleanNode[N: StructureNode[N]](BasicDataNode[N, bool]):
+class BooleanNode(BasicDataNode[bool]):
 	typeName: ClassVar[str] = 'boolean'
 	data: bool
 
 
 @dataclass
-class NumberNode[N: StructureNode[N], T: int | float](BasicDataNode[N, T]):
+class NumberNode[T: int | float](BasicDataNode[T]):
 	typeName: ClassVar[str] = 'number'
 	data: T
 
@@ -158,7 +157,7 @@ class NumberNode[N: StructureNode[N], T: int | float](BasicDataNode[N, T]):
 
 
 @dataclass
-class StringNode[N: StructureNode[N]](BasicDataNode[N, str]):
+class StringNode(BasicDataNode[str]):
 	typeName: ClassVar[str] = 'string'
 	data: str
 	rawData: bytes
@@ -166,16 +165,16 @@ class StringNode[N: StructureNode[N]](BasicDataNode[N, str]):
 	innerSlice: slice
 	""" The actual Span *inside* the quotes. """
 	indexMapper: IndexMapper
-	parsedValue: Optional[Any] = None
+	parsedValue: Any | None = None
 
 
 @dataclass
-class ListLikeNode[N: StructureNode[N], T: StructureDataNode[N]](StructureDataNode[N, ListLike[N, T]]):
+class ListLikeNode[T: StructureDataNode](StructureDataNode[ListLike[T]]):
 	typeName: ClassVar[str] = 'array'
 	data: list[T]
 
 	@property
-	def children(self) -> Collection[N]:
+	def children(self) -> Sequence[StructureNode]:
 		return self.data
 
 	def asString(self) -> bytes:
@@ -183,19 +182,19 @@ class ListLikeNode[N: StructureNode[N], T: StructureDataNode[N]](StructureDataNo
 
 
 @dataclass
-class StructureProperty[N: StructureNode[N]](StructureNode[N]):
+class StructureProperty[N: StructureDataNode](StructureNode):
 	typeName: ClassVar[str] = 'property'
 	key: StringNode
-	value: StructureDataNode[N]
+	value: N
 	
-	schema: Optional[PropertySchema] = field(hash=False, compare=False)
+	schema: PropertySchema | None = field(hash=False, compare=False)
 
 	def __post_init__(self) -> None:
 		if isinstance(self.key.schema, KeySchema):
 			self.key.schema.forProp = self
 
 	@property
-	def children(self) -> Collection[N]:
+	def children(self) -> Sequence[StructureNode]:
 		return self.key, self.value
 
 	def asString(self) -> bytes:
@@ -203,9 +202,9 @@ class StructureProperty[N: StructureNode[N]](StructureNode[N]):
 
 
 @dataclass
-class ObjectNode[N: StructureNode[N]](StructureDataNode[N, Object[N]]):
+class ObjectNode(StructureDataNode[Object]):
 	typeName: ClassVar[str] = 'object'
-	data: Object[N]
+	data: Object
 
 	def __post_init__(self) -> None:
 		selfRef = ref(self)
@@ -214,10 +213,15 @@ class ObjectNode[N: StructureNode[N]](StructureDataNode[N, Object[N]]):
 			prop.value._parent = selfRef
 
 	@property
-	def children(self) -> Collection[StructureProperty[N]]:
-		return self.data.values()
+	def children(self) -> Sequence[StructureProperty]:
+		return self.data.values()  # type: ignore  # not 100% kosher, as _ValuesView is not indexable
 
-	def getValue[TD](self, key: str, default: TD = None) -> StructureDataNode[N] | TD:
+	@overload
+	def getValue(self, key: str) -> StructureDataNode | None: ...
+	@overload
+	def getValue[TD](self, key: str, default: TD) -> StructureDataNode | TD: ...
+
+	def getValue[TD](self, key: str, default: TD | None = None) -> StructureDataNode | TD | None:
 		prop = self.data.get(key)
 		return prop.value if prop is not None else default
 
@@ -233,16 +237,16 @@ class StructureSchema(Schema, ABC):
 	A schema description to contextualize and validate SNBT and JSON files.
 	Note: This is NOT an implementation of the JSON Schema specification!
 	"""
-	DATA_TYPE: ClassVar[Type[StructureNode]] = StructureNode
+	DATA_TYPE: ClassVar[Type[StructureNode]] = StructureNode  # type: ignore
 	typeName: ClassVar[str] = 'StructureNode'
-	language: ClassVar[LanguageId] = 'Structure'
+	language: ClassVar[LanguageId] = LanguageId('Structure')  # not a real language
 
-	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool] = None):
+	def __init__(self, *, description: MDStr = MDStr(''), deprecated: bool = False, allowMultilineStr: bool | None = None):
 		self.description: MDStr = description
 		self.deprecated: bool = deprecated
 		self.span: Span = NULL_SPAN
 		self.filePath: str = ''
-		self.allowMultilineStr: Optional[bool] = allowMultilineStr
+		self.allowMultilineStr: bool | None = allowMultilineStr
 
 	@property
 	def asString(self) -> str:
@@ -255,7 +259,7 @@ class StructureSchema(Schema, ABC):
 
 
 class StructureDataSchema(StructureSchema, ABC):
-	DATA_TYPE: ClassVar[Type[StructureDataNode]] = StructureDataNode
+	DATA_TYPE: ClassVar[Type[StructureDataNode]] = StructureDataNode  # type: ignore
 	typeName: ClassVar[str] = 'StructureDataNode'
 
 
@@ -273,7 +277,7 @@ class NumberSchema(StructureDataSchema, ABC):
 	DATA_TYPE: ClassVar[Type[StructureDataNode]] = NumberNode
 	typeName: ClassVar[str] = 'number'
 
-	def __init__(self, *, minVal: float | int = -inf, maxVal: float | int = inf, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool] = None):
+	def __init__(self, *, minVal: float | int = -inf, maxVal: float | int = inf, description: MDStr = MDStr(''), deprecated: bool = False, allowMultilineStr: bool | None = None):
 		super(NumberSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.min: float | int = minVal
 		self.max: float | int = maxVal
@@ -294,15 +298,15 @@ class StringSchema(StructureDataSchema):
 	def __init__(
 			self,
 			*,
-			type: Optional[str | StructureArgType] = None,
-			args: Optional[dict[str, Any | None]] = None,
-			description: MDStr = '',
+			type: str | None = None,
+			args: dict[str, Any | None] | None = None,
+			description: MDStr = MDStr(''),
 			deprecated: bool = False,
-			allowMultilineStr: Optional[bool]
+			allowMultilineStr: bool | None
 	):
 		super(StringSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
-		self.type: Optional[str] = getattr(type, 'name', type)
-		self.args: Optional[dict[str, Any | None]] = args if args is not None else {}
+		self.type: str | None = type
+		self.args: dict[str, Any | None] | None = args if args is not None else {}
 
 
 class StringOptionsSchema(StringSchema):
@@ -310,13 +314,13 @@ class StringOptionsSchema(StringSchema):
 			self,
 			*,
 			options: dict[str, MDStr],
-			description: MDStr = '',
+			description: MDStr = MDStr(''),
 			deprecated: bool = False,
 			warningOnly: bool = False,
-			allowMultilineStr: Optional[bool]
+			allowMultilineStr: bool | None
 	):
 		super().__init__(
-			type=OPTIONS_STRUCTURE_ARG_TYPE,
+			type=OPTIONS_STRUCTURE_ARG_TYPE.name,
 			args=dict(values=options, warningOnly=warningOnly),
 			description=description,
 			deprecated=deprecated,
@@ -328,7 +332,7 @@ class ListLikeSchema(StructureDataSchema):
 	DATA_TYPE: ClassVar[Type[StructureDataNode]] = ListLikeNode
 	typeName: ClassVar[str] = 'list'
 
-	def __init__(self, *, description: MDStr = '', element: StructureDataSchema, minElemCount: int | None, maxElemCount: int | None, deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = MDStr(''), element: StructureDataSchema, minElemCount: int | None, maxElemCount: int | None, deprecated: bool = False, allowMultilineStr: bool | None):
 		super().__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.element: StructureDataSchema = element
 		self.minElemCount: int | None = minElemCount
@@ -342,11 +346,11 @@ class KeySchema(StringSchema):
 	def __init__(
 			self,
 			*,
-			type: Optional[str] = 'dpe:structure/key_schema',
-			args: Optional[dict[str, Any | None]] = None,
-			description: MDStr = '',
+			type: str | None = 'dpe:structure/key_schema',
+			args: dict[str, Any | None] | None = None,
+			description: MDStr = MDStr(''),
 			deprecated: bool = False,
-			allowMultilineStr: Optional[bool] = None
+			allowMultilineStr: bool | None = None
 	):
 		super(KeySchema, self).__init__(
 			type=type,
@@ -355,7 +359,7 @@ class KeySchema(StringSchema):
 			deprecated=deprecated,
 			allowMultilineStr=allowMultilineStr,
 		)
-		self.forProp: Optional[StructureProperty] = None
+		self.forProp: StructureProperty | None = None
 
 
 @as_dataclass(hashable=True, readonly=True)
@@ -372,10 +376,10 @@ class DecidingPropNotFound:
 	msg: str
 
 
-def getDecidingPropValue[N: StructureNode[N]](decidingProp: DecidingPropRef, parent: ObjectNode[N]) -> StructureValue[N] | DecidingPropNotFound:
-	decidingPropParent = parent
+def getDecidingPropValue(decidingProp: DecidingPropRef, parent: ObjectNode) -> PyStructureValue | DecidingPropNotFound:
+	decidingPropParent: ObjectNode | ListLikeNode[StructureDataNode] = parent
 	for _ in range(decidingProp.lookback):
-		decidingPropParent = decidingPropParent.parent
+		decidingPropParent = decidingPropParent.parent  # type: ignore  # ignore potential `None` result type
 		if decidingPropParent is None:
 			msg = f"encountered missing parent while resolving decidingProp with lookback={decidingProp.lookback}."
 			logWarning(msg)
@@ -411,23 +415,23 @@ class PropertySchema(StructureSchema):
 			self,
 			*,
 			name: str | Anything,
-			description: MDStr = '',
-			value: Optional[StructureDataSchema],
+			description: MDStr = MDStr(''),
+			value: StructureDataSchema | None,
 			optional: bool = False,
 			default: PyStructureValue = None,
-			decidingProp: Optional[DecidingPropRef] = None,
-			values: dict[PyStructureSimpleValue | tuple[PyStructureSimpleValue, ...], StructureDataSchema] = None,
-			requires: Optional[tuple[str, ...]] = None,
+			decidingProp: DecidingPropRef | None = None,
+			values: Mapping[PyStructureSimpleValue | tuple[PyStructureSimpleValue, ...], StructureDataSchema] | None = None,
+			requires: tuple[str, ...] | None = None,
 			hates: tuple[str, ...] = (),
 			exclusionGroups: tuple[str, ...] = (),
 			deprecated: bool = False,
-			allowMultilineStr: Optional[bool]):
+			allowMultilineStr: bool | None):
 		super(PropertySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 		self.name: str | Anything = name
 		self.optional: bool = optional
 		self.default: PyStructureValue = default
-		self.value: Optional[StructureDataSchema] = value
-		self.decidingProp: Optional[DecidingPropRef] = decidingProp
+		self.value: StructureDataSchema | None = value
+		self.decidingProp: DecidingPropRef | None = decidingProp
 		self.values: dict[PyStructureSimpleValue, StructureDataSchema] = {}
 		if requires is None:
 			requires = ()
@@ -449,17 +453,17 @@ class PropertySchema(StructureSchema):
 		return not self.optional
 
 	def isMissingRequiredProp(self, parent: ObjectNode) -> bool:
-		return self.requires and all(p not in parent.data for p in self.requires)
+		return bool(self.requires) and all(p not in parent.data for p in self.requires)
 
 	def hasIncompatibleProp(self, parent: ObjectNode) -> bool:
-		return self.hates and any(p in parent.data for p in self.hates)
+		return bool(self.hates) and any(p in parent.data for p in self.hates)
 
 	def isConsidered(self, parent: ObjectNode) -> bool:
 		missingRequiredProp = self.requires and all(p not in parent.data for p in self.requires)
 		hasIncompatibleProp = self.hates and any(p in parent.data for p in self.hates)
 		return not missingRequiredProp and not hasIncompatibleProp and self.getValueSchemaForParent(parent) is not None
 
-	def getValueSchemaForParent(self, parent: ObjectNode) -> Optional[StructureDataSchema]:
+	def getValueSchemaForParent(self, parent: ObjectNode) -> StructureDataSchema | None:
 		decidingProp = self.decidingProp
 		if decidingProp is not None:
 			dVal = getDecidingPropValue(decidingProp, parent)
@@ -468,7 +472,7 @@ class PropertySchema(StructureSchema):
 			if not callable(getattr(dVal, '__hash__', None)):
 				msg = f"value of decidingProp is not a simple value, but rather a {type(dVal).__name__}."
 				return UnionSchema(description=MDStr(msg), options=[], allowMultilineStr=None)
-			selectedSchema = self.values.get(dVal, self.value)
+			selectedSchema: StructureDataSchema | None = self.values.get(dVal, self.value)  # type: ignore
 		else:
 			selectedSchema = self.value
 
@@ -492,7 +496,7 @@ class ExclusionGroup:
 @dataclass
 class Inheritance:
 	schema: ObjectSchema
-	decidingProp: Optional[DecidingPropRef] = None
+	decidingProp: DecidingPropRef | None = None
 	decidingValues: tuple[str, ...] = ()
 
 
@@ -500,9 +504,17 @@ class ObjectSchema(StructureDataSchema):
 	DATA_TYPE: ClassVar[Type[StructureDataNode]] = ObjectNode
 	typeName: ClassVar[str] = 'object'
 
-	def __init__(self, *, description: MDStr = '', properties: list[PropertySchema], inherits: list[Inheritance] = (), definingProps: AbstractSet[str] = frozenset(), deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(
+			self, *,
+			description: MDStr = MDStr(''),
+			properties: list[PropertySchema],
+			inherits: list[Inheritance] | None = None,
+			definingProps: AbstractSet[str] = frozenset(),
+			deprecated: bool = False,
+			allowMultilineStr: bool | None
+	):
 		super(ObjectSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
-		self.inherits: list[Inheritance] = inherits
+		self.inherits: list[Inheritance] = inherits if inherits is not None else []
 		self.definingProps: AbstractSet[str] = definingProps
 		"""
 		Used to help select the correct choice from a UnionSchema of ObjectSchema. 
@@ -514,8 +526,8 @@ class ObjectSchema(StructureDataSchema):
 		self.propertiesDict: Mapping[str, PropertySchema] = {}
 		self.exclusionGroups: Mapping[str, ExclusionGroup] = {}
 		"""Not every property in an exclusion group might be mandatory"""
-		self.anythingProp: Optional[PropertySchema] = None
-		self.anythingKey: Optional[StringSchema] = None
+		self.anythingProp: PropertySchema | None = None
+		self.anythingKey: StringSchema | None = None
 		"""Specialized key schema that can be applied together with anythingProp."""
 		self.isFinished: bool = False
 		# self.finish()
@@ -527,10 +539,10 @@ class ObjectSchema(StructureDataSchema):
 			self.isFinished = True
 		return self
 
-	def getSchemaForProp(self, name: str) -> Optional[PropertySchema]:
+	def getSchemaForProp(self, name: str) -> PropertySchema | None:
 		return self.propertiesDict.get(name, self.anythingProp)
 
-	def getSchemaForPropAndVal(self, name: str, parent: ObjectNode) -> tuple[Optional[StringSchema], Optional[PropertySchema], Optional[StructureDataSchema]]:
+	def getSchemaForPropAndVal(self, name: str, parent: ObjectNode) -> tuple[StringSchema | None, PropertySchema | None, StructureDataSchema | None]:
 		"""
 		:return: keySchema, propSchema, valueSchema.
 				usually keySchema is None, unless a special schema for default-keys has been provided.
@@ -553,14 +565,15 @@ def _buildExclusionGroups(properties: Mapping[str, PropertySchema]) -> Mapping[s
 
 	return {
 		name: ExclusionGroup(
-			frozenset({prop.name for prop in exclusions}),
-			frozenset({prop.name for prop in exclusions if not prop.optional})
+			# Anything check only theoretically needed.
+			frozenset({prop.name for prop in exclusions if prop.name is not Anything}),  # type: ignore  # mypy gets confused by `Anything`
+			frozenset({prop.name for prop in exclusions if not prop.optional and prop.name is not Anything})  # type: ignore  # mypy gets confused by `Anything`
 		)
 		for name, exclusions in exclusionGroups.items()
 	}
 
 
-def _buildPropertiesDict(inherits: list[Inheritance], properties: list[PropertySchema]) -> tuple[Mapping[str, PropertySchema], Optional[PropertySchema]]:
+def _buildPropertiesDict(inherits: list[Inheritance], properties: list[PropertySchema]) -> tuple[Mapping[str, PropertySchema], PropertySchema | None]:
 	propsDict: dict[str, PropertySchema] = dict()
 	anythingProp = None
 
@@ -595,7 +608,7 @@ def _buildPropertiesDict(inherits: list[Inheritance], properties: list[PropertyS
 	return propsDict, anythingProp
 
 
-def _addProp(anythingProp: Optional[PropertySchema], prop: PropertySchema, propsDict: dict[str, PropertySchema]) -> Optional[PropertySchema]:
+def _addProp(anythingProp: PropertySchema | None, prop: PropertySchema, propsDict: dict[str, PropertySchema]) -> PropertySchema | None:
 	if prop.name is Anything:
 		# quietly overwrite:
 		# if anythingProp is not None:
@@ -605,10 +618,10 @@ def _addProp(anythingProp: Optional[PropertySchema], prop: PropertySchema, props
 		# quietly overwrite:
 		# if prop.name in propsDict:
 		# 	raise ValueError(f"ObjectSchema.properties contains duplicate names {prop.name!r}")
-		if (origProp := propsDict.get(prop.name)) is not None:
+		if (origProp := propsDict.get(prop.name)) is not None:  # type: ignore  # mypy gets confused by `Anything`
 			prop = _joinProps(origProp, prop)
 
-		propsDict[prop.name] = prop
+		propsDict[prop.name] = prop  # type: ignore  # mypy gets confused by `Anything`
 	return anythingProp
 
 
@@ -639,6 +652,8 @@ def _joinProps(prop1: PropertySchema, prop2: PropertySchema) -> PropertySchema:
 			values[decVal] = val
 		value = None
 	else:
+		if prop1.value is None or prop2.value is None:
+			raise ValueError("PropertySchema.value is None, but PropertySchema.decidingProp is not set.")
 		values = None
 		value = UnionSchema(description=MDStr(''), options=[prop1.value, prop2.value], allowMultilineStr=None)
 
@@ -651,7 +666,7 @@ def _joinProps(prop1: PropertySchema, prop2: PropertySchema) -> PropertySchema:
 		optional=prop1.optional,
 		default=prop1.default,
 		decidingProp=prop1.decidingProp,
-		values=values,
+		values=values,  # type: ignore
 		requires=prop1.requires,
 		hates=prop1.hates,
 		exclusionGroups=exclusionGroups,
@@ -668,11 +683,12 @@ def _joinProps(prop1: PropertySchema, prop2: PropertySchema) -> PropertySchema:
 class UnionSchema(StructureDataSchema):
 	typeName: ClassVar[str] = 'union'
 
-	def __init__(self, *, description: MDStr = '', options: Sequence[StructureDataSchema], allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = MDStr(''), options: Sequence[StructureDataSchema], allowMultilineStr: bool | None):
 		super(UnionSchema, self).__init__(description=description, allowMultilineStr=allowMultilineStr)
 		self.options: Sequence[StructureDataSchema] = options
 
-	def _getAllOptions(self) -> list[StructureDataSchema]:
+	@CachedProperty
+	def allOptions(self) -> list[StructureDataSchema]:
 		result = []
 		for opt in self.options:
 			if isinstance(opt, UnionSchema):
@@ -680,8 +696,6 @@ class UnionSchema(StructureDataSchema):
 			else:
 				result.append(opt)
 		return result
-
-	allOptions: list[StructureDataSchema] = CachedProperty(_getAllOptions)
 
 	# @CachedProperty
 	@property
@@ -692,17 +706,17 @@ class UnionSchema(StructureDataSchema):
 class CalculatedValueSchema(StructureDataSchema):
 	typeName: ClassVar[str] = 'calculated'
 
-	def __init__(self, *, description: MDStr = '', func: Callable[[ObjectNode], Optional[StructureSchema]], deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = MDStr(''), func: Callable[[ObjectNode], StructureDataSchema | None], deprecated: bool = False, allowMultilineStr: bool | None):
 		super(CalculatedValueSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
-		self.func: Callable[[ObjectNode], Optional[StructureSchema]] = func
+		self.func: Callable[[ObjectNode], StructureDataSchema | None] = func
 
 	# @CachedProperty
 	@property
 	def asString(self) -> str:
-		return f"(...)"
+		return "(...)"
 
 
-def resolveCalculatedSchema(schema: StructureSchema, parent: ObjectNode) -> Optional[StructureDataSchema]:
+def resolveCalculatedSchema(schema: StructureDataSchema | None, parent: ObjectNode) -> StructureDataSchema | None:
 	if isinstance(schema, CalculatedValueSchema):
 		schema = schema.func(parent)
 	return schema
@@ -711,14 +725,14 @@ def resolveCalculatedSchema(schema: StructureSchema, parent: ObjectNode) -> Opti
 class AnySchema(StructureDataSchema):
 	typeName: ClassVar[str] = 'any'
 
-	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = MDStr(''), deprecated: bool = False, allowMultilineStr: bool | None):
 		super(AnySchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 
 
 class IllegalSchema(StructureDataSchema):
 	typeName: ClassVar[str] = 'illegal'
 
-	def __init__(self, *, description: MDStr = '', deprecated: bool = False, allowMultilineStr: Optional[bool]):
+	def __init__(self, *, description: MDStr = MDStr(''), deprecated: bool = False, allowMultilineStr: bool | None):
 		super(IllegalSchema, self).__init__(description=description, deprecated=deprecated, allowMultilineStr=allowMultilineStr)
 
 
@@ -726,7 +740,7 @@ STRUCTURE_ANY_SCHEMA: AnySchema = AnySchema(allowMultilineStr=None)
 STRUCTURE_ILLEGAL_SCHEMA: IllegalSchema = IllegalSchema(allowMultilineStr=None)
 
 
-def resolvePath[N: StructureNode[N]](data: StructureDataNode[N], path: tuple[str | int, ...]) -> Optional[StructureDataNode[N]]:
+def resolvePath(data: StructureDataNode, path: tuple[str | int, ...]) -> StructureDataNode | None:
 	result = data
 	for item in path:
 		if isinstance(item, str):
@@ -745,7 +759,7 @@ def resolvePath[N: StructureNode[N]](data: StructureDataNode[N], path: tuple[str
 	return result
 
 
-def resolvePath2[R: StructureDataNode](data: StructureDataNode, path: tuple[str | int, ...], RCls: Type[R]) -> Optional[R]:
+def resolvePath2[R: StructureDataNode](data: StructureDataNode, path: tuple[str | int, ...], RCls: Type[R]) -> R | None:
 	result = data
 	for item in path:
 		if isinstance(item, str):
@@ -778,53 +792,60 @@ def getEffectivePropertyValue(propertyName: str, jObject: ObjectNode) -> PyStruc
 	return dVal
 
 
-_toPyValueHandlers: dict[Type[StructureDataNode], Callable[[StructureDataNode, Callable[[StructureDataNode, Any], Any]], Any]] = {}
+class DataNodeLike(Protocol):
+	# n: TJSD
+	@property
+	def data(self) -> StructureValue:
+		...
 
-_toPyValueHandler = AddToDictDecorator(_toPyValueHandlers)
+
+_toPyValueHandlers: dict[Type[StructureDataNode], Callable[[DataNodeLike, Callable[[DataNodeLike, Any], DataNodeLike]], PyStructureValue]] = {}
+
+_toPyValueHandler: AddToDictDecorator = AddToDictDecorator(_toPyValueHandlers)
 
 _getToPyValueHandler = IfKeyIssubclassGetter(_toPyValueHandlers)
 
 
 @overload
-def toPyValue(data: StructureDataNode) -> PyStructureValue: ...
+def toPyValue(data: DataNodeLike) -> PyStructureValue: ...
 @overload
-def toPyValue[T](data: T, resolver: Callable[[StructureDataNode, T], T]) -> PyStructureValue: ...
+def toPyValue(data: DataNodeLike, resolver: Callable[[StructureDataNode, DataNodeLike], DataNodeLike]) -> PyStructureValue: ...
 
 
-def toPyValue[T](data: T, resolver: Callable[[StructureDataNode, T], T] = ...) -> PyStructureValue:
+def toPyValue(data: DataNodeLike, resolver: Callable[[StructureDataNode, DataNodeLike], DataNodeLike] = lambda e, parent: e) -> PyStructureValue:
 	if resolver is ...:
 		return _toPyValue(data, lambda e, parent: e)
 	return _toPyValue(data, resolver)
 
 
-def _toPyValue[T](data: T, resolver: Callable[[StructureDataNode, T], T]) -> PyStructureValue:
+def _toPyValue(data: DataNodeLike, resolver: Callable[[StructureDataNode, DataNodeLike], DataNodeLike]) -> PyStructureValue:
 	if hasattr(data, 'n'):
 		handler = _getToPyValueHandler(type(data.n))
 	else:
-		handler = _getToPyValueHandler(type(data))
-	return handler(data, resolver)
+		handler = _getToPyValueHandler(type(data))  # type: ignore
+	return handler(data, resolver)  # type: ignore
 
 
 @_toPyValueHandler(InvalidNode)
-def _invalidHandler[T](node: InvalidNode, resolver: Callable[[StructureDataNode, T], T]) -> None:
+def _invalidHandler[T](node: InvalidNode, resolver: Callable[[StructureDataNode, DataNodeLike], DataNodeLike]) -> None:
 	return None
 
 
 @_toPyValueHandler(ObjectNode)
-def _objectHandler[T](node: ObjectNode, resolver: Callable[[StructureDataNode, T], T]) -> PyStructureObject:
-	return {toPyValue(resolver(p.key, node), resolver): toPyValue(resolver(p.value, node), resolver) for p in node.data.values()}
+def _objectHandler[T](node: ObjectNode, resolver: Callable[[StructureDataNode, DataNodeLike], DataNodeLike]) -> PyStructureObject:
+	return {_stringHandler(p.key, resolver): toPyValue(resolver(p.value, node), resolver) for p in node.data.values()}  # type: ignore
 
 
 @_toPyValueHandler(ListLikeNode)
-def _arrayHandler[T](node: ListLikeNode, resolver: Callable[[StructureDataNode, T], T]) -> PyStructureList:
-	return [toPyValue(resolver(e, node), resolver) for e in node.data]
+def _arrayHandler[T](node: ListLikeNode, resolver: Callable[[StructureDataNode, DataNodeLike], DataNodeLike]) -> PyStructureList:
+	return [toPyValue(resolver(e, node), resolver) for e in node.data]  # type: ignore
 
 
 @_toPyValueHandler(BooleanNode)
 @_toPyValueHandler(NumberNode)
 @_toPyValueHandler(StringNode)
 @_toPyValueHandler(NullNode)
-def _stringHandler[T](node: BasicDataNode, resolver: Callable[[StructureDataNode, T], T]) -> PyStructureValue:
+def _stringHandler[T](node: BasicDataNode, resolver: Callable[[StructureDataNode, T], DataNodeLike]) -> PyStructureValue:
 	return node.data
 
 
@@ -835,10 +856,10 @@ class StructureArgType:
 			registerNamedStructureArgType(self)
 
 	name: str
-	description: MDStr = ''
-	description2: MDStr = ''
-	example: MDStr = ''
-	examples: MDStr = ''
+	description: MDStr = MDStr('')
+	description2: MDStr = MDStr('')
+	example: MDStr = MDStr('')
+	examples: MDStr = MDStr('')
 	NBTProperties: str = ''  # todo what??
 
 
