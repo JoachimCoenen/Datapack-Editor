@@ -1,18 +1,17 @@
 from __future__ import annotations
 
+import enum
 import re
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Optional, Callable, ClassVar
+from typing import Callable, ClassVar
 
 from recordclass import as_dataclass
 
-from base.model.parsing.bytesUtils import WHITESPACE_CHARS
 from base.model.parsing.parser import TokenizerBase
 from base.model.utils import Position, Span
 
 
-class TokenType(Enum):
+class TokenType(enum.Enum):
 	Invalid = 0
 	QuotedString = 1
 	Number = 2
@@ -26,6 +25,29 @@ class TokenType(Enum):
 	CloseList = 10
 	Colon = 11
 	Comma = 12
+	eof = 13
+
+	@property
+	def asString(self) -> str:
+		return _TOKEN_TYPE_STR_REP[self]
+
+
+_TOKEN_TYPE_STR_REP = {
+	TokenType.Invalid: "invalid",
+	TokenType.QuotedString: "quoted string",
+	TokenType.Number: "number",
+	TokenType.String: "string",
+	TokenType.Compound: "'{'",
+	TokenType.CloseCompound: "'}'",
+	TokenType.ByteArray: "'[B;'",
+	TokenType.IntArray: "'[I;'",
+	TokenType.LongArray: "'[L;'",
+	TokenType.List: "'['",
+	TokenType.CloseList: "']'",
+	TokenType.Colon: "':'",
+	TokenType.Comma: "','",
+	TokenType.eof: "end of file",
+}
 
 
 @as_dataclass()
@@ -64,18 +86,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 	def _tokenStartEnd(self) -> tuple[int, int]:
 		return self._tokenStart[1], self.cursor
 
-	def _consumeWhitespace(self) -> None:
-		src = self.text
-		length = self.length
-		i = self.cursor
-		while i < length and src[i] in WHITESPACE_CHARS:
-			if src[i] == ord('\n'):
-				self.cursor = i + 1  # needed for self.advanceLine()
-				self.advanceLine()
-			i += 1
-		self.cursor = i
-
-	def handleQuotedString(self) -> Optional[Token]:
+	def handleQuotedString(self) -> Token | None:
 		src = self.text
 		i = self.cursor
 		length = self.length
@@ -106,7 +117,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 		self.cursor = i
 		return Token(TokenType.Invalid, self._tokenSpan, self._tokenStartEnd)
 
-	def handleNumberOrString(self) -> Optional[Token]:
+	def handleNumberOrString(self) -> Token | None:
 		numberMatch = NUMBER_PAT.match(self.text, self.cursor)
 		if numberMatch is not None:
 			self.cursor = numberMatch.end()
@@ -119,15 +130,15 @@ class SNBTTokenizer(TokenizerBase[Token]):
 			self.cursor += 1
 			return Token(TokenType.Invalid, self._tokenSpan, self._tokenStartEnd)
 
-	def handleCompound(self) -> Optional[Token]:
+	def handleCompound(self) -> Token | None:
 		self.cursor += 1
 		return Token(TokenType.Compound, self._tokenSpan, self._tokenStartEnd)
 
-	def handleCloseCompound(self) -> Optional[Token]:
+	def handleCloseCompound(self) -> Token | None:
 		self.cursor += 1
 		return Token(TokenType.CloseCompound, self._tokenSpan, self._tokenStartEnd)
 
-	def handleArrayOrList(self) -> Optional[Token]:
+	def handleArrayOrList(self) -> Token | None:
 		self.cursor += 1
 		if self.cursor >= self.length:
 			# List:
@@ -146,23 +157,23 @@ class SNBTTokenizer(TokenizerBase[Token]):
 		# List:
 		return Token(TokenType.List, self._tokenSpan, self._tokenStartEnd)
 
-	def handleCloseList(self) -> Optional[Token]:
+	def handleCloseList(self) -> Token | None:
 		self.cursor += 1
 		return Token(TokenType.CloseList, self._tokenSpan, self._tokenStartEnd)
 
-	def handleColon(self) -> Optional[Token]:
+	def handleColon(self) -> Token | None:
 		self.cursor += 1
 		return Token(TokenType.Colon, self._tokenSpan, self._tokenStartEnd)
 
-	def handleComma(self) -> Optional[Token]:
+	def handleComma(self) -> Token | None:
 		self.cursor += 1
 		return Token(TokenType.Comma, self._tokenSpan, self._tokenStartEnd)
 
-	def handleInvalid(self) -> Optional[Token]:
+	def handleInvalid(self) -> Token | None:
 		self.cursor += 1
 		return Token(TokenType.Invalid, self._tokenSpan, self._tokenStartEnd)
 
-	_TOKEN_HANDLERS_1: ClassVar[dict[int, Callable[[SNBTTokenizer], Token]]] = {
+	_TOKEN_HANDLERS_1: ClassVar[dict[int, Callable[[SNBTTokenizer], Token | None]]] = {
 		ord('"'): handleQuotedString,
 		ord("'"): handleQuotedString,
 		**{
@@ -178,17 +189,17 @@ class SNBTTokenizer(TokenizerBase[Token]):
 		ord(','): handleComma,
 	}
 
-	def nextToken(self) -> Optional[Token]:
+	def nextToken(self) -> Token:
 		self.lastCursor = self.cursor
 		self.lastLine = self.line
 		self.lastLineStart = self.lineStart
-		self._consumeWhitespace()
+		self.consumeWhitespace()
 		self._tokenStart = self.currentPos, self.cursor
 		if self.cursor >= self.length:
 			self.cursor = self.lastCursor
 			self.line = self.lastLine
 			self.lineStart = self.lastLineStart
-			return None
+			return Token(TokenType.eof, Span(self.currentPos), self._tokenStartEnd)
 
 		c = self.text[self.cursor]
 		handler = self._TOKEN_HANDLERS_1.get(c, lambda s: s.handleInvalid())
