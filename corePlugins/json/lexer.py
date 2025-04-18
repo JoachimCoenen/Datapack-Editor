@@ -30,10 +30,10 @@ _TOKEN_TYPE_FOR_SPECIAL = {
 }
 
 _TOKEN_TYPE_FOR_OPERATOR = {
-	b'[': TokenType.left_bracket,
-	b']': TokenType.right_bracket,
-	b'{': TokenType.left_brace,
-	b'}': TokenType.right_brace,
+	b'[': TokenType.list_start,
+	b']': TokenType.list_end,
+	b'{': TokenType.object_start,
+	b'}': TokenType.object_end,
 	b',': TokenType.comma,
 	b':': TokenType.colon,
 }

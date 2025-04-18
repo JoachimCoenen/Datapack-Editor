@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from _weakref import ref, ReferenceType
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -19,6 +20,54 @@ from cat.utils import CachedProperty, Anything, Nothing
 from cat.utils.collections_ import AddToDictDecorator
 from cat.utils.collections_.collections_ import IfKeyIssubclassGetter
 from cat.utils.logging_ import logWarning
+
+
+class TokenType(enum.Enum):
+	invalid = enum.auto()
+
+	null = enum.auto()
+	boolean = enum.auto()
+	number = enum.auto()
+	quoted_string = enum.auto()
+	unquoted_string = enum.auto()
+
+	object_start = enum.auto()
+	object_end = enum.auto()
+
+	list_start = enum.auto()
+	array_start = enum.auto()
+	list_end = enum.auto()
+
+	colon = enum.auto()
+	comma = enum.auto()
+	eof = enum.auto()
+
+	@property
+	def asString(self) -> str:
+		return _TOKEN_TYPE_STR_REP[self]
+
+
+_TOKEN_TYPE_STR_REP = {
+	TokenType.invalid: "invalid",
+	TokenType.quoted_string: "quoted string",
+	TokenType.number: "number",
+	TokenType.unquoted_string: "string",
+	TokenType.object_start: "'{'",
+	TokenType.object_end: "'}'",
+	TokenType.array_start: "'[_;'",
+	TokenType.list_start: "'['",
+	TokenType.list_end: "']'",
+	TokenType.colon: "':'",
+	TokenType.comma: "','",
+	TokenType.eof: "end of file",
+}
+
+
+@as_dataclass(readonly=True)
+class Token:
+	type: TokenType
+	span: Span
+	startEnd: tuple[int, int]
 
 
 type ListLike[T: StructureDataNode] = Sequence[T]
@@ -880,6 +929,9 @@ OPTIONS_STRUCTURE_ARG_TYPE = StructureArgType(
 
 
 __all__ = [
+	'TokenType',
+	'Token',
+
 	'ListLike',
 	'Object',
 	'StructureValue',

@@ -1,72 +1,17 @@
 from __future__ import annotations
 
-import enum
 import re
 from dataclasses import dataclass, field
 from typing import Callable, ClassVar
 
-from recordclass import as_dataclass
-
+from base.model.parsing.bytesConstants import ASCII_LETTERS_SET
 from base.model.parsing.parser import TokenizerBase
 from base.model.utils import Position, Span
-
-
-class TokenType(enum.Enum):
-	Invalid = 0
-	QuotedString = 1
-	Number = 2
-	String = 3
-	Compound = 4
-	CloseCompound = 5
-	ByteArray = 6
-	IntArray = 7
-	LongArray = 8
-	List = 9
-	CloseList = 10
-	Colon = 11
-	Comma = 12
-	eof = 13
-
-	@property
-	def asString(self) -> str:
-		return _TOKEN_TYPE_STR_REP[self]
-
-
-_TOKEN_TYPE_STR_REP = {
-	TokenType.Invalid: "invalid",
-	TokenType.QuotedString: "quoted string",
-	TokenType.Number: "number",
-	TokenType.String: "string",
-	TokenType.Compound: "'{'",
-	TokenType.CloseCompound: "'}'",
-	TokenType.ByteArray: "'[B;'",
-	TokenType.IntArray: "'[I;'",
-	TokenType.LongArray: "'[L;'",
-	TokenType.List: "'['",
-	TokenType.CloseList: "']'",
-	TokenType.Colon: "':'",
-	TokenType.Comma: "','",
-	TokenType.eof: "end of file",
-}
-
-
-@as_dataclass()
-class Token:
-	type: TokenType
-	span: Span
-	startEnd: tuple[int, int]
-
+from corePlugins.nbtJsonBase.core import Token, TokenType
 
 STRING_OR_NUMBER_CHARS = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._+-"
 NUMBER_PAT = re.compile(rb"[+-]?(?:[0-9]*?\.[0-9]+|[0-9]+\.[0-9]*?|[1-9][0-9]*|0)([eE][+-]?[0-9]+)?[bslfdBSLFD]?(?![a-zA-Z0-9._+-])")
 STRING_PAT = re.compile(rb"[a-zA-Z0-9._+-]+")
-
-
-_TOKEN_TYPE_BY_PREFIX: dict[int, TokenType] = {
-	ord('B'): TokenType.ByteArray,
-	ord('I'): TokenType.IntArray,
-	ord('L'): TokenType.LongArray,
-}
 
 
 @dataclass
@@ -86,7 +31,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 	def _tokenStartEnd(self) -> tuple[int, int]:
 		return self._tokenStart[1], self.cursor
 
-	def handleQuotedString(self) -> Token | None:
+	def handleQuotedString(self) -> Token:
 		src = self.text
 		i = self.cursor
 		length = self.length
@@ -99,7 +44,7 @@ class SNBTTokenizer(TokenizerBase[Token]):
 			if i2 == -1:
 				i = self.length
 				self.cursor = i
-				return Token(TokenType.Invalid, self._tokenSpan, self._tokenStartEnd)
+				return Token(TokenType.invalid, self._tokenSpan, self._tokenStartEnd)
 			else:
 				# is it an escaped quote?:
 				i3: int = i2 - 1
@@ -112,66 +57,66 @@ class SNBTTokenizer(TokenizerBase[Token]):
 					continue  # it's escaped
 				else:  # it's not escaped!
 					self.cursor = i
-					return Token(TokenType.QuotedString, self._tokenSpan, self._tokenStartEnd)
+					return Token(TokenType.quoted_string, self._tokenSpan, self._tokenStartEnd)
 		# string isn't closed:
 		self.cursor = i
-		return Token(TokenType.Invalid, self._tokenSpan, self._tokenStartEnd)
+		return Token(TokenType.invalid, self._tokenSpan, self._tokenStartEnd)
 
 	def handleNumberOrString(self) -> Token | None:
 		numberMatch = NUMBER_PAT.match(self.text, self.cursor)
 		if numberMatch is not None:
 			self.cursor = numberMatch.end()
-			return Token(TokenType.Number, self._tokenSpan, self._tokenStartEnd)
+			return Token(TokenType.number, self._tokenSpan, self._tokenStartEnd)
 		stringMatch = STRING_PAT.match(self.text, self.cursor)
 		if stringMatch is not None:
 			self.cursor = stringMatch.end()
-			return Token(TokenType.String, self._tokenSpan, self._tokenStartEnd)
+			return Token(TokenType.unquoted_string, self._tokenSpan, self._tokenStartEnd)
 		else:
 			self.cursor += 1
-			return Token(TokenType.Invalid, self._tokenSpan, self._tokenStartEnd)
+			return Token(TokenType.invalid, self._tokenSpan, self._tokenStartEnd)
 
 	def handleCompound(self) -> Token | None:
 		self.cursor += 1
-		return Token(TokenType.Compound, self._tokenSpan, self._tokenStartEnd)
+		return Token(TokenType.object_start, self._tokenSpan, self._tokenStartEnd)
 
 	def handleCloseCompound(self) -> Token | None:
 		self.cursor += 1
-		return Token(TokenType.CloseCompound, self._tokenSpan, self._tokenStartEnd)
+		return Token(TokenType.object_end, self._tokenSpan, self._tokenStartEnd)
 
 	def handleArrayOrList(self) -> Token | None:
 		self.cursor += 1
 		if self.cursor >= self.length:
 			# List:
-			return Token(TokenType.List, self._tokenSpan, self._tokenStartEnd)
+			return Token(TokenType.list_start, self._tokenSpan, self._tokenStartEnd)
 		c = self.text[self.cursor]
 
 		# Array:
-		if (tokenType := _TOKEN_TYPE_BY_PREFIX.get(c)) is not None:
+		if c in ASCII_LETTERS_SET:
 			self.cursor += 1
 			if self.cursor < self.length:
 				c2 = self.text[self.cursor]
 				if c2 == ord(';'):
 					self.cursor += 1
-					return Token(tokenType, self._tokenSpan, self._tokenStartEnd)
+					return Token(TokenType.array_start, self._tokenSpan, self._tokenStartEnd)
 			self.cursor -= 1
 		# List:
-		return Token(TokenType.List, self._tokenSpan, self._tokenStartEnd)
+		return Token(TokenType.list_start, self._tokenSpan, self._tokenStartEnd)
 
 	def handleCloseList(self) -> Token | None:
 		self.cursor += 1
-		return Token(TokenType.CloseList, self._tokenSpan, self._tokenStartEnd)
+		return Token(TokenType.list_end, self._tokenSpan, self._tokenStartEnd)
 
 	def handleColon(self) -> Token | None:
 		self.cursor += 1
-		return Token(TokenType.Colon, self._tokenSpan, self._tokenStartEnd)
+		return Token(TokenType.colon, self._tokenSpan, self._tokenStartEnd)
 
 	def handleComma(self) -> Token | None:
 		self.cursor += 1
-		return Token(TokenType.Comma, self._tokenSpan, self._tokenStartEnd)
+		return Token(TokenType.comma, self._tokenSpan, self._tokenStartEnd)
 
 	def handleInvalid(self) -> Token | None:
 		self.cursor += 1
-		return Token(TokenType.Invalid, self._tokenSpan, self._tokenStartEnd)
+		return Token(TokenType.invalid, self._tokenSpan, self._tokenStartEnd)
 
 	_TOKEN_HANDLERS_1: ClassVar[dict[int, Callable[[SNBTTokenizer], Token | None]]] = {
 		ord('"'): handleQuotedString,
@@ -207,7 +152,5 @@ class SNBTTokenizer(TokenizerBase[Token]):
 
 
 __all__ = [
-	'TokenType',
-	'Token',
 	'SNBTTokenizer',
 ]

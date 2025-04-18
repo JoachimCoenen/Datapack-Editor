@@ -2,7 +2,7 @@
 from ast import literal_eval
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Optional, AbstractSet, Callable, cast
+from typing import Any, AbstractSet, Callable, cast
 
 from cat.utils import CachedProperty
 from cat.utils.collections_ import OrderedMultiDict
@@ -89,13 +89,13 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 		self._last = self._current
 		self._current = next(self._tokensIter, self._eofToken)
 
-	def tryAccept(self, tokenType: TokenType) -> Optional[Token]:
+	def tryAccept(self, tokenType: TokenType) -> Token | None:
 		if self._current.type is not tokenType:
 			return None
 		self._next()
 		return self._last  # current == self._last
 
-	def tryAcceptAnyOf(self, tokenTypes: AbstractSet[TokenType]) -> Optional[Token]:
+	def tryAcceptAnyOf(self, tokenTypes: AbstractSet[TokenType]) -> Token | None:
 		if self._current.type not in tokenTypes:
 			return None
 		self._next()
@@ -174,7 +174,7 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 			while (tkn2 := self.tryAccept(TokenType.colon)) is not None:
 				self.errorMsg(DUPLICATE_NOT_ALLOWED_MSG, TokenType.colon.asString, span=tkn2.span)
 
-			if token is not None and token.type is TokenType.eof:
+			if token.type is TokenType.eof:
 				value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
 				objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
 				return
@@ -194,8 +194,8 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 					value = self.parse_invalid()
 					objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
 					return
-				elif (token := self.tryAccept(TokenType.eof)) is not None:
-					value = JsonInvalid(Span(self._last.span.end, token.span.end), None, '')
+				elif (token2 := self.tryAccept(TokenType.eof)) is not None:
+					value = JsonInvalid(Span(self._last.span.end, token2.span.end), None, '')
 					objData.add(key.data, JsonProperty(Span(key.span.start, value.span.end), None, key, value))
 					return
 				else:
@@ -204,7 +204,7 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 					return
 
 		start = self._last.span.start
-		end = self._parse_list_like(TokenType.comma, TokenType.right_brace, valueTokens, goodValueTokens, parse_property)
+		end = self._parse_list_like(TokenType.comma, TokenType.object_end, valueTokens, goodValueTokens, parse_property)
 		return JsonObject(Span(start, end), None, objData)
 
 	def _parse_list_like(self, delimiter: TokenType, closing: TokenType, valueTokens: AbstractSet[TokenType], goodValueTokens: AbstractSet[TokenType], parseItem: Callable[[], None]) -> Position:
@@ -269,7 +269,7 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 			arrayData.append(value)
 
 		start = self._last.span.start
-		end = self._parse_list_like(TokenType.comma, TokenType.right_bracket, valueTokens, goodValueTokens, parse_element)
+		end = self._parse_list_like(TokenType.comma, TokenType.list_end, valueTokens, goodValueTokens, parse_element)
 		return JsonArray(Span(start, end), None, arrayData)
 
 	def parse_string(self) -> JsonString:
@@ -280,7 +280,7 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 		hasEscapeSequence = b'\\' in string
 
 		# calculate innerSlice:
-		if False:  # todo uncomment when merging with SNBT parser: if (current.type == TokenType.String) or (acceptNumber and current.type == TokenType.Number):
+		if False:  # todo uncomment when merging with SNBT parser: if (current.type == TokenType.unquoted_string) or (acceptNumber and current.type == TokenType.number):
 			innerSlice = token.span.slice
 		elif self.indexMapper.isIdentity:
 			innerStart = token.span.start.index + 1
@@ -406,8 +406,8 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 	@CachedProperty
 	def _PARSERS(self) -> dict[TokenType, Callable[[], StructureDataNode]]:
 		return {
-			TokenType.left_bracket: self.parse_array2,
-			TokenType.left_brace: self.parse_object2,
+			TokenType.list_start: self.parse_array2,
+			TokenType.object_start: self.parse_object2,
 			TokenType.string: self.parse_string,
 			TokenType.number: self.parse_number,
 			TokenType.boolean: self.parse_boolean,
@@ -424,7 +424,7 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 		else:
 			return JsonInvalid(token.span, None, bytesToStr(token.value))
 
-	def parseJsonTokens(self) -> Optional[StructureDataNode]:
+	def parseJsonTokens(self) -> StructureDataNode | None:
 		"""Recursive JSON parse implementation"""
 		token = self.acceptAnyOf(self._PARSERS.keys())
 		if token.type is not TokenType.eof:
@@ -436,7 +436,7 @@ class JsonParser(ParserBase[JsonNode, StructureDataSchema]):
 		return data
 
 	@ProfiledFunction(enabled=False)
-	def parse(self) -> Optional[StructureDataNode]:
+	def parse(self) -> StructureDataNode | None:
 		"""Parses a JSON string into a Python object"""
 		value = self.parseJsonTokens()
 

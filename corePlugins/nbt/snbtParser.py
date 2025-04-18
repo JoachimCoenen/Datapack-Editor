@@ -1,3 +1,4 @@
+
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, AbstractSet, Callable, cast, Type
@@ -8,17 +9,19 @@ from cat.utils.collections_ import OrderedMultiDict
 from cat.utils.profiling import ProfiledFunction
 from .tags import NBTNode, InvalidTag, BooleanTag, NumberTag, ByteTag, ShortTag, IntTag, LongTag, FloatTag, DoubleTag, \
 	StringTag, ListTag, NBTProperty, CompoundTag, ArrayTag, ByteArrayTag, IntArrayTag, LongArrayTag
-from .snbtTokenizer import SNBTTokenizer, Token, TokenType
+from .snbtTokenizer import SNBTTokenizer
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesToStr, ORD_BACKSLASH, ORD_DOUBLE_QUOTE, ORD_SINGLE_QUOTE
 from base.model.parsing.parser import ParserBase, IndexMapBuilder, IndexMapper
 from base.model.utils import Span, MDStr, Message, NULL_SPAN, Position, wrapInMDCode
-from corePlugins.nbtJsonBase.core import KeySchema, StructureDataNode, StructureDataSchema, StructureProperty
+from corePlugins.nbtJsonBase.core import KeySchema, StructureDataNode, StructureDataSchema, StructureProperty, \
+	TokenType, Token
 from corePlugins.nbtJsonBase.schema import pathify, enrichWithSchema
 
 ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG = Message("JSON standard allows only double quoted string as property key", 0)
 MISSING_VALUE_MSG = Message("Missing value for property", 0)
 INVALID_NUMBER_MSG: Message = Message("Invalid {0}: '`{1}`'", 2)
+ARRAY_PREFIX_MUST_BE_CAPITALIZED_MSG: Message = Message("Array prefix must be capitalized.", 0)
 
 _ESCAPE_CHAR_MAP = {
 	ord('"'): b'"',
@@ -84,7 +87,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 		)
 		self.errors = self._tokenizer.errors  # sync errors
 		self._current = cast(Any, None)
-		self._next()  # sets self._current, self._last
+		self._next()
 
 	def tokenize(self) -> tuple[list[Token], Token]:
 		tokens = []
@@ -153,8 +156,8 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 
 	def parse_object2(self) -> CompoundTag:
 		"""Parses an object out of JSON tokens"""
-		valueTokens = {*self._PARSERS.keys(), TokenType.Invalid, TokenType.Colon}
-		goodValueTokens = {TokenType.String}
+		valueTokens = {*self._PARSERS.keys(), TokenType.invalid, TokenType.colon}
+		goodValueTokens = {TokenType.unquoted_string}
 		objData: OrderedMultiDict[str, StructureProperty] = OrderedMultiDict()
 
 		def parse_property() -> None:
@@ -162,16 +165,16 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 			colonAlreadySeen = False
 			token = self._last
 			# parse KEY:
-			if token.type == TokenType.String:
+			if token.type == TokenType.unquoted_string:
 				key: StringTag = self.parse_string_tag()
 			elif token.type in self._PARSERS.keys():
 				key = self._internalParseTokens()  # type: ignore
 				if key.typeName != StringTag.typeName:
 					self.errorMsg(ONLY_DBL_QUOTED_STR_AS_PROP_KEY_MSG, span=key.span)
 					key = InvalidTag(key.span, None, bytesToStr(self.text[key.span.slice]))  # type: ignore
-			elif token.type == TokenType.Invalid:
+			elif token.type == TokenType.invalid:
 				key = self.parse_invalid()  # type: ignore
-			elif token.type == TokenType.Colon:
+			elif token.type == TokenType.colon:
 				key = InvalidTag(Span(token.span.start), None, '')  # type: ignore
 				colonAlreadySeen = True
 			else:
@@ -179,16 +182,16 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 			key.schema = KeySchema()
 
 			if not colonAlreadySeen:
-				token = self.accept(TokenType.Colon, advanceIfBad=False)
+				token = self.accept(TokenType.colon, advanceIfBad=False)
 
-			if token.type is not TokenType.Colon:
+			if token.type is not TokenType.colon:
 				value: StructureDataNode = InvalidTag(Span(self._last.span.end, token.span.end), None, '')
 				objData.add(key.data, NBTProperty(Span(key.span.start, value.span.end), None, key, value))
 				return
 
 			# duplicate colons:
-			while (tkn2 := self.tryAccept(TokenType.Colon)) is not None:
-				self.errorMsg(DUPLICATE_NOT_ALLOWED_MSG, TokenType.Colon.asString, span=tkn2.span)
+			while (tkn2 := self.tryAccept(TokenType.colon)) is not None:
+				self.errorMsg(DUPLICATE_NOT_ALLOWED_MSG, TokenType.colon.asString, span=tkn2.span)
 
 			if token.type is TokenType.eof:
 				value = InvalidTag(Span(self._last.span.end, token.span.end), None, '')
@@ -206,7 +209,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 			else:
 				# force error, but don't consume:
 				self.acceptAnyOf(self._PARSERS.keys(), advanceIfBad=False)
-				if self.tryAccept(TokenType.Invalid) is not None:
+				if self.tryAccept(TokenType.invalid) is not None:
 					value = self.parse_invalid()
 					objData.add(key.data, NBTProperty(Span(key.span.start, value.span.end), None, key, value))
 					return
@@ -220,7 +223,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 					return
 
 		start = self._last.span.start
-		end = self._parse_list_like(TokenType.Comma, TokenType.CloseCompound, valueTokens, goodValueTokens, parse_property)
+		end = self._parse_list_like(TokenType.comma, TokenType.object_end, valueTokens, goodValueTokens, parse_property)
 		return CompoundTag(Span(start, end), None, objData)
 
 	def _parse_list_like(self, delimiter: TokenType, closing: TokenType, valueTokens: AbstractSet[TokenType], goodValueTokens: AbstractSet[TokenType], parseItem: Callable[[], None]) -> Position:
@@ -250,7 +253,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 					while (tkn2 := self.tryAccept(delimiter)) is not None:
 						self.errorMsg(DUPLICATE_NOT_ALLOWED_MSG, delimiter.asString, span=tkn2.span)
 					if self.tryAccept(closing) is not None:
-						# SNBT allows trailing commas. self.errorMsg(TRAILING_NOT_ALLOWED_MSG, delimiter.asString, span=tkn.span)
+						# SNBT allows trailing commas.
 						self._waitingForClosing[closing] -= 1
 						return self._last.span.end
 					tryParseItem(goodValueTokens)
@@ -274,7 +277,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 
 	def parse_list_tag(self) -> ListTag:
 		"""Parses an array out of JSON tokens"""
-		valueTokens = {*self._PARSERS.keys(), TokenType.Invalid}
+		valueTokens = {*self._PARSERS.keys(), TokenType.invalid}
 		goodValueTokens = {*self._PARSERS.keys()}
 		arrayData: list[StructureDataNode] = []
 
@@ -284,17 +287,32 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 			arrayData.append(value)
 
 		start = self._last.span.start
-		end = self._parse_list_like(TokenType.Comma, TokenType.CloseList, valueTokens, goodValueTokens, parse_element)
+		end = self._parse_list_like(TokenType.comma, TokenType.list_end, valueTokens, goodValueTokens, parse_element)
 		return ListTag(Span(start, end), None, arrayData)
 
-	def _parse_array_tag[T: NBTNode, A: ArrayTag](
-			self,
-			cls: Callable[[Span, StructureDataSchema | None, list[T]], A],
-			parseTag: Callable[[], T]
-	) -> A:
-		valueTokens = {TokenType.Number, TokenType.Invalid}
-		goodValueTokens = {TokenType.Number}
-		arrayData: list[T] = []
+	@CachedProperty
+	def _arrayTagByPrefix(self) -> dict[int, tuple[Type[ArrayTag], Callable[[], NumberTag]]]:
+		return {
+			ord('B'): (ByteArrayTag, self.parse_byte_tag),
+			ord('I'): (IntArrayTag, self.parse_int_tag),
+			ord('L'): (LongArrayTag, self.parse_long_tag),
+		}
+
+	def parse_array_tag(self) -> ArrayTag:
+		prefix = self._getContent(self._last)[1]
+		if prefix in b'bil':
+			self.errorMsg(ARRAY_PREFIX_MUST_BE_CAPITALIZED_MSG, span=self._last.span)
+			prefix += ord('A') - ord('a')
+
+		if prefix not in b'BIL':
+			self.errorMsg(UNKNOWN_MSG, "array prefix", chr(prefix), span=self._last.span)
+			prefix = ord('L')
+
+		cls, parseTag = self._arrayTagByPrefix[prefix]
+
+		valueTokens = {TokenType.number, TokenType.invalid}
+		goodValueTokens = {TokenType.number}
+		arrayData: list[NumberTag] = []
 
 		def parse_element() -> None:
 			nonlocal arrayData
@@ -302,17 +320,8 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 			arrayData.append(tag)
 
 		start = self._last.span.start
-		end = self._parse_list_like(TokenType.Comma, TokenType.CloseList, valueTokens, goodValueTokens, parse_element)
+		end = self._parse_list_like(TokenType.comma, TokenType.list_end, valueTokens, goodValueTokens, parse_element)
 		return cls(Span(start, end), None, arrayData)
-
-	def parse_byte_array_tag(self) -> ByteArrayTag:
-		return self._parse_array_tag(ByteArrayTag, self.parse_byte_tag)
-
-	def parse_int_array_tag(self) -> IntArrayTag:
-		return self._parse_array_tag(IntArrayTag, self.parse_int_tag)
-
-	def parse_long_array_tag(self) -> LongArrayTag:
-		return self._parse_array_tag(LongArrayTag, self.parse_long_tag)
 
 	def _parse_string_or_bool_tag(self) -> StructureDataNode:
 		current = self._last
@@ -333,7 +342,7 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 		hasEscapeSequence = b'\\' in string
 
 		# calculate innerSlice:
-		if token.type == TokenType.QuotedString:
+		if token.type == TokenType.quoted_string:
 			if self.indexMapper.isIdentity:
 				innerStart = token.span.start.index + 1
 				innerEnd = token.span.end.index - 1
@@ -463,14 +472,12 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 	@CachedProperty
 	def _PARSERS(self) -> dict[TokenType, Callable[[], StructureDataNode]]:
 		return {
-			TokenType.List: self.parse_list_tag,
-			TokenType.ByteArray: self.parse_byte_array_tag,
-			TokenType.IntArray: self.parse_int_array_tag,
-			TokenType.LongArray: self.parse_long_array_tag,
-			TokenType.Compound: self.parse_object2,
-			TokenType.QuotedString: self.parse_string_tag,
-			TokenType.String: self._parse_string_or_bool_tag,
-			TokenType.Number: self.parse_number_tag,
+			TokenType.list_start: self.parse_list_tag,
+			TokenType.array_start: self.parse_array_tag,
+			TokenType.object_start: self.parse_object2,
+			TokenType.quoted_string: self.parse_string_tag,
+			TokenType.unquoted_string: self._parse_string_or_bool_tag,
+			TokenType.number: self.parse_number_tag,
 		}
 
 	def _internalParseTokens(self) -> StructureDataNode:
@@ -499,9 +506,9 @@ class SNBTParser(ParserBase[NBTNode, StructureDataSchema]):
 		"""Parses a JSON string into a Python object"""
 		value = self.parseJsonTokens()
 
-		if self._current is not None and self._current.type is not TokenType.eof:
+		if not self.ignoreTrailingChars and self._current is not None and self._current.type is not TokenType.eof:
 			self.error(
-				MDStr(f"Invalid JSON at `{bytesToStr(self._getContent(self._current))}`"),
+				MDStr(f"Invalid SNBT at `{bytesToStr(self._getContent(self._current))}`"),
 				span=self._current.span
 			)
 

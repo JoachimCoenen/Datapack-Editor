@@ -19,10 +19,10 @@ class TokenType(enum.Enum):
 	boolean = 2
 	number = 3
 	string = 4
-	left_bracket = 5
-	left_brace = 6
-	right_bracket = 7
-	right_brace = 8
+	list_start = 5
+	list_end = 7
+	object_start = 6
+	object_end = 8
 	comma = 9
 	colon = 10
 	invalid = 11
@@ -39,10 +39,10 @@ _TOKEN_TYPE_STR_REP = {
 	TokenType.boolean: "boolean",
 	TokenType.number: "number",
 	TokenType.string: "string",
-	TokenType.left_bracket: "'['",
-	TokenType.left_brace: "'{'",
-	TokenType.right_bracket: "']'",
-	TokenType.right_brace: "'}'",
+	TokenType.list_start: "'['",
+	TokenType.object_start: "'{'",
+	TokenType.list_end: "']'",
+	TokenType.object_end: "'}'",
 	TokenType.comma: "','",
 	TokenType.colon: "':'",
 	TokenType.invalid: "invalid",
@@ -55,10 +55,10 @@ VALUE_TOKENS = {
 	TokenType.boolean,
 	TokenType.number,
 	TokenType.string,
-	TokenType.left_bracket,
-	TokenType.left_brace,
-	# TokenType.right_bracket,
-	# TokenType.right_brace,
+	TokenType.list_start,
+	TokenType.object_start,
+	# TokenType.list_end,
+	# TokenType.object_end,
 	# TokenType.comma,
 	# TokenType.colon,
 	TokenType.invalid,
