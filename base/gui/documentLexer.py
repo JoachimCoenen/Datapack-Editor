@@ -314,11 +314,19 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		if tree is None:
 			return
 
+		self.clearLanguageIndicatorRanges(start, end)
+
 		stylerCtx = StylerCtxQScintilla(DEFAULT_STYLE_ID, start, end, self._languageIndicators, self)
 		styler = getStyler(tree.language, stylerCtx)
 		if styler is not None:
 			self.startStyling(start)
 			styler.styleNode(tree)
+
+	def clearLanguageIndicatorRanges(self, start: int, end: int) -> None:
+		editor: CodeEditor = self.editor()
+		if editor is not None:
+			for indicator in self._languageIndicators.values():
+				editor.clearIndicatorRangeIndex(start, end, indicator)
 
 	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
 	# @ProfiledFunction()
