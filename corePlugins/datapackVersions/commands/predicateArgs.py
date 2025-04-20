@@ -53,6 +53,7 @@ class PredicateArgSchemaBase(Schema):
 class PredicateArgNode[TSchema: PredicateArgSchemaBase](Node['PredicateArgNode', TSchema]):
 	typeName: ClassVar[str] = 'PredicateArgNode'
 	language: ClassVar[LanguageId] = PREDICATE_ARGS_ID
+	isClosed: bool = field(kw_only=True)
 
 
 @dataclass
@@ -87,6 +88,7 @@ class PredicateArg(PredicateArgNode[PredicateArgInfo]):
 	isNegated: bool
 	operator: str  # usually '='
 	value: StructureDataSchema | None
+	isClosed: bool = field(default=True, init=False)
 
 	@property
 	def children(self) -> Sequence[PredicateArgNode]:
@@ -101,6 +103,7 @@ class PredicateArg(PredicateArgNode[PredicateArgInfo]):
 class PredicateArgUnion(PredicateArgNode[PredicateArgInfo]):
 	typeName: ClassVar[str] = 'PredicateArgUnion'
 	predicates: list[PredicateArg]
+	isClosed: bool = field(default=False, init=False)
 
 	@property
 	def children(self) -> Sequence[PredicateArgNode]:
@@ -168,7 +171,7 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 
 			self.consumeWhitespace()
 			if self.text.startswith((b'|', b',', b']'), self.cursor):
-				self.error(EXPECTED_MSG.format("snbt"))
+				self.error(EXPECTED_MSG_RAW.format("snbt"))
 				value = InvalidNode(Span(self.currentPos), STRUCTURE_ILLEGAL_SCHEMA, '', structureKind=StructureKind.SNBT)
 			else:
 				value = self._parseForeignNode(nbtSchema, SNBT_ID, ignoreTrailingChars=True)
@@ -197,12 +200,12 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 
 		p1 = self.currentPos
 		if not self.tryConsumeLiteral(b'['):
-			return PredicateArgs(Span(p1), self.schema, arguments)
+			return PredicateArgs(Span(p1), self.schema, arguments, isClosed=True)
 		self.consumeWhitespace()
 
 		if self.tryConsumeLiteral(b']'):
 			p2 = self.currentPos
-			return PredicateArgs(Span(p1, p2), self.schema, arguments)
+			return PredicateArgs(Span(p1, p2), self.schema, arguments, isClosed=True)
 
 		arguments.append(self._parsePredicateArgsUnion())
 
@@ -212,9 +215,9 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 			arguments.append(self._parsePredicateArg())
 			self.consumeWhitespace()
 
-		self.consumeLiteral(b']')
+		isClosed = self.consumeLiteral(b']')
 		p2 = self.currentPos
-		return PredicateArgs(Span(p1, p2), self.schema, arguments)
+		return PredicateArgs(Span(p1, p2), self.schema, arguments, isClosed=isClosed)
 
 	def _parseForeignNode(self, schema: Schema, language: LanguageId, **kwargs) -> Node | None:
 		node, errors, parser = parseNPrepare(
@@ -268,10 +271,17 @@ def _getBestMatchInChildren2(children: Sequence[Node | None], pos: Position, mat
 	for child in children:
 		if child is None:
 			continue
-		if child.span.end <= pos:
+		if child.span.end < pos:
 			before = child
+		elif child.span.end == pos:
+			if isinstance(child, PredicateArgNode) and not child.isClosed:
+				before = None
+				match.before.append(child)
+				_getBestMatchInNode2(child, pos, match)
+				break
+			else:
+				before = child
 		elif child.span.start < pos:
-			# maybe keep match.before if start == pos?
 			before = None
 			_getBestMatchInNode2(child, pos, match)
 			break

@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Generic, Iterator, Mapping, TypeVar, Type, Optional, ClassVar, NamedTuple, Callable, cast
 
+from base.model.messages import EXPECTED_MSG
 from base.model.parsing.bytesConstants import WHITESPACE_CHARS
 from base.model.parsing.bytesUtils import bytesToStr
 from cat.utils.collections_ import AddToDictDecorator
@@ -347,7 +348,7 @@ class _Base(ABC):
 		if self.tryConsumeLiteral(chars):
 			return True
 		else:
-			self.error(MDStr(f"Expected {wrapInMarkdownCode(repr(chars))}"))
+			self.error(EXPECTED_MSG.format(repr(chars)))
 			return False
 
 	def tryConsumeAnyOfLiteral(self, options: tuple[bytes, ...]) -> Optional[bytes]:

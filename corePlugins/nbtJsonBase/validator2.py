@@ -3,10 +3,12 @@ from typing import Protocol
 
 from cat.utils import first
 from cat.utils.collections_ import AddToDictDecorator
-from .core import *
 from base.model.messages import *
 from base.model.utils import Message, SemanticsError, Span, GeneralError, Position
 from .context import getStringNodeContext
+from .core import StructureDataNode, InvalidNode, NullNode, BooleanNode, NumberNode, StringNode, ObjectNode, \
+	StructureSchema, StructureDataSchema, NullSchema, BooleanSchema, NumberSchema, IntSchema, FloatSchema, StringSchema, \
+	ListLikeSchema, ObjectSchema, UnionSchema, resolveCalculatedSchema, AnySchema, IllegalSchema
 
 EXPECTED_ARGUMENT_SEPARATOR_MSG = Message("Expected whitespace to end one argument, but found trailing data: `{0}`.", 1)
 NO_SCHEMA_MSG = Message("No Schema for {0}.", 1)
@@ -18,7 +20,7 @@ DEPRECATED_PROPERTY_MSG = Message("Deprecated property `'{0}'`.", 1)
 REQUIRES_PROPERTY_TO_BE_SET_MSG = Message("Requires property `'{0}'`. Will be ignored if  `'{0}'` is not present.", 1)
 INCOMPATIBLE_PROPERTY_MSG = Message("Is incompatible with properties `'{0}'`.", 1)
 MISSING_MANDATORY_PROPERTY_MSG = Message("Missing mandatory property `'{0}'`.", 1)
-MISSING_ONE_OF_MANDATORY_PROPERTIES_MSG = Message("Missing at least one of the properties {0}.", 1, argumentTransformers=(lambda props: ", ".join(f"`'{x}'`" for x in props),))
+MISSING_ONE_OF_MANDATORY_PROPERTIES_MSG = Message("Missing at least one of these properties {0}.", 1, argumentTransformers=(lambda props: ", ".join(f"`'{x}'`" for x in props),))
 ONLY_ONE_OF_PROPERTIES_ALLOWED_MSG = Message("At most one of these properties can be used at the same time: {0}.", 1, argumentTransformers=(lambda props: ", ".join(f"`'{x}'`" for x in props),))
 TOO_MANY_ELEMENTS_MSG = Message("Too many elements. At most {0} are allowed.", 1)
 TOO_FEW_ELEMENTS_MSG = Message("Too few elements. At least {0} are required.", 1)
@@ -32,7 +34,8 @@ def wrongTypeError(expected: StructureDataSchema, got: StructureDataNode):
 def validateStructure(data: StructureDataNode, errorsIO: list[GeneralError]) -> None:
 	if data.schema is not None:
 		validator = getSchemaValidator(data.schema.typeName, None)
-		validator(data, data.schema, errorsIO=errorsIO)
+		if validator is not None:
+			validator(data, data.schema, errorsIO=errorsIO)
 	else:
 		msg = NO_SCHEMA_MSG.format(data.typeName)
 		errorsIO.append(SemanticsError(msg, Span(data.span.start)))
@@ -202,7 +205,7 @@ def validateObjectNode(data: StructureDataNode, schema: ObjectSchema, *, errorsI
 				errorsIO.append(SemanticsError(msg, span))
 
 
-def _flattenOptions(schema: UnionSchema, parent: ObjectNode, allOptionsIO: list[StructureDataSchema]) -> None:
+def _flattenOptions(schema: UnionSchema, parent: ObjectNode | None, allOptionsIO: list[StructureDataSchema]) -> None:
 	for opt in schema.allOptions:
 		actualOpt = resolveCalculatedSchema(opt, parent)
 		if actualOpt is None:

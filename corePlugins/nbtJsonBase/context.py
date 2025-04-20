@@ -3,9 +3,10 @@ from __future__ import annotations
 import functools
 from abc import ABC, abstractmethod
 from itertools import chain
-from typing import Generator, Iterable, Optional, Callable, cast, Any
+from typing import Generator, Iterable, Optional, Callable, cast, Any, Container
 
 from base.model.messages import UNKNOWN_MSG
+from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import ContextProvider, Suggestions, Context, Match, AddContextToDictDecorator, \
 	CtxInfo, getCallTips, parseNPrepare, validateTree, getSuggestions, getDocumentation, getClickableRanges, \
 	onIndicatorClicked, prepareTree
@@ -14,7 +15,11 @@ from base.model.pathUtils import FilePath
 from base.model.session import getSession
 from base.model.utils import Position, SemanticsError, Span, GeneralError, MDStr, LanguageId
 from cat.utils import Decorator, flatmap, Anything
-from .core import *
+from .core import StructureKind, StructureNode, StructureDataNode, InvalidNode, StringNode, ListLikeNode, \
+	StructureProperty, ObjectNode, StructureSchema, StructureDataSchema, NullSchema, BooleanSchema, NumberSchema, \
+	IntSchema, FloatSchema, StringSchema, ListLikeSchema, KeySchema, PropertySchema, ObjectSchema, UnionSchema, \
+	resolveCalculatedSchema, AnySchema, IllegalSchema, STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA, StructureArgType, \
+	OPTIONS_STRUCTURE_ARG_TYPE
 from .schema import enrichWithSchema
 from .schemaBuilder import SchemaBuilder
 from .structureReader import JObject
@@ -93,7 +98,7 @@ def _getBestMatch(tree: StructureNode, pos: Position, matches: Match[StructureNo
 		matches.hit = tree
 
 
-def _flattenOptions(schema: UnionSchema, parent: ObjectNode) -> Generator[StructureDataSchema]:
+def _flattenOptions(schema: UnionSchema, parent: ObjectNode | None) -> Generator[StructureDataSchema]:
 	for opt in schema.allOptions:
 		actualOpt = resolveCalculatedSchema(opt, parent)
 		if actualOpt is None:
@@ -149,12 +154,15 @@ class StructureCtxProvider(ContextProvider[StructureNode]):
 			prefix = ''
 			suffix = chr(data[0]) + ': ' if data.startswith((b'"', b"'")) else ': '
 
+		# explicitly allow the key, we're currently editing:
+		currentKeyName = bytesToStr(data.removeprefix(b'"').removesuffix(b'"').removeprefix(b"'").removesuffix(b"'"))
+
 		return [
 			f'{prefix}{p.name}{suffix}'
 			for opt in allOptions
 			if isinstance(opt, ObjectSchema)
 			for p in opt.propertiesDict.values()
-			if p.name not in container.data and p.getValueSchemaForParent(container) is not None
+			if (p.name not in container.data or currentKeyName == p.name) and p.getValueSchemaForParent(container) is not None
 		]
 
 	def _suggestionsForUnionSchema(self, schema: UnionSchema, contained: list[StructureNode], data: bytes):
@@ -502,12 +510,17 @@ class OptionsStrContext(StringNodeContext):
 
 	def validate(self, node: StringNode, errorsIO: list[GeneralError]) -> None:
 		if isinstance(node.schema, StringSchema):
-			warningOnly = node.schema.args.get('warningOnly', False)
+			args = node.schema.args if node.schema.args is not None else {}
+			warningOnly = args.get('warningOnly', False)
 			style = 'warning' if warningOnly else 'error'
-			if node.data not in node.schema.args.get('values', ()):
+			values = args.get('values', ())
+
+			if not isinstance(values, Container) or node.data not in values:
 				errorsIO.append(SemanticsError(UNKNOWN_MSG.format("Option", node.data), node.span, style=style))
 
 	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo) -> Suggestions:
 		if isinstance(node.schema, StringSchema):
-			return list(node.schema.args.get('values', ()))
+			args = node.schema.args if node.schema.args is not None else {}
+			values = args.get('values', ())
+			return list(values) if isinstance(values, Iterable) else []
 		return []

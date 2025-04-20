@@ -6,6 +6,7 @@
 
 ### Improvements
  * Improved visibility of indicators (search result, matched brace, etc.) in dark mode.
+ * Improved availability of code suggestions in certain situations.
 
 ### Fixes
  * Fixed drifting of encoded index when parsing nested JSON with a nesting depth > 2.

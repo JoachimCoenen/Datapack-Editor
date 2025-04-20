@@ -403,7 +403,7 @@ class ItemStackHandler(StructuredArgumentContext[ItemStack]):
 			if itemComponents is None:
 				currentPos = sr.currentPos
 				blockStatesOptions = ITEM_COMPONENT_ARG_OPTIONS
-				itemComponents = PredicateArgs(Span(currentPos), blockStatesOptions, [])
+				itemComponents = PredicateArgs(Span(currentPos), blockStatesOptions, [], isClosed=True)
 			else:
 				sr.mergeLastSave()
 			nbt = None

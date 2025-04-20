@@ -783,8 +783,8 @@ class CalculatedValueSchema(StructureDataSchema):
 		return "(...)"
 
 
-def resolveCalculatedSchema(schema: StructureDataSchema | None, parent: ObjectNode) -> StructureDataSchema | None:
-	if isinstance(schema, CalculatedValueSchema):
+def resolveCalculatedSchema(schema: StructureDataSchema | None, parent: ObjectNode | None) -> StructureDataSchema | None:
+	if isinstance(schema, CalculatedValueSchema) and parent is not None:
 		schema = schema.func(parent)
 	return schema
 
@@ -817,12 +817,12 @@ def resolvePath(data: StructureDataNode, path: tuple[str | int, ...]) -> Structu
 			if prop is None:
 				return None
 			result = prop.value
-		else:
-			if not isinstance(result, ListLikeNode):
-				return None
+		elif isinstance(result, ListLikeNode):
 			if item >= len(result.data):
 				return None
 			result = result.data[item]
+		else:
+			return None
 	return result
 
 
