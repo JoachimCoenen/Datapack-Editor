@@ -434,12 +434,8 @@ class _Base(ABC):
 class TokenizerBase(_Base, Generic[_TToken], ABC):
 
 	@abstractmethod
-	def nextToken(self) -> Optional[_TToken]:
+	def nextToken(self) -> _TToken:
 		pass
-
-	def __iter__(self) -> Iterator[_TToken]:
-		while (tk := self.nextToken()) is not None:
-			yield tk
 
 
 @dataclass

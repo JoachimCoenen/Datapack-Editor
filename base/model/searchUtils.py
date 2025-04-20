@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, cast, Generic, Iterable, Iterator, Mapping, Optional, overload, TypeVar, \
 	Sequence
 
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 
 from cat.utils import first
 
@@ -213,21 +213,13 @@ def filterAnyComputedChoices(getStrs: Callable[[_TT], tuple[str, ...]]) -> Calla
 SplitStrs = list[tuple[int, str]]
 
 
-@as_dataclass()
-class SplitStrsItem(Generic[_TT]):
-	""""""
-	value: _TT
-	splitStrs: SplitStrs
-
-
-@as_dataclass()
+@as_dataclass(frozen=True)
 class SearchTerms:
 	searchTerm: str
-	subTerms: list[tuple[int, str]]
 	lowerSubTerms: list[str]
 
 
-@as_dataclass()
+@as_dataclass(frozen=True)
 class FuzzyMatch:
 	indices: list[tuple[int, slice]]  # = field(default_factory=list)
 	matchQuality: tuple[float, float]  # = (fullMatches / partsCnt, partialMatches / partsCnt)
@@ -237,7 +229,7 @@ class FuzzyMatch:
 		return bool(self.indices)
 
 
-@as_dataclass()
+@as_dataclass(frozen=True)
 class SearchResult(Generic[_TT]):
 	fe: _TT
 	aMatch: FuzzyMatch  # = field(compare=False)
@@ -280,7 +272,7 @@ def splitStringForSearch(string: str) -> SplitStrs:
 def getSearchTerms(searchTerm: str) -> SearchTerms:
 	subTerms = splitStringForSearch(searchTerm)
 	lowerSubTerms = [s[1].lower() for s in subTerms]
-	return SearchTerms(searchTerm, subTerms, lowerSubTerms)
+	return SearchTerms(searchTerm, lowerSubTerms)
 
 
 def getFuzzyMatch(searchTerms: SearchTerms, string: str, *, strict: bool) -> Optional[FuzzyMatch]:
@@ -389,14 +381,6 @@ def performFuzzySearch(allChoices: Iterable[_TT], searchTerm: str, getSplitStr: 
 	searchResults = _performFuzzySearch(allChoices, searchTerms, getSplitStr)
 	searchResults.results.sort(key=lambda x: x.aMatch.matchQuality, reverse=True)
 	return searchResults
-
-
-# def getStrSplitChoices(allChoices: Iterable[str]) -> list[SplitStrs]:
-# 	return [SplitStrs(choice, splitStringForSearch(choice)) for choice in allChoices]
-#
-#
-# def getComputedSplitChoices(allChoices: Iterable[_TT], getStr: Callable[[_TT], str]) -> list[SplitStrsItem[_TT]]:
-# 	return [SplitStrs(choice, splitStringForSearch(getStr(choice))) for choice in allChoices]
 
 
 def performFuzzyStrSearch(allChoices: Iterable[str], searchTerm: str) -> SearchResults[str]:

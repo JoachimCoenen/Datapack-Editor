@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import Collection, Generic, TypeVar, Hashable, Iterator, Mapping, Optional
 
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 
 from base.model.pathUtils import FilePathTpl
 from cat.utils import CachedProperty

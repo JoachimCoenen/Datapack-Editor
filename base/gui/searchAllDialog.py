@@ -5,7 +5,7 @@ from typing import Callable, Iterator, Optional, Sequence
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QWidget
 from better_orderedmultidict import OrderedMultiDict
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 
 from base.gui.onProjectFilesDialogBase import OnProjectFilesDialogBase
 from base.model.pathUtils import FilePathTpl, ZipFilePool, dirFromFilePath, fileNameFromFilePath, loadTextFile
@@ -19,7 +19,7 @@ from gui.datapackEditorGUI import ContextMenuEntries, DatapackEditorGUI, makeTex
 from gui.icons import icons
 
 
-@as_dataclass(hashable=True)
+@as_dataclass(hashable=True, frozen=True)
 class Occurrence:
 	file: FilePathTpl
 	span: Span

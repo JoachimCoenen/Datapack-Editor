@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Generic, Optional, Sequence, TypeVar, final
 
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 
 from base.model.aspect import Aspect, AspectDict, SerializableDataclassWithAspects
 from base.model.pathUtils import ArchiveFilePool, FilePathStr, FilePathTpl, normalizeDirSeparatorsStr

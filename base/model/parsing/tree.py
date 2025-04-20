@@ -31,7 +31,6 @@ class LanguageId2(Generic[_TNode]):
 class TokenLike(Protocol):
 	type: Enum
 	span: Span
-	startEnd: slice
 
 
 def _walkTree(children: Iterable[_TNode]) -> Iterator[_TNode]:

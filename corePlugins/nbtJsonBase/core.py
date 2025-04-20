@@ -10,7 +10,7 @@ from typing import ClassVar, Collection, Any, Type, Sequence, Callable, Mapping,
 
 
 from better_orderedmultidict import OrderedMultiDict
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.parser import IndexMapper
@@ -63,7 +63,7 @@ _TOKEN_TYPE_STR_REP = {
 }
 
 
-@as_dataclass(readonly=True)
+@as_dataclass(frozen=True)
 class Token:
 	"""Represents a Token extracted by the parser"""
 	type: TokenType
@@ -429,7 +429,7 @@ class KeySchema(StringSchema):
 		self.forProp: StructureProperty | None = None
 
 
-@as_dataclass(hashable=True, readonly=True)
+@as_dataclass(hashable=True, frozen=True)
 class DecidingPropRef:
 	lookback: int
 	name: str
@@ -438,7 +438,7 @@ class DecidingPropRef:
 		return f'(lookback={self.lookback!r}, name={self.name!r})'
 
 
-@as_dataclass(hashable=True, readonly=True)
+@as_dataclass(hashable=True, frozen=True)
 class DecidingPropNotFound:
 	msg: str
 

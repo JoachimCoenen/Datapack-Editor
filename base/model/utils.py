@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Iterator, NewType, Optional, final
 
 import markdown
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 
 from cat.utils import strings, GlobalGeneratingCache, Deprecated, escapeForXmlTextContent
 
@@ -60,7 +60,7 @@ class MessageAdapter(MessageLike):
 
 
 @final
-@as_dataclass(fast_new=True, hashable=True)
+@as_dataclass(hashable=True, frozen=True, fast_new=True)
 class Position:
 	line: int
 	column: int
@@ -117,7 +117,7 @@ class Span:
 	start: Position
 	end: Position
 
-	def __init__(self, start: Position = None, end: Position = None):
+	def __init__(self, start: Position | None = None, end: Position | None = None):
 		self.start = NULL_POSITION if start is None else start
 		self.end = self.start if end is None else end
 		# assert isinstance(self.start, Position)

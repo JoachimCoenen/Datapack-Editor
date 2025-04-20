@@ -7,7 +7,7 @@ from operator import attrgetter
 from typing import Optional, Callable, ClassVar, Type, final
 
 from PyQt5.QtGui import QIcon
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 from watchdog.events import FileSystemEventHandler, FileClosedEvent, FileModifiedEvent, FileDeletedEvent, FileCreatedEvent, FileMovedEvent
 
 from base.model.searchUtils import FilterStr, filterComputedChoices
@@ -60,7 +60,7 @@ class ProjectFilesGUI(EditorBase[None]):
 
 
 @final
-@as_dataclass(fast_new=True, hashable=False)
+@as_dataclass(fast_new=True, hashable=False)  # cannot mark as frozen=True, because that would overwrite hashable=False
 class FilesTreeItem:
 	"""Only used by the files tree GUI to denote directories and files"""
 	label: str
@@ -103,7 +103,7 @@ class FilesTreeItem:
 
 
 @final
-@as_dataclass(fast_new=True, hashable=False)
+@as_dataclass(fast_new=True, hashable=False)  # cannot mark as frozen=True, because that would overwrite hashable=False
 class FilesTreeRoot:
 	"""Only used by the files tree GUI to denote file roots, (i.e. ProjectRoot, Root, etc.)"""
 	projects: list[AnyFilesTreeElement]  # = dataclasses.field(compare=False)

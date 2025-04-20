@@ -8,7 +8,7 @@ from typing import Optional, Sequence
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QSizePolicy, QWidget
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 
 from base.gui.onProjectFilesDialogBase import OnProjectFilesDialogBase
 from base.model.documents import ErrorCounts, getErrorCounts, loadDocument
@@ -44,7 +44,7 @@ class ErrorsResult:
 		return hash(self.file)
 
 
-@as_dataclass(hashable=True)
+@as_dataclass(hashable=True, frozen=True)
 class Error:
 	file: FilePathTpl
 	error: GeneralError

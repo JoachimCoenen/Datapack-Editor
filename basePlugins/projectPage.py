@@ -1,10 +1,10 @@
 from collections import defaultdict
-from dataclasses import dataclass, fields, Field, field
+from dataclasses import dataclass, fields, Field
 from typing import Optional, Sequence, Type, cast, Protocol, Any
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
-from recordclass import as_dataclass
+from base.model.recordclassAdapter import as_dataclass
 
 from base.model.searchUtils import filterComputedChoices
 from cat.GUI import SizePolicy, NO_MARGINS, MessageBoxStyle, propertyDecorators as pd
@@ -118,18 +118,18 @@ class InfoP(Protocol):
 	root: Optional[Root]
 
 
-@as_dataclass()
+@as_dataclass(frozen=True)
 class RootInfo:
 	root: Root
 
 
-@as_dataclass()
+@as_dataclass(frozen=True)
 class RequiredByInfo:
 	root: Root
 	descr: DependencyDescr
 
 
-@as_dataclass()
+@as_dataclass(frozen=True)
 class DependencyInfo:
 	root: Optional[Root]
 	descr: DependencyDescr
@@ -140,10 +140,10 @@ class DependencyInfo:
 
 class _DependenciesNS:
 
-	@as_dataclass()  # (unsafe_hash=True)
+	@as_dataclass(frozen=True)  # (unsafe_hash=True)
 	class DependencyDetails:
-		name: str = field(compare=True)
-		children: list[InfoP] = field(compare=False)
+		name: str  # = field(compare=True)
+		children: list[InfoP]  # = field(compare=False)
 
 		def __hash__(self) -> int:
 			return hash((_DependenciesNS.DependencyDetails, self.name))
