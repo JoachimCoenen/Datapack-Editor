@@ -20,7 +20,7 @@ from .schemaBuilder import SchemaBuilder
 from .structureReader import JObject
 
 
-def _getBestMatchInListLike[N: StructureNode](tree: ListLikeNode[N, StructureDataNode[N]], pos: Position, matches: Match[N]) -> None:
+def _getBestMatchInListLike(tree: ListLikeNode, pos: Position, matches: Match[StructureNode]) -> None:
 	matches.before = None
 	matches.hit = None
 	matches.after = None
@@ -37,7 +37,7 @@ def _getBestMatchInListLike[N: StructureNode](tree: ListLikeNode[N, StructureDat
 			break
 
 
-def _getBestMatchInObject[N: StructureNode](tree: ObjectNode[N], pos: Position, matches: Match[N]) -> None:
+def _getBestMatchInObject(tree: ObjectNode, pos: Position, matches: Match[StructureNode]) -> None:
 	matches.before = None
 	matches.hit = None
 	matches.after = None
@@ -57,7 +57,7 @@ def _getBestMatchInObject[N: StructureNode](tree: ObjectNode[N], pos: Position, 
 		# 	return
 
 
-def _getBestMatchInProperty[N: StructureNode](tree: StructureProperty[N], pos: Position, matches: Match[N]) -> None:
+def _getBestMatchInProperty(tree: StructureProperty, pos: Position, matches: Match[StructureNode]) -> None:
 	matches.before = None
 	matches.hit = None
 	matches.after = None
@@ -85,7 +85,7 @@ _BEST_MATCHERS: dict[str, Callable[[StructureNode, Position, Match[StructureNode
 }
 
 
-def _getBestMatch[N: StructureNode](tree: N, pos: Position, matches: Match[N]) -> None:
+def _getBestMatch(tree: StructureNode, pos: Position, matches: Match[StructureNode]) -> None:
 	if (matcher := _BEST_MATCHERS.get(tree.typeName)) is not None:
 		matches.contained.append(tree)
 		matcher(tree, pos, matches)
@@ -104,15 +104,15 @@ def _flattenOptions(schema: UnionSchema, parent: ObjectNode) -> Generator[Struct
 			yield actualOpt
 
 
-class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
+class StructureCtxProvider(ContextProvider[StructureNode]):
 
-	def __init__(self, tree: N, text: bytes, requiresStringQuotation: bool):
+	def __init__(self, tree: StructureNode, text: bytes):
 		super().__init__(tree, text)
-		self.requiresStringQuotation: bool = requiresStringQuotation
+		self.requiresStringQuotation: bool = tree.structureKind is StructureKind.JSON
 
-	def getBestMatch(self, pos: Position) -> Match[N]:
+	def getBestMatch(self, pos: Position) -> Match[StructureNode]:
 		tree = self.tree
-		matches = Match(None, None, None, [])
+		matches: Match[StructureNode] = Match(None, None, None, [])
 		if tree.span.__contains__(pos):
 			_getBestMatch(tree, pos, matches)
 			if matches.before is not None and matches.hit is not None:
@@ -121,7 +121,7 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 					matches.hit = None
 		return matches
 
-	def getContext(self, node: N) -> Optional[StructureContext]:
+	def getContext(self, node: StructureNode) -> Optional[StructureContext]:
 		schema = node.schema
 		if schema is not None and isinstance(schema, StringSchema) and schema.type is not None:
 			return getStringNodeContext(schema.type)
@@ -132,13 +132,13 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 
 	def validateTree(self, errorsIO: list[GeneralError]) -> None:
 		from . import validator2
-		validator2.validateStructure(self.tree, errorsIO)
+		validator2.validateStructure(cast(StructureDataNode, self.tree), errorsIO)
 
 	def _getKeySuggestionsForObject(self, container: ObjectNode, schema: ObjectSchema | UnionSchema, data: bytes) -> list[str]:
 		if isinstance(schema, UnionSchema):
-			allOptions = list(_flattenOptions(schema, container.parent))
+			allOptions = list(_flattenOptions(schema, container.parent if isinstance(container.parent, ObjectNode) else None))
 		elif isinstance(schema, ObjectSchema):
-			allOptions = (schema,)
+			allOptions = [schema]
 		else:
 			return []
 
@@ -163,7 +163,7 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 			parent = contained[-1] # maybe contained[-2]??
 			if isinstance(parent, StructureProperty):  # keep it safe...
 				parent = contained[-2]
-			return list(flatmap(gsfs, _flattenOptions(schema, parent)))
+			return list(flatmap(gsfs, _flattenOptions(schema, parent if isinstance(parent, ObjectNode) else None)))
 		else:
 			return list(flatmap(gsfs, schema.options))
 
@@ -191,7 +191,7 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 	def getSuggestionsForSchema(self, schema: StructureSchema, contained: list[StructureNode], data: bytes) -> list[str]:
 		return self._SCHEMA_SUGGESTIONS_PROVIDERS[schema.typeName](self, schema, contained, data)
 
-	def _getSuggestionsForBefore(self, pos: Position, before: N, contained: list[N], replaceCtx: str) -> Suggestions:
+	def _getSuggestionsForBefore(self, pos: Position, before: StructureNode, contained: list[StructureNode], replaceCtx: str) -> Suggestions:
 		if isinstance(before.schema, KeySchema):
 			needsColon = b':' not in self.text[before.span.end.index:pos.index]
 			if len(contained) >= 2:
@@ -211,7 +211,7 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 			needsComma = b',' not in self.text[before.span.end.index:pos.index]
 			return self._getSuggestionsForContained(pos, contained, replaceCtx, needsComma=needsComma)
 
-	def _getSuggestionsForContained(self, pos: Position, contained: list[N], replaceCtx: str, *, needsComma: bool) -> Suggestions:
+	def _getSuggestionsForContained(self, pos: Position, contained: list[StructureNode], replaceCtx: str, *, needsComma: bool) -> Suggestions:
 		if not contained:
 			return []
 		container = contained[-1]
@@ -234,7 +234,7 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 
 		return []
 
-	def _getSuggestionsForHit(self, pos: Position, hit: N, contained: list[N], replaceCtx: str) -> Suggestions:
+	def _getSuggestionsForHit(self, pos: Position, hit: StructureNode, contained: list[StructureNode], replaceCtx: str) -> Suggestions:
 		data = self.text[hit.span.slice]
 		if isinstance(hit, StringNode):
 			if hit.span.end == pos and len(data) >= 2 and data.endswith(b'"') and data.startswith(b'"'):
@@ -252,7 +252,7 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 			return self.getSuggestionsForSchema(hit.schema, contained, data)
 		return []
 
-	def _getSuggestionsForString(self, pos: Position, hit: N, replaceCtx: str):
+	def _getSuggestionsForString(self, pos: Position, hit: StringNode, replaceCtx: str):
 		if (strHandler := self.getContext(hit)) is not None:
 			return strHandler.getSuggestions(hit, pos, replaceCtx=replaceCtx, info=CtxInfo(self, ''))  # TODO: set correct replaceCtx
 		else:
@@ -265,7 +265,7 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 
 		hit = matches.hit
 		if hit is not None and hit.typeName is not InvalidNode.typeName:
-			return self._getSuggestionsForHit(pos, matches.hit, matches.contained, replaceCtx)
+			return self._getSuggestionsForHit(pos, hit, matches.contained, replaceCtx)
 		if matches.before is not None:
 			return self._getSuggestionsForBefore(pos, matches.before, matches.contained, replaceCtx)
 		else:
@@ -283,14 +283,13 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 			if match is None:
 				continue
 			if (schema := match.schema) is not None:
-				if schema.typeName == PropertySchema.typeName:
-					match: StructureProperty
+				if isinstance(match, StructureProperty):
 					if schema.description:
 						tips.append(f"###Property '{match.key.data}':")
 						tips.append(schema.description)
 					break
 				else:
-					if (strHandler := self.getContext(match)) is not None:
+					if isinstance(match, StringNode) and (strHandler := self.getContext(match)) is not None:
 						if doc := strHandler.getDocumentation(match, pos):
 							tips.append(doc)
 
@@ -304,22 +303,22 @@ class StructureCtxProvider[N: StructureNode[N]](ContextProvider[N]):
 		for node in self.tree.walkTree():
 			if not node.span.overlaps(span):
 				continue
-			if (strHandler := self.getContext(node)) is not None:
+			if isinstance(node, StringNode) and (strHandler := self.getContext(node)) is not None:
 				partRanges = strHandler.getClickableRanges(node)
 				if partRanges:
 					ranges.extend(partRanges)
 		return ranges
 
 
-class StructureContext(Context[StructureDataNode]):
+class StructureContext(Context[StringNode]):
 
-	def prepare(self, node: StringNode, info: CtxInfo[StructureNode], errorsIO: list[GeneralError]) -> None:
+	def prepare(self, node: StringNode, info: CtxInfo, errorsIO: list[GeneralError]) -> None:
 		pass
 
 	def validate(self, node: StringNode, errorsIO: list[GeneralError]) -> None:
 		raise ValueError("StructureContext.validate() should never be called. use validator2.validateStructure(...) instead!")
 
-	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:
+	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo) -> Suggestions:
 		return []
 
 	def getDocumentation(self, node: StringNode, pos: Position) -> MDStr:
@@ -356,7 +355,7 @@ class StringNodeContext(StructureContext, ABC):
 		return STRUCTURE_ILLEGAL_SCHEMA, False
 
 
-def orRefSchema(schema: StructureSchema) -> UnionSchema:
+def orRefSchema(schema: StructureDataSchema) -> UnionSchema:
 	refProperties: list[PropertySchema] = [
 		PropertySchema(
 			name='$ref',
@@ -365,7 +364,7 @@ def orRefSchema(schema: StructureSchema) -> UnionSchema:
 			allowMultilineStr=False
 		),
 		PropertySchema(
-			name=Anything,
+			name=Anything(),
 			value=STRUCTURE_ANY_SCHEMA,
 			optional=False,
 			allowMultilineStr=None
@@ -391,9 +390,11 @@ def validateSimpleSchemaArgs(
 	elif isinstance(expectedArgs, IllegalSchema):
 		if argsNode is not None and argsNode.data:
 			return [SemanticsError(MDStr(f"Unexpected arguments for type '{type_.name}'."), argsNode.span, style='warning')]
+		else:
+			return []
 	elif argsNode is not None:
 		enrichWithSchema(argsNode.n, expectedArgs)
-		errors = []
+		errors: list[GeneralError] = []
 		prepareTree(argsNode.n, b'', filePath, errorsIO=errors)
 		validateTree(argsNode.n, b'', errorsIO=errors)
 		return errors
@@ -446,7 +447,7 @@ class ParsingStructureCtx(StringNodeContext, ABC):
 		if node.parsedValue is not None:
 			validateTree(node.parsedValue, b'', errorsIO)
 
-	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:
+	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo) -> Suggestions:
 		if node.parsedValue is not None:
 			return getSuggestions(node.parsedValue, info.ctxProvider.text, pos, replaceCtx)
 		return []
@@ -470,6 +471,7 @@ class ParsingStructureCtx(StringNodeContext, ABC):
 	def getClickableRanges(self, node: StringNode) -> Optional[Iterable[Span]]:
 		if node.parsedValue is not None:
 			return getClickableRanges(node.parsedValue, b'')
+		return None
 
 	def onIndicatorClicked(self, node: StringNode, pos: Position) -> None:
 		if node.parsedValue is not None:
@@ -483,11 +485,12 @@ class KeyContext(StringNodeContext):
 		pass
 
 	def getClickableRanges(self, node: StringNode) -> Optional[Iterable[Span]]:
-		if isinstance(node.schema, KeySchema) and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:
+		if isinstance(node.schema, KeySchema) and node.schema.forProp is not None and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:
 			return (node.span,)
+		return None
 
 	def onIndicatorClicked(self, node: StringNode, pos: Position) -> None:
-		if isinstance(node.schema, KeySchema) and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:
+		if isinstance(node.schema, KeySchema) and node.schema.forProp is not None and node.schema.forProp.schema is not None and node.schema.forProp.schema.filePath:
 			getSession().tryOpenOrSelectDocument(node.schema.forProp.schema.filePath, Span(node.schema.forProp.schema.span.start))
 
 
@@ -504,7 +507,7 @@ class OptionsStrContext(StringNodeContext):
 			if node.data not in node.schema.args.get('values', ()):
 				errorsIO.append(SemanticsError(UNKNOWN_MSG.format("Option", node.data), node.span, style=style))
 
-	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:
+	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo) -> Suggestions:
 		if isinstance(node.schema, StringSchema):
 			return list(node.schema.args.get('values', ()))
 		return []

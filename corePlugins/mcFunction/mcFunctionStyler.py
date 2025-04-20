@@ -54,7 +54,6 @@ class MCCommandStyler(CatStyler[CommandPart]):
 		for argS in _argumentStylers.values():
 			localInnerLanguages.extend(argS.localLanguages())
 		return list(set(localInnerLanguages))
-		# return [LanguageId('JSON')]
 
 	def __post_init__(self) -> None:
 		super(MCCommandStyler, self).__post_init__()

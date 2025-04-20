@@ -1,13 +1,10 @@
 from typing import Type
 
 from base.gui.styler import CatStyler
-from base.model.documents import ParsedDocument,  DocumentTypeDescription
-from base.model.parsing.contextProvider import ContextProvider
+from base.model.documents import ParsedDocument, DocumentTypeDescription
 from base.model.parsing.parser import ParserBase
-from base.model.parsing.tree import Node
 from base.model.utils import LanguageId
 from base.plugin import PluginBase, PLUGIN_SERVICE
-
 
 SNBT_ID = LanguageId('SNBT')
 
@@ -31,19 +28,6 @@ class SNBTPlugin(PluginBase):
 		return {
 			SNBT_ID: SNBTParser,
 			SNBT_PATH_ID: SNBTPathParser,
-		}
-
-	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
-		from corePlugins.nbtJsonBase.context import StructureCtxProvider
-		from corePlugins.nbtJsonBase.core import StructureNode
-		from .tags import NBTNode
-
-		class NBTCtxProvider(StructureCtxProvider):
-			def __init__(self, tree: StructureNode, text: bytes):
-				super().__init__(tree, text, requiresStringQuotation=False)
-
-		return {
-			NBTNode: NBTCtxProvider
 		}
 
 	def documentTypes(self) -> list[DocumentTypeDescription]:

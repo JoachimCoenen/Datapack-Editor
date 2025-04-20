@@ -20,7 +20,7 @@ class StructureStyler(CatStyler[StructureNode]):
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT'), LanguageId('MCFunction')]
+		return [LanguageId('MCFunction')]
 
 	_STYLERS: ClassVar[dict[str, Callable[[StructureStyler, StructureDataNode], int]]] = {}
 	_Styler: ClassVar = AddToDictDecorator(_STYLERS)

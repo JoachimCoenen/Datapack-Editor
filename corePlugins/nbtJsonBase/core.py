@@ -65,9 +65,11 @@ _TOKEN_TYPE_STR_REP = {
 
 @as_dataclass(readonly=True)
 class Token:
+	"""Represents a Token extracted by the parser"""
 	type: TokenType
 	span: Span
-	startEnd: tuple[int, int]
+	value: bytes
+	# isValid: bool = True
 
 
 type ListLike[T: StructureDataNode] = Sequence[T]
@@ -81,12 +83,18 @@ type PyStructureSimpleValue = None | bool | int | float | str
 type PyStructureValue = PyStructureSimpleValue | PyStructureList | PyStructureObject
 
 
+class StructureKind(enum.Enum):
+	JSON = enum.auto()
+	SNBT = enum.auto()
+
+
 @dataclass
 class StructureNode(Node['StructureNode', 'StructureSchema']):  # should also inherit ABC, but that creates an inconsistent method resolution order (MRO).
 	typeName: ClassVar[str] = 'structure_node'
 	language: ClassVar[LanguageId] = LanguageId('Structure')
 
 	schema: StructureSchema | None = field(hash=False, compare=False)
+	structureKind: StructureKind = field(hash=False, compare=False, kw_only=True)
 
 	def walkTree(self) -> Iterator[StructureNode]:
 		yield self
@@ -228,6 +236,16 @@ class ListLikeNode[T: StructureDataNode](StructureDataNode[ListLike[T]]):
 
 	def asString(self) -> bytes:
 		return b'[' + b', '.join(d.asString() for d in self.data) + b']'
+
+
+@dataclass
+class ListNode(ListLikeNode[StructureDataNode]):
+	pass
+
+
+@dataclass
+class NumberArrayNode(ListLikeNode[NumberNode]):
+	arrayTypeTag: bytes
 
 
 @dataclass
@@ -940,6 +958,7 @@ __all__ = [
 	'PyStructureSimpleValue',
 	'PyStructureValue',
 
+	'StructureKind',
 	'StructureNode',
 	'StructureDataNode',
 	'InvalidNode',
@@ -949,6 +968,8 @@ __all__ = [
 	'NumberNode',
 	'StringNode',
 	'ListLikeNode',
+	'ListNode',
+	'NumberArrayNode',
 	'StructureProperty',
 	'ObjectNode',
 

@@ -1,14 +1,12 @@
-"""Lexer functions, loosely based on www.github.com/tusharsadhwani/json_parser"""
 from dataclasses import dataclass, field
 from typing import Callable
 
 from cat.utils import CachedProperty
 from base.model.parsing.bytesUtils import CR_LF, DIGITS_RANGE, WHITESPACE, ASCII_LOWERCASE_RANGE, ASCII_UPPERCASE_RANGE, bytesToStr, ASCII_LETTERS, WHITESPACE_NO_LF, ORD_LF, \
 	ORD_SLASH, ORD_SINGLE_QUOTE, ORD_BACKSLASH, ORD_DOUBLE_QUOTE
-from .core import TokenType, Token
 from base.model.parsing.parser import TokenizerBase
 from base.model.utils import Span, Position, Message
-
+from corePlugins.nbtJsonBase.core import TokenType, Token
 
 INCOMPLETE_ESCAPE_MSG = Message("Incomplete escape at end of string", 0)
 SINGLE_QUOTED_STRING_MSG = Message("JSON standard does not allow single quoted strings", 0)
@@ -44,13 +42,13 @@ class JsonTokenizer(TokenizerBase[Token]):
 	allowMultilineStr: bool
 	_errorsNextToken: list[tuple[Message, tuple, str]] = field(default_factory=list, init=False)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		super(JsonTokenizer, self).__post_init__()
 
 	def addToken(self, start: Position, startCursor: int, tokenType: TokenType) -> Token:
 		end = self.currentPos
 		span = Span(start, end)
-		token = Token(self.text[startCursor:self.cursor], tokenType, span)
+		token = Token(tokenType, span, self.text[startCursor:self.cursor])
 		# add errors:
 		if self._errorsNextToken:
 			for msg, args, style in self._errorsNextToken:
@@ -61,7 +59,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 	def addToken2(self, start: Position, value: bytes, tokenType: TokenType) -> Token:
 		end = self.currentPos
 		span = Span(start, end)
-		token = Token(value, tokenType, span)
+		token = Token(tokenType, span, value)
 		# add errors:
 		if self._errorsNextToken:
 			for msg, args, style in self._errorsNextToken:
@@ -119,13 +117,13 @@ class JsonTokenizer(TokenizerBase[Token]):
 			if char == ORD_BACKSLASH:
 				if self.cursor == self.length or self.text[self.cursor] in CR_LF:
 					self.errorNextToken(INCOMPLETE_ESCAPE_MSG)
-					return self.addToken(start, startCursor, TokenType.string)
+					return self.addToken(start, startCursor, TokenType.quoted_string)
 				else:
 					self.cursor += 1
 					continue
 
 			elif char == quote:
-				return self.addToken(start, startCursor, TokenType.string)
+				return self.addToken(start, startCursor, TokenType.quoted_string)
 
 			elif char == ORD_LF:
 				if self.allowMultilineStr:
@@ -135,7 +133,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 					break
 
 		self.errorNextToken(MISSING_CLOSING_QUOTE_MSG)
-		return self.addToken(start, startCursor, TokenType.string)
+		return self.addToken(start, startCursor, TokenType.quoted_string)
 
 	def extract_number(self) -> Token:
 		"""Extracts a single number token (e.g. 42, -12.3) from JSON string"""
@@ -246,7 +244,7 @@ class JsonTokenizer(TokenizerBase[Token]):
 
 	def nextToken(self) -> Token:
 		self.consumeWhitespace()
-		if not self.cursor < self.length:
+		if self.cursor >= self.length:
 			return self.addToken2(self.currentPos, b'', TokenType.eof)
 
 		char = self.text[self.cursor]
@@ -266,5 +264,6 @@ class JsonTokenizer(TokenizerBase[Token]):
 
 
 __all__ = [
+	'Token',
 	'JsonTokenizer',
 ]

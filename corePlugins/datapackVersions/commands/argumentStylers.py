@@ -94,7 +94,7 @@ def styleForeignNode2(self: ArgumentStyler, value: Optional[Node], span: Span) -
 class ComponentStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('JSON')]
+		return [LanguageId('Structure')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		styleForeignNode2(self, argument.value, argument.span)
@@ -105,7 +105,7 @@ class ComponentStyler(ArgumentStyler):
 class SNBTStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT')]
+		return [LanguageId('Structure')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		styleForeignNode2(self, argument.value, argument.span)
@@ -116,7 +116,7 @@ class SNBTStyler(ArgumentStyler):
 class ItemStackStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT'), LanguageId('PredicateArgs')]
+		return [LanguageId('Structure'), LanguageId('PredicateArgs')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.content_locator)
@@ -127,7 +127,7 @@ class ItemStackStyler(ArgumentStyler):
 class BlockStateStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT'), LanguageId('FilterArg')]
+		return [LanguageId('Structure'), LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.content_locator)
@@ -139,7 +139,7 @@ class BlockStateStyler(ArgumentStyler):
 class EntityStyler(ArgumentStyler):
 	@classmethod
 	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('SNBT'), LanguageId('FilterArg')]
+		return [LanguageId('Structure'), LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.special1)

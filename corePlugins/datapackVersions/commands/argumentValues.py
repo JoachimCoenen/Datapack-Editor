@@ -5,14 +5,14 @@ from base.model.parsing.tree import Node
 from corePlugins.datapackVersions.commands.predicateArgs import PredicateArgs
 from corePlugins.mcFunction.filterArgs import FilterArguments
 from corePlugins.minecraft.resourceLocation import ResourceLocationNode
-from corePlugins.nbt.tags import CompoundTag, NBTNode
+from corePlugins.nbtJsonBase.core import StructureDataNode, ObjectNode
 
 
 @dataclass
 class BlockState:
 	blockId: ResourceLocationNode
 	states: FilterArguments
-	nbt: Optional[CompoundTag]
+	nbt: Optional[ObjectNode]
 
 	def getForeignNodes(self) -> Collection[Node | None]:
 		return self.blockId, self.states, self.nbt
@@ -21,7 +21,7 @@ class BlockState:
 @dataclass
 class ItemStack:
 	itemId: ResourceLocationNode | Literal['*']
-	nbt: Optional[CompoundTag]
+	nbt: Optional[ObjectNode]
 	components: PredicateArgs
 
 	def getForeignNodes(self) -> Collection[Node | None]:
@@ -49,7 +49,7 @@ class TargetSelector:
 @dataclass
 class Particle:
 	particleId: ResourceLocationNode
-	configurationTags: Optional[CompoundTag]
+	configurationTags: Optional[ObjectNode]
 
 	def getForeignNodes(self) -> Collection[Node | None]:
 		return self.particleId, self.configurationTags
@@ -58,7 +58,7 @@ class Particle:
 @dataclass
 class ResourceLocationOrInlineNBT:
 	resLoc: Optional[ResourceLocationNode]
-	nbt: Optional[NBTNode]
+	nbt: Optional[StructureDataNode]
 
 	def getForeignNodes(self) -> Collection[Node | None]:
 		return self.resLoc, self.nbt

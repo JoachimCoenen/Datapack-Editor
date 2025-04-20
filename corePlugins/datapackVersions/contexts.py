@@ -7,7 +7,6 @@ from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
 from base.model.utils import GeneralError, LanguageId, MDStr, Span
 from cat.utils.logging_ import logError
-from corePlugins.json.core import *
 from corePlugins.nbtJsonBase.context import ParsingStructureCtx, structureStringContext, orRefSchema
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
 from corePlugins.mcFunction.argumentTypes import ArgumentType
@@ -16,12 +15,13 @@ from corePlugins.mcFunction.commandContext import getArgumentContext
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import RESOURCE_LOCATION_ID, ResourceLocationSchema, getAllKnownResourceLocationContexts
 from .argTypes import *
-from corePlugins.nbtJsonBase.core import *
+from corePlugins.nbtJsonBase.core import StringNode, ObjectSchema, UnionSchema, IllegalSchema, StringOptionsSchema, \
+	PropertySchema, BooleanSchema, StringSchema, STRUCTURE_ANY_SCHEMA, StructureNode, StructureArgType
 
 
 @structureStringContext(MINECRAFT_RESOURCE_LOCATION.name)
 class ResourceLocationHandler(ParsingStructureCtx):
-	def getSchema(self, node: JsonString) -> ResourceLocationSchema:
+	def getSchema(self, node: StringNode) -> ResourceLocationSchema:
 		schema = node.schema
 		if hasattr(schema, 'args'):  # isinstance(schema, JsonStringSchema):
 			args = (schema.args or {})
@@ -41,7 +41,7 @@ class ResourceLocationHandler(ParsingStructureCtx):
 			schema = ResourceLocationSchema('', 'any', allowTags=False, onlyTags=False)
 		return schema
 
-	def getLanguage(self, node: JsonString) -> LanguageId:
+	def getLanguage(self, node: StringNode) -> LanguageId:
 		return RESOURCE_LOCATION_ID
 
 	def getArgsSchema(self) -> tuple[ObjectSchema | UnionSchema | IllegalSchema, bool]:
@@ -75,33 +75,33 @@ class ResourceLocationHandler(ParsingStructureCtx):
 @structureStringContext(MINECRAFT_NBT_TAG.name)
 class NBTJsonStrContext(ParsingStructureCtx):
 
-	def getSchema(self, node: JsonString) -> Optional[Schema]:
+	def getSchema(self, node: StringNode) -> Optional[Schema]:
 		if isinstance(node.schema, StringSchema):
 			return node.schema.args.get('schema') or STRUCTURE_ANY_SCHEMA
 
-	def getLanguage(self, node: JsonString) -> LanguageId:
+	def getLanguage(self, node: StringNode) -> LanguageId:
 		return LanguageId('SNBT')
 
 
 @structureStringContext(MINECRAFT_NBT_PATH.name)
 class NBTPathJsonStrContext(ParsingStructureCtx):
 
-	def getSchema(self, node: JsonString) -> Optional[Schema]:
+	def getSchema(self, node: StringNode) -> Optional[Schema]:
 		return None
 
-	def getLanguage(self, node: JsonString) -> LanguageId:
+	def getLanguage(self, node: StringNode) -> LanguageId:
 		return LanguageId('SNBTPath')  # todo implement proper nbt path parsing
 
 
 @structureStringContext(MINECRAFT_CHAT_COMMAND.name)
 class CommandJsonStrContext(ParsingStructureCtx):
 
-	def getSchema(self, node: JsonString) -> Optional[Schema]:
+	def getSchema(self, node: StringNode) -> Optional[Schema]:
 		if isinstance(node.schema, StringSchema):
 			schema = node.schema.args.get('schema') if node.schema.args is not None else None
 			return schema or GLOBAL_SCHEMA_STORE.get(MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID)
 
-	def getLanguage(self, node: JsonString) -> LanguageId:
+	def getLanguage(self, node: StringNode) -> LanguageId:
 		return MC_FUNCTION_ID
 
 
@@ -117,16 +117,16 @@ class McFunctionArgumentContextAdaptor(ParsingStructureCtx, ABC):
 	def __init__(self, *, argType: StructureArgType):
 		self.argType: ArgumentType = argType.commandArgumentType
 
-	def getSchema(self, node: JsonString) -> Optional[Schema]:
+	def getSchema(self, node: StringNode) -> Optional[Schema]:
 		raise NotImplemented()  # we don't need this
 
-	def getLanguage(self, node: JsonString) -> LanguageId:
+	def getLanguage(self, node: StringNode) -> LanguageId:
 		raise NotImplemented()  # we don't need this
 
-	def getParserKwArgs(self, node: JsonString) -> dict[str, Any]:
+	def getParserKwArgs(self, node: StringNode) -> dict[str, Any]:
 		raise NotImplemented()  # we don't need this
 
-	def prepare(self, node: JsonString, info: CtxInfo[JsonString], errorsIO: list[GeneralError]) -> None:
+	def prepare(self, node: StringNode, info: CtxInfo[StringNode], errorsIO: list[GeneralError]) -> None:
 		sr = StringReader(
 			node.rawData,
 			line=node.span.start.line,

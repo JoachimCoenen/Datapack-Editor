@@ -133,7 +133,7 @@ def buildColorScheme() -> ColorScheme:
 	colSNBT.setAlphaF(1 - 0.9)
 
 	scheme.languageIndicators = {
-		LanguageId('JSON'): IndicatorStyle(
+		LanguageId('Structure'): IndicatorStyle(
 			style=QSciIndicatorStyle.StraightBoxIndicator,
 			drawUnder=True,
 			foreground=colJson,
@@ -143,11 +143,7 @@ def buildColorScheme() -> ColorScheme:
 			drawUnder=True,
 			foreground=colMCFunction,
 		),
-		LanguageId('SNBT'): IndicatorStyle(
-			style=QSciIndicatorStyle.StraightBoxIndicator,
-			drawUnder=True,
-			foreground=colSNBT,
-		)}
+	}
 
 	return scheme
 

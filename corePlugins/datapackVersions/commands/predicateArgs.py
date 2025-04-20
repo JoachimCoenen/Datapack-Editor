@@ -23,8 +23,9 @@ from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.minecraft.resourceLocation import ResourceLocationNode, ResourceLocationSchema, RESOURCE_LOCATION_ID
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 from corePlugins.nbt import SNBT_ID
-from corePlugins.nbt.tags import InvalidTag
-from corePlugins.nbtJsonBase.core import StructureDataSchema, STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA
+from corePlugins.nbtJsonBase.core import StructureDataSchema, STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA, \
+	InvalidNode, StructureKind
+from corePlugins.nbtJsonBase import STRUCTURE_ID
 
 
 def makeArgument(sr: StringReader, schema: CommandPartSchema, key: bytes, value: Any) -> ParsedArgument:
@@ -168,9 +169,9 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 			self.consumeWhitespace()
 			if self.text.startswith((b'|', b',', b']'), self.cursor):
 				self.error(EXPECTED_MSG.format("snbt"))
-				value = InvalidTag(Span(self.currentPos), STRUCTURE_ILLEGAL_SCHEMA, '')
+				value = InvalidNode(Span(self.currentPos), STRUCTURE_ILLEGAL_SCHEMA, '', structureKind=StructureKind.SNBT)
 			else:
-				value = self._parseForeignNode(nbtSchema, SNBT_ID)
+				value = self._parseForeignNode(nbtSchema, SNBT_ID, ignoreTrailingChars=True)
 		else:
 			value = None
 
@@ -492,7 +493,7 @@ class PredicateArgumentsStyler(CatStyler[PredicateArgNode]):
 
 	@classmethod
 	def localInnerLanguages(cls) -> list[LanguageId]:
-		return [SNBT_ID]
+		return [STRUCTURE_ID]
 
 	def styleNode(self, node: PredicateArgNode) -> int:
 		if node.typeName == PredicateArg.typeName:

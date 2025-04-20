@@ -89,10 +89,10 @@ class JsonMeta(MetaInfo):
 		from corePlugins.json import JSON_ID
 		json, errors, _ = parse(file, filePath=self.filePath, language=JSON_ID, schema=None)
 
-		from corePlugins.json.core import JsonObject, JsonString
-		if json is not None and isinstance(json, JsonObject):
+		from corePlugins.nbtJsonBase.core import ObjectNode, StringNode
+		if json is not None and isinstance(json, ObjectNode):
 			description = json.data.get('description')
-			if description is not None and isinstance(description.value, JsonString):
+			if description is not None and isinstance(description.value, StringNode):
 				return MDStr(description.value.data)
 
 		return MDStr('')

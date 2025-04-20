@@ -9,10 +9,9 @@ from corePlugins.mcFunction.commandContext import makeParsedArgument
 from corePlugins.mcFunction.stringReader import StringReader
 from corePlugins.nbt import SNBT_ID
 from corePlugins.minecraft.resourceLocation import ResourceLocationSchema, ResourceLocationNode
-from corePlugins.nbt.tags import CompoundTag, NBTNode
 from base.model.pathUtils import FilePath
 from base.model.utils import GeneralError
-from corePlugins.nbtJsonBase.core import StructureDataSchema
+from corePlugins.nbtJsonBase.core import StructureDataSchema, StructureNode, ObjectNode
 
 
 def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: bool, notation: bytes) -> Optional[ParsedArgument]:
@@ -46,8 +45,8 @@ def _parseVec(sr: StringReader, ai: ArgumentSchema, *, count: int, useFloat: boo
 	return makeParsedArgument(sr, ai, value=tuple(vec))
 
 
-def tryReadNBTTag(sr: StringReader, schema: StructureDataSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTNode]:
-	return cast(NBTNode, parseFromStringReader(
+def tryReadNBTTag(sr: StringReader, schema: StructureDataSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[StructureNode]:
+	return cast(StructureNode, parseFromStringReader(
 		sr,
 		filePath=filePath,
 		language=SNBT_ID,
@@ -57,12 +56,12 @@ def tryReadNBTTag(sr: StringReader, schema: StructureDataSchema, filePath: FileP
 	))
 
 
-def tryReadNBTCompoundTag(sr: StringReader, schema: StructureDataSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[NBTNode]:
+def tryReadNBTCompoundTag(sr: StringReader, schema: StructureDataSchema, filePath: FilePath, *, errorsIO: list[GeneralError]) -> Optional[StructureNode]:
 	tag = tryReadNBTTag(sr, schema, filePath, errorsIO=errorsIO)
 	if tag is None:
 		return None
 
-	if type(tag) is CompoundTag:
+	if isinstance(tag, ObjectNode):
 		return tag
 	else:
 		sr.rollback()

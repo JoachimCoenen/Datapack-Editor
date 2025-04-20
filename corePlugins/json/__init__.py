@@ -3,9 +3,8 @@ from typing import Type
 
 from base.gui.styler import CatStyler
 from base.model.documents import ParsedDocument, DocumentTypeDescription
-from base.model.parsing.contextProvider import ContextProvider
 from base.model.parsing.parser import ParserBase
-from base.model.parsing.tree import Node, Schema
+from base.model.parsing.tree import Schema
 from base.model.utils import LanguageId
 from base.plugin import PluginBase, PLUGIN_SERVICE
 from corePlugins.nbt import SNBT_ID
@@ -29,19 +28,6 @@ class JsonPlugin(PluginBase):
 		from .parser import JsonParser
 		return {
 			JSON_ID: JsonParser,
-		}
-
-	def contextProviders(self) -> dict[Type[Node], Type[ContextProvider]]:
-		from corePlugins.nbtJsonBase.context import StructureCtxProvider
-		from corePlugins.nbtJsonBase.core import StructureNode
-		from .core import JsonNode
-
-		class JsonCtxProvider(StructureCtxProvider):
-			def __init__(self, tree: StructureNode, text: bytes):
-				super().__init__(tree, text, requiresStringQuotation=True)
-
-		return {
-			JsonNode: JsonCtxProvider
 		}
 
 	def documentTypes(self) -> list[DocumentTypeDescription]:
