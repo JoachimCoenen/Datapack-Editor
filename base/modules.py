@@ -30,21 +30,22 @@ def collectAllModules(baseModuleName: str, baseModuleDir: FilePathStr, folderFil
 	if setDefaultFilesFunc is not None:
 		setDefaultFilesFunc(baseModuleDir)
 
-	allModulePaths: list[str] = []  # next(os.walk(baseModuleDir))[1]
+	allModulePaths: list[str] = []
 	processRecursively(baseModuleDir, folderFilter, allModulePaths.append, filenameRegex=fileFilterRegex)
 	allModulePaths = [normalizeDirSeparatorsStr(p) for p in allModulePaths]
 
 	allModuleNames = [(mp.removeprefix(baseModuleDir).removesuffix('.py').removesuffix('/__init__').lstrip('/'), mp) for mp in allModulePaths]
 	allModules = [(f'{baseModuleName}.' + '.'.join(mn.split('/')), mp) for mn, mp in allModuleNames]
-	# allModules = [(f'plugins.{mn}', joinFilePath(baseModuleDir, mn)) for mn in allModuleNames]
 	return allModules
 
 
-def _importModuleFromFile(moduleName: str, path: str):
+def _importModuleFromFile(moduleName: str, path: str) -> ModuleType:
 	spec = importlib.util.spec_from_file_location(moduleName, path)
+	if spec is None:
+		raise ValueError(f"'{path}' does not seem to be a valid python module.")
 	foo = importlib.util.module_from_spec(spec)
 	sys.modules[moduleName] = foo
-	spec.loader.exec_module(foo)
+	spec.loader.exec_module(foo)  # type: ignore
 	return foo
 
 
@@ -59,8 +60,8 @@ def loadModules(baseModuleName: str, baseModulePath: FilePathStr, names: list[tu
 			thisMod = _importModuleFromFile(moduleName, modPath)
 		except Exception as ex:
 			logError(
-				_CANNOT_LOAD_MSG.format(baseModuleName, moduleName, f"the following Exception occurred while loading the python module:"),
-				format_full_exc(ex, indentLvl=1)
+				_CANNOT_LOAD_MSG.format(baseModuleName, moduleName, "the following Exception occurred while loading the python module:"),
+				format_full_exc(ex)
 			)
 			continue
 
@@ -80,8 +81,8 @@ def reloadModules(baseModuleName: str, modules: Iterable[ModuleType]):
 			importlib.reload(module)
 		except Exception as ex:
 			logError(
-				_CANNOT_LOAD_MSG.format(baseModuleName, moduleName, f"the following Exception occurred while reloading the python module:"),
-				format_full_exc(ex, indentLvl=1)
+				_CANNOT_LOAD_MSG.format(baseModuleName, moduleName, "the following Exception occurred while reloading the python module:"),
+				format_full_exc(ex)
 			)
 			continue
 
@@ -100,7 +101,7 @@ def callModuleMethod(baseModuleName: str, modules: dict[str, ModuleType], method
 		except Exception as ex:
 			logError(
 				_CANNOT_LOAD_MSG.format(baseModuleName, moduleName, f"the following Exception occurred while calling '{moduleName}.{methodName}()':"),
-				format_full_exc(ex, indentLvl=1)
+				format_full_exc(ex)
 			)
 			continue
 
@@ -110,7 +111,7 @@ class FolderAndFileFilter(NamedTuple):
 	fileFilterRegex: Optional[str]
 
 
-@TimedFunction(details=lambda baseModuleName, baseModuleDir, *args, **kwargs: f"{baseModuleName} from directory '{baseModuleDir}'")
+@TimedFunction(details=lambda baseModuleName, baseModuleDir, *args, **kwargs: f"{baseModuleName} from directory '{baseModuleDir}'")  # type: ignore
 def loadAllModules(
 		baseModuleName: str,
 		baseModuleDir: FilePathStr,
