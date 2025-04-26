@@ -15,6 +15,7 @@
  * Fixed wrong color of fold margin in dark mode.
  * Fixed JSON parser failing to parse constants when the JSON is an inner language.
  * Fixed JSON validation failing when a string schema is missing its `args` definition.
+ * Fixed crash when spotlight search ahs no results and an arrow key is pressed. 
 
 
 ## 0.9.0-alpha

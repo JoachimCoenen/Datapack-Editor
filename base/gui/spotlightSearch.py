@@ -316,7 +316,10 @@ class FileSearchPopup(PythonGUIDialog):
 			if newIndex >= len(self._shownResults):
 				newIndex -= len(self._shownResults)
 
-			self.selectedItem = self._shownResults[newIndex]
+			if self._shownResults:
+				self.selectedItem = self._shownResults[newIndex]
+			else:
+				self.selectedItem = None
 			self._gui.redrawGUI()
 
 	@CrashReportWrapped
