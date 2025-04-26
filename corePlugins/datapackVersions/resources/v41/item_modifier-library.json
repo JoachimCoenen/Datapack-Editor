@@ -6,7 +6,7 @@
     "predicate": "predicate-library.json",
     "loot_table": "loot_table-library.json",
     "number_provider": "utils/number_provider-library.json",
-    "data_components": "nbt/data_components-library.json",
+    "data_components": "data_components/data_components-library.json",
     "utils": "utils/utils-library.json",
     "nbt": "utils/nbt-types.json"
   },
@@ -793,7 +793,7 @@
       "properties": {
         "options": {
           "description": "The resource location started with <code>#</code> of an instrument [[tag]], one of the listings is selected randomly.",
-          "value": { "$ref": "utils:resource_location", "schema": "instrument"  }
+          "value": { "$ref": "utils:resource_location", "schema": "instrument", "allowTags": true  }
         }
       }
     },

@@ -29,7 +29,8 @@
               "advancement_reward": "* Loot table set as an [[Advancement/JSON_format|advancement's reward]].",
               "generic": "Not used. Supplies all loot context parameters.\n* Specifying {{cd|\"type\":\"generic\"}} or omitting it means no checking for context parameters in this loot table when loading the data pack.",
               "block": "Loots from breaking a block.\n* The command {{cmd|loot &hellip; mine &lt;pos&gt;}}.",
-              "equipment": "Has required parameters of `this_entity` and `origin`."
+              "equipment": "Has required parameters of `this_entity` and `origin`.",
+              "shearing": "When shearing a bogged, sheep, mooshroom, or snow golem."
             },
             "optionalPrefixes": ["minecraft:"]
           }

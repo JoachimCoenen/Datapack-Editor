@@ -31,6 +31,7 @@ def loadJsonSchemas() -> dict[str, StructureDataSchema]:
 	v41Schemas |= {
 		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:particle_configuration_tags', os.path.join(v41Dir, 'particle_configuration_tags.json')),
 		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:item_sub_predicates', os.path.join(v41Dir, 'item_sub_predicates.json')),
+		**STRUCTURE_SCHEMA_LOADER.loadSchemaLibrary('minecraft:item_components', os.path.join(v41Dir, 'data_components/data_components.json')),
 	}
 	return v41Schemas
 
