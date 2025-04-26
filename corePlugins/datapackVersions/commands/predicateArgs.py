@@ -5,7 +5,7 @@ They are either block states ot target selector arguments
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional, Callable, ClassVar, Sequence, Iterable, Type
+from typing import Optional, Callable, ClassVar, Sequence, Iterable, Type
 
 from base.gui.styler import StyleIdEnum, DEFAULT_STYLE_ID, CatStyler
 from base.model.messages import *
@@ -14,31 +14,17 @@ from base.model.parsing.contextProvider import Suggestions, Match, getSuggestion
 	parseNPrepare, getContext, getDocumentation, getCallTips, getClickableRanges, CtxInfo, prepareTree, validateTree
 from base.model.parsing.parser import ParserBase
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
-from base.model.parsing.tree import Schema, Node
+from base.model.parsing.tree import Schema, Node, LanguageId2
 from base.model.utils import Span, Position, GeneralError, MDStr, LanguageId
 from cat.utils import first
 from .. import PREDICATE_ARGS_ID
-from corePlugins.mcFunction.command import CommandPartSchema, ParsedArgument
-from corePlugins.mcFunction.stringReader import StringReader
-from corePlugins.minecraft.resourceLocation import ResourceLocationNode, ResourceLocationSchema, RESOURCE_LOCATION_ID
+from corePlugins.minecraft.resourceLocation import ResourceLocationNode, ResourceLocationSchema, RESOURCE_LOCATION_ID2
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 from corePlugins.nbt import SNBT_ID
-from corePlugins.nbtJsonBase.core import StructureDataSchema, STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA, \
-	InvalidNode, StructureKind
+from corePlugins.nbtJsonBase.core import STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA, InvalidNode, StructureKind, \
+	StructureDataNode
 from corePlugins.nbtJsonBase import STRUCTURE_ID
-
-
-def makeArgument(sr: StringReader, schema: CommandPartSchema, key: bytes, value: Any) -> ParsedArgument:
-	return ParsedArgument(
-		sr.currentSpan,
-		schema,
-		sr.fullSource,
-		key,
-		value=value
-	)
-
-
-_INT_MAX = int(2**31) - 1
+from  corePlugins.nbt.snbtParser import SNBT_ID2
 
 
 class PredicateArgSchemaBase(Schema):
@@ -54,11 +40,12 @@ class PredicateArgNode[TSchema: PredicateArgSchemaBase](Node['PredicateArgNode',
 	typeName: ClassVar[str] = 'PredicateArgNode'
 	language: ClassVar[LanguageId] = PREDICATE_ARGS_ID
 	isClosed: bool = field(kw_only=True)
+	isSeparator: ClassVar[bool] = False
 
 
 @dataclass
 class PredicateArgInfo(PredicateArgSchemaBase):
-	name: str = field(default=None, kw_only=True)
+	name: str = field(kw_only=True)
 	valueSchema: Optional[str] = field(default=None, kw_only=True)
 	subPredicateSchema: Optional[str] = field(default=None, kw_only=True)
 
@@ -82,12 +69,23 @@ class PredicateArgOptions(PredicateArgSchemaBase):
 
 
 @dataclass
+class PredicateArgSeparator(PredicateArgNode[PredicateArgSchemaBase]):
+	typeName: ClassVar[str] = 'PredicateArgSeparator'
+	isSeparator: ClassVar[bool] = True
+	separator: str
+
+	@property
+	def children(self) -> Sequence[PredicateArgNode]:
+		return ()
+
+
+@dataclass
 class PredicateArg(PredicateArgNode[PredicateArgInfo]):
 	typeName: ClassVar[str] = 'PredicateArg'
 	key: ResourceLocationNode
 	isNegated: bool
-	operator: str  # usually '='
-	value: StructureDataSchema | None
+	operator: str | None  # usually '='
+	value: StructureDataNode | None
 	isClosed: bool = field(default=True, init=False)
 
 	@property
@@ -102,7 +100,7 @@ class PredicateArg(PredicateArgNode[PredicateArgInfo]):
 @dataclass
 class PredicateArgUnion(PredicateArgNode[PredicateArgInfo]):
 	typeName: ClassVar[str] = 'PredicateArgUnion'
-	predicates: list[PredicateArg]
+	predicates: list[PredicateArg | PredicateArgSeparator]
 	isClosed: bool = field(default=False, init=False)
 
 	@property
@@ -113,19 +111,11 @@ class PredicateArgUnion(PredicateArgNode[PredicateArgInfo]):
 @dataclass
 class PredicateArgs(PredicateArgNode[PredicateArgOptions]):
 	typeName: ClassVar[str] = 'PredicateArgs'
-	arguments: list[PredicateArgUnion]
+	arguments: list[PredicateArgUnion | PredicateArgSeparator]
 
 	@property
 	def children(self) -> Sequence[PredicateArgNode]:
 		return self.arguments
-
-
-FALLBACK_FILTER_ARGUMENT_INFO = PredicateArgInfo(
-	name='_fallback',
-	valueSchema='any',
-	subPredicateSchema='any',
-	description=''
-)
 
 
 @dataclass
@@ -142,7 +132,7 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 		p1 = self.currentPos
 		isNegated = self.tryConsumeLiteral(b'!')
 		self.consumeWhitespace()
-		key = self._parseForeignNode(self.schema.keySchema, RESOURCE_LOCATION_ID, ignoreTrailingChars=True)
+		key = self._parseForeignNode(self.schema.keySchema, RESOURCE_LOCATION_ID2, ignoreTrailingChars=True)
 		if key is None:
 			self.error(EXPECTED_MSG.format(self.schema.keySchema.asString()))
 			key = ResourceLocationNode(None, '', False, Span(self.currentPos), self.schema.keySchema)
@@ -170,11 +160,12 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 				nbtSchema = STRUCTURE_ANY_SCHEMA
 
 			self.consumeWhitespace()
+			value: StructureDataNode | None
 			if self.text.startswith((b'|', b',', b']'), self.cursor):
 				self.error(EXPECTED_MSG_RAW.format("snbt"))
 				value = InvalidNode(Span(self.currentPos), STRUCTURE_ILLEGAL_SCHEMA, '', structureKind=StructureKind.SNBT)
 			else:
-				value = self._parseForeignNode(nbtSchema, SNBT_ID, ignoreTrailingChars=True)
+				value = self._parseForeignNode(nbtSchema, SNBT_ID2, ignoreTrailingChars=True)
 		else:
 			value = None
 
@@ -182,21 +173,25 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 		return PredicateArg(Span(p1, p2), schema, key, isNegated, operator, value)
 
 	def _parsePredicateArgsUnion(self) -> PredicateArgUnion:
-		predicates = []
+		predicates: list[PredicateArg | PredicateArgSeparator] = []
 		p1 = self.currentPos
 		predicates.append(self._parsePredicateArg())
-
+		p2 = self.currentPos
 		self.consumeWhitespace()
+		p1Sep = self.currentPos
 		while self.tryConsumeLiteral(b'|'):
+			p2Sep = self.currentPos
+			predicates.append(PredicateArgSeparator(Span(p1Sep, p2Sep), None, '|', isClosed=True))
 			self.consumeWhitespace()
 			predicates.append(self._parsePredicateArg())
+			p2 = self.currentPos
 			self.consumeWhitespace()
+			p1Sep = self.currentPos
 
-		p2 = self.currentPos
 		return PredicateArgUnion(Span(p1, p2), None, predicates)
 
 	def _parsePredicateArgs(self) -> PredicateArgs:
-		arguments = []
+		arguments: list[PredicateArgUnion | PredicateArgSeparator] = []
 
 		p1 = self.currentPos
 		if not self.tryConsumeLiteral(b'['):
@@ -210,16 +205,20 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 		arguments.append(self._parsePredicateArgsUnion())
 
 		self.consumeWhitespace()
+		p1Sep = self.currentPos
 		while self.tryConsumeLiteral(b','):
+			p2Sep = self.currentPos
+			arguments.append(PredicateArgSeparator(Span(p1Sep, p2Sep), None, ',', isClosed=True))
 			self.consumeWhitespace()
-			arguments.append(self._parsePredicateArg())
+			arguments.append(self._parsePredicateArgsUnion())
 			self.consumeWhitespace()
+			p1Sep = self.currentPos
 
 		isClosed = self.consumeLiteral(b']')
 		p2 = self.currentPos
 		return PredicateArgs(Span(p1, p2), self.schema, arguments, isClosed=isClosed)
 
-	def _parseForeignNode(self, schema: Schema, language: LanguageId, **kwargs) -> Node | None:
+	def _parseForeignNode[TN: Node](self, schema: Schema, language: LanguageId2[TN], **kwargs) -> TN | None:
 		node, errors, parser = parseNPrepare(
 			self.text,
 			filePath=self.filePath,
@@ -273,7 +272,7 @@ def _getBestMatchInChildren2(children: Sequence[Node | None], pos: Position, mat
 			continue
 		if child.span.end < pos:
 			before = child
-		elif child.span.end == pos:
+		elif child.span.end == pos and child.span.start != pos:
 			if isinstance(child, PredicateArgNode) and not child.isClosed:
 				before = None
 				match.before.append(child)
@@ -301,7 +300,7 @@ def _getBestMatchInNode2(node: Node, pos: Position, match: Match2) -> None:
 
 
 def _getBestMatch2(node: Node, pos: Position) -> Match2[Node]:
-	match = Match2([], [], [])
+	match: Match2[Node] = Match2([], [], [])
 	if node.span.__contains__(pos):
 		_getBestMatchInChildren2((node,), pos, match)
 		if match.before:
@@ -336,14 +335,18 @@ class PredicateArgNodeCtxProvider(ContextProvider[PredicateArgNode]):
 	def _prepareAll(self, node: PredicateArgNode, info: CtxInfo, errorsIO: list[GeneralError]) -> None:
 		super()._prepareAll(node, info, errorsIO)
 		for foreignNode in node.foreignNodes:
-			prepareTree(foreignNode, self.text, info.filePath, errorsIO)
+			if foreignNode is not None:
+				prepareTree(foreignNode, self.text, info.filePath, errorsIO)
 
-	def _validateAll(self, node: Node, errorsIO: list[GeneralError]) -> None:
+	def _validateAll(self, node: PredicateArgNode, errorsIO: list[GeneralError]) -> None:
 		super()._validateAll(node, errorsIO)
 		for foreignNode in node.foreignNodes:
-			validateTree(foreignNode, self.text, errorsIO)
+			if foreignNode is not None:
+				validateTree(foreignNode, self.text, errorsIO)
 
-	def getSuggestionsForPredicateArgKey(self, pos: Position, schema: PredicateArgOptions, replaceCtx: str) -> Suggestions:
+	def getSuggestionsForPredicateArgKey(self, pos: Position, schema: PredicateArgOptions | None, replaceCtx: str) -> Suggestions:
+		if schema is None:
+			return []
 		key = ResourceLocationNode(None, '', False, Span(pos), schema.keySchema)
 		return getSuggestions(key, self.text, pos, replaceCtx)
 
@@ -354,15 +357,13 @@ class PredicateArgNodeCtxProvider(ContextProvider[PredicateArgNode]):
 		if isinstance(before, PredicateArgs):
 			if before.span.length == 0:
 				suggestions.append(replaceCtx + '[')
-			elif not before.arguments:
-				suggestions.append('!')
-				suggestions.extend(self.getSuggestionsForPredicateArgKey(pos, self.tree.schema, replaceCtx))
-				suggestions.append(replaceCtx + ']')
 			else:
-				return suggestions  # we must be after a properly closed PredicateArgs
+				pass  # we must be after a properly closed PredicateArgs
 
 		elif isinstance(before, PredicateArgUnion):
 			raise ValueError(f"Unexpected type of before {type(before)}.")
+		elif isinstance(before, PredicateArgSeparator):
+			raise ValueError(f"Unexpected type of after {type(before)}.")
 
 		elif isinstance(before, PredicateArg):  # we must be at the end of (or after) operator
 			if before.value is not None:
@@ -379,13 +380,17 @@ class PredicateArgNodeCtxProvider(ContextProvider[PredicateArgNode]):
 			if not isinstance(before2, PredicateArg):
 				raise ValueError(f"Unexpected type of before2 {type(before2)}.")
 			if before2.value is not None:  # we must be at the end of value
-				suggestions.extend([replaceCtx + '|', replaceCtx + ',', replaceCtx + ']'])
-			elif before2.operator is None and before2.key.isValid:  # we must be at the end of key
-				if before2.schema.valueSchema:
-					suggestions.append(replaceCtx + '=')
-				if before2.schema.subPredicateSchema:
-					suggestions.append(replaceCtx + '~')
-				suggestions.extend([replaceCtx + '|', replaceCtx + ',', replaceCtx + ']'])
+				suggestions.extend([replaceCtx + '|', replaceCtx + ', ', replaceCtx + ']'])
+				# todo add separators to list(?) to enable detection whether we need ',' or keys.
+			elif before2.operator is None:
+				if before2.key.isValid:  # we must be at the end of key
+					if before2.schema is not None and before2.schema.valueSchema:
+						suggestions.append(replaceCtx + '=')
+					if before2.schema is not None and before2.schema.subPredicateSchema:
+						suggestions.append(replaceCtx + '~')
+					suggestions.extend([replaceCtx + '|', replaceCtx + ', ', replaceCtx + ']'])
+				else:
+					suggestions.insert(0, '!')
 
 		return suggestions
 
@@ -396,6 +401,8 @@ class PredicateArgNodeCtxProvider(ContextProvider[PredicateArgNode]):
 		if isinstance(after, PredicateArgs):
 			suggestions.append(replaceCtx + '[')
 		elif isinstance(after, PredicateArgUnion):
+			raise ValueError(f"Unexpected type of after {type(after)}.")
+		elif isinstance(after, PredicateArgSeparator):
 			raise ValueError(f"Unexpected type of after {type(after)}.")
 		elif isinstance(after, PredicateArg):  # we must be at the beginning of key
 			suggestions.append('!')
@@ -417,7 +424,10 @@ class PredicateArgNodeCtxProvider(ContextProvider[PredicateArgNode]):
 	def _getSuggestionsForHit(self, pos: Position, hits: list[Node], replaceCtx: str) -> Suggestions:
 		hit = hits[-1]
 		if isinstance(hit, PredicateArgs):  # PredicateArgs can be a hit if it is empty and pos is between the brackets.
-			return self.getSuggestionsForPredicateArgKey(pos, hit.schema, replaceCtx) + [']']
+			suggestions = ['!']
+			suggestions += self.getSuggestionsForPredicateArgKey(pos, hit.schema, replaceCtx)
+			suggestions.append(']')
+			return suggestions
 		elif isinstance(hit, PredicateArgNode):
 			raise ValueError(f"Unexpected type of hit {type(hit)}.")
 		else:
@@ -426,9 +436,9 @@ class PredicateArgNodeCtxProvider(ContextProvider[PredicateArgNode]):
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
 		match = self.getBestMatch2(pos)
 
-		if match.before:
+		if match.before and not getattr(match.before[-1], 'isSeparator', False):
 			return self._getSuggestionsForBefore(pos, match.before, match.hit, replaceCtx)
-		elif match.after:
+		elif match.after and not getattr(match.after[-1], 'isSeparator', False):
 			return self._getSuggestionsForAfter(pos, match.after, match.hit, replaceCtx)
 		elif match.hit:
 			return self._getSuggestionsForHit(pos, match.hit, replaceCtx)
@@ -483,7 +493,7 @@ class PredicateArgsContext(Context[PredicateArgNode]):
 	def onIndicatorClicked(self, node: PredicateArgNode, pos: Position) -> None:
 		pass
 
-	def getSuggestions(self, node: PredicateArgs, pos: Position, replaceCtx: str, info: CtxInfo[PredicateArgNode]) -> Suggestions:
+	def getSuggestions(self, node: PredicateArgNode, pos: Position, replaceCtx: str, info: CtxInfo[PredicateArgNode]) -> Suggestions:
 		return []
 
 
@@ -518,7 +528,6 @@ __all__ = [
 	'PredicateArgOptions',
 	'PredicateArgNode',
 	'PredicateArgs',
-	'FALLBACK_FILTER_ARGUMENT_INFO',
 	'PredicateArgsParser',
 	'PredicateArgNodeCtxProvider',
 	'PredicateArgumentsStyler',

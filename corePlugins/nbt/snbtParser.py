@@ -2,9 +2,14 @@
 from dataclasses import dataclass
 from typing import ClassVar, cast
 
+from base.model.parsing.tree import LanguageId2
+from . import SNBT_ID
 from .snbtTokenizer import SNBTTokenizer
 from corePlugins.nbtJsonBase.core import TokenType, StructureDataNode, StructureKind
 from corePlugins.nbtJsonBase.parserBase import StructureNodeParserBase
+
+
+SNBT_ID2 = LanguageId2(SNBT_ID, StructureDataNode)
 
 
 @dataclass

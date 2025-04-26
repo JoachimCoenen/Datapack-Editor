@@ -11,7 +11,7 @@ from cat.utils import Deprecated
 from base.model.parsing.bytesUtils import bytesToStr
 from base.model.parsing.contextProvider import AddContextFunc, ContextProvider, Match, Context, Suggestions, \
 	AddContextToDictDecorator, CtxInfo
-from base.model.parsing.tree import Schema, Node
+from base.model.parsing.tree import Schema, Node, LanguageId2
 from base.model.pathUtils import FilePath, FilePathTpl
 from base.model.project.project import Root
 from base.model.session import getSession
@@ -62,6 +62,9 @@ class ResourceLocationNode(Node['ResourceLocationNode', ResourceLocationSchema],
 	__gt__ = ResourceLocation.__gt__
 	__ge__ = ResourceLocation.__ge__
 	__hash__ = ResourceLocation.__hash__
+
+
+RESOURCE_LOCATION_ID2 = LanguageId2(RESOURCE_LOCATION_ID, ResourceLocationNode)
 
 
 @dataclass
@@ -272,6 +275,7 @@ def containsResourceLocation(rl: ResourceLocation, container: Iterable[ResourceL
 
 __all__ = [
 	'RESOURCE_LOCATION_ID',
+	'RESOURCE_LOCATION_ID2',
 	'ResourceLocation',
 	'ResourceLocationSchema',
 	'ResourceLocationNode',
