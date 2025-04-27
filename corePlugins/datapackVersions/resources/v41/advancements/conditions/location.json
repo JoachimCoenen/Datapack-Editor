@@ -10,7 +10,7 @@
         "biomes": {
           "optional": true,
           "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "worldgen/biome"},
-          "description": "The biome the entity is currently in. This tag is a [ [resource location] ] for a biome (see [ [Biome#Biome IDs] ] for the ones used in vanilla)."
+          "description": "The biome the entity is currently in. This tag is a resource location for a biome (see Biome#Biome IDs for the ones used in vanilla)."
         },
         "block": {
           "optional": true,
@@ -20,7 +20,7 @@
               "blocks": {
                 "optional": true,
                 "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "block"},
-                "description": "A list of [ [Java Edition data values#Blocks|block IDs] ]."
+                "description": "A list of Java Edition data values#Blocks|block IDs."
               },
               "nbt": {
                 "optional": true,
@@ -76,7 +76,7 @@
               "fluids": {
                 "optional": true,
                 "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "fluid"},
-                "description": "The [ [Java Edition data values#Fluids|fluid ID] ]."
+                "description": "The Java Edition data values#Fluids|fluid ID."
               },
               "state": {
                 "optional": true,
@@ -155,7 +155,7 @@
         "structures": {
           "optional": true,
           "value": {"$ref": "utils:resource_location_or_tag_or_list", "schema": "worldgen/structure"},
-          "description": "The structure the entity is currently in. This tag is a [ [resource location] ] for a structure feature (see [ [Java Edition data values#Structures] ] for the ones used in vanilla)."
+          "description": "The structure the entity is currently in. This tag is a resource location for a structure feature (see Java Edition data values#Structures for the ones used in vanilla)."
         }
       }
     }

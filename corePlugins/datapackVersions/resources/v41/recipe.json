@@ -56,7 +56,7 @@
       ],
       "properties": {
         "type": {
-          "description": "A [ [resource location] ] indicating the type of serializer of the recipe.",
+          "description": "A resource location indicating the type of serializer of the recipe.",
           "value": { 
             "$type": "enum",
             "options": {

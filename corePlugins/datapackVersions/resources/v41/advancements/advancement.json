@@ -560,7 +560,7 @@
       "$type": "string",
       "description": "Checks the block that was destroyed. Accepts block IDs."
     },
-    "%block-enter_block": {"$ref": "utils:resource_location", "schema": "block", "description": "The block that the player is standing in. Accepts [ [Data values#Block IDs|block ID] ]s." },
+    "%block-enter_block": { "$ref": "utils:resource_location", "schema": "block", "description": "The block that the player is standing in. Accepts [ [Data values#Block IDs|block ID] ]s." },
     "%block-slide_down_block": {
       "$type": "string",
       "description": "The block that the player slid on."
@@ -654,8 +654,8 @@
       "options": [{ "$defRef": "%entity_or_predicates" }]
     },
     "%potion-brewed_potion": {"$ref": "utils:resource_location", "schema": "potion", "description": "A [ [Potion#Item data|brewed potion ID] ]." },
-    "%from-changed_dimension": {"$ref": "utils:resource_location", "schema": "dimension", "description": "The dimension the entity traveled from. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
-    "%to-changed_dimension": {"$ref": "utils:resource_location", "schema": "dimension", "description": "The dimension the entity traveled to. This tag is a [ [resource location] ] for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
+    "%from-changed_dimension": {"$ref": "utils:resource_location", "schema": "dimension", "description": "The dimension the entity traveled from. This tag is a resource location for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
+    "%to-changed_dimension": {"$ref": "utils:resource_location", "schema": "dimension", "description": "The dimension the entity traveled to. This tag is a resource location for a dimension ({{tooltip|only these|overworld, the_end, the_nether}} in vanilla; more can be added with data packs)." },
     "%victims-channeled_lightning": {
       "$type": "array",
       "description": "The victims hit by the lightning summoned by the Channeling enchantment. All entities in this list must be hit.",
