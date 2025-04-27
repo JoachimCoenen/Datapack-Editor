@@ -24,6 +24,13 @@ MINECRAFT_CHAT_COMMAND = StructureArgType(
 	examples=MDStr(""),
 )
 
+DPE_STRINGIFIED_JSON_TAG = StructureArgType(
+	name='dpe:stringified_json',
+	description=MDStr("Must be JSON within a string."),
+	description2=MDStr(""""""),
+	examples=MDStr(""""""),
+)
+
 MINECRAFT_NBT_COMPOUND_TAG = StructureArgType(
 	name='minecraft:nbt_compound_tag',
 	description=MDStr("Must be a compound NBT in SNBT format."),
@@ -85,6 +92,7 @@ def init() -> None:
 
 __all__ = [
 	'MINECRAFT_CHAT_COMMAND',
+	'DPE_STRINGIFIED_JSON_TAG',
 	'MINECRAFT_NBT_COMPOUND_TAG',
 	'MINECRAFT_NBT_PATH',
 	'MINECRAFT_NBT_TAG',

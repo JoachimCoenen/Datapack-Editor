@@ -1,13 +1,14 @@
+import re
 from abc import ABC
-from typing import Any, Optional, cast
+from typing import Any, Optional, cast, ClassVar
 
 from base.model.messages import EXPECTED_MSG, TRAILING_NOT_ALLOWED_MSG
-from base.model.parsing.contextProvider import CtxInfo, errorMsg
+from base.model.parsing.contextProvider import CtxInfo, errorMsg, Suggestions
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.parsing.tree import Schema
-from base.model.utils import GeneralError, LanguageId, MDStr, Span
+from base.model.utils import GeneralError, LanguageId, MDStr, Span, SemanticsError, Position
 from cat.utils.logging_ import logError
-from corePlugins.nbtJsonBase.context import ParsingStructureCtx, structureStringContext, orRefSchema
+from corePlugins.nbtJsonBase.context import ParsingStructureCtx, structureStringContext, orRefSchema, StringNodeContext
 from corePlugins.mcFunction import MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID
 from corePlugins.mcFunction.argumentTypes import ArgumentType
 from corePlugins.mcFunction.command import ArgumentSchema
@@ -71,16 +72,35 @@ class ResourceLocationHandler(ParsingStructureCtx):
 		return ObjectSchema(properties=properties, allowMultilineStr=None).finish(), True
 
 
+@structureStringContext(DPE_STRINGIFIED_JSON_TAG.name)
+class StringifiedJsonStrContext(ParsingStructureCtx):
+
+	def getSchema(self, node: StringNode) -> Optional[Schema]:
+		if isinstance(node.schema, StringSchema):
+			schema = node.schema.args.get('schema') if node.schema.args is not None else None
+			return GLOBAL_SCHEMA_STORE.get(schema, LanguageId('JSON')) or STRUCTURE_ANY_SCHEMA
+
+	def getLanguage(self, node: StringNode) -> LanguageId:
+		return LanguageId('JSON')
+
+	def getArgsSchema(self) -> tuple[ObjectSchema | UnionSchema | IllegalSchema, bool]:
+		return ObjectSchema(properties=[PropertySchema(name='schema', value=StringSchema(allowMultilineStr=False), allowMultilineStr=False)], allowMultilineStr=False).finish(), False
+
+
 @structureStringContext(MINECRAFT_NBT_COMPOUND_TAG.name)
 @structureStringContext(MINECRAFT_NBT_TAG.name)
 class NBTJsonStrContext(ParsingStructureCtx):
 
 	def getSchema(self, node: StringNode) -> Optional[Schema]:
 		if isinstance(node.schema, StringSchema):
-			return node.schema.args.get('schema') or STRUCTURE_ANY_SCHEMA
+			schema = node.schema.args.get('schema') if node.schema.args is not None else None
+			return GLOBAL_SCHEMA_STORE.get(schema, LanguageId('SNBT')) or STRUCTURE_ANY_SCHEMA
 
 	def getLanguage(self, node: StringNode) -> LanguageId:
 		return LanguageId('SNBT')
+
+	def getArgsSchema(self) -> tuple[ObjectSchema | UnionSchema | IllegalSchema, bool]:
+		return ObjectSchema(properties=[PropertySchema(name='schema', value=StringSchema(allowMultilineStr=False), allowMultilineStr=False)], allowMultilineStr=False).finish(), False
 
 
 @structureStringContext(MINECRAFT_NBT_PATH.name)
@@ -99,17 +119,54 @@ class CommandJsonStrContext(ParsingStructureCtx):
 	def getSchema(self, node: StringNode) -> Optional[Schema]:
 		if isinstance(node.schema, StringSchema):
 			schema = node.schema.args.get('schema') if node.schema.args is not None else None
-			return schema or GLOBAL_SCHEMA_STORE.get(MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID)
+			return schema or GLOBAL_SCHEMA_STORE.get(MC_FUNCTION_DEFAULT_SCHEMA_ID, MC_FUNCTION_ID)  # todo 'schema' might be a string??
 
 	def getLanguage(self, node: StringNode) -> LanguageId:
 		return MC_FUNCTION_ID
+
+
+@structureStringContext(MINECRAFT_COLOR.name)
+class ColorStructureCtx(StringNodeContext):
+	named_colors: ClassVar[set[str]] = {
+		'black',
+		'dark_blue',
+		'dark_green',
+		'dark_aqua',
+		'dark_red',
+		'dark_purple',
+		'gold',
+		'gray',
+		'dark_gray',
+		'blue',
+		'green',
+		'aqua',
+		'red',
+		'light_purple',
+		'yellow',
+		'white',
+	}
+
+	def validate(self, node: StringNode, errorsIO: list[GeneralError]) -> None:
+		if isinstance(node.schema, StringSchema):
+			if node.data in self.named_colors:
+				return  # good.
+			else:
+				v = node.data
+				if not v.startswith('#'):
+					errorsIO.append(SemanticsError(MDStr(f"Invalid color value '{v}'. Colors must be a named color or have to start with a '#'."), node.span))
+				elif len(v) != 7:
+					errorsIO.append(SemanticsError(MDStr(f"Hexadecimal colors must have 6 digits (3 pairs)."), node.span))
+				elif not re.fullmatch(r'#[0-9a-fA-F]{6}', v):
+					errorsIO.append(SemanticsError(MDStr(f"'{v[1:]}' is not a valid hexadecimal color."), node.span))
+
+	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:
+		return list(self.named_colors)
 
 
 @structureStringContext(MINECRAFT_SCORE_HOLDER.name, argType=MINECRAFT_SCORE_HOLDER)
 @structureStringContext(MINECRAFT_OBJECTIVE.name, argType=MINECRAFT_OBJECTIVE)
 @structureStringContext(MINECRAFT_TARGET_SELECTOR.name, argType=MINECRAFT_TARGET_SELECTOR)  # for now
 @structureStringContext(MINECRAFT_BLOCK_POS.name, argType=MINECRAFT_BLOCK_POS)
-@structureStringContext(MINECRAFT_COLOR.name, argType=MINECRAFT_COLOR)
 @structureStringContext(MINECRAFT_ITEM_SLOTS.name, argType=MINECRAFT_ITEM_SLOTS)
 @structureStringContext(MINECRAFT_UUID.name, argType=MINECRAFT_UUID)
 class McFunctionArgumentContextAdaptor(ParsingStructureCtx, ABC):
