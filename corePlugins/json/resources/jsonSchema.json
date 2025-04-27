@@ -47,17 +47,36 @@
 								"default-property": {
 									"$type": "object",
 									"properties": {
-										"type": {
-											"$type": "enum",
-											"options": {
-												"null": "",
-												"boolean": "",
-												"number": "",
-												"string": "",
-												"array": "",
-												"object": ""
-											}
-										},
+										"type": { "$ref": "orRef", "type": {
+											"$type": "union",
+											"options": [
+												{
+													"$type": "enum",
+													"options": {
+														"null": "",
+														"boolean": "",
+														"number": "",
+														"string": "",
+														"array": "",
+														"object": ""
+													}
+												},
+												{
+													"$type": "array",
+													 "element": { "$ref": "orRef", "type": {
+														"$type": "enum",
+														"options": {
+															"null": "",
+															"boolean": "",
+															"number": "",
+															"string": "",
+															"array": "",
+															"object": ""
+														}
+													}}
+												}
+											]
+										}},
 										"default": {
 											"optional": true,
 											"value": { "$defRef": "anyOrRef" }

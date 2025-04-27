@@ -2,7 +2,9 @@
 ### Features
  * Added common unified style ids for syntax highlighting. (issue #35)
  * Added ability to customize default indicator styles. (issue #35)
- * JSON & SNBT schemas: Properties now support exclusion groups.
+ * JSON & SNBT schemas: 
+   * Properties now support exclusion groups.
+   * Parameters of templates no support multiple types at once. (e.g. `"$params": { "minCount": { "type": ["number", "null"], "default": null } }`)
  * Added support for data components; still needs some refinement. (issue #54)
 
 ### Improvements

@@ -1,13 +1,25 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from dataclasses import dataclass, field
+from types import UnionType
 from typing import Collection, Optional, TypeVar, Type, Any, AbstractSet, final, overload, Literal, NoReturn
 
-from .core import *
+from .core import (
+	ListLike,
+	Object,
+	StructureDataNode,
+	InvalidNode,
+	NullNode,
+	BooleanNode,
+	NumberNode,
+	StringNode,
+	ListLikeNode,
+	ObjectNode,
+	StructureDataSchema,
+	StructureValue,
+)
 from base.model.parsing.bytesUtils import strToBytes
 from base.model.utils import GeneralError, MDStr, Span, SemanticsError
-
 
 TEMPLATE_REF_PROP = '$ref'
 
@@ -28,7 +40,7 @@ class V[T]:
 
 @final
 @dataclass(frozen=True, slots=True)
-class JD[TJSD: StructureDataNode, T2](V[TJSD]):
+class JD[TJSD: StructureDataNode, T2: StructureValue](V[TJSD]):
 	n: TJSD
 
 	@property
@@ -40,7 +52,7 @@ class JD[TJSD: StructureDataNode, T2](V[TJSD]):
 		return self.n.span
 
 	@property
-	def schema(self) -> StructureDataSchema:
+	def schema(self) -> StructureDataSchema | None:
 		return self.n.schema
 
 	@property
@@ -69,7 +81,7 @@ class SchemaLibrary:
 	filePath: str
 	exists: bool
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		self.additional.setdefault('definitions', {})
 
 	@property
@@ -84,7 +96,7 @@ class SchemaLibrary:
 @dataclass
 class SchemaTemplate:
 	description: MDStr
-	params: OrderedDict[str, TemplateParam]
+	params: dict[str, TemplateParam]
 	body: ObjectNode
 	span: Span
 
@@ -92,7 +104,7 @@ class SchemaTemplate:
 @dataclass
 class TemplateParam:
 	name: str
-	type: str
+	type: set[str]
 	description: MDStr
 	default: Optional[JD]
 	span: Span
@@ -108,7 +120,7 @@ class TemplateContext:
 
 @dataclass
 class TemplateArg:
-	value: Optional[JD]
+	value: JD
 
 
 @dataclass
@@ -144,7 +156,7 @@ class StructureReader:
 			templates[ref] = self.parseTemplate(templateNode, prop.key.span)
 
 	def parseArguments(self, refNode: JObject, template: SchemaTemplate, templateCtx: TemplateContext) -> dict[str, TemplateArg]:
-		args = {}
+		args: dict[str, TemplateArg] = {}
 		remainingParams = template.params.copy()
 		for name, prop in refNode.data.items():
 			if name.startswith('$'):
@@ -152,10 +164,9 @@ class StructureReader:
 			if name in args:
 				self.error(MDStr(f"args {name!r} already defined before at {args[name].value.span.start}"), span=prop.key.span, ctx=refNode.ctx)
 			if (param := remainingParams.pop(name, None)) is not None:
-				arg = prop.value
-				arg = self.fromRef2(arg, refNode.ctx)
-				if arg.typeName != param.type:
-					msg = f"Unexpected argument type. Got {arg.typeName}, but expected type: {param.type}"
+				arg: JD[StructureDataNode, StructureValue] = self.fromRef2(prop.value, refNode.ctx)
+				if arg.typeName not in param.type:
+					msg = f"Unexpected argument type. Got {arg.typeName}, but expected one of: {param.type}"
 					self.error(MDStr(msg), span=arg.span, ctx=arg.ctx)
 					raise ValueError(msg)
 				args[name] = TemplateArg(arg)
@@ -172,7 +183,7 @@ class StructureReader:
 	def parseTemplate(self, node: JObject, span: Span) -> SchemaTemplate:
 		description = MDStr(self.optStrVal(node, 'description', ''))
 		paramsNode = self.optObject(node, '$params')
-		params = self.parseParams(paramsNode) if paramsNode is not None else OrderedDict()
+		params = self.parseParams(paramsNode) if paramsNode is not None else {}
 		body = self.reqObjectRaw(node, '$body')  # will be resolved later, if necessary.
 
 		template = SchemaTemplate(
@@ -183,8 +194,8 @@ class StructureReader:
 		)
 		return template
 
-	def parseParams(self, paramsNode: JObject) -> OrderedDict[str, TemplateParam]:
-		params = OrderedDict()
+	def parseParams(self, paramsNode: JObject) -> dict[str, TemplateParam]:
+		params: dict[str, TemplateParam] = {}
 		for name, prop in paramsNode.data.items():
 			if name in params:
 				self.error(MDStr(f"param {name!r} already defined before at {params[name].span.start}"), span=prop.key.span, ctx=paramsNode.ctx)
@@ -195,7 +206,13 @@ class StructureReader:
 		return params
 
 	def parseParam(self, node: JObject, name: str, span: Span) -> TemplateParam:
-		type_ = MDStr(self.reqEnumVal(node, 'type', STRUCTURE_TYPE_NAMES))
+		data = self.fromRef(self._reqProp(node, 'type'))
+		if isinstance(data.n, StringNode):
+			type_ = {self.checkOptions(data, STRUCTURE_TYPE_NAMES).n.data}
+		else:
+			typeList: list[JD[StringNode, str]] = self.reqListLikeVal2(node, 'type', StringNode)
+			type_ = {self.checkOptions(jd, STRUCTURE_TYPE_NAMES).n.data for jd in typeList}
+
 		description = MDStr(self.optStrVal(node, 'description', ''))
 		default = self._optProp(node, 'default')
 
@@ -219,7 +236,7 @@ class StructureReader:
 				), ctx=refNode.ctx)
 		return library, ns, lref
 
-	def fromRef[TJD: JD](self, node: TJD) -> TJD:
+	def fromRef(self, node: JD) -> JD:
 		if not isinstance(node.n, ObjectNode):
 			return node
 		if (refNode := self.optStr(node, TEMPLATE_REF_PROP)) is None:
@@ -234,17 +251,18 @@ class StructureReader:
 
 		library, ns, lref = self.getNamespace(refNode)
 
-		if (template := library.templates.get(lref)) is not None:
+		if library is not None and (template := library.templates.get(lref)) is not None:
 			templateCtx = TemplateContext(lref, library.filePath, library.libraries, {})
 			templateCtx.arguments.update(self.parseArguments(node, template, templateCtx))
 			return self.fromRef(JD(template.body, templateCtx))  # be aware of possible infinite recursion!
 		else:
 			self.error(MDStr(f"No template \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
+			return node
 
-	def fromRef2[TJSD: StructureDataNode, T](self, data: TJSD, ctx: TemplateContext) -> JD[TJSD, T]:
+	def fromRef2[TJSD: StructureDataNode, T: StructureValue](self, data: TJSD, ctx: TemplateContext) -> JD[TJSD, T]:
 		return self.fromRef(JD(data, ctx))
 
-	def checkType[TJSD: StructureDataNode, T](self, data: JD, type_: Type[TJSD]) -> JD[TJSD, T]:
+	def checkType[TJSD: StructureDataNode, T: StructureValue](self, data: JD, type_: Type[TJSD] | UnionType) -> JD[TJSD, T]:
 		if isinstance(data.n, type_):
 			return data
 		msg = f"Unexpected type. Got {type(data.n)}, but expected type: {type_}"
@@ -271,7 +289,7 @@ class StructureReader:
 			return self.fromRef2(prop.value, obj.ctx)
 		return None
 
-	def reqType[TJSD: StructureDataNode, T](self, obj: JObject, key: str, type_: Type[TJSD]) -> JD[TJSD, T]:
+	def reqType[TJSD: StructureDataNode, T: StructureValue](self, obj: JObject, key: str, type_: Type[TJSD]) -> JD[TJSD, T]:
 		data = self._reqProp(obj, key)
 		return self.checkType(self.fromRef(data), type_)
 
@@ -293,7 +311,7 @@ class StructureReader:
 	def reqObjectRaw(self, obj: JObject, key: str):
 		return self.checkType(self._reqProp(obj, key), ObjectNode)
 
-	def optType[TJSD: StructureDataNode, T](self, obj: JObject, key: str, type_: Type[TJSD]) -> Optional[JD[TJSD, T]]:
+	def optType[TJSD: StructureDataNode, T: StructureValue](self, obj: JObject, key: str, type_: Type[TJSD] | UnionType) -> Optional[JD[TJSD, T]]:
 		data = self._optProp(obj, key)
 		return self.checkType(self.fromRef(data), type_) if data is not None else None
 
@@ -330,45 +348,75 @@ class StructureReader:
 		data = self.reqStr(obj, key)
 		return self.checkOptions(data, options).n.data
 
-	def reqListLikeVal(self, obj: JObject, key: str) -> V[list[StructureDataNode]]:
-		array = self.reqType(obj, key, ListLikeNode)
+	def reqListLikeVal(self, obj: JObject, key: str) -> V[ListLike]:
+		array: JD[ListLikeNode, ListLike] = self.reqType(obj, key, ListLikeNode)
 		return V(array.n.data, array.ctx)
 
-	def reqListLikeVal2[TJN: StructureNode, T](self, obj: JObject, key: str, type_: Type[TJN]) -> list[JD[TJN, T]]:
-		array = self.reqType(obj, key, ListLikeNode)
+	def reqListLikeVal2[TJN: StructureDataNode, T: StructureValue](self, obj: JObject, key: str, type_: Type[TJN]) -> list[JD[TJN, T]]:
+		array: JD[ListLikeNode, ListLike] = self.reqType(obj, key, ListLikeNode)
 		ctx = array.ctx
 		return [self.checkType(self.fromRef2(elem, ctx), type_) for elem in array.n.data]
 
-	def optBoolVal[D](self, obj: JObject, key: str, default: D = None) -> bool | D:
+	@overload
+	def optBoolVal(self, obj: JObject, key: str) -> bool | None: ...
+	@overload
+	def optBoolVal[D](self, obj: JObject, key: str, default: D) -> bool | D: ...
+
+	def optBoolVal[D](self, obj: JObject, key: str, default: D | None = None) -> bool | D | None:
+		data: JD[BooleanNode, bool] | None
 		if (data := self.optType(obj, key, BooleanNode)) is not None:
 			return data.n.data
 		return default
 
-	def optNumberVal[D](self, obj: JObject, key: str, default: D = None) -> int | float | D:
+	@overload
+	def optNumberVal(self, obj: JObject, key: str) -> int | float | None: ...
+	@overload
+	def optNumberVal[D](self, obj: JObject, key: str, default: D) -> int | float | D: ...
+
+	def optNumberVal[D](self, obj: JObject, key: str, default: D | None = None) -> int | float | D | None:
+		data: JD[NumberNode, int | float] | None
 		if (data := self.optType(obj, key, NumberNode)) is not None:
 			return data.n.data
 		return default
 
-	def optStrVal[D](self, obj: JObject, key: str, default: D = None) -> str | D:
+	@overload
+	def optStrVal(self, obj: JObject, key: str) -> str | None: ...
+	@overload
+	def optStrVal[D](self, obj: JObject, key: str, default: D) -> str | D: ...
+
+	def optStrVal[D](self, obj: JObject, key: str, default: D | None = None) -> str | D | None:
+		data: JD[StringNode, str] | None
 		if (data := self.optType(obj, key, StringNode)) is not None:
 			return data.n.data
 		return default
 
-	def optEnumVal[D](self, obj: JObject, key: str, options: AbstractSet[str], default: D = None) -> str | D:
-		data = self.optStr(obj, key)
+	@overload
+	def optEnumVal(self, obj: JObject, key: str, options: AbstractSet[str]) -> str | None: ...
+	@overload
+	def optEnumVal[D](self, obj: JObject, key: str, options: AbstractSet[str], default: D) -> str | D: ...
+
+	def optEnumVal[D](self, obj: JObject, key: str, options: AbstractSet[str], default: D | None = None) -> str | D | None:
+		data: JD[StringNode, str] | None
+		data = self.optType(obj, key, StringNode)
 		if data is not None:
 			return self.checkOptions(data, options).n.data
 		return default
 
-	def optListLikeVal(self, obj: JObject, key: str) -> Optional[V[list[StructureDataNode]]]:
-		array = self.optType(obj, key, ListLikeNode)
-		if array is not None:
+	def optListLikeVal(self, obj: JObject, key: str) -> Optional[V[ListLike]]:
+		array: JD[ListLikeNode, ListLike] | None
+		if (array := self.optType(obj, key, ListLikeNode)) is not None:
 			return V(array.n.data, array.ctx)
 		return None
 
-	def optListLikeVal2[TJSD: StructureDataNode, T](self, obj: JObject, key: str, type_: Type[TJSD]) -> list[JD[TJSD, T]]:
-		array = self.optType(obj, key, ListLikeNode)
-		if array is not None:
+	def optListLikeVal2[TJSD: StructureDataNode, T: StructureValue](self, obj: JObject, key: str, type_: Type[TJSD]) -> list[JD[TJSD, T]]:
+		array: JD[ListLikeNode, ListLike] | None
+		if (array := self.optType(obj, key, ListLikeNode)) is not None:
 			ctx = array.ctx
 			return [self.checkType(self.fromRef2(elem, ctx), type_) for elem in array.n.data]
 		return []
+
+	def optNumberOrNullVal(self, obj: JObject, key: str) -> int | float | None:
+		data: JD[NumberNode | NullNode, int | float] | None
+		if (data := self.optType(obj, key, NumberNode | NullNode)) is not None:
+			return data.n.data
+		return None

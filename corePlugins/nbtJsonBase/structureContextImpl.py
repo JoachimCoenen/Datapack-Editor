@@ -1,5 +1,3 @@
-import os.path
-from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -235,7 +233,7 @@ class TmplRefStrArgKeysContext(StringNodeContext):
 		default = resolvePath(node, ('default',))
 		return TemplateParam(name, type_, description, default, span)
 
-	def _getTemplate(self, node: StringNode) -> SchemaTemplate | ObjectNode | None:
+	def _getTemplate(self, node: StringNode) -> SchemaTemplate | None:
 		if (tmplRefStrValue := self._getTmplRefStrValue(node)) is not None:
 			if isinstance(definition := tmplRefStrValue.definition, SchemaTemplate):
 				return definition
@@ -249,7 +247,7 @@ class TmplRefStrArgKeysContext(StringNodeContext):
 					}
 				else:
 					params = {}
-				return SchemaTemplate(MDStr(''), OrderedDict(params), definition, definition.span)
+				return SchemaTemplate(MDStr(''), params, definition, definition.span)
 		return None
 
 	def prepare(self, node: StringNode, info: CtxInfo[StringNode], errorsIO: list[GeneralError]) -> None:
@@ -264,8 +262,7 @@ class TmplRefStrArgKeysContext(StringNodeContext):
 			node.parsedValue = param
 
 	def getSuggestions(self, node: StringNode, pos: Position, replaceCtx: str, info: CtxInfo[StructureNode]) -> Suggestions:
-		template = self._getTemplate(node)
-		if template is None:
+		if (template := self._getTemplate(node)) is None:
 			return []
 		return list(template.params.keys())
 

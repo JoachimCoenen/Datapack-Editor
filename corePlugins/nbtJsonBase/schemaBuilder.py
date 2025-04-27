@@ -12,7 +12,29 @@ from base.model.pathUtils import normalizeDirSeparators, fromDisplayPath, loadBi
 from base.model.utils import GeneralError, MDStr, Span, WrappedError, LanguageId, NULL_SPAN, ParsingError
 from cat.utils import Anything
 from cat.utils.collections_ import AddToDictDecorator
-from .core import *
+from .core import (
+	StringNode,
+	ObjectNode,
+	StructureDataSchema,
+	NullSchema,
+	BooleanSchema,
+	NumberSchema,
+	IntSchema,
+	FloatSchema,
+	StringSchema,
+	StringOptionsSchema,
+	ListLikeSchema,
+	DecidingPropRef,
+	PropertySchema,
+	ObjectSchema,
+	Inheritance,
+	UnionSchema,
+	CalculatedValueSchema,
+	AnySchema,
+	STRUCTURE_ILLEGAL_SCHEMA,
+	toPyValue,
+	ALL_NAMED_STRUCTURE_ARG_TYPES,
+)
 from .structureReader import StructureReader, TemplateContext, SchemaLibrary, JObject, JD, JString
 
 DEF_REF_PROP = '$defRef'
@@ -125,6 +147,7 @@ class SchemaBuilder:
 	def parseLibrariesPartial(self, librariesNode: JObject, ctx: TemplateContext) -> Generator[None]:
 		"""" !!! 3-step generator !!! """
 		partialLibraries2: list[Doer2] = []
+		partialLibraries1: list[Doer1] = []
 		libraries: dict[str, SchemaLibrary] = cast(SchemaLibrary, ctx.libraries['']).libraries
 		for ns, prop in librariesNode.data.items():
 			if ns in libraries:
@@ -139,9 +162,10 @@ class SchemaBuilder:
 
 			libraries[ns], partial = self.orchestrator._getSchemaLibraryPartial(libraryFilePath)
 			partialLibraries2.append(partial)
+			partialLibraries1.append(partial.do())
 		yield
 
-		partialLibraries1 = [partial.do() for partial in partialLibraries2]
+		# partialLibraries1 = [partial.do() for partial in partialLibraries2]
 		finishers = [partial.do() for partial in partialLibraries1]
 		yield
 		for finisher in finishers:
@@ -177,7 +201,7 @@ class SchemaBuilder:
 
 	def resolveDefRef(self, refNode: JString) -> StructureDataSchema:
 		library, ns, lref = self.reader.getNamespace(refNode)
-		if (definition := library.additional['definitions'].get(lref)) is not None:
+		if library is not None and (definition := library.additional['definitions'].get(lref)) is not None:
 			return definition
 		else:
 			self.reader.error(MDStr(f"No definition \"{lref}\" in namespace \"{ns}\"."), span=refNode.span, ctx=refNode.ctx)
@@ -542,8 +566,8 @@ def objectHandler(self: SchemaBuilder, node: JObject) -> Generator[StructureData
 def arrayHandler(self: SchemaBuilder, node: JObject) -> Generator[StructureDataSchema]:
 	description, deprecated, allowMultilineStr = readCommonValues(self.reader, node)
 	element = self.reader.reqObject(node, 'element')
-	minElemCount = self.reader.optNumberVal(node, 'minCount', None)
-	maxElemCount = self.reader.optNumberVal(node, 'maxCount', None)
+	minElemCount = self.reader.optNumberOrNullVal(node, 'minCount')
+	maxElemCount = self.reader.optNumberOrNullVal(node, 'maxCount')
 	objectSchema = ListLikeSchema(
 		description=description,
 		element=cast(StructureDataSchema, None),  # will be set later.
