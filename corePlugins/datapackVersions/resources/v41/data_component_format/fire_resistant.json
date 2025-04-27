@@ -1,0 +1,13 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "fire_resistant" },
+  "$templates": {},
+  "$definitions": {
+    "fire_resistant": {
+      "$type": "object",
+      "properties": {},
+      "description": "If set, this item does not burn in fire or lava."
+    }
+  }
+}

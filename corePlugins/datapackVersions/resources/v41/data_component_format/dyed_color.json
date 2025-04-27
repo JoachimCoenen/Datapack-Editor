@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "dyed_color" },
+  "$templates": {},
+  "$definitions": {
+    "dyed_color": {
+      "$type": "object",
+      "properties": {}
+    }
+  }
+}

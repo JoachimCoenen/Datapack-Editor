@@ -1,0 +1,58 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json"
+  },
+  "$body": { "$defRef": "tool" },
+  "$templates": {},
+  "$definitions": {
+    "tool": {
+      "$type": "object",
+      "properties": {
+        "default_mining_speed": {
+          "description": "The default mining speed of this tool, used if no rules override it. Defaults to 1.0.",
+          "value": { "$defRef": "nbt-types:float" }
+        },
+        "damage_per_block": {
+          "description": "The amount of durability to remove each time a block is broken with this tool. Must be a non-negative integer. Defaults to 1.",
+          "value": { "$defRef": "nbt-types:int" }
+        },
+        "can_destroy_blocks_in_creative": {
+          "description": "{{upcoming|JE 1.21.5}}: Whether players can break blocks while holding this tool in Creative mode. Defaults to {{cd|true}}.",
+          "value": { "$type": "boolean" }
+        },
+        "rules": {
+          "description": "A list of rules for the blocks that this tool has a special behavior with. If a field is overridden by multiple matched rules, the one that comes first in the list is chosen.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "description": "A single rule.",
+              "properties": {
+                "blocks": {
+                  "description": "{{json_ref|block|tag=1}}The blocks to match with. ",
+                  "value": {
+                    "$ref": "utils:resource_location_or_tag_or_list",
+                    "schema": "block"
+                  }
+                },
+                "speed": {
+                  "optional": true,
+                  "description": "If the blocks match, overrides the default mining speed. Optional.",
+                  "value": { "$defRef": "nbt-types:float" }
+                },
+                "correct_for_drops": {
+                  "optional": true,
+                  "description": "If the blocks match, overrides whether or not this tool is considered correct to mine at its most efficient speed, and to drop items if the block's loot table requires it. If not set by any rules, defaults to {{cd|false}}. Optional.",
+                  "value": { "$type": "boolean" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "If set, this item is considered as a [ [tool] ]."
+    }
+  }
+}

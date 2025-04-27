@@ -1,0 +1,147 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json",
+    "sound_event": "../chunk_format/sound_event.json"
+  },
+  "$body": { "$defRef": "consumable" },
+  "$templates": {},
+  "$definitions": {
+    "consumable": {
+      "$type": "object",
+      "properties": {
+        "consume_seconds": {
+          "description": "The amount of seconds it takes for a player to consume the item. Defaults to 1.6.",
+          "value": { "$defRef": "nbt-types:float" }
+        },
+        "animation": {
+          "description": "The animation used during consumption of the item. Must be one of {{cd|none|eat|drink|block|bow|spear|crossbow|spyglass|toot_horn|brush|d=or}}. Defaults to <code>eat</code>.",
+          "value": { "$type": "string" }
+        },
+        "sound": {
+          "description": "{{json_ref|sound event|inline=1}} used during and on completion of the item's consumption. Defaults to <code>entity.generic.eat</code>.",
+          "value": {
+            "$type": "union",
+            "options": [
+              {
+                "$ref": "utils:resource_location",
+                "schema": "sound_event"
+              },
+              { "$defRef": "sound_event:sound_event" }
+            ]
+          }
+        },
+        "has_consume_particles": {
+          "description": "Whether consumption particles are emitted while consuming this item. Defaults to <code>true</code>.",
+          "value": { "$type": "boolean" }
+        },
+        "on_consume_effects": {
+          "optional": true,
+          "description": "A list of effects which take place as a result of consuming this item. Optional.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "description": "A single consume effect.",
+              "properties": {
+                "type": {
+                  "description": "The kind of consume effect. Must be one of {{cd|apply_effects|remove_effects|clear_all_effects|teleport_randomly|play_sound|d=or}}.",
+                  "value": { "$type": "string" }
+                },
+                "effects": {
+                  "decidingProp": "type",
+                  "optionalPrefixes": [ "minecraft:" ],
+                  "values": {
+                    "apply_effects": { "$defRef": "%effects-apply_effects" },
+                    "remove_effects": { "$defRef": "%effects-remove_effects" }
+                  }
+                },
+                "probability": {
+                  "decidingProp": "type",
+                  "optionalPrefixes": [ "minecraft:" ],
+                  "values": { "apply_effects": { "$defRef": "%probability-apply_effects" } }
+                },
+                "diameter": {
+                  "decidingProp": "type",
+                  "optionalPrefixes": [ "minecraft:" ],
+                  "values": { "teleport_randomly": { "$defRef": "%diameter-teleport_randomly" } }
+                },
+                "sound": {
+                  "decidingProp": "type",
+                  "optionalPrefixes": [ "minecraft:" ],
+                  "values": { "play_sound": { "$defRef": "%sound-play_sound" } }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "If present, this item can be consumed on use."
+    },
+    "%effects-apply_effects": {
+      "$type": "array",
+      "description": "A list of [ [effect] ] instances applied once consumed.",
+      "element": {
+        "$type": "object",
+        "description": "A single effect.",
+        "properties": {
+          "id": {
+            "description": "The ID of the effect.",
+            "value": { "$type": "string" }
+          },
+          "amplifier": {
+            "description": "The amplifier of the effect, with level I having value 0. Optional, defaults to 0.",
+            "value": { "$defRef": "nbt-types:byte" }
+          },
+          "duration": {
+            "description": "The duration of the effect in [ [tick] ]s. Value -1 is treated as infinity. Values 0 or less than -2 are treated as 1. Optional, defaults to 1 tick.",
+            "value": { "$defRef": "nbt-types:int" }
+          },
+          "ambient": {
+            "description": "Whether or not this is an effect provided by a beacon and therefore should be less intrusive on the screen. Optional, defaults to {{cd|false}}.",
+            "value": { "$type": "boolean" }
+          },
+          "show_particles": {
+            "description": "Whether or not this effect produces particles. Optional, defaults to {{cd|true}}.",
+            "value": { "$type": "boolean" }
+          },
+          "show_icon": {
+            "description": "Whether or not an icon should be shown for this effect. Optional, defaults to {{cd|true}}.",
+            "value": { "$type": "boolean" }
+          }
+        }
+      }
+    },
+    "%effects-remove_effects": {
+      "$type": "union",
+      "description": "A set of effects removed once consumed, as either a single ID or list of IDs.",
+      "options": [
+        {
+          "$type": "array",
+          "description": "A set of effects removed once consumed, as either a single ID or list of IDs.",
+          "element": {
+            "$type": "string",
+            "description": "A set of effects removed once consumed, as either a single ID or list of IDs."
+          }
+        },
+        {
+          "$type": "string",
+          "description": "A set of effects removed once consumed, as either a single ID or list of IDs."
+        }
+      ]
+    },
+    "%probability-apply_effects": { "$defRef": "nbt-types:float" },
+    "%diameter-teleport_randomly": { "$defRef": "nbt-types:float" },
+    "%sound-play_sound": {
+      "$type": "union",
+      "options": [
+        {
+          "$ref": "utils:resource_location",
+          "schema": "sound_event"
+        },
+        { "$defRef": "sound_event:sound_event" }
+      ]
+    }
+  }
+}

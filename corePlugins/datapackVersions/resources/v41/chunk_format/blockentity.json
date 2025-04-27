@@ -1,0 +1,41 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json"
+  },
+  "$body": { "$defRef": "blockentity" },
+  "$templates": {},
+  "$definitions": {
+    "blockentity": {
+      "$type": "object",
+      "properties": {
+        "id": {
+          "description": "Block entity ID",
+          "value": { "$ref": "utils:resource_location", "schema": "block_entity_type" }
+        },
+        "keepPacked": {
+          "description": "1 or 0 ({{cd|true|false|d=/}}) - If <code>true</code>, this is an invalid block entity, and this block is not immediately placed when a loaded chunk is loaded. If <code>false</code>, this is a normal block entity that can be immediately placed.",
+          "value": { "$type": "boolean" }
+        },
+        "x": {
+          "description": "X coordinate of the block entity.",
+          "value": { "$defRef": "nbt-types:int" }
+        },
+        "y": {
+          "description": "Y coordinate of the block entity.",
+          "value": { "$defRef": "nbt-types:int" }
+        },
+        "z": {
+          "description": "Z coordinate of the block entity.",
+          "value": { "$defRef": "nbt-types:int" }
+        },
+        "components": {
+          "description": "Optional map of components.",
+          "value": { "$defRef": "utils:data_components" }
+        }
+        // todo: add specific block_entity fields for each block_entity_type re: #61
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "jukebox_playable" },
+  "$templates": {},
+  "$definitions": {
+    "jukebox_playable": {
+      "$type": "object",
+      "properties": {
+        "song": {
+          "description": "The song to play.",
+          "value": { "$type": "string" }
+        },
+        "show_in_tooltip": {
+          "description": "{{until|JE 1.21.5}}: Show or hide the song on this item's tooltip. Defaults to {{cd|true}}.",
+          "value": { "$type": "boolean" }
+        }
+      },
+      "description": "If present, this item can be inserted into a [ [jukebox] ] and plays the specified song."
+    }
+  }
+}

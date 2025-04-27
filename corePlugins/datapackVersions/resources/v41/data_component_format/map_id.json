@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "map_id" },
+  "$templates": {},
+  "$definitions": {
+    "map_id": {
+      "$type": "union", "options": [{ "$defRef": "nbt-types:int" }],
+      "description": "The number of this [ [filled map] ], representing the shared state holding map contents and markers."
+    }
+  }
+}

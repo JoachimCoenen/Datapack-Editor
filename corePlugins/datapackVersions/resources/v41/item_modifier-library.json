@@ -6,7 +6,7 @@
     "predicate": "predicate-library.json",
     "loot_table": "loot_table-library.json",
     "number_provider": "utils/number_provider-library.json",
-    "data_components": "data_components/data_components-library.json",
+    "firework_explosion-impl": "data_component_format/firework_explosion.json",
     "utils": "utils/utils-library.json",
     "nbt": "utils/nbt-types.json"
   },
@@ -750,7 +750,7 @@
             "properties": {
               "values": {
                 "description": "List of firework explosion data.",
-                "value": { "$defRef": "data_components:firework_explosion_data" }
+                "value": { "$defRef": "firework_explosion-impl:firework_explosion" }
               },
               "mode": {
                 "description": "Determines how existing fireworks component should be modified.",
@@ -784,7 +784,7 @@
     
     "%set_firework_explosion": {
       "$type": "object",
-      "inherits": [ { "defRef": "data_components:firework_explosion_data" } ],
+      "inherits": [ { "defRef": "firework_explosion-impl:firework_explosion" } ],
       "properties": {}
     },
     

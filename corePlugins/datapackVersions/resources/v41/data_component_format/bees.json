@@ -1,0 +1,33 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "entity": "../entity_format/entity.json",
+    "nbt-types": "../utils/nbt-types.json"
+  },
+  "$body": { "$defRef": "bees" },
+  "$templates": {},
+  "$definitions": {
+    "bees": {
+      "$type": "array",
+      "element": {
+        "$type": "object",
+        "description": "A single entity.",
+        "properties": {
+          "entity_data": {
+            "description": "The NBT data of the entity in the hive.",
+            "value": { "$defRef": "entity:entity" }
+          },
+          "min_ticks_in_hive": {
+            "description": "The minimum amount of time in ticks for this entity to stay in the hive.",
+            "value": { "$defRef": "nbt-types:int" }
+          },
+          "ticks_in_hive": {
+            "description": "The amount of ticks the entity has stayed in the hive.",
+            "value": { "$defRef": "nbt-types:int" }
+          }
+        }
+      },
+      "description": "The entities currently in the beehive or bee nest."
+    }
+  }
+}

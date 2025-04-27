@@ -1,0 +1,13 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "blockentity": "../chunk_format/blockentity.json" },
+  "$body": { "$defRef": "block_entity_data" },
+  "$templates": {},
+  "$definitions": {
+    "block_entity_data": {
+      "$type": "union",
+      "options": [{ "$defRef": "blockentity:blockentity"}],
+      "description": "[[Block entity]] NBT applied when this block is placed. Excludes `x`, `y` and `z` tags."
+    }
+  }
+}

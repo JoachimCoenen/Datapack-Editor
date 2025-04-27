@@ -1,0 +1,23 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../utils/utils-library.json"
+  },
+  "$body": { "$defRef": "banner_pattern" },
+  "$templates": {},
+  "$definitions": {
+    "banner_pattern": {
+      "$type": "object",
+      "properties": {
+        "asset_id": {
+          "description": "The resource location for the texture asset.",
+          "value": { "$ref": "utils:resource_location" , "schema": "resource_pack-texture"} // todo find good way to mark resource locations in a resource pack.
+        },
+        "translation_key": {
+          "description": "The translation key for displaying the banner tooltip.",
+          "value": { "$type": "string" }
+        }
+      }
+    }
+  }
+}

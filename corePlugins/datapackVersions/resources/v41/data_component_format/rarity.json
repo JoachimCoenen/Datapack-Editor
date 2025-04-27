@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "rarity" },
+  "$templates": {},
+  "$definitions": {
+    "rarity": {
+      "$type": "string",
+      "description": "Sets the [ [Rarity|rarity] ] of this item, which affects the default color of its name. Can be {{cd|d=or|common|uncommon|rare|epic}}."
+    }
+  }
+}

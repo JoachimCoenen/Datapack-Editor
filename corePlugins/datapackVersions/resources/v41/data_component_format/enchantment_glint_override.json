@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "enchantment_glint_override" },
+  "$templates": {},
+  "$definitions": {
+    "enchantment_glint_override": {
+      "$type": "boolean",
+      "description": "Overrides the enchantment glint effect on this item. When {{cd|true}}, this item displays a glint, even without enchantments. When {{cd|false}}, this item does not display a glint, even with enchantments."
+    }
+  }
+}

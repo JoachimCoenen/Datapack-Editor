@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "provides_trim_material" },
+  "$templates": {},
+  "$definitions": {
+    "provides_trim_material": {
+      "$type": "string",
+      "description": "When present, this item will provide the specified trim material when used in a trimming recipe.<ref>To be used in the built-in smithing recipes, the item must also be in the {{cd|#trim_material}} tag.</ref>"
+    }
+  }
+}

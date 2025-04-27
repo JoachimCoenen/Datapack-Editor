@@ -1,0 +1,28 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "tooltip_display" },
+  "$templates": {},
+  "$definitions": {
+    "tooltip_display": {
+      "$type": "object",
+      "properties": {
+        "hide_tooltip": {
+          "description": "If true, the item will have no tooltip when hovered.",
+          "value": { "$type": "boolean" }
+        },
+        "hidden_components": {
+          "description": "The tooltips provided by any component in this list will be hidden. If that component provides no tooltip, it will have no effect.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "string",
+              "description": "The [ [resource location] ] of a component"
+            }
+          }
+        }
+      },
+      "description": "Allows the tooltips provided specifically by any given item component to be surpressed."
+    }
+  }
+}

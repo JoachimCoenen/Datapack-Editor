@@ -1,0 +1,26 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "custom_data" },
+  "$templates": {},
+  "$definitions": {
+    "custom_data": {
+      "$type": "union",
+      "description": "Contains key-value pairs of any custom data not used by the game, either as an object or a [ [SNBT] ] string.",
+      "options": [
+        {
+          "$type": "string",
+          "type": "minecraft:nbt_compound_tag"
+        },
+        {
+          "$type": "object",
+          "properties": {},
+          "default-property": {
+            "description": "A key-value pair, where the value can have any data type, including another compound.",
+            "value": { "$type": "any" }
+          }
+        }
+      ]
+    }
+  }
+}

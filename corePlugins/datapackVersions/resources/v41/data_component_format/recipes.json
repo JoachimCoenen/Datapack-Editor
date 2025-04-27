@@ -1,0 +1,16 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "recipes" },
+  "$templates": {},
+  "$definitions": {
+    "recipes": {
+      "$type": "array",
+      "element": {
+        "$type": "string",
+        "description": "The ID of a [ [recipe] ]."
+      },
+      "description": "The recipes that a player unlocks when this [ [knowledge book] ] is used."
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "unbreakable" },
+  "$templates": {},
+  "$definitions": {
+    "unbreakable": {
+      "$type": "object",
+      "properties": {
+        "show_in_tooltip": {
+          "description": "{{until|JE 1.21.5}}: Show or hide the \"Unbreakable\" line on this item's tooltip. Defaults to {{cd|true}}.",
+          "value": { "$type": "boolean" }
+        }
+      },
+      "description": "If set, this item doesn't lose durability when used."
+    }
+  }
+}

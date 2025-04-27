@@ -1,0 +1,13 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "utils": "../utils/utils-library.json" },
+  "$body": { "$defRef": "bundle_contents" },
+  "$templates": {},
+  "$definitions": {
+    "bundle_contents": {
+      "$type": "array",
+      "element": { "$defRef": "utils:item_stack_with_count" },
+      "description": "The items stored inside this [ [bundle] ]."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "max_damage" },
+  "$templates": {},
+  "$definitions": {
+    "max_damage": {
+      "$type": "union", "options": [{ "$defRef": "nbt-types:int" }],
+      "description": "The maximum amount of damage that this item can take. If not set, this item cannot take damage. Must be a positive integer. Cannot be combined with <code>[ [Data component format#max stack size|max_stack_size] ]</code> if it has a value greater than 1 (if the item can be stacked)."
+    }
+  }
+}

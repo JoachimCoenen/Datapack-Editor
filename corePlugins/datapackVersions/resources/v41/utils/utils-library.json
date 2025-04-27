@@ -110,9 +110,15 @@
       "description": "The angle in radians. \n- 360° = 2π radians ≈ 6.28 radians\n- 180° = π radians ≈ 3.14 radians\n- 90° = 0.5π radians ≈ 1.57 radians"
     },
     
+    "uuid_as_array": {
+      "$ref": "nbt:int_array_t",
+      "minCount": 4,
+      "maxCount": 4,
+      "description": "a UUID"
+    },
+    
     "block_pos": {
-      "$type": "array",
-      "element": { "$type": "integer" },
+      "$ref": "nbt:int_array_t",
       "minCount": 3,
       "maxCount": 3,
       "description": "The block position. [X, Y, Z]"

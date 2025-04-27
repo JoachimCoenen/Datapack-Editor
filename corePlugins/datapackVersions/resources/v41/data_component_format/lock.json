@@ -1,0 +1,42 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../utils/utils-library.json",
+    "nbt-types": "../utils/nbt-types.json"
+  },
+  "$body": { "$defRef": "lock" },
+  "$templates": {},
+  "$definitions": {
+    "lock": {
+      "$type": "object",
+      "properties": {
+        "items": {
+          "description": "{{json_ref|item|tag=1}}The items that can be used to open this container. ",
+          "value": {
+            "$ref": "utils:resource_location_or_tag_or_list",
+            "schema": "item"
+          }
+        },
+        "count": {
+          "description": "The range in the stack size of the item that can open this container. If specified as an integer, specifies the exact stack size of the item that can open this container.",
+          "value": {
+            "$ref": "utils:val_or_range",
+            "type": "integer"
+          }
+        },
+        "components": {
+          "description": "Items that exactly match these components can open this container.",
+          "value": { "$defRef": "utils:data_components" }
+        },
+        "predicates": {
+          "description": "An [ [item sub-predicate] ]. If an item matches these predicates, it can open this container.",
+          "value": {
+            "$type": "object",
+            "properties": {}
+          }
+        }
+      },
+      "description": "An [ [Argument types#minecraft:item_predicate|item predicate] ] representing the \"key\" to open this container item.{{info needed|Is there anything that was missed? Are all of these correct?}}"
+    }
+  }
+}

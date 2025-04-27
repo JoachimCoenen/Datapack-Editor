@@ -1,0 +1,22 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "container_loot" },
+  "$templates": {},
+  "$definitions": {
+    "container_loot": {
+      "$type": "object",
+      "properties": {
+        "loot_table": {
+          "description": "The ID of a [ [loot table] ].",
+          "value": { "$type": "string" }
+        },
+        "seed": {
+          "description": "The pseudorandom seed to resolve the loot table with. If not specified or 0, a seed is randomly chosen by the game.",
+          "value": { "$defRef": "nbt-types:long" }
+        }
+      },
+      "description": "The unresolved loot table and seed of this container item."
+    }
+  }
+}

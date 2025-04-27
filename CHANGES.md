@@ -3,6 +3,7 @@
  * Added common unified style ids for syntax highlighting. (issue #35)
  * Added ability to customize default indicator styles. (issue #35)
  * JSON & SNBT schemas: Properties now support exclusion groups.
+ * Added support for data components; still needs some refinement. (issue #54)
 
 ### Improvements
  * Improved visibility of indicators (search result, matched brace, etc.) in dark mode.

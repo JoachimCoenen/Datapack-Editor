@@ -1,0 +1,56 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "profile" },
+  "$templates": {},
+  "$definitions": {
+    "profile": {
+      "$type": "union",
+      "description": "Information about the owner of this [ [player head] ]. If defined as a string, corresponds to {{nbt|string|name}}.",
+      "options": [
+        { "$type": "string" },
+        {
+          "$type": "object",
+          "properties": {
+            "name": {
+              "optional": true,
+              "description": "The name of a player profile, i.e. its username. If this is the only tag provided, it resolves into the other ones below. Optional.",
+              "value": { "$type": "string" }
+            },
+            "id": {
+              "optional": true,
+              "description": "The [ [UUID] ] of the owner. Used to update the other tags when the chunk loads or the holder logs in, in case the owner's name has changed. Optional.",
+              "value": { "$defRef": "nbt-types:int_array" }
+            },
+            "properties": {
+              "optional": true,
+              "description": "A list of properties. Optional.",
+              "value": {
+                "$type": "array",
+                "element": {
+                  "$type": "object",
+                  "description": "A single property.",
+                  "properties": {
+                    "name": {
+                      "description": "The name of the property. Can be {{cd|textures}}.",
+                      "value": { "$type": "string" }
+                    },
+                    "value": {
+                      "description": "The [ [Mojang_API#Query_player's_skin_and_cape|texture data json] ], encoded in {{w|base64}}.",
+                      "value": { "$type": "string" }
+                    },
+                    "signature": {
+                      "optional": true,
+                      "description": "Optional. Mojang's {{w|Digital_signature|signature}} of the value, encoded in base64.",
+                      "value": { "$type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "block_state" },
+  "$templates": {},
+  "$definitions": {
+    "block_state": {
+      "$type": "object",
+      "properties": {},
+      "default-property": {
+        "description": "A key-value pair, where the key is a block state key and the value is a block state value to force place for this block, for example <code>facing: \"east\"</code>.",
+        "value": { "$type": "string" }
+      },
+      "description": "The block state properties to apply when placing this block."
+    }
+  }
+}

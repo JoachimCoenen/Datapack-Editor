@@ -1,0 +1,21 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "suspicious_stew_effects" },
+  "$templates": {},
+  "$definitions": {
+    "suspicious_stew_effects": {
+      "$type": "array",
+      "element": {
+        "$type": "object",
+        "properties": {
+          "duration": {
+            "description": "The duration of the effect in [ [tick] ]s. Defaults to 160.",
+            "value": { "$defRef": "nbt-types:int" }
+          }
+        }
+      },
+      "description": "The effects applied when consuming this [ [suspicious stew] ]."
+    }
+  }
+}

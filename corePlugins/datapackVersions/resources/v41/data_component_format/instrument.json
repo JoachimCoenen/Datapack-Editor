@@ -1,0 +1,49 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../utils/utils-library.json",
+    "sound_event": "../chunk_format/sound_event.json",
+    "nbt-types": "../utils/nbt-types.json"
+  },
+  "$body": { "$defRef": "instrument" },
+  "$templates": {},
+  "$definitions": {
+    "instrument": {
+      "$type": "union",
+      "options": [
+        {
+          "$ref": "utils:resource_location",
+          "schema": "goat_horn"
+        },
+        {
+          "$type": "object",
+          "description": "{{json_ref|instrument|Goat horn|inline=1}}.",
+          "properties": {
+            "sound_event": {
+              "description": "{{json_ref|sound event|inline=1}}.",
+              "value": {
+                "$type": "union",
+                "options": [
+                  {
+                    "$ref": "utils:resource_location",
+                    "schema": "sound_event"
+                  },
+                  { "$defRef": "sound_event:sound_event" }
+                ]
+              }
+            },
+            "use_duration": {
+              "description": "A non-negative float for how long the use duration is.",
+              "value": { "$defRef": "nbt-types:float" }
+            },
+            "range": {
+              "description": "A non-negative float for the range of the sound.",
+              "value": { "$defRef": "nbt-types:float" }
+            }
+          }
+        }
+      ],
+      "description": "{{json_ref|instrument|Goat horn|inline=1}}."
+    }
+  }
+}

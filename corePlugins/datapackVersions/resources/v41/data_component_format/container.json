@@ -1,0 +1,29 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../utils/utils-library.json",
+    "nbt-types": "../utils/nbt-types.json"
+  },
+  "$body": { "$defRef": "container" },
+  "$templates": {},
+  "$definitions": {
+    "container": {
+      "$type": "array",
+      "element": {
+        "$type": "object",
+        "description": "A single item.",
+        "properties": {
+          "item": {
+            "description": "The item stack in this slot.",
+            "value": { "$defRef": "utils:item_stack_with_count" }
+          },
+          "slot": {
+            "description": "A slot in this container. Can be between 0 and 255 (inclusive).",
+            "value": { "$defRef": "nbt-types:int" }
+          }
+        }
+      },
+      "description": "The items contained in this [ [container] ]."
+    }
+  }
+}

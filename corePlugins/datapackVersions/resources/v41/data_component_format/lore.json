@@ -1,0 +1,16 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "lore" },
+  "$templates": {},
+  "$definitions": {
+    "lore": {
+      "$type": "array",
+      "element": {
+        "$type": "string",
+        "description": "{{until|JE 1.21.5}}{{nbt|string}}{{nbt|list}}{{nbt|compound}}: Text component representing a line of text. See [ [Text component format] ]."
+      },
+      "description": "List of additional lines to display in this item's tooltip. Has a maximum of 256 lines."
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { 
+    "firework_explosion-impl": "../data_component_format/firework_explosion.json",
+    "nbt-types": "../utils/nbt-types.json"
+  },
+  "$body": { "$defRef": "fireworks" },
+  "$templates": {},
+  "$definitions": {
+    "fireworks": {
+      "$type": "object",
+      "properties": {
+        "explosions": {
+          "description": "List of the explosion effects caused by this firework rocket. Has a maximum of 256 explosions.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$defRef": "firework_explosion-impl:firework_explosion"
+            }
+          }
+        },
+        "flight_duration": {
+          "description": "The flight duration of this firework rocket, i.e. the number of gunpowders used to craft it. Must be an integer between -128 and 127. Defaults to 1.",
+          "value": { "$defRef": "nbt-types:byte" },
+          "default": 1
+        }
+      },
+      "description": ""
+    }
+  }
+}

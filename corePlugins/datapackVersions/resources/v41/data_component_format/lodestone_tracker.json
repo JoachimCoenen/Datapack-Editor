@@ -1,0 +1,35 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "lodestone_tracker" },
+  "$templates": {},
+  "$definitions": {
+    "lodestone_tracker": {
+      "$type": "object",
+      "properties": {
+        "target": {
+          "optional": true,
+          "description": "Information about the lodestone. Optional. If not set, this compass spins randomly.",
+          "value": {
+            "$type": "object",
+            "properties": {
+              "pos": {
+                "description": "The integer coordinates of the lodestone.",
+                "value": { "$defRef": "nbt-types:int_array" }
+              },
+              "dimension": {
+                "description": "The ID of the dimension of the lodestone.",
+                "value": { "$type": "string" }
+              }
+            }
+          }
+        },
+        "tracked": {
+          "description": "If {{cd|true}}, the component is removed when the lodestone is broken. If {{cd|false}}, the component is kept. Defaults to {{cd|true}}.",
+          "value": { "$type": "boolean" }
+        }
+      },
+      "description": "If specified, stores information about the [ [lodestone] ] this [ [compass] ] should point towards."
+    }
+  }
+}

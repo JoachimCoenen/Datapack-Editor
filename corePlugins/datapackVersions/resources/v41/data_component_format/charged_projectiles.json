@@ -1,0 +1,13 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "utils": "../utils/utils-library.json" },
+  "$body": { "$defRef": "charged_projectiles" },
+  "$templates": {},
+  "$definitions": {
+    "charged_projectiles": {
+      "$type": "array",
+      "element": { "$defRef": "utils:item_stack_with_count" },
+      "description": "The items loaded as projectiles into this crossbow. If not present, this crossbow is not charged."
+    }
+  }
+}

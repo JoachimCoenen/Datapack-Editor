@@ -1,0 +1,17 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "debug_stick_state" },
+  "$templates": {},
+  "$definitions": {
+    "debug_stick_state": {
+      "$type": "object",
+      "properties": {},
+      "default-property": {
+        "description": "A key-value pair, where the key is a block ID and the value is a block state key to edit on the block, for example <code>\"minecraft:oak_fence\": \"east\"</code>.",
+        "value": { "$type": "string" }
+      },
+      "description": "The selected block state properties used by this [ [debug stick] ]."
+    }
+  }
+}

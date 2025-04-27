@@ -1,0 +1,58 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "bucket_entity_data" },
+  "$templates": {},
+  "$definitions": {
+    "bucket_entity_data": {
+      "$type": "object",
+      "properties": {
+        "NoAI": {
+          "description": "Turns into {{cd|NoAI}} entity tag for all bucketable entities.",
+          "value": { "$type": "boolean" }
+        },
+        "Silent": {
+          "description": "Turns into {{cd|Silent}} entity tag for all bucketable entities.",
+          "value": { "$type": "boolean" }
+        },
+        "NoGravity": {
+          "description": "Turns into {{cd|NoGravity}} entity tag for all bucketable entities.",
+          "value": { "$type": "boolean" }
+        },
+        "Glowing": {
+          "description": "Turns into {{cd|Glowing}} entity tag for all bucketable entities.",
+          "value": { "$type": "boolean" }
+        },
+        "Invulnerable": {
+          "description": "Turns into {{cd|Invulnerable}} entity tag for all bucketable entities.",
+          "value": { "$type": "boolean" }
+        },
+        "Health": {
+          "description": "Turns into {{cd|Health}} entity tag for all bucketable entities.",
+          "value": { "$defRef": "nbt-types:float" }
+        },
+        "Age": {
+          "description": "Turns into {{cd|Age}} entity tag for [ [axolotl] ]s and [ [tadpole] ]s.",
+          "value": { "$defRef": "nbt-types:int" }
+        },
+        "Variant": {
+          "description": "Turns into {{cd|Variant}} entity tag for [ [axolotl] ]s.",
+          "value": { "$defRef": "nbt-types:int" }
+        },
+        "HuntingCooldown": {
+          "description": "Turns into the expiry time of the memory module {{cd|has_hunting_cooldown}} for [ [axolotl] ]s.",
+          "value": { "$defRef": "nbt-types:long" }
+        },
+        "BucketVariantTag": {
+          "description": "Turns into {{cd|Variant}} entity tag for [ [tropical fish] ].",
+          "value": { "$defRef": "nbt-types:int" }
+        },
+        "type": {
+          "description": "Turns into {{cd|type}} entity tag for [ [salmon] ].",
+          "value": { "$type": "string" }
+        }
+      },
+      "description": "NBT applied to an [ [entity] ] when placed from this bucket. Only tags below are applied."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "intangible_projectile" },
+  "$templates": {},
+  "$definitions": {
+    "intangible_projectile": {
+      "$type": "object",
+      "properties": {},
+      "description": "If set, this projectile item can't be picked up by a player when fired, except in creative mode. Can only be used within <code>[ [Data component format#charged_projectiles|charged_projectiles] ]</code> components."
+    }
+  }
+}

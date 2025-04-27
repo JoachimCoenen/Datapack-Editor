@@ -1,0 +1,22 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../utils/utils-library.json",
+    "sound_event": "../chunk_format/sound_event.json"
+  },
+  "$body": { "$defRef": "break_sound" },
+  "$templates": {},
+  "$definitions": {
+    "break_sound": {
+      "$type": "union",
+      "options": [
+        {
+          "$ref": "utils:resource_location",
+          "schema": "sound_event"
+        },
+        { "$defRef": "sound_event:sound_event" }
+      ],
+      "description": "{{json_ref|sound event|inline=1}} to play when the item runs out of durability and breaks."
+    }
+  }
+}

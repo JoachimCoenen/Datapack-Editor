@@ -1,0 +1,13 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "item_name" },
+  "$templates": {},
+  "$definitions": {
+    "item_name": {
+      "$type": "string",
+      "type": "dpe:stringified_json",
+      "args": { "schema": "minecraft:raw_json_text" }
+    }
+  }
+}

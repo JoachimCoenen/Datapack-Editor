@@ -1,0 +1,18 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "enchantable" },
+  "$templates": {},
+  "$definitions": {
+    "enchantable": {
+      "$type": "object",
+      "properties": {
+        "value": {
+          "description": "Positive integer representing the item's [ [Enchanting mechanics#How enchantments are chosen|enchantability] ]. A higher value allows enchantments with a higher cost to be picked.",
+          "value": { "$defRef": "nbt-types:int" }
+        }
+      },
+      "description": "If present, and applicable enchantments are available, items with the component can be enchanted in an enchanting table."
+    }
+  }
+}

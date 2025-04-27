@@ -1,0 +1,26 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "food" },
+  "$templates": {},
+  "$definitions": {
+    "food": {
+      "$type": "object",
+      "properties": {
+        "nutrition": {
+          "description": "The number of food points restored by this item when eaten. Must be a non-negative integer.",
+          "value": { "$defRef": "nbt-types:int" }
+        },
+        "saturation": {
+          "description": "The amount of saturation restored by this item when eaten.",
+          "value": { "$defRef": "nbt-types:float" }
+        },
+        "can_always_eat": {
+          "description": "If {{cd|true}}, this item can be eaten even if the player is not hungry. Defaults to {{cd|false}}.",
+          "value": { "$type": "boolean" }
+        }
+      },
+      "description": "The food stats for this consumable item. Has no effect unless the item can be consumed (i.e. the item has the {{cd|consumable}} component)."
+    }
+  }
+}

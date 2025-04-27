@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "max_stack_size" },
+  "$templates": {},
+  "$definitions": {
+    "max_stack_size": {
+      "$type": "union", "options": [{ "$defRef": "nbt-types:int" }],
+      "description": "The maximum number of items that can fit in a stack. Must be a positive integer between 1 and 99 (inclusive). If it has a value greater than 1 (if the item can be stacked), cannot be combined with <code>[ [Data component format#max damage|max_damage] ]</code>."
+    }
+  }
+}

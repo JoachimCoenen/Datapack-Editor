@@ -1,0 +1,44 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "writable_book_content" },
+  "$templates": {},
+  "$definitions": {
+    "writable_book_content": {
+      "$type": "object",
+      "properties": {
+        "pages": {
+          "description": "A list of the pages in the book.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "union",
+              "options": [
+                {
+                  "$type": "object",
+                  "description": "A single page.",
+                  "properties": {
+                    "raw": {
+                      "description": "The plain text content of the page. The escape sequence {{cd|\\n}} is used for line breaks. However, the [ [Brigadier|command parser] ] does not accept {{cd|\\n}}, so line breaks need to be set by a [ [player] ] or using [ [loot table] ]s.<ref>{{bug|MC-119659}}</ref>",
+                      "value": { "$type": "string" }
+                    },
+                    "filtered": {
+                      "optional": true,
+                      "description": "The filtered text of the page. Optional. Shown only to players with chat filter enabled, instead of {{nbt|string|text}}.",
+                      "value": { "$type": "string" }
+                    }
+                  }
+                },
+                {
+                  "$type": "string",
+                  "description": "The plain text content of a page."
+                }
+              ]
+            }
+          }
+        }
+      },
+      "description": "The contents of this [ [book and quill] ]."
+    }
+  }
+}

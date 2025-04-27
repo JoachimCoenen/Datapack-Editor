@@ -1,0 +1,99 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json",
+    "sound_event": "../chunk_format/sound_event.json"
+  },
+  "$body": { "$defRef": "blocks_attacks" },
+  "$templates": {},
+  "$definitions": {
+    "blocks_attacks": {
+      "$type": "object",
+      "properties": {
+        "block_delay_seconds": {
+          "description": "The amount of time (in seconds) that {{control|use}} must be held before successfully blocking attacks. Defaults to {{cd|0}}.",
+          "value": { "$defRef": "nbt-types:float" }
+        },
+        "disable_cooldown_scale": {
+          "description": "The multiplier applied to the number of seconds that the item will be on cooldown for when attacked by a disabling attack (The multiplier for {{nbt|float|disable_blocking_for_seconds}} on the [ [Data component format#weapon|{{cd|minecraft:weapon}}] ] component). If set to {{cd|0}}, this item can never be disabled by attacks. Defaults to {{cd|1}}.",
+          "value": { "$defRef": "nbt-types:float" }
+        },
+        "damage_reductions": {
+          "description": "Controls how much damage should be blocked in a given attack.",
+          "value": {
+            "$type": "array",
+            "element": {
+              "$type": "object",
+              "description": "A damage reduction field",
+              "properties": {
+                "types": {
+                  "description": "{{json_ref|damage type|tag=1}} The damage types to block. Can either be a damage type id, a damage type tag prefixed with {{cd|#}} or a list of damage type ids. Defaults to all damage types.",
+                  "value": {
+                    "$ref": "utils:resource_location_or_tag_or_list",
+                    "schema": "damage_type"
+                  }
+                },
+                "base": {
+                  "description": "The constant amount of damage to be blocked.",
+                  "value": { "$defRef": "nbt-types:float" }
+                },
+                "factor": {
+                  "description": "The fraction of the dealt damage to be blocked.",
+                  "value": { "$defRef": "nbt-types:float" }
+                }
+              }
+            }
+          }
+        },
+        "item_damage": {
+          "description": "Controls how much damage should be applied to the item from a given attack.",
+          "value": {
+            "$type": "object",
+            "properties": {
+              "threshold": {
+                "description": "The minimum amount of damage dealt by the attack before item damage is applied to the item.",
+                "value": { "$defRef": "nbt-types:float" }
+              },
+              "base": {
+                "description": "The constant amount of damage applied to the item, if threshold is passed.",
+                "value": { "$defRef": "nbt-types:float" }
+              },
+              "factor": {
+                "description": "The fraction of the dealt damage that should be applied to the item, if threshold is passed.",
+                "value": { "$defRef": "nbt-types:float" }
+              }
+            }
+          }
+        },
+        "block_sound": {
+          "description": "{{json_ref|sound event|inline=1}} to play when an attack is successfully blocked. Defaults to none{{verify|Does it default to none?}}.",
+          "value": {
+            "$type": "union",
+            "options": [
+              {
+                "$ref": "utils:resource_location",
+                "schema": "sound_event"
+              },
+              { "$defRef": "sound_event:sound_event" }
+            ]
+          }
+        },
+        "disable_sound": {
+          "description": "{{json_ref|sound event|inline=1}} to play when the item goes on its disabled cooldown due to an attack. Defaults to none{{verify|Does it default to none?}}.",
+          "value": {
+            "$type": "union",
+            "options": [
+              {
+                "$ref": "utils:resource_location",
+                "schema": "sound_event"
+              },
+              { "$defRef": "sound_event:sound_event" }
+            ]
+          }
+        }
+      },
+      "description": "When present, this item can be used like a shield to block attacks to the holding player."
+    }
+  }
+}

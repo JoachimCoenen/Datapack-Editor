@@ -1,0 +1,47 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json"
+  },
+  "$body": { "$defRef": "stored_enchantments" },
+  "$templates": {},
+  "$definitions": {
+    "stored_enchantments": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "properties": {
+            "levels": {
+              "description": "Contains key-value pairs of levels of enchantments stored on this enchanted book.",
+              "value": {
+                "$type": "object",
+                "properties": {},
+                "default-key": { "$ref": "utils:resource_location", "schema": "enchantment" },
+                "default-property": {
+                  "description": "A single key-value pair, where the key is the resource location of an enchantment, and the value is the level.",
+                  "value": { "$defRef": "nbt-types:int" }
+                }
+              }
+            },
+            "show_in_tooltip": {
+              "description": "Show or hide enchantments on this item's tooltip. Defaults to <code>true</code>.",
+              "value": { "$type": "boolean" }
+            }
+          }
+        },
+        {
+          "$type": "object",
+          "properties": {},
+          "default-key": { "$ref": "utils:resource_location", "schema": "enchantment" },
+          "default-property": {
+            "description": "A single key-value pair, where the key is the resource location of an enchantment, and the value is the level.",
+            "value": { "$defRef": "nbt-types:int" }
+          }
+        }
+      ],
+      "description": "{{until|JE 1.21.5}}: Can contain either the following fields, or key-value pairs of levels of enchantments. For the latter, corresponds to {{nbt|compound|levels}}."
+    }
+  }
+}

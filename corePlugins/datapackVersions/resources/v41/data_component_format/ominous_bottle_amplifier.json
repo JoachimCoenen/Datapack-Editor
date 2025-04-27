@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "ominous_bottle_amplifier" },
+  "$templates": {},
+  "$definitions": {
+    "ominous_bottle_amplifier": {
+      "$type": "union", "options": [{ "$defRef": "nbt-types:int" }],
+      "description": "The amplifier amount of the [ [Bad Omen] ] effect on this [ [ominous bottle] ]. Must be a positive integer between 0 and 4 (inclusive)."
+    }
+  }
+}

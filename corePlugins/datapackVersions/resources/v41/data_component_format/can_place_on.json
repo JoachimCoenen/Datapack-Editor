@@ -1,0 +1,99 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "utils": "../utils/utils-library.json" },
+  "$body": { "$defRef": "can_place_on" },
+  "$templates": {},
+  "$definitions": {
+    "can_place_on": {
+      "$type": "union",
+      "options": [
+        {
+          "$type": "object",
+          "properties": {
+            "predicates": {
+              "description": "A list of block predicates to match.",
+              "value": {
+                "$type": "array",
+                "element": {
+                  "$type": "object",
+                  "description": "A single block predicate.",
+                  "properties": {
+                    "blocks": {
+                      "description": "{{json_ref|block|tag=1}}",
+                      "value": {
+                        "$ref": "utils:resource_location_or_tag_or_list",
+                        "schema": "block"
+                      }
+                    },
+                    "nbt": {
+                      "description": "[ [Block entity] ] NBT to match. See [ [Block entity format] ].",
+                      "value": {
+                        "$type": "string",
+                        "type": "minecraft:nbt_compound_tag"
+                      }
+                    },
+                    "state": {
+                      "description": "The block state properties to match.",
+                      "value": {
+                        "$type": "object",
+                        "properties": {},
+                        "default-property": {
+                          "description": "A key-value pair, where the key is a block state key and the value is a block state value to match, for example <code>facing: \"east\"</code>.",
+                          "value": { "$type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "blocks": {
+              "description": "{{json_ref|block|tag=1}}",
+              "value": {
+                "$ref": "utils:resource_location_or_tag_or_list",
+                "schema": "block"
+              }
+            },
+            "nbt": {
+              "description": "[ [Block entity] ] NBT to match. See [ [Block entity format] ].",
+              "value": {
+                "$type": "string",
+                "type": "minecraft:nbt_compound_tag"
+              }
+            },
+            "state": {
+              "description": "The block state properties to match.",
+              "value": {
+                "$type": "object",
+                "properties": {},
+                "default-property": {
+                  "description": "A key-value pair, where the key is a block state key and the value is a block state value to match, for example <code>facing: \"east\"</code>.",
+                  "value": { "$type": "string" }
+                }
+              }
+            },
+            "show_in_tooltip": {
+              "description": "Show or hide the \"Can be placed on\" line on this item's tooltip. Defaults to <code>true</code>.",
+              "value": { "$type": "boolean" }
+            }
+          }
+        },
+        {
+          "$type": "union",
+          "description": "{{upcoming|JE 1.21.5}}: Determines which blocks that blocks with this component can be placed against in [ [adventure] ] mode.  If defined as a compound, corresponds to {{nbt|compound}} A single block predicate.",
+          "options": [
+            {
+              "$type": "object",
+              "properties": {}
+            },
+            {
+              "$type": "array",
+              "element": { "$type": "string" }
+            }
+          ]
+        }
+      ],
+      "description": "{{until|JE 1.21.5}}: Determines which blocks that blocks with this component can be placed against in [ [adventure] ] mode."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "base_color" },
+  "$templates": {},
+  "$definitions": {
+    "base_color": {
+      "$type": "string",
+      "type": "minecraft:color",
+      "description": "The base dye color of the banner applied on a shield."
+    }
+  }
+}

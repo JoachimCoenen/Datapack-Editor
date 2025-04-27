@@ -1,0 +1,75 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "potion_contents" },
+  "$templates": {},
+  "$definitions": {
+    "potion_contents": {
+      "$type": "union",
+      "description": "The potion and custom effects contained in this [ [potion] ], [ [splash potion] ], [ [lingering potion] ], or [ [tipped arrow] ]. If defined as a string, corresponds to {{nbt|string|potion}}.",
+      "options": [
+        { "$type": "string" },
+        {
+          "$type": "object",
+          "properties": {
+            "potion": {
+              "optional": true,
+              "description": "The ID of a potion type. Optional. See [ [Potion#Item data] ].",
+              "value": { "$type": "string" }
+            },
+            "custom_color": {
+              "description": "The overriding color of this potion texture, and/or the particles of the area effect cloud created.",
+              "value": { "$defRef": "nbt-types:int" }
+            },
+            "custom_name": {
+              "description": "An optional string used to generate containing stack name. The game uses the translation key {{cd|item.minecraft.<item type>.effect.<value>}}. This name has a higher priority than the {{cd|minecraft:item_name}} component, but lower than the {{cd|minecraft:custom_name}} component.",
+              "optional": true,
+              "value": { "$type": "string" }
+            },
+            "custom_effects": {
+              "description": "A list of the additional [ [effect] ]s that this item should apply.",
+              "value": {
+                "$type": "array",
+                "element": {
+                  "$type": "object",
+                  "description": "A single custom effect.",
+                  "properties": {
+                    "id": {
+                      "description": "The ID of the effect.",
+                      "value": { "$type": "string" }
+                    },
+                    "amplifier": {
+                      "optional": true,
+                      "description": "The amplifier of the effect, with level I having value 0. Optional, defaults to 0.",
+                      "value": { "$defRef": "nbt-types:byte" }
+                    },
+                    "duration": {
+                      "optional": true,
+                      "description": "The duration of the effect in [ [tick] ]s. Value -1 is treated as infinity. Values 0 or less than -2 are treated as 1. Optional, defaults to 1 tick.",
+                      "value": { "$defRef": "nbt-types:int" }
+                    },
+                    "ambient": {
+                      "optional": true,
+                      "description": "Whether or not this is an effect provided by a beacon and therefore should be less intrusive on the screen. Optional, defaults to {{cd|false}}.",
+                      "value": { "$type": "boolean" }
+                    },
+                    "show_particles": {
+                      "optional": true,
+                      "description": "Whether or not this effect produces particles. Optional, defaults to {{cd|true}}.",
+                      "value": { "$type": "boolean" }
+                    },
+                    "show_icon": {
+                      "optional": true,
+                      "description": "Whether or not an icon should be shown for this effect. Optional, defaults to {{cd|true}}.",
+                      "value": { "$type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

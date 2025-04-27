@@ -2,7 +2,32 @@
   "$schema": "dpe/json/schema/library",
   "$libraries": {},
   
-  "$templates": {},
+  "$templates": {
+    "byte_array_t": {
+      "$params": {
+        "minCount": { "type": ["number", "null"], "default": null },
+        "maxCount": { "type": ["number", "null"], "default": null },
+        "description": { "type": "string", "default": "A byte array." }
+      },
+      "$body": { "$type": "array", "element": {"$defRef": "byte"}, "minCount": {"$ref": "#minCount"}, "maxCount": {"$ref": "#maxCount"}, "description": {"$ref": "#description"} }
+    },
+    "int_array_t": {
+      "$params": {
+        "minCount": { "type": ["number", "null"], "default": null },
+        "maxCount": { "type": ["number", "null"], "default": null },
+        "description": { "type": "string", "default": "A int array." }
+      },
+      "$body": { "$type": "array", "element": {"$defRef": "int"}, "minCount": {"$ref": "#minCount"}, "maxCount": {"$ref": "#maxCount"}, "description": {"$ref": "#description"} }
+    },
+    "long_array_t": {
+      "$params": {
+        "minCount": { "type": ["number", "null"], "default": null },
+        "maxCount": { "type": ["number", "null"], "default": null },
+        "description": { "type": "string", "default": "A long array." }
+      },
+      "$body": { "$type": "array", "element": {"$defRef": "long"}, "minCount": {"$ref": "#minCount"}, "maxCount": {"$ref": "#maxCount"}, "description": {"$ref": "#description"} }
+    }
+  },
   
   "$definitions": {
     "byte":   { "$type": "integer", "min": -128,                 "max": 127 },
@@ -12,7 +37,7 @@
     "float":  { "$type": "float",   "min": -3.4E+38,  "max": 3.4E+38 },
     "double": { "$type": "float",   "min": -1.7E+308, "max": 1.7E+308 },
 
-    "byte_array": { "$type": "array", "element": {"$defRef": "byte"} },
+    "byte_array": { "$type": "array", "element": {"$defRef": "byte"}, "minCount": null, "maxCount": null },
     "int_array": { "$type": "array", "element": {"$defRef": "int"} },
     "long_array": { "$type": "array", "element": {"$defRef": "long"} }
     

@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "provides_banner_patterns" },
+  "$templates": {},
+  "$definitions": {
+    "provides_banner_patterns": {
+      "$type": "string",
+      "description": "When present, this item can be placed in the pattern slot of a loom and will provide the specified banner pattern tag. Must be a tag prefixed with {{cd|#}}."
+    }
+  }
+}

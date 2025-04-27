@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "damage" },
+  "$templates": {},
+  "$definitions": {
+    "damage": {
+      "$type": "union", "options": [{ "$defRef": "nbt-types:int" }],
+      "description": "The number of uses ''consumed'' (not remaining) of the item's [ [durability] ]. Must be a non-negative integer, defaults to 0."
+    }
+  }
+}

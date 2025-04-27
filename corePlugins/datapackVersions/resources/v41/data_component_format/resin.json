@@ -1,0 +1,20 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "resin" },
+  "$templates": {},
+  "$definitions": {
+    "resin": {
+      "$type": "object",
+      "properties": {
+        "resin": {
+          "description": "The properties of this [ [toxic resin] ].",
+          "value": {
+            "$type": "object",
+            "properties": {}
+          }
+        }
+      }
+    }
+  }
+}

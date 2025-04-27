@@ -1,0 +1,38 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "utils": "../utils/utils-library.json",
+    "banner_pattern": "../chunk_format/banner_pattern.json"
+  },
+  "$body": { "$defRef": "banner_patterns" },
+  "$templates": {},
+  "$definitions": {
+    "banner_patterns": {
+      "$type": "array",
+      "element": {
+        "$type": "object",
+        "description": "A single pattern.",
+        "properties": {
+          "color": {
+            "description": "Dye color of the section.",
+            "value": { "$type": "string" }
+          },
+          "pattern": {
+            "description": "{{json_ref|banner pattern|inline=1}}.",
+            "value": {
+              "$type": "union",
+              "options": [
+                {
+                  "$ref": "utils:resource_location",
+                  "schema": "banner_pattern"
+                },
+                { "$defRef": "banner_pattern:banner_pattern" }
+              ]
+            }
+          }
+        }
+      },
+      "description": "List of all patterns applied to the banner or the shield."
+    }
+  }
+}

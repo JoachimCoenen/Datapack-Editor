@@ -1,0 +1,13 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "hide_additional_tooltip" },
+  "$templates": {},
+  "$definitions": {
+    "hide_additional_tooltip": {
+      "$type": "object",
+      "properties": {},
+      "description": "If set, it hides additional info on this item's tooltip."
+    }
+  }
+}

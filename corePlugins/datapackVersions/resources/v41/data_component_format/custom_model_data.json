@@ -1,0 +1,59 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "custom_model_data" },
+  "$templates": {},
+  "$definitions": {
+    "custom_model_data": {
+      "$type": "object",
+      "properties": {
+        "floats": {
+          "description": "A list of {{nbt|float|floats}} for the {{cd|range_dispatch}} model type. Missing values return the {{cd|fallback}} model.",
+          "value": {
+            "$type": "array",
+            "element": { "$type": "string" }
+          }
+        },
+        "flags": {
+          "description": "A list of {{nbt|boolean|booleans}} for the {{cd|condition}} model type. Missing value returns the {{cd|is_false}} model.",
+          "value": { "$defRef": "nbt-types:byte_array" }
+        },
+        "strings": {
+          "description": "A list of {{nbt|string|strings}} for the {{cd|select}} model type. Missing value returns the {{cd|fallback}} model.",
+          "value": {
+            "$type": "array",
+            "element": { "$type": "string" }
+          }
+        },
+        "colors": {
+          "description": "A list of RGB values or number providers for the {{cd|model}} model type's {{cd|tints}}. Missing value returns the {{cd|default}} value provided by the item model definition. Can either be a list of lists, or an int array. When provided as a list, it will automatically convert to an int array.",
+          "value": {
+            "$type": "union",
+            "description": "A list of RGB values or number providers for the {{cd|model}} model type's {{cd|tints}}. Missing value returns the {{cd|default}} value provided by the item model definition. Can either be a list of lists, or an int array. When provided as a list, it will automatically convert to an int array.",
+            "options": [
+              {
+                "$type": "array",
+                "element": {
+                  "$type": "union",
+                  "options": [
+                    { "$defRef": "nbt-types:int" },
+                    {
+                      "$type": "array",
+                      "description": "A list containing 3 floats corresponding to red, green and blue values as a fraction (ranged 0 to 1, inclusive) that is automatically converted to the int format.",
+                      "element": {
+                        "$type": "string",
+                        "description": "A list containing 3 floats corresponding to red, green and blue values as a fraction (ranged 0 to 1, inclusive) that is automatically converted to the int format."
+                      }
+                    }
+                  ]
+                }
+              },
+              { "$defRef": "nbt-types:int_array" }
+            ]
+          }
+        }
+      },
+      "description": "A list of values used by [ [items model definition] ]s for model selection and coloring."
+    }
+  }
+}

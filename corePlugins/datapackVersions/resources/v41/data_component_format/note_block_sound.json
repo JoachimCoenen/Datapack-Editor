@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {},
+  "$body": { "$defRef": "note_block_sound" },
+  "$templates": {},
+  "$definitions": {
+    "note_block_sound": {
+      "$type": "string",
+      "description": "The ID of the sound event played by a note block when this [ [player head] ] is placed above."
+    }
+  }
+}

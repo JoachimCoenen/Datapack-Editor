@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "entity": "../entity_format/entity.json" },
+  "$body": { "$defRef": "entity_data" },
+  "$templates": {},
+  "$definitions": {
+    "entity_data": {
+      "$type": "union", "options": [{ "$defRef": "entity:entity" }],
+      "description": "NBT applied to an [ [entity] ] when created from an item."
+    }
+  }
+}

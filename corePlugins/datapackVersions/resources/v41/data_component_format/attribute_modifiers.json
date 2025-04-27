@@ -1,0 +1,70 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json"
+  },
+  "$templates": {},
+  "$definitions": {
+    "attribute_modifiers": {
+      "$type": "union",
+      "description": "Can be defined as a compound or a list.",
+      "options": [
+        {
+          "$type": "object",
+          "properties": {
+            "modifiers": {
+              "$type": "array",
+              "description": "Contains Attribute Modifiers on this item which modify Attributes of the wearer or holder (if the item is not in the hand or armor slots, it has no effect).",
+              "element": { "$defRef": "%attribute_modifier" }
+            },
+            "show_in_tooltip": {
+              "description": "Show or hide attribute modifiers on this item's tooltip. Defaults to {{cd|true}}.",
+              "optional": true,
+              "default": true,
+              "value": { "$type": "boolean" }
+            }
+          }
+        },
+        {
+          "$type": "array",
+          "description": "Contains Attribute Modifiers on this item which modify Attributes of the wearer or holder (if the item is not in the hand or armor slots, it has no effect).",
+          "element": { "$defRef": "%attribute_modifier" }
+        }
+      ]
+    },
+    
+    "%attribute_modifier": {
+      "$type": "object",
+      "description": "A single attribute modifier.",
+      "properties": {
+        "type": {
+          "description": "The name of the attribute this modifier is to act upon.",
+          "value": { "$ref": "utils:resource_location" , "schema": "attribute"} 
+        },
+        "name": {
+          "description": "The name of the Modifier. Has no known effect.",
+          "value": { "$type": "string" } 
+        },
+        "slot": {
+          "description": "Slot or slot type the item must be in for the modifier to take effect. Can be {{cd|d=or|any|hand|armor|mainhand|offhand|head|chest|legs|feet|body}}. Defaults to {{cd|any}}.",
+          "optional": true,
+          "default": "any",
+          "value": { "$defRef": "utils:armor_slots" }
+        },
+        "uuid": {
+          "description": "The modifier's UUID, stored as four ints. Used when equipping and unequipping the item to identify which modifier to add or remove from the entity.",
+          "value": { "$defRef": "utils:uuid_as_array" }
+        },
+        "amount": {
+          "description": "Amount of change from the modifier.",
+          "value": { "$defRef": "nbt-types:double" }
+        },
+        "operation": {
+          "description": "Modifier operation. Can be {{cd|d=or|add_value|add_multiplied_base|add_multiplied_total}} See [ [Attribute#Modifiers|Attribute Modifiers] ] for info.",
+          "value": { "$defRef": "utils:attribute_operations" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "potion_duration_scale" },
+  "$templates": {},
+  "$definitions": {
+    "potion_duration_scale": {
+      "$type": "union", "options": [{ "$defRef": "nbt-types:float" }],
+      "description": "When present, for items that have the [ [Data component format#potion_contents|{{cd|minecraft:potion_contents}}] ] component, the duration of the applied effects will be scaled by this factor. Defaults to {{cd|1.0}}."
+    }
+  }
+}

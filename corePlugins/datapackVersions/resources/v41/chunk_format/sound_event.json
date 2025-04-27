@@ -1,0 +1,25 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json"
+  },
+  "$body": { "$defRef": "sound_event" },
+  "$templates": {},
+  "$definitions": {
+    "sound_event": {
+      "$type": "object",
+      "properties": {
+        "sound_id": {
+          "description": "A resource location that points to a sound file.",
+          "value": { "$ref": "utils:resource_location" , "schema": "resource_pack-sound"} // todo find good way to mark resource locations in a resource pack.
+        },
+        "range": {
+          "optional": true,
+          "description": "Optional. The fixed range of the sound. If omitted, the sound will have a variable range.",
+          "value": { "$defRef": "nbt-types:float" }
+        }
+      }
+    }
+  }
+}

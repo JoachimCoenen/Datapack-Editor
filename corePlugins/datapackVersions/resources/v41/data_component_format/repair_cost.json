@@ -1,0 +1,12 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "repair_cost" },
+  "$templates": {},
+  "$definitions": {
+    "repair_cost": {
+      "$type": "union", "options": [{ "$defRef": "nbt-types:int" }],
+      "description": "The number of experience levels to add to the base level cost when repairing, combining, or renaming this item with an [ [anvil] ]. Must be a non-negative integer, defaults to 0."
+    }
+  }
+}

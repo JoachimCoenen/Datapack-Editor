@@ -1,0 +1,37 @@
+{
+  "$schema": "dpe/json/schema/library",
+  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$body": { "$defRef": "map_decorations" },
+  "$templates": {},
+  "$definitions": {
+    "map_decorations": {
+      "$type": "object",
+      "properties": {},
+      "default-property": {
+        "description": "The key-value pair of a single icon, where the key is an arbitrary unique string identifying the decoration.",
+        "value": {
+          "$type": "object",
+          "properties": {
+            "type": {
+              "description": "The type of the icon. Can be {{cd|d=or|player|frame|red_marker|blue_marker|target_x|target_point|player_off_map|player_off_limits|mansion|monument|banner_white|banner_orange|banner_magenta|banner_light_blue|banner_yellow|banner_lime|banner_pink|banner_gray|banner_light_gray|banner_cyan|banner_purple|banner_blue|banner_brown|banner_green|banner_red|banner_black|red_x|village_desert|village_plains|village_savanna|village_snowy|village_taiga|jungle_temple|swamp_hut}}.",
+              "value": { "$type": "string" }
+            },
+            "x": {
+              "description": "The X world coordinate of the decoration.",
+              "value": { "$defRef": "nbt-types:double" }
+            },
+            "z": {
+              "description": "The Z world coordinate of the decoration.",
+              "value": { "$defRef": "nbt-types:double" }
+            },
+            "rotation": {
+              "description": "The rotation of the icon, ranging from 0.0 to 360.0, rotated clockwise from north in degrees.",
+              "value": { "$defRef": "nbt-types:float" }
+            }
+          }
+        }
+      },
+      "description": "Contains key-value pairs of the icons to display on this [ [filled map] ]."
+    }
+  }
+}
