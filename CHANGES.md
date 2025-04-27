@@ -6,6 +6,7 @@
    * Properties now support exclusion groups.
    * Parameters of templates no support multiple types at once. (e.g. `"$params": { "minCount": { "type": ["number", "null"], "default": null } }`)
  * Added support for data components; still needs some refinement. (issue #54)
+ * Added support for attributes. (issue #53)
 
 ### Improvements
  * Improved visibility of indicators (search result, matched brace, etc.) in dark mode.

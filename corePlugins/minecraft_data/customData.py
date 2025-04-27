@@ -79,6 +79,7 @@ class CustomMCData:
 	damageTypes: frozenset[ResourceLocation]
 	itemComponents: frozenset[ResourceLocation]
 	itemSubPredicates: frozenset[ResourceLocation]
+	attributes: frozenset[ResourceLocation]
 	statisticTypes: frozenset[ResourceLocation]
 	entityVariants: EntityVariants
 
@@ -101,6 +102,7 @@ CustomMCData.EMPTY = CustomMCData(
 	damageTypes=frozenset(),
 	itemComponents=frozenset(),
 	itemSubPredicates=frozenset(),
+	attributes=frozenset(),
 	statisticTypes=frozenset(),
 	entityVariants=EntityVariants.EMPTY,
 	slots=FrozenDict(),

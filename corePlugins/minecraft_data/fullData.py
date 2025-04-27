@@ -34,10 +34,11 @@ class FullMCData:
 	damageTypes: frozenset[ResourceLocation]
 	itemComponents: frozenset[ResourceLocation]
 	itemSubPredicates: frozenset[ResourceLocation]
+	attributes: frozenset[ResourceLocation]
 	statisticTypes: frozenset[ResourceLocation]
 	entityVariants: EntityVariants
 
-	slots: FrozenDict[bytes, frozenset[bytes]]
+	slots: FrozenDict[bytes, frozenset[bytes | None]]
 	blockStates: FrozenDict[ResourceLocation, list[BlockStateType]]
 	gamerules: FrozenDict[bytes, Gamerule]
 
@@ -84,6 +85,7 @@ def buildFullMCData(name: str, mcData: Optional[MCData], cuData: Optional[Custom
 		damageTypes=cuData.damageTypes,
 		itemComponents=cuData.itemComponents,
 		itemSubPredicates=cuData.itemSubPredicates,
+		attributes=cuData.attributes,
 		statisticTypes=cuData.statisticTypes,
 		entityVariants=cuData.entityVariants,
 		slots=cuData.slots,

@@ -118,6 +118,7 @@ _VERSION_1_17_0 = CustomMCData(
 	# compiled from the 1.20.2.jar using this command "javap -constants -c  buj.class":
 	itemComponents=frozenset(),  # empty. because introduced in 1.20.5.
 	itemSubPredicates=frozenset(),  # empty. because introduced in 1.20.5.
+	attributes=frozenset(),  # empty. because introduced in 1.20.5.
 	statisticTypes=frozenset({
 		ResourceLocation.fromString('custom'),
 		ResourceLocation.fromString('crafted'),

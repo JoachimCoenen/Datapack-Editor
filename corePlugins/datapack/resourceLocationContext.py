@@ -65,13 +65,13 @@ class RecipeResourceLocationContext(SimpleResourceLocationContext1):
 @resourceLocationContext('attribute', _indexPath=None, _tagsIndexPath=TAGS.ATTRIBUTE)
 class AttributeResourceLocationContext(SimpleResourceLocationContext1):
 	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
-		return ()
+		return mc.attributes
 
 
 @resourceLocationContext('block_entity_type', _indexPath=None, _tagsIndexPath=TAGS.BLOCK_ENTITY_TYPE)
 class BlockEntityTypeResourceLocationContext(SimpleResourceLocationContext1):
 	def valuesFromMC(self, mc: FullMCData) -> Collection[ResourceLocation]:
-		return ()
+		return mc.blocks  # todo change to mc.block_entities re: #61
 
 
 @resourceLocationContext('chunk_status', _indexPath=None, _tagsIndexPath=TAGS.CHUNK_STATUS)
