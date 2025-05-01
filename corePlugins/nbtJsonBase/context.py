@@ -268,11 +268,9 @@ class StructureCtxProvider(ContextProvider[StructureNode]):
 
 	def getSuggestions(self, pos: Position, replaceCtx: str) -> Suggestions:
 		matches = self.getBestMatch(pos)
-		if not matches.contained:
-			return []
 
 		hit = matches.hit
-		if hit is not None and hit.typeName is not InvalidNode.typeName:
+		if hit is not None:
 			return self._getSuggestionsForHit(pos, hit, matches.contained, replaceCtx)
 		if matches.before is not None:
 			return self._getSuggestionsForBefore(pos, matches.before, matches.contained, replaceCtx)

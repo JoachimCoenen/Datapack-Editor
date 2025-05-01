@@ -5,7 +5,7 @@ They are either block states ot target selector arguments
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Callable, ClassVar, Sequence, Iterable, Type
+from typing import Optional, Callable, ClassVar, Sequence, Iterable, Type, cast
 
 from base.gui.styler import StyleIdEnum, DEFAULT_STYLE_ID, CatStyler
 from base.model.messages import *
@@ -22,7 +22,7 @@ from corePlugins.minecraft.resourceLocation import ResourceLocationNode, Resourc
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 from corePlugins.nbt import SNBT_ID
 from corePlugins.nbtJsonBase.core import STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA, InvalidNode, StructureKind, \
-	StructureDataNode
+	StructureDataNode, StructureDataSchema
 from corePlugins.nbtJsonBase import STRUCTURE_ID
 from  corePlugins.nbt.snbtParser import SNBT_ID2
 
@@ -85,8 +85,9 @@ class PredicateArg(PredicateArgNode[PredicateArgInfo]):
 	key: ResourceLocationNode
 	isNegated: bool
 	operator: str | None  # usually '='
+	operatorSpan: Span | None
 	value: StructureDataNode | None
-	isClosed: bool = field(default=True, init=False)
+	isClosed: bool = field(default=False, init=False)
 
 	@property
 	def children(self) -> Sequence[PredicateArgNode]:
@@ -145,6 +146,7 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 
 		if operator is not None:
 			p_op2 = self.currentPos
+			operatorSpan = Span(p_op1, p_op2)
 			# parse value / predicate
 			if operator == '=':
 				nbtSchemaName = schema.valueSchema
@@ -155,22 +157,23 @@ class PredicateArgsParser(ParserBase[PredicateArgs, PredicateArgOptions]):
 				if nbtSchemaName is None:
 					self.error(MDStr(f"Predicate Argument '{key.asString}' does not support sub-predicate matching."), span=Span(p_op1, p_op2))
 
-			nbtSchema = GLOBAL_SCHEMA_STORE.get(nbtSchemaName, SNBT_ID)
+			nbtSchema = cast(StructureDataSchema | None, GLOBAL_SCHEMA_STORE.get(nbtSchemaName, SNBT_ID))
 			if nbtSchema is None:
 				nbtSchema = STRUCTURE_ANY_SCHEMA
 
 			self.consumeWhitespace()
 			value: StructureDataNode | None
-			if self.text.startswith((b'|', b',', b']'), self.cursor):
+			if self.text.startswith((b'|', b',', b']'), self.cursor) or self.cursor >= self.length:
 				self.error(EXPECTED_MSG_RAW.format("snbt"))
-				value = InvalidNode(Span(self.currentPos), STRUCTURE_ILLEGAL_SCHEMA, '', structureKind=StructureKind.SNBT)
+				value = InvalidNode(Span(self.currentPos), nbtSchema, '', structureKind=StructureKind.SNBT)
 			else:
 				value = self._parseForeignNode(nbtSchema, SNBT_ID2, ignoreTrailingChars=True)
 		else:
 			value = None
+			operatorSpan = None
 
 		p2 = self.currentPos
-		return PredicateArg(Span(p1, p2), schema, key, isNegated, operator, value)
+		return PredicateArg(Span(p1, p2), schema, key, isNegated, operator, operatorSpan, value)
 
 	def _parsePredicateArgsUnion(self) -> PredicateArgUnion:
 		predicates: list[PredicateArg | PredicateArgSeparator] = []
@@ -375,15 +378,15 @@ class PredicateArgNodeCtxProvider(ContextProvider[PredicateArgNode]):
 			raise ValueError(f"Unexpected type of before {type(before)}.")
 
 		else:  # we must be at the end of (or after) the key or value
-			suggestions = getSuggestions(before, self.text, pos, replaceCtx)
 			before2 = befores[-2] if len(befores) >= 2 else hits[-1]
 			if not isinstance(before2, PredicateArg):
 				raise ValueError(f"Unexpected type of before2 {type(before2)}.")
-			if before2.value is not None:  # we must be at the end of value
-				suggestions.extend([replaceCtx + '|', replaceCtx + ', ', replaceCtx + ']'])
-				# todo add separators to list(?) to enable detection whether we need ',' or keys.
-			elif before2.operator is None:
-				if before2.key.isValid:  # we must be at the end of key
+
+			if before2.operatorSpan is None or pos <= before2.operatorSpan.start:
+				# we're at the key:
+				suggestions = getSuggestions(before2.key, self.text, pos, replaceCtx)
+
+				if before2.key.isValid:  # we must be at the *end* of a valid key
 					if before2.schema is not None and before2.schema.valueSchema:
 						suggestions.append(replaceCtx + '=')
 					if before2.schema is not None and before2.schema.subPredicateSchema:
@@ -391,6 +394,13 @@ class PredicateArgNodeCtxProvider(ContextProvider[PredicateArgNode]):
 					suggestions.extend([replaceCtx + '|', replaceCtx + ', ', replaceCtx + ']'])
 				else:
 					suggestions.insert(0, '!')
+
+			elif before2.operatorSpan.end <= pos and before2.value is not None:
+				# we're at the value (after = or ~)
+				suggestions = getSuggestions(before2.value, self.text, pos, replaceCtx)
+
+				if before2.value.span.length > 0:
+					suggestions.extend([replaceCtx + '|', replaceCtx + ', ', replaceCtx + ']'])
 
 		return suggestions
 
