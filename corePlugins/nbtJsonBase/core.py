@@ -49,14 +49,19 @@ class TokenType(enum.Enum):
 
 _TOKEN_TYPE_STR_REP = {
 	TokenType.invalid: "invalid",
-	TokenType.quoted_string: "quoted string",
+	TokenType.null: "null",
+	TokenType.boolean: "boolean",
 	TokenType.number: "number",
+	TokenType.quoted_string: "quoted string",
 	TokenType.unquoted_string: "string",
+
 	TokenType.object_start: "'{'",
 	TokenType.object_end: "'}'",
+
 	TokenType.array_start: "'[_;'",
 	TokenType.list_start: "'['",
 	TokenType.list_end: "']'",
+
 	TokenType.colon: "':'",
 	TokenType.comma: "','",
 	TokenType.eof: "end of file",
