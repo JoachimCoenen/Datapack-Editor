@@ -1,7 +1,6 @@
 {
   "$schema": "dpe/json/schema/library",
   "$libraries": {
-    "nbt-types": "../utils/nbt-types.json",
     "utils": "../utils/utils-library.json"
   },
   "$templates": {},
@@ -15,12 +14,12 @@
         },
         "colors": {
           "description": "The colors of the initial particles of the explosion, randomly selected from.",
-          "value": { "$defRef": "nbt-types:int_array" },
+          "value": { "$type": "array", "element": { "$defRef": "utils:int_color" } },
           "optional": true
         },
         "fade_colors": {
           "description": "The colors of the fading particles of the explosion, randomly selected from.",
-          "value": { "$defRef": "nbt-types:int_array" },
+          "value": { "$type": "array", "element": { "$defRef": "utils:int_color" } },
           "optional": true
         },
         "has_trail": {

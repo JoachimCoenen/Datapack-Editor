@@ -8,8 +8,8 @@
       "$type": "object",
       "properties": {
         "loot_table": {
-          "description": "The ID of a [ [loot table] ].",
-          "value": { "$type": "string" }
+          "description": "The ID of a loot table.",
+          "value": { "$ref": "utils:resource_location", "schema": "loot_table" }
         },
         "seed": {
           "description": "The pseudorandom seed to resolve the loot table with. If not specified or 0, a seed is randomly chosen by the game.",

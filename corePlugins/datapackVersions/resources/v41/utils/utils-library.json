@@ -40,7 +40,8 @@
 
     "value_or_array": {
       "$params": {
-        "element": { "type": "object" }
+        "element": { "type": "object" },
+        "description": { "type": "string", "default": "" }
       },
       "$body": { 
         "$type": "union",
@@ -50,7 +51,8 @@
             "$type": "array",
             "element": { "$ref": "#element" }
           }
-        ]
+        ],
+        "description": {"$ref": "#description"}
       }
     },
     
@@ -122,6 +124,52 @@
       "minCount": 3,
       "maxCount": 3,
       "description": "The block position. [X, Y, Z]"
+    },
+    
+    "float_color": {
+      "$type": "array",
+      "minCount": 3,
+      "maxCount": 3,
+      "description": "A list containing 3 floats corresponding to red, green, and blue values as a fraction (ranged 0 to 1, inclusive). Automatically converted to the integer format when saved.",
+      "element": { "$type": "float", "min": 0, "max": 1 }
+    },
+    
+    "int_color": {
+      "$type": "integer",
+      "min": 0,
+      "max": 16777215,
+      "description": "An RGB color code converted to a decimal number. It can be calculated from the Red, Green and Blue components using this formula: `Red<<16 + Green<<8 + Blue`"
+    },
+    
+    "float_or_int_color": {
+      "$type": "union",
+      "options": [
+        { "$defRef": "float_color" },
+        { "$defRef": "int_color" }
+      ]
+    },
+    
+    "float_color_alpha": {
+      "$type": "array",
+      "minCount": 4,
+      "maxCount": 4,
+      "description": "A list containing 4 floats corresponding to red, green, blue, and alpha values as a fraction (ranged 0 to 1, inclusive). Automatically converted to the integer format when saved.",
+      "element": { "$type": "float", "min": 0, "max": 1 }
+    },
+    
+    "int_color_alpha": {
+      "$type": "integer",
+      "min": 0,
+      "max": 4294967295,
+      "description": "An RGB color code converted to a decimal number. It can be calculated from the Red, Green and Blue components using this formula: `Alpha<<24 + Red<<16 + Green<<8 + Blue`"
+    },
+    
+    "float_or_int_color_alpha": {
+      "$type": "union",
+      "options": [
+        { "$defRef": "float_color_alpha" },
+        { "$defRef": "int_color_alpha" }
+      ]
     },
     
     "firework_shape": {

@@ -5,17 +5,6 @@
   },
   "$templates": {
     
-    "color_array": {
-      "$params": {},
-      "$body": {
-        "$type": "array",
-        "element": { "$type": "float", "min": 0, "max": 1 },
-        "minCount": 3,
-        "maxCount": 3,
-        "description": "Three floats representing the red, green, and blue components of the dust color. Each should be from 0 to 1. If any color value is less than 0 or higher than 1, the particle color is undefined behavior."
-      }
-    },
-    
     "position_source_for_vibration": {
       "$params": {},
       "$body": {
@@ -49,7 +38,7 @@
     "dust": {
       "$type": "object",
       "properties": {
-        "color": { "$ref": "color_array" },
+        "color": { "$defRef": "utils:float_color" },
         "scale": {
           "$type": "float",
           "description": "Controls the size scale multiplier and lifetime multiplier of the particle. The particle's lifetime is a random integer from 8 to 40 game ticks, then multiplied by this scale value, with a minimum of 1."
@@ -60,8 +49,8 @@
     "dust_color_transition": {
       "$type": "object",
       "properties": {
-        "from_color": { "$ref": "color_array" },
-        "to_color": { "$ref": "color_array" },
+        "from_color": { "$defRef": "utils:float_color" },
+        "to_color": { "$defRef": "utils:float_color" },
         "scale": {
           "$type": "float",
           "description": "Controls the size scale multiplier and lifetime multiplier of the particle. The particle's lifetime is a random integer from 8 to 40 game ticks, then multiplied by this scale value, with a minimum of 1."
@@ -72,24 +61,7 @@
     "entity_effect": {
       "$type": "object",
       "properties": {
-        "color": {
-          "$type": "union",
-          "options": [
-            {
-              "$type": "array",
-              "element": { "$type": "float", "min": 0, "max": 1 },
-              "minCount": 4,
-              "maxCount": 4,
-              "description": "Four floats representing the red, green, blue, and alpha components of the color. Each should be from 0 to 1. If any color value is less than 0 or higher than 1, the particle color is undefined behavior."
-            },
-            { 
-              "$type": "integer", 
-              "min": 0, 
-              "max": 4294967295,
-              "description": "Decimal number representing the ARGB color, calculated using this formula: `Alpha<<24 + Red<<16 + Green<<8 + Blue`."
-            }
-          ]
-        }
+        "color": { "$defRef": "utils:float_or_int_color_alpha" }
       }
     },
     

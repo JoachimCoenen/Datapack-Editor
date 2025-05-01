@@ -1,12 +1,22 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": {},
+  "$libraries": {
+    "utils": "../utils/utils-library.json"
+  },
   "$body": { "$defRef": "dyed_color" },
   "$templates": {},
   "$definitions": {
     "dyed_color": {
-      "$type": "object",
-      "properties": {}
+      "$type": "union",
+      "options": [
+        { "$defRef": "utils:int_color" },
+        {
+          "$type": "object",
+          "properties": {
+            "rgb": { "$defRef": "utils:int_color" }
+          }
+        }
+      ]
     }
   }
 }

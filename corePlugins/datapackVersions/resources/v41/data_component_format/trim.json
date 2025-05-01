@@ -1,6 +1,8 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": {},
+  "$libraries": {
+    "utils": "../utils/utils-library.json"
+  },
   "$body": { "$defRef": "trim" },
   "$templates": {},
   "$definitions": {
@@ -9,18 +11,18 @@
       "properties": {
         "pattern": {
           "description": "The ID of the trim pattern.",
-          "value": { "$type": "string" }
+          "value": { "$ref": "utils:resource_location", "schema": "item" }
         },
         "material": {
           "description": "The ID of the trim material, which applies a color to the trim.",
-          "value": { "$type": "string" }
+          "value": { "$ref": "utils:resource_location", "schema": "item" }
         },
         "show_in_tooltip": {
           "description": "{{until|JE 1.21.5}}: Show or hide the trim on this item's tooltip. Defaults to {{cd|true}}.",
           "value": { "$type": "boolean" }
         }
       },
-      "description": "Contains the trim applied to this [ [armor] ] piece."
+      "description": "Contains the trim applied to this armor piece."
     }
   }
 }

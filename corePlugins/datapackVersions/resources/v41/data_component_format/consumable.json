@@ -13,6 +13,7 @@
       "properties": {
         "consume_seconds": {
           "description": "The amount of seconds it takes for a player to consume the item. Defaults to 1.6.",
+          "default": 1.6,
           "value": { "$defRef": "nbt-types:float" }
         },
         "animation": {
@@ -88,7 +89,7 @@
         "properties": {
           "id": {
             "description": "The ID of the effect.",
-            "value": { "$type": "string" }
+            "value": { "$ref": "utils:resource_location", "schema": "mob_effect" }
           },
           "amplifier": {
             "description": "The amplifier of the effect, with level I having value 0. Optional, defaults to 0.",
@@ -114,32 +115,16 @@
       }
     },
     "%effects-remove_effects": {
-      "$type": "union",
+      "$ref": "utils:value_or_array",
       "description": "A set of effects removed once consumed, as either a single ID or list of IDs.",
-      "options": [
-        {
-          "$type": "array",
-          "description": "A set of effects removed once consumed, as either a single ID or list of IDs.",
-          "element": {
-            "$type": "string",
-            "description": "A set of effects removed once consumed, as either a single ID or list of IDs."
-          }
-        },
-        {
-          "$type": "string",
-          "description": "A set of effects removed once consumed, as either a single ID or list of IDs."
-        }
-      ]
+      "element": { "$ref": "utils:resource_location", "schema": "mob_effect" }
     },
     "%probability-apply_effects": { "$defRef": "nbt-types:float" },
     "%diameter-teleport_randomly": { "$defRef": "nbt-types:float" },
     "%sound-play_sound": {
       "$type": "union",
       "options": [
-        {
-          "$ref": "utils:resource_location",
-          "schema": "sound_event"
-        },
+        { "$ref": "utils:resource_location", "schema": "sound_event" },
         { "$defRef": "sound_event:sound_event" }
       ]
     }

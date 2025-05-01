@@ -234,7 +234,7 @@
                     "description": "Included only if <code>type</code> is set to <code>storage</code>. A [[resource location]] specifying the storage ID to copy NBT from. ",
                     "decidingProp": "type",
                     "values": {
-                      "storage": { "$ref": "utils:resource_location", "schema": "any"  }
+                      "storage": { "$ref": "utils:resource_location", "schema": "command_storage"  } ?? maybe command_storage?
                     },
                     "optionalPrefixes": [ "minecraft:" ],
                     "optional": true
@@ -554,7 +554,7 @@
                 },
                 "id": {
                   "description": "Optional. [[UUID]] to assign the modifier, in hyphenated hexadecimal format. If none specified, a new random UUID is generated.",
-                  "value": { "$type": "string" },
+                  "value": { "$type": "string", "type": "minecraft:uuid" },
                   "optional": true
                 },
                 "slot": {
@@ -920,7 +920,7 @@
               "properties": {
                 "type": {
                   "description": "The effect ID.",
-                  "value": { "$type": "string" },
+                  "value": { "$ref": "utils:resource_location", "schema": "mob_effect"  },
                   "optional": true
                 },
                 "duration": {

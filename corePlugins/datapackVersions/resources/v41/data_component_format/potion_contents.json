@@ -1,25 +1,28 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json"
+  },
   "$body": { "$defRef": "potion_contents" },
   "$templates": {},
   "$definitions": {
     "potion_contents": {
       "$type": "union",
-      "description": "The potion and custom effects contained in this [ [potion] ], [ [splash potion] ], [ [lingering potion] ], or [ [tipped arrow] ]. If defined as a string, corresponds to {{nbt|string|potion}}.",
+      "description": "The potion and custom effects contained in this potion, splash potion, lingering potion, or tipped arrow. If defined as a string, corresponds to {{nbt|string|potion}}.",
       "options": [
-        { "$type": "string" },
+        { "$ref": "utils:resource_location", "schema": "potion" },
         {
           "$type": "object",
           "properties": {
             "potion": {
               "optional": true,
-              "description": "The ID of a potion type. Optional. See [ [Potion#Item data] ].",
-              "value": { "$type": "string" }
+              "description": "The ID of a potion type. Optional. See Potion#Item data.",
+              "value": { "$ref": "utils:resource_location", "schema": "potion" }
             },
             "custom_color": {
               "description": "The overriding color of this potion texture, and/or the particles of the area effect cloud created.",
-              "value": { "$defRef": "nbt-types:int" }
+              "value": { "$defRef": "utils:int_color" }
             },
             "custom_name": {
               "description": "An optional string used to generate containing stack name. The game uses the translation key {{cd|item.minecraft.<item type>.effect.<value>}}. This name has a higher priority than the {{cd|minecraft:item_name}} component, but lower than the {{cd|minecraft:custom_name}} component.",
@@ -36,7 +39,7 @@
                   "properties": {
                     "id": {
                       "description": "The ID of the effect.",
-                      "value": { "$type": "string" }
+                      "value": { "$ref": "utils:resource_location", "schema": "mob_effect" }
                     },
                     "amplifier": {
                       "optional": true,
@@ -45,7 +48,7 @@
                     },
                     "duration": {
                       "optional": true,
-                      "description": "The duration of the effect in [ [tick] ]s. Value -1 is treated as infinity. Values 0 or less than -2 are treated as 1. Optional, defaults to 1 tick.",
+                      "description": "The duration of the effect in ticks. Value -1 is treated as infinity. Values 0 or less than -2 are treated as 1. Optional, defaults to 1 tick.",
                       "value": { "$defRef": "nbt-types:int" }
                     },
                     "ambient": {

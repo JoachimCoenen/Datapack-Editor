@@ -1,12 +1,14 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$libraries": {
+    "utils": "../utils/utils-library.json"
+  },
   "$body": { "$defRef": "map_color" },
   "$templates": {},
   "$definitions": {
     "map_color": {
-      "$type": "union", "options": [{ "$defRef": "nbt-types:int" }],
-      "description": "The color of the markings on this [ [filled map] ] item texture."
+      "$type": "union", "options": [{ "$defRef": "utils:int_color" }],
+      "description": "The color of the markings on this filled map item texture."
     }
   }
 }

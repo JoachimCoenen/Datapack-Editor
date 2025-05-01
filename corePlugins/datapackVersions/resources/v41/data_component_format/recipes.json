@@ -6,10 +6,7 @@
   "$definitions": {
     "recipes": {
       "$type": "array",
-      "element": {
-        "$type": "string",
-        "description": "The ID of a [ [recipe] ]."
-      },
+      "element": { "$ref": "utils:resource_location", "schema": "recipe" },
       "description": "The recipes that a player unlocks when this [ [knowledge book] ] is used."
     }
   }

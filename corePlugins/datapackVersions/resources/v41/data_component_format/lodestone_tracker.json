@@ -1,6 +1,8 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$libraries": {
+    "utils": "../utils/utils-library.json"
+  },
   "$body": { "$defRef": "lodestone_tracker" },
   "$templates": {},
   "$definitions": {
@@ -15,11 +17,11 @@
             "properties": {
               "pos": {
                 "description": "The integer coordinates of the lodestone.",
-                "value": { "$defRef": "nbt-types:int_array" }
+                "value": { "$defRef": "utils:block_pos" }
               },
               "dimension": {
                 "description": "The ID of the dimension of the lodestone.",
-                "value": { "$type": "string" }
+                "value": { "$ref": "utils:resource_location", "schema": "dimension" }
               }
             }
           }

@@ -1,16 +1,16 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": {},
+  "$libraries": {
+    "utils": "../utils/utils-library.json"
+  },
   "$body": { "$defRef": "pot_decorations" },
   "$templates": {},
   "$definitions": {
     "pot_decorations": {
       "$type": "array",
-      "element": {
-        "$type": "string",
-        "description": "The ID of an item. Can be either {{cd|brick}} or a [ [sherd] ]."
-      },
-      "description": "A list of the sherds applied on each face of this [ [decorated pot] ]. If the list has less than 4 entries, the remaining ones default to {{cd|\"minecraft:brick\"}}."
+      "maxCount": 4,
+      "element": { "$ref": "utils:resource_location", "schema": "potion", "description": "The ID of an item. Can be either {{cd|brick}} or a [ [sherd] ]." },
+      "description": "A list of the sherds applied on each face of this decorated pot. If the list has less than 4 entries, the remaining ones default to {{cd|\"minecraft:brick\"}}."
     }
   }
 }

@@ -37,7 +37,7 @@
     "float":  { "$type": "float",   "min": -3.4E+38,  "max": 3.4E+38 },
     "double": { "$type": "float",   "min": -1.7E+308, "max": 1.7E+308 },
 
-    "byte_array": { "$type": "array", "element": {"$defRef": "byte"}, "minCount": null, "maxCount": null },
+    "byte_array": { "$type": "array", "element": {"$defRef": "byte"} },
     "int_array": { "$type": "array", "element": {"$defRef": "int"} },
     "long_array": { "$type": "array", "element": {"$defRef": "long"} }
     

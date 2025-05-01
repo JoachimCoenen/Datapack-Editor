@@ -557,7 +557,8 @@
       "element": { "$defRef": "predicate:predicate-body" }
     },
     "%block-bee_nest_destroyed": {
-      "$type": "string",
+      "$ref": "utils:resource_location",
+      "schema": "block",
       "description": "Checks the block that was destroyed. Accepts block IDs."
     },
     "%block-enter_block": { "$ref": "utils:resource_location", "schema": "block", "description": "The block that the player is standing in. Accepts [ [Data values#Block IDs|block ID] ]s." },
