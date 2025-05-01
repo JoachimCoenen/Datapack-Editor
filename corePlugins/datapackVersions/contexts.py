@@ -167,6 +167,7 @@ class ColorStructureCtx(StringNodeContext):
 @structureStringContext(MINECRAFT_OBJECTIVE.name, argType=MINECRAFT_OBJECTIVE)
 @structureStringContext(MINECRAFT_TARGET_SELECTOR.name, argType=MINECRAFT_TARGET_SELECTOR)  # for now
 @structureStringContext(MINECRAFT_BLOCK_POS.name, argType=MINECRAFT_BLOCK_POS)
+@structureStringContext(MINECRAFT_GAME_MODE.name, argType=MINECRAFT_GAME_MODE)
 @structureStringContext(MINECRAFT_ITEM_SLOTS.name, argType=MINECRAFT_ITEM_SLOTS)
 @structureStringContext(MINECRAFT_UUID.name, argType=MINECRAFT_UUID)
 class McFunctionArgumentContextAdaptor(ParsingStructureCtx, ABC):

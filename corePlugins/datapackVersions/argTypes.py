@@ -77,11 +77,12 @@ MINECRAFT_RESOURCE_LOCATION = StructureArgType(
 	),
 )
 
-MINECRAFT_SCORE_HOLDER = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_SCORE_HOLDER)
-MINECRAFT_OBJECTIVE = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_OBJECTIVE)
-MINECRAFT_TARGET_SELECTOR = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_ENTITY, name='minecraft:target_selector')  # for now
 MINECRAFT_BLOCK_POS = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_BLOCK_POS)
 MINECRAFT_COLOR = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_COLOR)
+MINECRAFT_GAME_MODE = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_GAME_MODE)
+MINECRAFT_OBJECTIVE = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_OBJECTIVE)
+MINECRAFT_SCORE_HOLDER = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_SCORE_HOLDER)
+MINECRAFT_TARGET_SELECTOR = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_ENTITY, name='minecraft:target_selector')  # for now
 MINECRAFT_ITEM_SLOTS = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_ITEM_SLOTS)
 MINECRAFT_UUID = fromCommandArgumentType(commandArgumentTypes.MINECRAFT_UUID)
 
@@ -102,6 +103,7 @@ __all__ = [
 	'MINECRAFT_TARGET_SELECTOR',
 	'MINECRAFT_BLOCK_POS',
 	'MINECRAFT_COLOR',
+	'MINECRAFT_GAME_MODE',
 	'MINECRAFT_ITEM_SLOTS',
 	'MINECRAFT_UUID',
 ]
