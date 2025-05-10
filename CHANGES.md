@@ -4,9 +4,9 @@
  * Added ability to customize default indicator styles. (issue #35)
  * JSON & SNBT schemas: 
    * Properties now support exclusion groups.
-   * Parameters of templates no support multiple types at once. (e.g. `"$params": { "minCount": { "type": ["number", "null"], "default": null } }`)
- * Added support for data components; still needs some refinement. (issue #54)
- * Added support for attributes. (issue #53)
+   * Parameters of templates now support multiple types at once. (e.g. `"$params": { "minCount": { "type": ["number", "null"], "default": null } }`)
+ * Added validation, code suggestions, and inline documentation for data components. (issue #54)
+ * Added validation, code suggestions, and inline documentation for attributes. (issue #53)
 
 ### Improvements
  * Improved visibility of indicators (search result, matched brace, etc.) in dark mode.
@@ -19,7 +19,7 @@
  * Fixed wrong color of fold margin in dark mode.
  * Fixed JSON parser failing to parse constants when the JSON is an inner language.
  * Fixed JSON validation failing when a string schema is missing its `args` definition.
- * Fixed crash when spotlight search ahs no results and an arrow key is pressed. 
+ * Fixed crash when spotlight search has no results and an arrow key is pressed. 
 
 
 ## 0.9.0-alpha

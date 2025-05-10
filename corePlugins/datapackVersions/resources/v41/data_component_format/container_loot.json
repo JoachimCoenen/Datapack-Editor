@@ -1,6 +1,9 @@
 {
   "$schema": "dpe/json/schema/library",
-  "$libraries": { "nbt-types": "../utils/nbt-types.json" },
+  "$libraries": {
+    "nbt-types": "../utils/nbt-types.json",
+    "utils": "../utils/utils-library.json"
+  },
   "$body": { "$defRef": "container_loot" },
   "$templates": {},
   "$definitions": {

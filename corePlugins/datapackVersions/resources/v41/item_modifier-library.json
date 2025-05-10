@@ -234,7 +234,7 @@
                     "description": "Included only if <code>type</code> is set to <code>storage</code>. A [[resource location]] specifying the storage ID to copy NBT from. ",
                     "decidingProp": "type",
                     "values": {
-                      "storage": { "$ref": "utils:resource_location", "schema": "command_storage"  } ?? maybe command_storage?
+                      "storage": { "$ref": "utils:resource_location", "schema": "command_storage"  }
                     },
                     "optionalPrefixes": [ "minecraft:" ],
                     "optional": true
@@ -592,10 +592,7 @@
               "properties": {
                 "pattern": {
                   "description": "The [[Banner/Patterns|pattern]] type. For example, <code>square_bottom_left</code>.",
-                  "value": {
-                    "$type": "string",
-                    "type": "minecraft:banner_pattern"
-                  },
+                  "value": { "$ref": "utils:resource_location", "schema": "banner_pattern" },
                   "optional": true
                 },
                 "color": {

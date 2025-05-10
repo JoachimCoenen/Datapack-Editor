@@ -22,10 +22,7 @@
             "value": {
               "$type": "union",
               "options": [
-                {
-                  "$ref": "utils:resource_location",
-                  "schema": "banner_pattern"
-                },
+                { "$ref": "utils:resource_location", "schema": "banner_pattern" },
                 { "$defRef": "banner_pattern:banner_pattern" }
               ]
             }
