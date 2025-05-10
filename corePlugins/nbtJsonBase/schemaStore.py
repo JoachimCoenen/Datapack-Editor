@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from base.model.utils import WrappedError
-from cat.utils.logging_ import logWarning, logInfo
+from cat.utils.logging_ import logWarning, logInfo, logError, LoggingFunction
 from base.model.pathUtils import FilePathStr
 from corePlugins.nbtJsonBase.core import StructureDataSchema
 from corePlugins.nbtJsonBase.schemaBuilder import SchemaBuilderOrchestrator
@@ -12,6 +12,7 @@ from corePlugins.nbtJsonBase.schemaBuilder import SchemaBuilderOrchestrator
 class _SchemaLibPath:  # todo find better name for class _SchemaLibPath
 	path: str
 	includedDefinitions: tuple[str, ...] = ()
+	"""if empty, all definitions are included."""
 
 
 @dataclass(frozen=True)
@@ -31,13 +32,11 @@ class StructureSchemaLoader:
 		self.logAndClearErrors()
 		return schema
 
-	# def registerSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> dict[str, JsonSchema]:
-	def loadSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = None) -> dict[str, StructureDataSchema]:
+	def loadSchemaLibrary(self, name: str, path: str, includedDefinitions: tuple[str, ...] = ()) -> dict[str, StructureDataSchema]:
 		"""
-
 		:param name:
 		:param path:
-		:param includedDefinitions: if set to None, all definitions are included.
+		:param includedDefinitions: if empty, all definitions are included.
 		:return:
 		"""
 		lib_path = _SchemaLibPath(path, includedDefinitions)
@@ -65,7 +64,7 @@ class StructureSchemaLoader:
 		return schemas
 
 	def reloadAllSchemas(self) -> dict[str, StructureDataSchema]:
-		logInfo(f"reloadAllSchemas():")
+		logInfo("reloadAllSchemas():")
 		self.orchestrator.clear()
 		schemas = {}
 
@@ -74,27 +73,35 @@ class StructureSchemaLoader:
 			if schema is not None:
 				schemas[name] = schema
 
-		for name, path in self._registeredLibraries.items():
-			schemas |= self._load_library(name, path)
+		for name, libPath in self._registeredLibraries.items():
+			schemas |= self._load_library(name, libPath)
 
 		self.logAndClearErrors()
-		logInfo(f"reloadAllSchemas finished:")
+		logInfo("reloadAllSchemas finished:")
 		return schemas
 
-	def logErrors(self):
+	def logErrors(self) -> None:
 		for path, errors in self.orchestrator.errors.items():
 			if errors:
-				logWarning(path)
+				maxErrorStyle = max(errors, key=lambda r: {'info': 10, 'warning': 20, 'error': 30}.get(r.style, 40)).style
+				logFunc = self._getLogFuncForErrorStyle(maxErrorStyle)
+				logFunc(path)
 				for error in errors:
+					logFunc = self._getLogFuncForErrorStyle(error.style)
 					if isinstance(error, WrappedError):
-						logWarning(error.wrappedEx, indentLvl=1)
+						logFunc(error.wrappedEx, indentLvl=1)
 					else:
-						logWarning(str(error), indentLvl=1)
+						logFunc(str(error), indentLvl=1)
 
-	def clearErrors(self):
+	@staticmethod
+	def _getLogFuncForErrorStyle(maxErrorStyle: str) -> LoggingFunction:
+		logFunc = {'info': logInfo, 'warning': logWarning, 'error': logError}.get(maxErrorStyle, logError)
+		return logFunc
+
+	def clearErrors(self) -> None:
 		self.orchestrator.errors.clear()
 
-	def logAndClearErrors(self):
+	def logAndClearErrors(self) -> None:
 		self.logErrors()
 		self.clearErrors()
 

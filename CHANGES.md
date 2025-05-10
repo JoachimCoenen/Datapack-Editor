@@ -12,6 +12,7 @@
  * Improved visibility of indicators (search result, matched brace, etc.) in dark mode.
  * Improved availability of code suggestions in certain situations.
  * Improved accuracy of code suggestions in predicate arguments.
+ * Errors, warnings, and infos logged while loading JSON & SNBT schemas are now logged using their respective log level.
 
 ### Fixes
  * Fixed drifting of encoded index when parsing nested JSON with a nesting depth > 2.
