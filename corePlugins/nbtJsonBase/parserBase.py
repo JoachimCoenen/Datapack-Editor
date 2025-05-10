@@ -124,6 +124,7 @@ class StructureNodeParserBase(ParserBase[StructureNode, StructureDataSchema]):
 				span = self._last.span if self._last is not None else NULL_SPAN
 				self.errorMsg(UNEXPECTED_EOF_MSG, span=span)
 				self._eofAlreadyLogged = True
+				self._next()  # makes sure that even SNBTTokenizer.lastCursor points to the very end of the string
 			return True
 		return False
 
