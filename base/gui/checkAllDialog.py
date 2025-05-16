@@ -167,9 +167,9 @@ class CheckAllDialog(OnProjectFilesDialogBase):
 					label=label,
 					isOpen=None,
 					sizePolicy=self._spoilerSizePolicy,
-					onDoubleClicked=lambda _, f=file: getSession().tryOpenOrSelectDocument(f),
+					onDoubleClicked=lambda *args, f=file: getSession().tryOpenOrSelectDocument(f),
 					contextMenuPolicy=Qt.CustomContextMenu,
-					onCustomContextMenuRequested=lambda pos, f=file: onContextMenu(f),
+					onCustomContextMenuRequested=lambda *args, f=file: onContextMenu(f),
 				)
 
 				with gui.indentation():

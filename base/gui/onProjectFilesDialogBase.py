@@ -14,7 +14,7 @@ from cat.GUI.framelessWindow.catFramelessWindowMixin import CatFramelessWindowMi
 from cat.GUI.utilities import connectOnlyOnce
 from cat.utils import BusyIndicator
 from cat.utils.profiling import TimedMethod
-from cat.utils.utils import runLaterSafe
+from cat.utils.utils import runLaterSafe, CrashReportWrapped
 from gui.datapackEditorGUI import DatapackEditorGUI
 
 
@@ -94,7 +94,7 @@ class OnProjectFilesDialogBase(CatFramelessWindowMixin, QDialog):
 	def OnGUI(self, gui: DatapackEditorGUI):
 		self.optionsGUI(gui)
 		resultsSummaryGUI = gui.subGUI(type(gui), self.resultsSummaryGUI, suppressRedrawLogging=False, seamless=True)
-		connectOnlyOnce(self, self.progressSignal, lambda i: resultsSummaryGUI.redrawGUI(), 'resultsGUI')
+		connectOnlyOnce(self, self.progressSignal, gui.getOnInputModified(resultsSummaryGUI.host), 'resultsGUI')
 		resultsSummaryGUI.redrawGUI()
 		self.resultsGUI(gui)
 
@@ -142,6 +142,7 @@ class OnProjectFilesDialogBase(CatFramelessWindowMixin, QDialog):
 	def resultSummaryUpdateMaxTimeDeltaSeconds(self) -> float:
 		return 0.5
 
+	@CrashReportWrapped
 	@BusyIndicator
 	@TimedMethod()
 	def _run(self) -> None:

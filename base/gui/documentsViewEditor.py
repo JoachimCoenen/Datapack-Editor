@@ -5,6 +5,7 @@ from PyQt5.QtCore import Qt
 from cat.GUI.pythonGUI import EditorBase, TabOptions
 from cat.GUI.components.catWidgetMixins import CatFramedWidgetMixin
 from cat.GUI.enums import TabPosition, SizePolicy
+from cat.utils.utils import CrashReportWrapped
 from gui.icons import icons
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries
 from base.gui.documentEditors import getDocumentEditor
@@ -79,12 +80,14 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 		if gui.toolButton(icon=icons.bars):  # , overlap=adjustOverlap(overlap, (1 if view.documents else 0, None, None, None if view.documents else 0)), roundedCorners=CORNERS.NONE):
 			self._showViewsContextMenu()
 
+	@CrashReportWrapped
 	def _tabCloseRequested(self, index: int) -> None:
 		view = self.model()
 		if index in range(len(view.documents)):
 			doc = view.documents[index]
 			getSession().documents.safelyCloseDocument(doc)
 
+	@CrashReportWrapped
 	def _tabMoved(self, from_: int, to: int) -> None:
 		view = self.model()
 		print(f"tab {from_} moved to {to}.")
@@ -94,6 +97,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 			doc = view.documents[from_]
 			view.moveDocument(doc, to)
 
+	@CrashReportWrapped
 	def _showFileContextMenu(self, index: int) -> None:
 		view = self.model()
 		gui = self._gui
@@ -138,7 +142,7 @@ class DocumentsViewEditor(EditorBase[View], CatFramedWidgetMixin):
 						docEditor = gui.editor(
 							documentEditorCls,
 							document,
-							onChildFocusReceived=lambda: view.makeCurrent(causedByUIFocusChange=True),
+							onChildFocusReceived=view.makeCurrent,
 							seamless=True
 						)
 						if document.filePathForDisplay == selectedDocumentId:

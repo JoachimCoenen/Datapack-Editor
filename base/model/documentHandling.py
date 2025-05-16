@@ -16,6 +16,7 @@ from cat.utils.signals import CatSignal
 from base.model.utils import Span
 from base.model.pathUtils import FilePath, toDisplayPath
 from base.model.documents import Document, loadDocument
+from cat.utils.utils import CrashReportWrapped
 
 
 @dataclass(repr=False, slots=True)
@@ -212,7 +213,8 @@ class View(ViewBase):
 			self.onSelectedDocumentChanged.emit()
 
 	# view related:
-	def makeCurrent(self, causedByUIFocusChange: bool) -> None:
+	@CrashReportWrapped
+	def makeCurrent(self, causedByUIFocusChange: bool = True) -> None:
 		self._ensureManagerIsSet()
 		self.manager.selectView(self, causedByUIFocusChange=causedByUIFocusChange)
 

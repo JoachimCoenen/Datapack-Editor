@@ -251,7 +251,7 @@ class FileSearchPopup(PythonGUIDialog):
 			overlap=overlap,
 			roundedCorners=roundedCorners,
 			default=isSelected,
-			onCustomContextMenuRequested=lambda pos: onContextMenu(fe),
+			onCustomContextMenuRequested=lambda *args: onContextMenu(fe),
 			vSizePolicy=SizePolicy.Fixed.value
 		):
 			with gui.hLayout():

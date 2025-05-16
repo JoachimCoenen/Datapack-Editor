@@ -31,6 +31,7 @@ from cat.GUI.pythonGUI import MenuItemData
 from cat.Serializable.serializableDataclasses import SerializableDataclass
 from cat.Serializable.utils import PropertyDecorator, get_args
 from cat.utils import findall, FILE_BROWSER_DISPLAY_NAME, showInFileSystem, CachedProperty
+from cat.utils.utils import CrashReportWrapped
 from gui.icons import icons
 
 inputBoxStyle = Style({'CatPanel': Style({'background': '#FFF2CC'})})
@@ -153,7 +154,8 @@ class DatapackEditorGUI(AutoGUI):
 			selectionModel: Optional[QItemSelectionModel] = None
 
 		def guiFunc(gui: DatapackEditorGUI, context: Context):
-			def onKeyPressed(widget, event: QKeyEvent):
+			@CrashReportWrapped
+			def onKeyPressed(slf, widget, event: QKeyEvent):
 				key = event.key()
 				if key == Qt.Key_Down:
 					context.index += 1
@@ -256,7 +258,8 @@ class DatapackEditorGUI(AutoGUI):
 		return newValue.selectedValue if isOk else value
 
 	def filterTextField(self, value: Optional[str], allChoices: Iterable[str], showPlaceholderText: bool = True, **kwargs) -> str:
-		def onKeyPressed(widget: CatTextField, event: QKeyEvent):
+		@CrashReportWrapped
+		def onKeyPressed(slf, widget: CatTextField, event: QKeyEvent):
 			if event.key() == Qt.Key_Tab:
 				widget.setText(autocompleteFromList(widget.text(), allChoices))
 				return True
@@ -308,7 +311,8 @@ class DatapackEditorGUI(AutoGUI):
 	) -> SearchableListContext[_TR]:
 		# TODO: find more descriptive name for advancedFilterTextField2(...)
 
-		def onKeyPressed(widget, event: QKeyEvent):
+		@CrashReportWrapped
+		def onKeyPressed(slf, widget, event: QKeyEvent):
 			key = event.key()
 			if key in {Qt.Key_Down, Qt.Key_Up, Qt.Key_Left, Qt.Key_Right, Qt.Key_Return}:
 				if context.treeView is not None:

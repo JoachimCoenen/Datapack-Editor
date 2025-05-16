@@ -20,6 +20,7 @@ from cat.utils.profiling import logError
 from base.model.documents import TextDocument, Document, ParsedDocument, convertIndentToUseTabsSettingsOfDocument
 from base.model.parsing.schemaStore import GLOBAL_SCHEMA_STORE
 from base.model.utils import LanguageId
+from cat.utils.utils import CrashReportWrapped
 from gui.datapackEditorGUI import DatapackEditorGUI, ContextMenuEntries, drawCodeField
 from base.model.applicationSettings import applicationSettings
 
@@ -57,9 +58,7 @@ class DocumentEditorBase(CatChildrenFocusableMixin, EditorBase[TDoc], Generic[TD
 				gui.button('retry')  # pressing causes a gui update & redraw
 
 			# footer:
-			space = int(3 * gui.scale) + 1
 			mg = gui.smallPanelMargin
-			#with gui.hLayout(contentsMargins=(mg, 0, mg, space)):
 			with gui.hPanel(
 				windowPanel=True,
 				contentsMargins=(mg, mg, mg, mg),
@@ -74,24 +73,25 @@ class DocumentEditorBase(CatChildrenFocusableMixin, EditorBase[TDoc], Generic[TD
 	def documentFooterGUI(self, gui: DatapackEditorGUI) -> None:
 		document = self.model()
 
-		def fileContextMenu(pos):
-			with gui.popupMenu(True) as menu:
-				menu.addItems(ContextMenuEntries.pathItems(document.filePath))
-
 		if document.isUntitled:
-			gui.label('🖉', onCustomContextMenuRequested=fileContextMenu)
+			gui.label('🖉', onCustomContextMenuRequested=self.fileContextMenu)
 
 		gui.elidedLabel(
 			document.filePathForDisplay,
 			elideMode=Qt.ElideMiddle,
 			sizePolicy=(SizePolicy.Maximum.value, SizePolicy.Fixed.value),
 			contextMenuPolicy=Qt.CustomContextMenu,
-			onCustomContextMenuRequested=fileContextMenu
+			onCustomContextMenuRequested=self.fileContextMenu
 		)
 		if document.documentChanged:
-			gui.label('*', style=getStyles().bold, onCustomContextMenuRequested=fileContextMenu)
+			gui.label('*', style=getStyles().bold, onCustomContextMenuRequested=self.fileContextMenu)
 
 		self.checkForFileSystemChanges(gui)
+
+	@CrashReportWrapped
+	def fileContextMenu(self, pos) -> None:
+		with self._gui.popupMenu(True) as menu:
+			menu.addItems(ContextMenuEntries.pathItems(self.model().filePath))
 
 	def checkForFileSystemChanges(self, gui: DatapackEditorGUI) -> None:
 		document = self.model()
@@ -193,8 +193,8 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			currentCursorPos=document.cursorPosition,
 			selectionTo=document.selection[2:] if document.selection[0] != -1 else None,
 			highlightErrors=document.highlightErrors,
-			onCursorPositionChanged=lambda a, b, d=document: _setCursorPos(a, b, d),
-			onSelectionChanged2=lambda a1, b1, a2, b2, d=document: _setSelection(a1, b1, a2, b2, d),
+			onCursorPositionChanged=self._setCursorPos,
+			onSelectionChanged2=self._setSelection,
 			focusPolicy=Qt.StrongFocus,
 			autoIndent=autoIndent,
 			caretLineVisible=False,
@@ -204,12 +204,22 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			**kwargs
 		)
 
+	@CrashReportWrapped
+	def _setCursorPos(self, a, b) -> None:
+		self.model().cursorPosition = (a, b)
+
+	@CrashReportWrapped
+	def _setSelection(self, a1, b1, a2, b2) -> None:
+		self.model().selection = (a1, b1, a2, b2)
+
+	@CrashReportWrapped
 	def languageContextMenu(self, pos):
 		document = self.model()
 		with self._gui.popupMenu(True) as menu:
 			for language in codeEditor.getAllLanguages():
 				menu.addItem(language, lambda l=language: setattr(document, 'language', l) or document.asyncParseNValidate())
 
+	@CrashReportWrapped
 	def schemaContextMenu(self, pos):
 		document = self.model()
 		if isinstance(document, ParsedDocument):
@@ -229,6 +239,7 @@ class TextDocumentEditor(DocumentEditorBase[TextDocument]):
 			iSchemas.schemas[name] = lambda l=schemaId: setattr(document, 'schemaId', l) or document.asyncParseNValidate()
 		return schemas.toMenu()
 
+	@CrashReportWrapped
 	def tabSettingsContextMenu(self, pos):
 		document = self.model()
 		indentation = document.indentationSettings
@@ -255,14 +266,6 @@ class SchemasMenu:
 			(name, contents.toMenu() if isinstance(contents, SchemasMenu) else contents)
 			for name, contents in sorted(self.schemas.items(), key=itemgetter(0))
 		]
-
-
-def _setCursorPos(a, b, d: Document):
-	d.cursorPosition = (a, b)
-
-
-def _setSelection(a1, b1, a2, b2, d: Document):
-	d.selection = (a1, b1, a2, b2)
 
 
 __all__ = [
