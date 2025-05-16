@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields
-from typing import Optional, Sequence, cast
+from typing import Optional, Sequence, cast, NewType
 
 from PyQt5.Qsci import QsciLexer, QsciLexerCustom, QsciScintilla
 from PyQt5.QtCore import Qt
@@ -11,36 +11,41 @@ from base.model.documents import TextDocument
 from base.model.parsing.contextProvider import ContextProvider, getContextProvider
 from base.model.parsing.tree import Node
 from base.model.searchUtils import performFuzzyStrSearch
-from base.model.theme import GlobalStyles, Style, StyleFont, SyntaxHighlightingStyles
+from base.model.theme import Style, StyleFont
 from base.model.utils import GeneralError, LanguageId, MDStr, NULL_POSITION, Position, addStyle, formatMarkdown
 from cat.GUI.components.codeEditor import AutoCompletionTree, CEPosition, CallTipInfo, CodeEditor, MyQsciAPIs, \
 	IndexSpan, IndicatorStyle
 from cat.utils import HTMLStr, override
-from cat.utils.logging_ import logWarning, logError
+from cat.utils.logging_ import logError
 from cat.utils.utils import CrashReportWrapped, runLaterSafe
 
-_SCI_STYLE_DEFAULT = StyleId(32)  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
-_SCI_STYLE_LINENUMBER = StyleId(33)  # This style sets the attributes of the text used to display line numbers in a line number margin. The background colour set for this style also sets the background colour for all margins that do not have any folding mask bits set. That is, any margin for which mask & SC_MASK_FOLDERS is 0. See SCI_SETMARGINMASKN for more about masks.
-_SCI_STYLE_BRACELIGHT = StyleId(34)  # This style sets the attributes used when highlighting braces with the SCI_BRACEHIGHLIGHT message and when highlighting the corresponding indentation with SCI_SETHIGHLIGHTGUIDE.
-_SCI_STYLE_BRACEBAD = StyleId(35)  # This style sets the display attributes used when marking an unmatched brace with the SCI_BRACEBADLIGHT message.
-_SCI_STYLE_CONTROLCHAR = StyleId(36)  # This style sets the font used when drawing control characters. Only the font, size, bold, italics, and character set attributes are used and not the colour attributes. See also: SCI_SETCONTROLCHARSYMBOL.
-_SCI_STYLE_INDENTGUIDE = StyleId(37)  # This style sets the foreground and background colours used when drawing the indentation guides.
-_SCI_STYLE_CALLTIP = StyleId(38)  # Call tips normally use the font attributes defined by STYLE_DEFAULT. Use of SCI_CALLTIPUSESTYLE causes call tips to use this style instead. Only the font face name, font size, foreground and background colours and character set attributes are used.
-_SCI_STYLE_FOLDDISPLAYTEXT = StyleId(39)  # This is the style used for drawing text tags attached to folded text.
-_SCI_STYLE_LASTPREDEFINED = StyleId(39)
-_SCI_STYLE_FIRST_USER_STYLE = _SCI_STYLE_LASTPREDEFINED + 1
-_CAT_STYLE_CARETLINE = StyleId(-257)
-_CAT_STYLE_CARET = StyleId(-258)
-_CAT_STYLE_WHITE_SPACE = StyleId(-300)
-_CAT_STYLE_FOLD_MARGIN = StyleId(-301)
+SciStyleId = NewType('SciStyleId', int)
 
-_SC_ELEMENT_WHITE_SPACE = 60
-_SC_ELEMENT_WHITE_SPACE_BACK = 61
+_SCI_STYLE_DEFAULT: SciStyleId = SciStyleId(32)  # This style defines the attributes that all styles receive when the SCI_STYLECLEARALL message is used.
+_SCI_STYLE_LINENUMBER: SciStyleId = SciStyleId(33)  # This style sets the attributes of the text used to display line numbers in a line number margin. The background colour set for this style also sets the background colour for all margins that do not have any folding mask bits set. That is, any margin for which mask & SC_MASK_FOLDERS is 0. See SCI_SETMARGINMASKN for more about masks.
+_SCI_STYLE_BRACELIGHT: SciStyleId = SciStyleId(34)  # This style sets the attributes used when highlighting braces with the SCI_BRACEHIGHLIGHT message and when highlighting the corresponding indentation with SCI_SETHIGHLIGHTGUIDE.
+_SCI_STYLE_BRACEBAD: SciStyleId = SciStyleId(35)  # This style sets the display attributes used when marking an unmatched brace with the SCI_BRACEBADLIGHT message.
+_SCI_STYLE_CONTROLCHAR: SciStyleId = SciStyleId(36)  # This style sets the font used when drawing control characters. Only the font, size, bold, italics, and character set attributes are used and not the colour attributes. See also: SCI_SETCONTROLCHARSYMBOL.
+_SCI_STYLE_INDENTGUIDE: SciStyleId = SciStyleId(37)  # This style sets the foreground and background colours used when drawing the indentation guides.
+_SCI_STYLE_CALLTIP: SciStyleId = SciStyleId(38)  # Call tips normally use the font attributes defined by STYLE_DEFAULT. Use of SCI_CALLTIPUSESTYLE causes call tips to use this style instead. Only the font face name, font size, foreground and background colours and character set attributes are used.
+_SCI_STYLE_FOLDDISPLAYTEXT: SciStyleId = SciStyleId(39)  # This is the style used for drawing text tags attached to folded text.
+_SCI_STYLE_LASTPREDEFINED: SciStyleId = SciStyleId(39)
+_SCI_STYLE_FIRST_USER_STYLE: SciStyleId = SciStyleId(_SCI_STYLE_LASTPREDEFINED + 1)
 
-_CAT_SCI_ELEMENT_COLOR_IDS = {
-	_CAT_STYLE_WHITE_SPACE: (_SC_ELEMENT_WHITE_SPACE, _SC_ELEMENT_WHITE_SPACE_BACK),
-	_CAT_STYLE_FOLD_MARGIN: (None, None)
-}
+
+def toSciStyleId(styleId: StyleId) -> SciStyleId:
+	return SciStyleId(styleId + _SCI_STYLE_FIRST_USER_STYLE)
+
+
+@dataclass
+class ResolvedStyle:
+	foreground: QColor
+	background: QColor
+	font: StyleFont
+
+
+def resolveStyle(style: Style, default: ResolvedStyle) -> ResolvedStyle:
+	return theme._mergeDataclass(default, style)  # type: ignore
 
 
 def QFontFromStyleFont(styleFont: StyleFont) -> QFont:
@@ -79,7 +84,7 @@ def _qColorToSciRGBA(c: QColor) -> int:
 
 class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a metaclass conflict.
 
-	def __init__(self, parent=None):
+	def __init__(self, parent=None) -> None:
 		# Initialize superclass
 		super().__init__(parent)
 		# Initialize all style colors
@@ -90,8 +95,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		self._api.prepare()
 		self.setAPIs(self._api)
 
-		self.initStyles(self.getStyles(), overwriteDefaultStyle=True)
-		self.initLanguageIndicators(self.getLanguageIndicators())
+		self.initStyles()
 
 	def autoCompletionTree(self) -> AutoCompletionTree:
 		return self._api.autoCompletionTree
@@ -107,118 +111,83 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 		# 	# TODO: remove properly: return tree.language
 		return None
 
-	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
-	def getStyles(self) -> dict[StyleId, Style]:
-		scheme = theme.currentColorScheme()
+	def editor(self) -> CodeEditor | None:  # type: ignore
+		return super().editor()  # type: ignore
 
-		styleMap: dict[StyleId, Style] = {}  # {DEFAULT_STYLE_ID: scheme.defaultStyle}
-		self.addGlobalStyles(scheme.globalStyles, styleMap)
-		self.addCommonStyles(scheme.syntaxHighlightingCommonStyles, styleMap)
+	def setFoldMarginStyle(self, style: ResolvedStyle):
+		if (editor := self.editor()) is not None:
+			editor.setFoldMarginColors(style.background, style.background)
 
-		return styleMap
-
-	def getLanguageIndicators(self) -> dict[LanguageId, IndicatorStyle]:
-		return theme.currentColorScheme().languageIndicators
-
-	def addGlobalStyles(self, globalStyles: GlobalStyles, styleMap: dict[StyleId, Style]):
-		revOffset = -_SCI_STYLE_FIRST_USER_STYLE
-		styleMap[DEFAULT_STYLE_ID] = globalStyles.defaultStyle
-		styleMap[StyleId(_SCI_STYLE_DEFAULT + revOffset)] = globalStyles.defaultStyle
-
-		styleMap[StyleId(_SCI_STYLE_LINENUMBER + revOffset)] = globalStyles.lineNumberStyle
-		styleMap[StyleId(_SCI_STYLE_BRACELIGHT + revOffset)] = globalStyles.braceLightStyle
-		styleMap[StyleId(_SCI_STYLE_BRACEBAD + revOffset)] = globalStyles.braceBadStyle
-		styleMap[StyleId(_SCI_STYLE_CONTROLCHAR + revOffset)] = globalStyles.controlCharStyle
-		styleMap[StyleId(_SCI_STYLE_INDENTGUIDE + revOffset)] = globalStyles.indentGuideStyle
-		styleMap[StyleId(_SCI_STYLE_CALLTIP + revOffset)] = globalStyles.calltipStyle
-		styleMap[StyleId(_SCI_STYLE_FOLDDISPLAYTEXT + revOffset)] = globalStyles.foldDisplayTextStyle
-		styleMap[_CAT_STYLE_CARETLINE] = globalStyles.caretLineStyle
-		styleMap[_CAT_STYLE_CARET] = globalStyles.caretStyle
-		styleMap[_CAT_STYLE_WHITE_SPACE] = globalStyles.whiteSpaceStyle
-		styleMap[_CAT_STYLE_FOLD_MARGIN] = globalStyles.lineNumberStyle
-
-	def addCommonStyles(self, commonStyles: SyntaxHighlightingStyles, styleMap: dict[StyleId, Style]):
-		for styleId in CommonStyleIds:
-			if styleId.name != 'default':
-				style = getattr(commonStyles, styleId.name)
-				styleMap[styleId.value] = style
-
-	def setCaretLineStyle(self, style: Style):
-		editor: CodeEditor = self.editor()
-		if editor is not None:
+	def setCaretLineStyle(self, style: ResolvedStyle):
+		if (editor := self.editor()) is not None:
 			editor.setCaretLineBackgroundColor(style.background)
 
-	def setCaretStyle(self, style: Style):
-		editor: CodeEditor = self.editor()
-		if editor is not None:
+	def setCaretStyle(self, style: ResolvedStyle):
+		if (editor := self.editor()) is not None:
 			editor.setCaretForegroundColor(style.foreground)
 
-	def setElementStyle(self, styleId: StyleId, style: Style):
-		editor: CodeEditor = self.editor()
-		if editor is not None:
-			if styleId == _CAT_STYLE_WHITE_SPACE:
-				editor.SendScintilla(CodeEditor.SCI_SETWHITESPACEFORE, True, _qColorToSciRGB(style.foreground))
-				editor.SendScintilla(CodeEditor.SCI_SETWHITESPACEBACK, False, _qColorToSciRGB(style.background))
-			elif styleId == _CAT_STYLE_FOLD_MARGIN:
-				editor.setFoldMarginColors(style.background, style.background)
-			else:
-				elementIds = _CAT_SCI_ELEMENT_COLOR_IDS[styleId]
-				if elementIds[0] is not None:
-					editor.SendScintilla(CodeEditor.SCI_SETELEMENTCOLOUR, elementIds[0], _qColorToSciRGBA(style.foreground))
-				if elementIds[1] is not None:
-					editor.SendScintilla(CodeEditor.SCI_SETELEMENTCOLOUR, elementIds[1], _qColorToSciRGBA(style.background))
+	def setWhitespaceStyle(self, style: ResolvedStyle):
+		if (editor := self.editor()) is not None:
+			editor.SendScintilla(CodeEditor.SCI_SETWHITESPACEFORE, True, _qColorToSciRGB(style.foreground))
+			editor.SendScintilla(CodeEditor.SCI_SETWHITESPACEBACK, False, _qColorToSciRGB(style.background))
 
-	def initStyle(self, style: Style, styleId: int) -> None:
-		actualId = styleId + _SCI_STYLE_FIRST_USER_STYLE
-		self.setColor(style.foreground, actualId)
-		self.setPaper(style.background, actualId)
-		self.setFont(QFontFromStyleFont(style.font), actualId)
+	def initStyle(self, style: ResolvedStyle, styleId: SciStyleId) -> None:
+		self.setColor(style.foreground, styleId)
+		self.setPaper(style.background, styleId)
+		self.setFont(QFontFromStyleFont(style.font), styleId)
 
-	def initStyles(self, styles: dict[StyleId, Style], overwriteDefaultStyle: bool = False):
-		defaultStyle = Style(
+	# @TimedMethod(objectName=lambda self: self.document().fileName if self.document() is not None else 'None')
+	def initStyles(self) -> None:
+		fallbackStyle = ResolvedStyle(
 			foreground=self.defaultColor(),
 			background=self.defaultPaper(),
 			font=StyleFontFromQFont(self.defaultFont()),
 		)
+		scheme = theme.currentColorScheme()
+		globalStyles = scheme.globalStyles
+
 		# handle default first:
-		if overwriteDefaultStyle:
-			defStyle = styles[cast(StyleId, _SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE)]
-			defaultStyle = defaultStyle | defStyle
-			defaultQFont = QFontFromStyleFont(defaultStyle.font)
-			# defaultQFont.setPointSize(self.defaultFont().pointSize())
+		default = resolveStyle(globalStyles.defaultStyle, fallbackStyle)
+		self.setDefaultColor(default.foreground)
+		self.setDefaultPaper(default.background)
+		super().setDefaultFont(QFontFromStyleFont(default.font))
+		self.setColor(default.foreground, 0)
+		self.setPaper(default.background, 0)
 
-			self.setDefaultColor(defaultStyle.foreground)
-			self.setColor(defaultStyle.foreground, 0)
-			self.setDefaultPaper(defaultStyle.background)
-			self.setPaper(defaultStyle.background, 0)
-			super().setDefaultFont(defaultQFont)
+		self.setCaretLineStyle(resolveStyle(globalStyles.caretLineStyle, default))
+		self.setCaretStyle(resolveStyle(globalStyles.caretStyle, default))
+		self.setWhitespaceStyle(resolveStyle(globalStyles.whiteSpaceStyle, default))
+		self.setFoldMarginStyle(resolveStyle(globalStyles.lineNumberStyle, default))
 
-		for tokenType, style in styles.items():
-			actualStyle = defaultStyle
-			if tokenType != DEFAULT_STYLE_ID:
-				actualStyle |= style
+		self.initStyle(default, toSciStyleId(DEFAULT_STYLE_ID))
+		self.initStyle(default, _SCI_STYLE_DEFAULT)
+		self.initStyle(resolveStyle(globalStyles.lineNumberStyle, default), _SCI_STYLE_LINENUMBER)
+		self.initStyle(resolveStyle(globalStyles.braceLightStyle, default), _SCI_STYLE_BRACELIGHT)
+		self.initStyle(resolveStyle(globalStyles.braceBadStyle, default), _SCI_STYLE_BRACEBAD)
+		self.initStyle(resolveStyle(globalStyles.controlCharStyle, default), _SCI_STYLE_CONTROLCHAR)
+		self.initStyle(resolveStyle(globalStyles.indentGuideStyle, default), _SCI_STYLE_INDENTGUIDE)
+		self.initStyle(resolveStyle(globalStyles.calltipStyle, default), _SCI_STYLE_CALLTIP)
+		self.initStyle(resolveStyle(globalStyles.foldDisplayTextStyle, default), _SCI_STYLE_FOLDDISPLAYTEXT)
 
-			if tokenType == _CAT_STYLE_CARETLINE:
-				self.setCaretLineStyle(actualStyle)
-			elif tokenType == _CAT_STYLE_CARET:
-				self.setCaretStyle(actualStyle)
-			elif tokenType in _CAT_SCI_ELEMENT_COLOR_IDS:
-				self.setElementStyle(tokenType, actualStyle)
-			else:
-				self.initStyle(actualStyle, tokenType)
+		syntaxHighlightingStyles = scheme.syntaxHighlightingCommonStyles
+		for styleId in CommonStyleIds:
+			if styleId.name != 'default':
+				style = getattr(syntaxHighlightingStyles, styleId.name)
+				sciStyleId = toSciStyleId(styleId.value)
+				self.initStyle(resolveStyle(style, default), sciStyleId)
+
+		self.initLanguageIndicators(scheme.languageIndicators)
 
 	def initLanguageIndicators(self, indicators: dict[LanguageId, IndicatorStyle]) -> None:
 		self._languageIndicators = {languageId: i for i, languageId in enumerate(indicators.keys())}
-		editor: CodeEditor = self.editor()
-		if editor is not None:
+		if (editor := self.editor()) is not None:
 			editor.initIndicatorStyles({
 				i: indicators[languageId] for languageId, i in self._languageIndicators.items()
 			})
 
 	def setDefaultFont(self, font: QFont):
 		super().setDefaultFont(font)
-		self.initStyles(self.getStyles(), overwriteDefaultStyle=True)
-		self.initLanguageIndicators(self.getLanguageIndicators())
+		self.initStyles()
 
 	def setFont(self, font: QFont, style=-1):
 		super().setFont(font, style)
@@ -226,7 +195,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 	def getTree(self) -> Optional[Node]:
 		doc = self.document()
 		if doc is None:
-			return
+			return None
 		tree = doc.tree
 		if isinstance(tree, Node):
 			return tree
@@ -235,7 +204,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 	def getText(self) -> Optional[bytes]:
 		doc = self.document()
 		if doc is None:
-			return
+			return None
 		return doc.content
 
 	def document(self) -> Optional[TextDocument]:
@@ -268,7 +237,8 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 	def actuallyStyleText(self, start: int, end: int):
 		documentText = self.getText()
 		lengthOfDocumentText = len(documentText) if documentText is not None else None
-		if self.editor().length() != lengthOfDocumentText:
+		editor = self.editor()
+		if editor is not None and editor.length() != lengthOfDocumentText:
 			# no need to style anything if the document text does not match the current text in the editor. This avoids unnecessary parsing.
 			# This also prevents this assertion failing when editing text at the very end of a document:
 			# Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= style.Length())] failed at ../../tmpym18yovx/QScintilla2/QScintilla_src-2.14.1/scintilla/src/CellBuffer.cpp 635
@@ -286,7 +256,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 			styler.styleNode(tree)
 
 	def clearLanguageIndicatorRanges(self, start: int, end: int) -> None:
-		editor: CodeEditor = self.editor()
+		editor = self.editor()
 		if editor is not None:
 			for indicator in self._languageIndicators.values():
 				editor.clearIndicatorRangeIndex(start, end, indicator)
@@ -309,7 +279,7 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 class StylerCtxQScintilla(StylerCtx):
 	_lastStylePos: int = field(init=False)
 	languageIndicators: dict[LanguageId, int]
-	lexer: QsciLexerCustom
+	lexer: DocumentLexer
 
 	def __post_init__(self):
 		self._lastStylePos = self.start
@@ -321,18 +291,18 @@ class StylerCtxQScintilla(StylerCtx):
 		if index > self._lastStylePos:
 			interStrLength = index - self._lastStylePos
 			assert interStrLength >= 0, interStrLength
-			self.lexer.setStyling(interStrLength, _SCI_STYLE_FIRST_USER_STYLE + self.defaultStyle)  # styler.offset)
+			self.lexer.setStyling(interStrLength, toSciStyleId(self.defaultStyle))  # styler.offset)
 			self._lastStylePos = index
 		else:
 			index = self._lastStylePos
 		if span.stop > self._lastStylePos:
 			length = span.stop - index
 			assert length >= 0, (length, style)
-			self.lexer.setStyling(length, _SCI_STYLE_FIRST_USER_STYLE + style)
+			self.lexer.setStyling(length, toSciStyleId(style))
 			self._lastStylePos = span.stop
 
 	def setForeignLanguage(self, span: slice, languageId: LanguageId) -> None:
-		editor: CodeEditor = self.lexer.editor()
+		editor = self.lexer.editor()
 		if editor is not None:
 			if (indicator := self.languageIndicators.get(languageId)) is not None:
 				editor.fillIndicatorRangeIndex(span.start, span.stop, indicator)
@@ -462,15 +432,15 @@ class DocumentQsciAPIs(MyQsciAPIs):
 		if not tips:
 			return None
 		tip = MDStr('\n\n'.join(tips))  # '\n<br/>\n'.join(tips)
-		tip = formatMarkdown(tip)
-		return tip
+		return formatMarkdown(tip)
 
 	@override
-	def getCallTips(self, cePosition: CEPosition) -> list[CallTipInfo]:
+	def getCallTips(self, cePosition: CEPosition) -> list[CallTipInfo] | None:
 		self.updateDocumentTree()
 		position = self.posFromCEPos(cePosition)
 		if (ctxProvider := self.contextProvider) is not None:
 			return [CallTipInfo(ct, HTMLStr('')) for ct in ctxProvider.getCallTips(position)]
+		return None
 
 	@CrashReportWrapped
 	def updateAutoCompletionList(self, context: list[str], aList: list[str]) -> list[str]:
@@ -516,7 +486,9 @@ class DocumentQsciAPIs(MyQsciAPIs):
 	@override
 	def wordCharacters(self) -> str:
 		if (ctxProvider := self.contextProvider) is not None:
-			return ctxProvider.getWordCharacters(self.currentCursorPos)
+			wordCharacters = ctxProvider.getWordCharacters(self.currentCursorPos)
+			if wordCharacters is not None:
+				return wordCharacters
 		return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~^@#$%&:/"
 		# return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 

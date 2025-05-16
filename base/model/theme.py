@@ -116,7 +116,7 @@ def _mergeDataclass[TT](val: TT, overridingVal: TT) -> TT:
 		value = mergeVal(getattr(val, propName), getattr(overridingVal, propName))
 		values[propName] = value
 
-	return type(overridingVal)(**values)
+	return type(val)(**values)
 
 
 def mergeStyle(style: Style, overridingStyle: Style) -> Style:
