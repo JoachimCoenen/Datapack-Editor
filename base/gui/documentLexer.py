@@ -111,74 +111,37 @@ class DocumentLexer(QsciLexerCustom):  # this is an ABC, but there would be a me
 	def getStyles(self) -> dict[StyleId, Style]:
 		scheme = theme.currentColorScheme()
 
-		styleMap = {}  # {DEFAULT_STYLE_ID: scheme.defaultStyle}
+		styleMap: dict[StyleId, Style] = {}  # {DEFAULT_STYLE_ID: scheme.defaultStyle}
 		self.addGlobalStyles(scheme.globalStyles, styleMap)
-
 		self.addCommonStyles(scheme.syntaxHighlightingCommonStyles, styleMap)
 
-		languageId = self.languageId
-		if languageId is None:
-			return styleMap
-
-		styles = scheme.getStyles2(languageId)
-		if styles is None:
-			return styleMap
-
-		styler = getStyler(languageId, StylerCtxQScintilla(DEFAULT_STYLE_ID, 0, 0, self._languageIndicators, self))
-		if styler is None:
-			return styleMap
-
-		for innerLanguage, styler in styler.innerStylers.items():
-			innerStyles = styles.getInnerLanguageStyles(innerLanguage)
-			if innerStyles is None:
-				continue
-			for name, styleId in styler.localStyles.items():
-				style = innerStyles.get(name)
-				if style is None:
-					logWarning(f"Theme '{scheme.name}' is missing style '{name}' for language '{innerLanguage}'")
-					style = styleMap[_SCI_STYLE_DEFAULT - _SCI_STYLE_FIRST_USER_STYLE]
-				# elif styleId == DEFAULT_STYLE_ID:
-				# 	style = scheme.globalStyles.defaultStyle | style
-				styleMap[styleId] = style
 		return styleMap
 
 	def getLanguageIndicators(self) -> dict[LanguageId, IndicatorStyle]:
 		return theme.currentColorScheme().languageIndicators
 
-	def addGlobalStyles(self, globalStyles: GlobalStyles, styleMap: dict[int, Style]):
+	def addGlobalStyles(self, globalStyles: GlobalStyles, styleMap: dict[StyleId, Style]):
 		revOffset = -_SCI_STYLE_FIRST_USER_STYLE
 		styleMap[DEFAULT_STYLE_ID] = globalStyles.defaultStyle
-		styleMap[_SCI_STYLE_DEFAULT + revOffset] = globalStyles.defaultStyle
+		styleMap[StyleId(_SCI_STYLE_DEFAULT + revOffset)] = globalStyles.defaultStyle
 
-		styleMap[_SCI_STYLE_LINENUMBER + revOffset] = globalStyles.lineNumberStyle
-		styleMap[_SCI_STYLE_BRACELIGHT + revOffset] = globalStyles.braceLightStyle
-		styleMap[_SCI_STYLE_BRACEBAD + revOffset] = globalStyles.braceBadStyle
-		styleMap[_SCI_STYLE_CONTROLCHAR + revOffset] = globalStyles.controlCharStyle
-		styleMap[_SCI_STYLE_INDENTGUIDE + revOffset] = globalStyles.indentGuideStyle
-		styleMap[_SCI_STYLE_CALLTIP + revOffset] = globalStyles.calltipStyle
-		styleMap[_SCI_STYLE_FOLDDISPLAYTEXT + revOffset] = globalStyles.foldDisplayTextStyle
+		styleMap[StyleId(_SCI_STYLE_LINENUMBER + revOffset)] = globalStyles.lineNumberStyle
+		styleMap[StyleId(_SCI_STYLE_BRACELIGHT + revOffset)] = globalStyles.braceLightStyle
+		styleMap[StyleId(_SCI_STYLE_BRACEBAD + revOffset)] = globalStyles.braceBadStyle
+		styleMap[StyleId(_SCI_STYLE_CONTROLCHAR + revOffset)] = globalStyles.controlCharStyle
+		styleMap[StyleId(_SCI_STYLE_INDENTGUIDE + revOffset)] = globalStyles.indentGuideStyle
+		styleMap[StyleId(_SCI_STYLE_CALLTIP + revOffset)] = globalStyles.calltipStyle
+		styleMap[StyleId(_SCI_STYLE_FOLDDISPLAYTEXT + revOffset)] = globalStyles.foldDisplayTextStyle
 		styleMap[_CAT_STYLE_CARETLINE] = globalStyles.caretLineStyle
 		styleMap[_CAT_STYLE_CARET] = globalStyles.caretStyle
 		styleMap[_CAT_STYLE_WHITE_SPACE] = globalStyles.whiteSpaceStyle
 		styleMap[_CAT_STYLE_FOLD_MARGIN] = globalStyles.lineNumberStyle
 
-	def addCommonStyles(self, commonStyles: SyntaxHighlightingStyles, styleMap: dict[int, Style]):
-		styleMap[CommonStyleIds.comment.value] = commonStyles.comment
-		styleMap[CommonStyleIds.keyword.value] = commonStyles.keyword
-		styleMap[CommonStyleIds.string.value] = commonStyles.string
-		styleMap[CommonStyleIds.number.value] = commonStyles.number
-		styleMap[CommonStyleIds.special_constant.value] = commonStyles.specialConstant
-		styleMap[CommonStyleIds.key1.value] = commonStyles.key1
-		styleMap[CommonStyleIds.key2.value] = commonStyles.key2
-		styleMap[CommonStyleIds.content_locator.value] = commonStyles.contentLocator
-		styleMap[CommonStyleIds.type.value] = commonStyles.type
-		styleMap[CommonStyleIds.operator.value] = commonStyles.operator
-		styleMap[CommonStyleIds.special1.value] = commonStyles.special1
-		styleMap[CommonStyleIds.special2.value] = commonStyles.special2
-		styleMap[CommonStyleIds.error.value] = commonStyles.error
-		styleMap[CommonStyleIds.invalid.value] = commonStyles.invalid
-		styleMap[CommonStyleIds.xml_tag.value] = commonStyles.xmlTag
-		styleMap[CommonStyleIds.xml_attribute.value] = commonStyles.xmlAttribute
+	def addCommonStyles(self, commonStyles: SyntaxHighlightingStyles, styleMap: dict[StyleId, Style]):
+		for styleId in CommonStyleIds:
+			if styleId.name != 'default':
+				style = getattr(commonStyles, styleId.name)
+				styleMap[styleId.value] = style
 
 	def setCaretLineStyle(self, style: Style):
 		editor: CodeEditor = self.editor()

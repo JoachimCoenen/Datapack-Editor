@@ -7,13 +7,13 @@ from base.model.theme import addColorScheme, ColorScheme, Style, GlobalStyles, u
 	StyleFont, SyntaxHighlightingStyles, IndicatorStyles
 
 
-def initPlugin():
+def initPlugin() -> None:
 	addColorScheme(buildColorScheme())
 
 
 def buildColorScheme() -> ColorScheme:
-	scheme = ColorScheme('Default', [])
-		
+	scheme = ColorScheme('Default')
+
 	scheme.uiColors = BaseColors(
 		Icon=QColor('#606060'),  # QColor('#4b4b4b')
 		DisabledIcon=QColor('#b4b4b4'),
@@ -61,23 +61,28 @@ def buildColorScheme() -> ColorScheme:
 	)
 	scheme.syntaxHighlightingCommonStyles = SyntaxHighlightingStyles(
 		comment=         Style(foreground=QColor(0x7f, 0x7f, 0x7f), font=StyleFont(italic=True)),
-		keyword=         Style(foreground=QColor(0xb100d0), font=StyleFont(bold=False)),  # Style(foreground=QColor(0x88, 0x0a, 0xe8), font=StyleFont(bold=False)),
+		keyword=         Style(foreground=QColor(0xb1, 0x00, 0xd0), font=StyleFont(bold=False)),  # Style(foreground=QColor(0x88, 0x0a, 0xe8), font=StyleFont(bold=False)),
 		string=          Style(foreground=QColor(0x7f, 0x00, 0x00)),
+		string2=         Style(foreground=QColor(0x7f, 0x00, 0x7f)),
 		number=          Style(foreground=QColor(0x00, 0x7f, 0x7f)),
-		specialConstant= Style(foreground=QColor(0x00, 0x00, 0xBf)),
+		special_constant= Style(foreground=QColor(0x00, 0x00, 0xBf)),
 		key1=            Style(foreground=QColor(0x88, 0x0a, 0xe8)),
 		key2=            Style(foreground=QColor('plum')),  # to be decided later
-		contentLocator=  Style(foreground=QColor(0x6f, 0x6f, 0x00)),
+		content_locator=  Style(foreground=QColor(0x6f, 0x6f, 0x00)),
+
+		variable=        Style(),
+		function=        Style(font=StyleFont(italic=True)),
+		parameter=       Style(foreground=QColor(0x00, 0x7f, 0x7f)),
 		type=            Style(foreground=QColor(0xbf, 0x00, 0xbf)),
-		operator=        Style(foreground=QColor(0x00, 0x00, 0x00)),  # Style(foreground=QColor('limegreen')),
+		operator=        Style(foreground=QColor(0x7f, 0x00, 0x00)),
 		special1=        Style(foreground=QColor(0x00, 0x7f, 0x7f)),
 		special2=        Style(foreground=QColor('darkorange')),  # to be decided later
 
 		error=           Style(foreground=QColor(0xff, 0x00, 0x00)),
 		invalid=         Style(foreground=QColor(0xff, 0x00, 0x00)),
 
-		xmlTag=          Style(foreground=QColor(0x00, 0x00, 0xbf)),
-		xmlAttribute=    Style(foreground=QColor(0x00, 0x80, 0x80)),
+		xml_tag=          Style(foreground=QColor(0x00, 0x00, 0xbf)),
+		xml_attribute=    Style(foreground=QColor(0x00, 0x80, 0x80)),
 	)
 	updateGlobalStylesToMatchUIColors(scheme)
 
@@ -126,7 +131,7 @@ def buildColorScheme() -> ColorScheme:
 	colJson = lighten(scheme.syntaxHighlightingCommonStyles.string.foreground, 0.8)
 	colJson.setAlphaF(1 - 0.9)
 
-	colMCFunction = lighten(scheme.syntaxHighlightingCommonStyles.specialConstant.foreground, 0.75)
+	colMCFunction = lighten(scheme.syntaxHighlightingCommonStyles.special_constant.foreground, 0.75)
 	colMCFunction.setAlphaF(1 - 0.9)
 
 	colSNBT = lighten(QColor(0x7f, 0x7f, 0x00), 0.33)
@@ -148,5 +153,5 @@ def buildColorScheme() -> ColorScheme:
 	return scheme
 
 
-def lighten(fg, lightness=.975):
+def lighten(fg: QColor, lightness: float = .975) -> QColor:
 	return QColor.fromHslF(fg.hslHueF(), fg.hslSaturationF(), lightness)

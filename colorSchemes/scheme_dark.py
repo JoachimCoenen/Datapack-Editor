@@ -4,8 +4,8 @@ from typing import Callable
 
 from PyQt5.QtGui import QColor, qGray
 
-from base.model.theme import addColorScheme, ColorScheme, Style, StylesModifier, updateGlobalStylesToMatchUIColors, \
-	GlobalStyles, SyntaxHighlightingStyles, IndicatorStyles
+from base.model.theme import addColorScheme, ColorScheme, Style, updateGlobalStylesToMatchUIColors, GlobalStyles, \
+	SyntaxHighlightingStyles, IndicatorStyles
 from base.model.utils import LanguageId
 from cat.GUI.components.catWidgetMixins import BaseColors
 from cat.GUI.components.codeEditor import IndicatorStyle
@@ -19,18 +19,20 @@ def initPlugin():
 
 
 def buildColorScheme() -> ColorScheme:
-	scheme = ColorScheme('Default Dark', [])
+	scheme = ColorScheme('Default Dark')
 	from .scheme_default import buildColorScheme
 	lightScheme = buildColorScheme()
 
 	blackColor = QColor('#1e1e1e')
 	# blackColor = QColor('#000000')
 
-	scheme.uiColors = invertUIColors(lightScheme.uiColors, blackColor)
+	if (uiColors := lightScheme.uiColors) is not None:
+		scheme.uiColors = invertUIColors(uiColors, blackColor)
 
 	scheme.globalStyles = invertGlobalStyles(lightScheme.globalStyles, blackColor)
 	updateGlobalStylesToMatchUIColors(scheme)
-	scheme.globalStyles.defaultStyle |= Style(background=scheme.uiColors.Window)
+	if (uiColors := scheme.uiColors) is not None:
+		scheme.globalStyles.defaultStyle |= Style(background=uiColors.Window)
 
 	scheme.syntaxHighlightingCommonStyles = invertCommonStyles(lightScheme.syntaxHighlightingCommonStyles, blackColor)
 
@@ -38,23 +40,14 @@ def buildColorScheme() -> ColorScheme:
 
 	scheme.languageIndicators = invertLanguageIndicators(lightScheme.languageIndicators, blackColor)
 
-	for language, styles in lightScheme.styles2.items():
-		if _DO_PRINT:
-			print(f"STYLES:")
-		styles._styles = {name: invertStyle(style, blackColor, f'{language}:{name}') for name, style in styles._styles.items()}
-		if _DO_PRINT:
-			print(f"MODIFIERS:")
-		styles.innerLanguageStyleModifiers = {name: invertStylesModifier(stylesMode, blackColor, f'{language}:{name}') for name, stylesMode in styles.innerLanguageStyleModifiers.items()}
-		scheme.styles2[language] = styles
-
 	return scheme
 
 
 def invertUIColors(uiColors: BaseColors, blackColor: QColor) -> BaseColors:
-	inverted = {}
+	invertedDict = {}
 	for f in fields(uiColors):
-		inverted[f.name] = invert(getattr(uiColors, f.name), blackColor=blackColor, name=f'uiColors:{f.name}')
-	inverted = BaseColors(**inverted)
+		invertedDict[f.name] = invert(getattr(uiColors, f.name), blackColor=blackColor, name=f'uiColors:{f.name}')
+	inverted = BaseColors(**invertedDict)
 	inverted2 = copy.copy(inverted)
 
 	darker = inverted.Panel
@@ -84,12 +77,6 @@ def invertUIColors(uiColors: BaseColors, blackColor: QColor) -> BaseColors:
 		inverted2.HighlightedText = inverted2.Text
 
 	return inverted2
-
-
-def invertStylesModifier(stylesMod: StylesModifier, blackColor: QColor, name: str) -> StylesModifier:
-	modifier = invertStyle(stylesMod.modifier, blackColor, f'{name}.modifier') if stylesMod.modifier is not None else None
-	default = invertStyle(stylesMod.default, blackColor, f'{name}.default') if stylesMod.default is not None else None
-	return replace(stylesMod, modifier=modifier, default=default)
 
 
 def invertGlobalStyles(gs: GlobalStyles, blackColor: QColor) -> GlobalStyles:

@@ -3,17 +3,15 @@ from __future__ import annotations
 import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Mapping, TYPE_CHECKING, TypeVar, NewType, Protocol, Generic, Type, Optional, Callable, Collection
+from typing import Mapping, TYPE_CHECKING, NewType, Protocol, Type, Optional, Callable, Collection
 
-from cat.utils import CachedProperty
 from cat.utils.collections_ import AddToDictDecorator
-from cat.utils.graphs import collectAndSemiTopolSortAllNodes3
 from cat.utils.logging_ import logError
 from base.model.parsing.tree import Node
 from base.model.utils import LanguageId
 
-_TNode = TypeVar('_TNode', bound=Node)
-_TStyler = TypeVar('_TStyler', bound='CatStyler')
+
+ENABLE_LOGGING_STYLER_NOT_FOUND: bool = False
 
 StyleId = NewType('StyleId', int)
 
@@ -33,24 +31,26 @@ class CommonStyleIds(StyleIdEnum):
 	comment =          enum.auto()
 	keyword =          enum.auto()  # if | else | return
 	string =           enum.auto()
+	string2 =          enum.auto()
 	number =           enum.auto()
 	special_constant = enum.auto()  # e.g. true, false, null, ...
 	key1 =             enum.auto()  # in key-value pairs. e.g. JSON
 	key2 =             enum.auto()
 	content_locator =  enum.auto()  # e.g. ResourceLocation, TLTypeLiteral, ...
+
+	variable =         enum.auto()  # a variable or function argument
+	function =         enum.auto()  # a function or method
+	parameter =        enum.auto()  # a function parameter
 	type =             enum.auto()  # e.g. int, string, dict, bool, ...
 	operator =         enum.auto()
 	special1 =         enum.auto()
 	special2 =         enum.auto()
+
 	error =            enum.auto()
 	invalid =          enum.auto()
 
 	xml_tag =          enum.auto()
 	xml_attribute =    enum.auto()
-
-
-class _CommonStyleIdsPlaceHolder(StyleIdEnum):
-	pass  # intentionally empty
 
 
 class StylingFunc(Protocol):
@@ -59,55 +59,43 @@ class StylingFunc(Protocol):
 
 
 @dataclass
-class CatStyler(Generic[_TNode], ABC):
+class CatStyler[N: Node](ABC):
 	ctx: StylerCtx
-	innerStylers: dict[LanguageId, CatStyler]
-	offset: StyleId
+	stylersCache: dict[LanguageId, CatStyler | None] = field(default_factory=dict, init=False)
 
 	setStyling: StylingFunc = field(init=False)
 
 	def __post_init__(self) -> None:
 		self.setStyling = self.ctx.setStylingUtf8
-		if self.usesCommonStyleIds():
-			self.offset = DEFAULT_STYLE_ID
 
 	@classmethod
-	def create(cls: Type[_TStyler], ctx: StylerCtx, innerStylers: dict[LanguageId, CatStyler], offset: StyleId) -> _TStyler:
-		return cls(ctx, innerStylers, offset)
+	def create[_TStyler: CatStyler](cls: Type[_TStyler], ctx: StylerCtx) -> _TStyler:
+		return cls(ctx)
 
-	@classmethod
-	def usesCommonStyleIds(cls) -> bool:
-		""" override when CommonStyleIds are used"""
-		return False
+	def _getStyler(self, language: LanguageId) -> CatStyler | None:
+		if (styler := self.stylersCache.get(language)) is not None:
+			return styler
 
-	@classmethod
-	@abstractmethod
-	def localInnerLanguages(cls) -> list[LanguageId]:
-		pass
+		if language in self.stylersCache:
+			return styler  # we already looked for a styler previously and were unsuccessful
 
-	@property
-	def styleIdEnum(self) -> Type[StyleIdEnum]:
-		if self.usesCommonStyleIds():
-			return _CommonStyleIdsPlaceHolder
-		else:
-			raise NotImplementedError("styleIdEnum")
-
-	@property
-	def localStylesCount(self) -> int:
-		return len(self.styleIdEnum)
+		self.stylersCache[language] = styler = getStyler(language, self.ctx)
+		if styler is not None:
+			styler.stylersCache = self.stylersCache
+		return styler
 
 	@abstractmethod
-	def styleNode(self, node: _TNode) -> int:
+	def styleNode(self, node: N) -> int:
 		pass
 
 	def styleForeignNode(self, node: Node) -> int:
 		self.ctx.setForeignLanguage(node.span.slice, node.language)
-		styler = self.innerStylers.get(type(node).language)
+		styler = self._getStyler(type(node).language)
 		if styler is not None:
-			self.setStyling(slice(node.span.start.index, node.span.start.index), self.offset)
+			self.setStyling(slice(node.span.start.index, node.span.start.index), DEFAULT_STYLE_ID)
 			with styler:
 				result = styler.styleNode(node)
-				self.setStyling(slice(result, node.span.end.index), styler.offset)
+				self.setStyling(slice(result, node.span.end.index), DEFAULT_STYLE_ID)
 			return node.span.end.index
 		return node.span.start.index
 
@@ -117,7 +105,7 @@ class CatStyler(Generic[_TNode], ABC):
 	def styleStructuredNodeForeignNodes(self, node: Node, baseStyle: StyleId) -> int:
 		return self.styleStructuredNode(node, node.foreignNodes, baseStyle, self.styleForeignNode)
 
-	def styleStructuredNode(self, node: Node, children: Collection[Node], baseStyle: StyleId, styleChildFunc: Callable[[Node], int]) -> int:
+	def styleStructuredNode[N2: Node](self, node: Node, children: Collection[N2 | None], baseStyle: StyleId, styleChildFunc: Callable[[N2], int]) -> int:
 		if not children:
 			self.setStyling(node.span.slice, baseStyle)
 		else:
@@ -129,26 +117,9 @@ class CatStyler(Generic[_TNode], ABC):
 			self.setStyling(slice(lastIdx, node.span.end.index), baseStyle)
 		return node.span.end.index
 
-	@CachedProperty
-	def localStyles(self) -> dict[str, StyleId]:
-		styles = {
-			styleId.name: self.offset + styleId.value
-			for styleId in self.styleIdEnum
-		}
-		return styles
-
-	@property
-	def allStylesIds(self) -> dict[str, StyleId]:
-		allStylesIds = {}
-		for language, styler in self.innerStylers.items():
-			innerStyles = styler.localStyles
-			for name, styleId in innerStyles.items():
-				allStylesIds[f'{language}:{name}'] = styleId
-		return allStylesIds
-
 	def __enter__(self) -> None:
 		self.ctx.defaultStyles.append(self.ctx.defaultStyle)
-		self.ctx.defaultStyle = self.offset
+		self.ctx.defaultStyle = DEFAULT_STYLE_ID
 
 	def __exit__(self, exc_type, exc_val, exc_tb) -> None:
 		self.ctx.defaultStyle = self.ctx.defaultStyles.pop()
@@ -164,25 +135,6 @@ class CatStyler(Generic[_TNode], ABC):
 	# 	super(LexerJson, self).setStyling(length, style)
 
 
-def createStyler(cls: Type[_TStyler], language: LanguageId, stylerCtx: StylerCtx) -> _TStyler:
-	def getDirectInnerLanguages(base: tuple[LanguageId, Optional[Type[CatStyler]]]) -> list[tuple[LanguageId, Optional[Type[CatStyler]]]]:
-		return () if base[1] is None else [(iLang, getStylerCls(iLang)) for iLang in base[1].localInnerLanguages()]
-
-	sortedLanguageStylers = collectAndSemiTopolSortAllNodes3([(language, cls)], getDirectInnerLanguages)
-
-	allStylers: dict[LanguageId, CatStyler] = {}
-
-	offset = len(CommonStyleIds)
-	for innerLanguage, stylerCls in sortedLanguageStylers:
-		if stylerCls is None:
-			logError(f"CatStyler: No Styler found for language {innerLanguage!r} while creating inner stylers for {cls}")
-		else:
-			allStylers[innerLanguage] = styler = stylerCls.create(stylerCtx, allStylers, StyleId(offset))
-			offset += styler.localStylesCount
-
-	return allStylers[language]
-
-
 __allCatStylers: dict[LanguageId, Type[CatStyler]] = {}
 
 registerStyler: AddToDictDecorator[LanguageId, Type[CatStyler]] = AddToDictDecorator(__allCatStylers)
@@ -195,9 +147,11 @@ def getStylerCls(language: LanguageId) -> Optional[Type[CatStyler]]:
 def getStyler(language: LanguageId, stylerCtx: StylerCtx) -> Optional[CatStyler]:
 	stylerCls = getStylerCls(language)
 	if stylerCls is None:
+		if ENABLE_LOGGING_STYLER_NOT_FOUND:
+			logError(f"CatStyler: No Styler found for language {language!r}")
 		return None
-	styler = createStyler(stylerCls, language, stylerCtx)
-	return styler
+	else:
+		return stylerCls.create(stylerCtx)
 
 
 def getAllStylers() -> Mapping[LanguageId, Type[CatStyler]]:

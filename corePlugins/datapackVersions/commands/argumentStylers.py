@@ -4,7 +4,7 @@ from typing import Optional
 
 from base.model.parsing.tree import Node
 from base.gui.styler import CommonStyleIds
-from base.model.utils import LanguageId, Span
+from base.model.utils import Span
 from corePlugins.mcFunction.command import ParsedArgument
 from corePlugins.mcFunction.mcFunctionStyler import addSimpleArgumentStyler, argumentStyler, ArgumentStyler
 from .argumentTypes import *
@@ -92,9 +92,6 @@ def styleForeignNode2(self: ArgumentStyler, value: Optional[Node], span: Span) -
 @argumentStyler(MINECRAFT_COMPONENT.name, forceOverride=True)
 @argumentStyler(MINECRAFT_STYLE.name, forceOverride=True)
 class ComponentStyler(ArgumentStyler):
-	@classmethod
-	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('Structure')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		styleForeignNode2(self, argument.value, argument.span)
@@ -103,9 +100,6 @@ class ComponentStyler(ArgumentStyler):
 @argumentStyler(MINECRAFT_NBT_COMPOUND_TAG.name, forceOverride=True)
 @argumentStyler(MINECRAFT_NBT_TAG.name, forceOverride=True)
 class SNBTStyler(ArgumentStyler):
-	@classmethod
-	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('Structure')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		styleForeignNode2(self, argument.value, argument.span)
@@ -114,9 +108,6 @@ class SNBTStyler(ArgumentStyler):
 @argumentStyler(MINECRAFT_ITEM_STACK.name, forceOverride=True)
 @argumentStyler(MINECRAFT_ITEM_PREDICATE.name, forceOverride=True)
 class ItemStackStyler(ArgumentStyler):
-	@classmethod
-	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('Structure'), LanguageId('PredicateArgs')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.content_locator)
@@ -125,9 +116,6 @@ class ItemStackStyler(ArgumentStyler):
 @argumentStyler(MINECRAFT_BLOCK_STATE.name, forceOverride=True)
 @argumentStyler(MINECRAFT_BLOCK_PREDICATE.name, forceOverride=True)
 class BlockStateStyler(ArgumentStyler):
-	@classmethod
-	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('Structure'), LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.content_locator)
@@ -137,9 +125,6 @@ class BlockStateStyler(ArgumentStyler):
 @argumentStyler(MINECRAFT_GAME_PROFILE.name, forceOverride=True)
 @argumentStyler(MINECRAFT_SCORE_HOLDER.name, forceOverride=True)
 class EntityStyler(ArgumentStyler):
-	@classmethod
-	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('Structure'), LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.special1)
@@ -149,9 +134,6 @@ class EntityStyler(ArgumentStyler):
 @argumentStyler(DPE_TARGET_SELECTOR_ADVANCEMENTS.name, forceOverride=True)
 @argumentStyler(DPE_TARGET_SELECTOR_ADVANCEMENTS_CRITERION.name, forceOverride=True)
 class TargetSelectorScoresStyler(ArgumentStyler):
-	@classmethod
-	def localLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('FilterArg')]
 
 	def style(self, argument: ParsedArgument) -> None:
 		styleForeignNode2(self, argument.value, argument.span)
@@ -162,9 +144,6 @@ class TargetSelectorScoresStyler(ArgumentStyler):
 @argumentStyler(MINECRAFT_PARTICLE.name, forceOverride=True)
 @argumentStyler(MINECRAFT_PREDICATE.name, forceOverride=True)
 class StructuredNodeStyler(ArgumentStyler):
-	@classmethod
-	def localLanguages(cls) -> list[LanguageId]:
-		return []
 
 	def style(self, argument: ParsedArgument) -> None:
 		self.commandStyler.styleStructuredNodeForeignNodes(argument, CommonStyleIds.content_locator)

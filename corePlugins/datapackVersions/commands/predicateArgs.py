@@ -5,9 +5,9 @@ They are either block states ot target selector arguments
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Callable, ClassVar, Sequence, Iterable, Type, cast
+from typing import Optional, Callable, ClassVar, Sequence, Iterable, cast
 
-from base.gui.styler import StyleIdEnum, DEFAULT_STYLE_ID, CatStyler
+from base.gui.styler import DEFAULT_STYLE_ID, CatStyler
 from base.model.messages import *
 from base.model.parsing.bytesUtils import bytesOptToStr
 from base.model.parsing.contextProvider import Suggestions, Match, getSuggestions, ContextProvider, Context, \
@@ -21,10 +21,9 @@ from .. import PREDICATE_ARGS_ID
 from corePlugins.minecraft.resourceLocation import ResourceLocationNode, ResourceLocationSchema, RESOURCE_LOCATION_ID2
 from corePlugins.minecraft_data.resourceLocation import ResourceLocation
 from corePlugins.nbt import SNBT_ID
-from corePlugins.nbtJsonBase.core import STRUCTURE_ANY_SCHEMA, STRUCTURE_ILLEGAL_SCHEMA, InvalidNode, StructureKind, \
-	StructureDataNode, StructureDataSchema
-from corePlugins.nbtJsonBase import STRUCTURE_ID
-from  corePlugins.nbt.snbtParser import SNBT_ID2
+from corePlugins.nbtJsonBase.core import STRUCTURE_ANY_SCHEMA, InvalidNode, StructureKind, StructureDataNode, \
+	StructureDataSchema
+from corePlugins.nbt.snbtParser import SNBT_ID2
 
 
 class PredicateArgSchemaBase(Schema):
@@ -510,20 +509,8 @@ class PredicateArgsContext(Context[PredicateArgNode]):
 PREDICATE_ARGUMENTS_CONTEXT = PredicateArgsContext()
 
 
-class PredicateArgumentsStyleIds(StyleIdEnum):
-	Default = DEFAULT_STYLE_ID
-
-
 @dataclass
 class PredicateArgumentsStyler(CatStyler[PredicateArgNode]):
-
-	@property
-	def styleIdEnum(self) -> Type[StyleIdEnum]:
-		return PredicateArgumentsStyleIds
-
-	@classmethod
-	def localInnerLanguages(cls) -> list[LanguageId]:
-		return [STRUCTURE_ID]
 
 	def styleNode(self, node: PredicateArgNode) -> int:
 		if node.typeName == PredicateArg.typeName:

@@ -7,28 +7,17 @@ from typing import Type, ClassVar
 from cat.utils import Decorator
 from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import DEFAULT_STYLE_ID, CatStyler, StyleIdEnum, StyleId, CommonStyleIds
-from . import MC_FUNCTION_ID
 from .argumentTypes import *
 from .command import CommandSchema, MCFunction, ParsedComment, ParsedCommand, KeywordSchema, ArgumentSchema, CommandPart, ParsedArgument
-from base.model.utils import LanguageId
 from .filterArgs import FilterArgNode, FilterArgument
 
 
 @dataclass
 class ArgumentStyler(ABC):
 	commandStyler: MCCommandStyler
-	offset: int = field(init=False)
-
-	def __post_init__(self) -> None:
-		self.offset = self.commandStyler.offset
 
 	def setStyling(self, span: slice, style: StyleId) -> None:
 		self.commandStyler.setStyling(span, style)
-
-	@classmethod
-	@abstractmethod
-	def localLanguages(cls) -> list[LanguageId]:
-		pass
 
 	@abstractmethod
 	def style(self, argument: ParsedArgument) -> None:
@@ -42,18 +31,7 @@ argumentStyler = Decorator(AddToDictDecorator(_argumentStylers))
 @dataclass
 class MCCommandStyler(CatStyler[CommandPart]):
 
-	@classmethod
-	def usesCommonStyleIds(cls) -> bool:
-		return True
-
 	argumentStylers: dict[str, ArgumentStyler] = field(init=False, repr=False, compare=False)
-
-	@classmethod
-	def localInnerLanguages(cls) -> list[LanguageId]:
-		localInnerLanguages = []
-		for argS in _argumentStylers.values():
-			localInnerLanguages.extend(argS.localLanguages())
-		return list(set(localInnerLanguages))
 
 	def __post_init__(self) -> None:
 		super(MCCommandStyler, self).__post_init__()
@@ -136,10 +114,6 @@ def addSimpleArgumentStyler(style: StyleId, *, forArgTypes: list[ArgumentType]) 
 	class SimpleArgumentStyler(ArgumentStyler):
 		STYLE: ClassVar[StyleId] = styleId
 
-		@classmethod
-		def localLanguages(cls) -> list[LanguageId]:
-			return []
-
 		def style(self, argument: ParsedArgument) -> None:
 			self.setStyling(argument.span.slice, styleId)
 
@@ -169,14 +143,6 @@ class FilterArgumentsStyleIds(StyleIdEnum):
 
 @dataclass
 class FilterArgumentsStyler(CatStyler[FilterArgNode]):
-
-	@classmethod
-	def usesCommonStyleIds(cls) -> bool:
-		return True
-
-	@classmethod
-	def localInnerLanguages(cls) -> list[LanguageId]:
-		return [MC_FUNCTION_ID]
 
 	def styleNode(self, node: FilterArgNode) -> int:
 		if node.typeName == FilterArgument.typeName:

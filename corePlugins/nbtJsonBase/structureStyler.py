@@ -5,27 +5,17 @@ from typing import ClassVar, Callable
 
 from cat.utils.collections_ import AddToDictDecorator
 from base.gui.styler import CatStyler, CommonStyleIds, StyleId
-from .core import *
+from .core import StructureDataNode, InvalidNode, NullNode, BooleanNode, NumberNode, StringNode, ListLikeNode, ObjectNode
 from base.model.parsing.tree import Node
-from base.model.utils import LanguageId
 
 
 @dataclass
-class StructureStyler(CatStyler[StructureNode]):
-
-	@classmethod
-	def usesCommonStyleIds(cls) -> bool:
-		""" override when CommonStyleIds are used"""
-		return True
-
-	@classmethod
-	def localInnerLanguages(cls) -> list[LanguageId]:
-		return [LanguageId('MCFunction')]
+class StructureStyler(CatStyler[StructureDataNode]):
 
 	_STYLERS: ClassVar[dict[str, Callable[[StructureStyler, StructureDataNode], int]]] = {}
 	_Styler: ClassVar = AddToDictDecorator(_STYLERS)
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		super().__post_init__()
 		self.DEFAULT_STYLE: StyleId = CommonStyleIds.default
 		self.NULL_STYLE:    StyleId = CommonStyleIds.special_constant

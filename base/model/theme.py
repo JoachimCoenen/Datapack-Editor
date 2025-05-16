@@ -4,8 +4,7 @@ import os
 import shutil
 import warnings
 from dataclasses import dataclass, field, fields, Field, is_dataclass, replace
-from operator import attrgetter
-from typing import TypeVar, Generic, Union, Optional, Iterable
+from typing import Union, Optional
 
 from PyQt5.QtGui import QFont, QColor
 
@@ -13,19 +12,15 @@ from cat.GUI.components.catWidgetMixins import BaseColors
 from cat.GUI.components.codeEditor import IndicatorStyle
 from cat.processFiles import processRecursively
 from cat.utils import getExePath
-from cat.utils.graphs import getCycles, collectAndSemiTopolSortAllNodes
-from cat.utils.logging_ import logDebug, logWarning, logError
+from cat.utils.logging_ import logDebug, logError
 from cat.utils.profiling import TimedFunction
 from base.model.utils import LanguageId
 from base.modules import loadAllModules, FolderAndFileFilter
 
-_TT = TypeVar('_TT')
 
-
-# @dataclass
-class NotSet(Generic[_TT]):
-	def __init__(self, default: _TT):
-		self.default: _TT = default
+class NotSet[TT]:
+	def __init__(self, default: TT):
+		self.default: TT = default
 
 
 @dataclass
@@ -83,10 +78,10 @@ DEFAULT_STYLE_STYLE = Style(
 )
 
 
-def _getWithDefaultsFilled(obj: _TT) -> _TT:
+def _getWithDefaultsFilled[TT](obj: TT) -> TT:
 	aField: Field
 	values = {}
-	for aField in fields(obj):
+	for aField in fields(obj):  # type: ignore
 		if not aField.init:
 			continue
 		propName: str = aField.name
@@ -100,7 +95,7 @@ def _getWithDefaultsFilled(obj: _TT) -> _TT:
 	return type(obj)(**values)
 
 
-def mergeVal(val: _TT, overridingVal: _TT) -> _TT:
+def mergeVal[TT](val: TT, overridingVal: TT) -> TT:
 	if overridingVal is None or isinstance(overridingVal, NotSet):
 		return val
 	elif val is None or isinstance(val, NotSet):
@@ -111,10 +106,10 @@ def mergeVal(val: _TT, overridingVal: _TT) -> _TT:
 		return overridingVal
 
 
-def _mergeDataclass(val: _TT, overridingVal: _TT) -> _TT:
+def _mergeDataclass[TT](val: TT, overridingVal: TT) -> TT:
 	aField: Field
 	values = {}
-	for aField in fields(overridingVal):
+	for aField in fields(overridingVal):  # type: ignore
 		if not aField.init:
 			continue
 		propName: str = aField.name
@@ -155,21 +150,21 @@ class GlobalStyles:
 
 
 def updateGlobalStylesToMatchUIColors(scheme: ColorScheme):
-	uic = scheme.uiColors
-	gls = scheme.globalStyles
-	scheme.globalStyles = GlobalStyles(
-		defaultStyle         = gls.defaultStyle         | Style(foreground=uic.Text, background=uic.Input),
-		lineNumberStyle      = gls.lineNumberStyle      | Style(background=uic.Window),
-		braceLightStyle      = gls.braceLightStyle      | Style(),
-		braceBadStyle        = gls.braceBadStyle        | Style(),
-		controlCharStyle     = gls.controlCharStyle     | Style(foreground=uic.Icon),
-		indentGuideStyle     = gls.indentGuideStyle     | Style(),
-		calltipStyle         = gls.calltipStyle         | Style(foreground=uic.Border, background=uic.Window),
-		foldDisplayTextStyle = gls.foldDisplayTextStyle | Style(),
-		caretLineStyle       = gls.caretLineStyle       | Style(background=uic.Window),
-		caretStyle           = gls.caretStyle           | Style(background=uic.Text),
-		whiteSpaceStyle      = gls.whiteSpaceStyle      | Style(),
-	)
+	if (uic := scheme.uiColors) is not None:
+		gls = scheme.globalStyles
+		scheme.globalStyles = GlobalStyles(
+			defaultStyle         = gls.defaultStyle         | Style(foreground=uic.Text, background=uic.Input),
+			lineNumberStyle      = gls.lineNumberStyle      | Style(background=uic.Window),
+			braceLightStyle      = gls.braceLightStyle      | Style(),
+			braceBadStyle        = gls.braceBadStyle        | Style(),
+			controlCharStyle     = gls.controlCharStyle     | Style(foreground=uic.Icon),
+			indentGuideStyle     = gls.indentGuideStyle     | Style(),
+			calltipStyle         = gls.calltipStyle         | Style(foreground=uic.Border, background=uic.Window),
+			foldDisplayTextStyle = gls.foldDisplayTextStyle | Style(),
+			caretLineStyle       = gls.caretLineStyle       | Style(background=uic.Window),
+			caretStyle           = gls.caretStyle           | Style(background=uic.Text),
+			whiteSpaceStyle      = gls.whiteSpaceStyle      | Style(),
+		)
 
 
 @dataclass
@@ -178,11 +173,16 @@ class SyntaxHighlightingStyles:
 	comment: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 	keyword: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # if | else | return
 	string: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	string2: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 	number: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
-	specialConstant: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # e.g. true, false, null, ...
+	special_constant: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # e.g. true, false, null, ...
 	key1: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # in key-value pairs. e.g. JSON
 	key2: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
-	contentLocator: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # e.g. ResourceLocation, TLTypeLiteral, ...
+	content_locator: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # e.g. ResourceLocation, TLTypeLiteral, ...
+
+	variable: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # a variable
+	function: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # a function or method
+	parameter: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # a function parameter
 	type: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))  # e.g. int, string, dict, bool, ...
 	operator: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 	special1: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
@@ -191,139 +191,19 @@ class SyntaxHighlightingStyles:
 	error: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 	invalid: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 
-	xmlTag: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
-	xmlAttribute: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	xml_tag: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
+	xml_attribute: Style = field(default_factory=lambda: replace(EMPTY_STYLE_STYLE))
 
 
 @dataclass
 class ColorScheme:
 	name: str
-	fallback: list[str]
-
-	localFallbackSchemes: list[ColorScheme] = field(init=False, default_factory=list)
-	allFallbackSchemes: list[ColorScheme] = field(init=False, default_factory=list)
 
 	uiColors: Optional[BaseColors] = None
 	indicatorStyles: IndicatorStyles = field(default_factory=IndicatorStyles)
 	globalStyles: GlobalStyles = field(default_factory=GlobalStyles)
 	syntaxHighlightingCommonStyles: SyntaxHighlightingStyles = field(default_factory=SyntaxHighlightingStyles)
 	languageIndicators: dict[LanguageId, IndicatorStyle] = field(default_factory=dict)
-
-	# styles: dict[LanguageId, dict[str, Style]] = field(default_factory=dict)
-	styles2: dict[LanguageId, Styles] = field(default_factory=dict)
-
-	def deferredInit1(self) -> None:
-		"""
-		Must be called *after* all ColorSchemes are loaded or reloaded to initialize the localFallbackSchemes.
-		Must be used like this:
-			for cs in allColorSchemes:
-				cs.deferredInit1()
-
-			_breakCycles(allColorSchemes)
-
-			for cs in allColorSchemes:
-				cs.deferredInit2()
-
-		see: initAllColorSchemes()
-		"""
-		for fbName in self.fallback:
-			fbScheme = getColorScheme(fbName)
-			if fbScheme is not None:
-				self.localFallbackSchemes.append(fbScheme)
-
-	def deferredInit2(self) -> None:
-		"""
-		Must be called *after* ColorSchemes.deferredInit1() has been run for all ColorSchemes to initialize the allFallbackSchemes.
-		Must be used like this:
-			for cs in allColorSchemes:
-				cs.deferredInit1()
-
-			_breakCycles(allColorSchemes)
-
-			for cs in allColorSchemes:
-				cs.deferredInit2()
-
-		see: initAllColorSchemes()
-		"""
-		allFbs = collectAndSemiTopolSortAllNodes([self], attrgetter('localFallbackSchemes'), attrgetter('name'))
-		self.allFallbackSchemes = allFbs
-
-	def getLocalStyles2(self, language: LanguageId) -> Optional[Styles]:
-		return self.styles2.get(language)
-
-	def getStyles2(self, language: LanguageId, outerStyles: Styles = ...) -> Optional[StylesProxy]:
-		styles = self.getLocalStyles2(language)
-		if outerStyles is ...:
-			outerStyles = styles
-
-		if styles is not None:
-			return StylesProxy(self, language, styles, outerStyles)
-
-		for fbScheme in self.allFallbackSchemes:
-			styles = fbScheme.getLocalStyles2(language)
-			if styles is not None:
-				return StylesProxy(self, language, styles, outerStyles)
-
-		return None
-
-	def getStyle2(self, language: LanguageId, style: str) -> Optional[Style]:
-		styles = self.getStyles2(language)
-		if styles is None:
-			return None
-		return styles.get(style)
-
-
-@dataclass
-class StylesModifier:
-	modifier: Optional[Style] = None
-	default: Optional[Style] = None
-
-
-@dataclass
-class Styles:
-	# language: LanguageId
-
-	_styles: dict[str, Style] = field(default_factory=dict)
-	innerLanguageStyleModifiers: dict[LanguageId, StylesModifier] = field(default_factory=dict)
-
-	def get(self, name: str) -> Optional[Style]:
-		return self._styles.get(name)
-
-
-@dataclass
-class StylesProxy:
-	scheme: ColorScheme
-	language: LanguageId
-	_styles: Styles
-	outerStyles: Optional[Styles]
-	_styleModifier: StylesModifier = field(init=False)
-
-	def __post_init__(self):
-		if self.outerStyles is not None:
-			self._styleModifier = self.outerStyles.innerLanguageStyleModifiers.get(self.language, StylesModifier())
-		else:
-			self._styleModifier = StylesModifier()
-
-	def get(self, styleName: str) -> Optional[Style]:
-		style = self._styles.get(styleName)
-		if style is None:
-			return None
-
-		if (default2 := self._styleModifier.default) is not None:
-			if styleName == 'default':
-				style = mergeStyle(style, default2)
-			else:
-				style = mergeStyle(default2, style)
-
-		if (default1 := self._styles.get('default')) is not None:
-			style = mergeStyle(default1, style)
-
-		if (modifier := self._styleModifier.modifier) is not None:
-			style = mergeStyle(style, modifier)
-		return style
-
-	def getInnerLanguageStyles(self, innerLanguage: LanguageId) -> Optional[StylesProxy]:
-		return self.scheme.getStyles2(innerLanguage, self.outerStyles)
 
 
 _ALL_COLOR_SCHEMES: dict[str, ColorScheme] = {}
@@ -339,7 +219,7 @@ def currentColorScheme() -> ColorScheme:
 		scheme = _ALL_COLOR_SCHEMES.get('None')
 	if scheme is None:
 		warnings.warn("No Color Schemes available. Not even the 'None' Color Scheme. Adding it now.", RuntimeWarning)
-		scheme = addColorScheme(ColorScheme('None', []))
+		scheme = addColorScheme(ColorScheme('None'))
 	return scheme
 
 
@@ -348,7 +228,7 @@ def currentColorSchemeUpdated() -> None:
 	uiColors = currentColorScheme().uiColors
 	catWidgetMixins.setGUIColors(uiColors)
 	indicatorStyles = currentColorScheme().indicatorStyles
-	indicatorStyles = {
+	indicatorStyles2 = {
 		codeEditor.CatIndicatorIds.CAT_ERROR:         indicatorStyles.error,
 		codeEditor.CatIndicatorIds.CAT_WARNING:       indicatorStyles.warning,
 		codeEditor.CatIndicatorIds.CAT_INFO:          indicatorStyles.info,
@@ -357,7 +237,7 @@ def currentColorSchemeUpdated() -> None:
 		codeEditor.CatIndicatorIds.CAT_MATCHED_BRACE: indicatorStyles.matched_brace,
 		# codeEditor.CatIndicatorIds.CAT_LINK:          indicatorStyles.link,
 	}
-	codeEditor.setIndicatorStyles({styleId: style for styleId, style in indicatorStyles.items() if style is not None})
+	codeEditor.setIndicatorStyles({styleId: style for styleId, style in indicatorStyles2.items() if style is not None})
 
 
 def setCurrentColorScheme(name: str) -> None:
@@ -377,41 +257,6 @@ def getAllColorSchemes() -> list[ColorScheme]:
 def addColorScheme(cs: ColorScheme, /) -> ColorScheme:
 	_ALL_COLOR_SCHEMES[cs.name] = cs
 	return cs
-
-
-def _breakCycles(colorSchemes: Iterable[ColorScheme]):
-	cycles = getCycles(colorSchemes, attrgetter('localFallbackSchemes'), attrgetter('name'))
-	if cycles:
-		cyclesStr = '\n'.join(f"[{' -> '.join(elem.name for elem in cycle)}]" for cycle in cycles)
-		logWarning(
-			f"ColorSchemes: {len(cycles)} fallback cycles found: \n{cyclesStr}\n"
-			f"Fallbacks will be disabled for all ColorSchemes within these cycles.")
-
-		for cycle in cycles:
-			cycleNames = {elem.name for elem in cycle}
-			for elem in cycle:
-				fbs = list(filter(lambda fb: fb.name not in cycleNames, elem.localFallbackSchemes))
-				elem.localFallbackSchemes = fbs
-
-
-def initAllColorSchemes() -> None:
-	"""
-	Must be used like this:
-		for cs in allColorSchemes:
-			cs.deferredInit1()
-
-		_breakCycles(allColorSchemes)
-
-		for cs in allColorSchemes:
-			cs.deferredInit2()
-	"""
-	for cs in _ALL_COLOR_SCHEMES.values():
-		cs.deferredInit1()
-
-	_breakCycles(_ALL_COLOR_SCHEMES.values())
-
-	for cs in _ALL_COLOR_SCHEMES.values():
-		cs.deferredInit2()
 
 
 def getColorSchemesDir() -> str:
@@ -439,10 +284,10 @@ def _copyDefaultColorSchemes(csDir: str) -> None:
 @TimedFunction()
 def loadAllColorSchemes() -> None:
 	_ALL_COLOR_SCHEMES.clear()
-	addColorScheme(ColorScheme('None', []))
+	addColorScheme(ColorScheme('None'))
 
 	colorSchemesDir = getColorSchemesDir()
-	colorSchemeModules = loadAllModules(
+	loadAllModules(
 		'colorSchemes',
 		colorSchemesDir,
 		[FolderAndFileFilter('/**', r'scheme_.+\.py')],
@@ -450,7 +295,6 @@ def loadAllColorSchemes() -> None:
 		initMethodName='initPlugin'
 	)
 
-	initAllColorSchemes()
 	currentColorSchemeUpdated()
 
 
