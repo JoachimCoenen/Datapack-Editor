@@ -1,4 +1,4 @@
-## next version
+## 0.10.0-alpha
 ### Features
  * Added common unified style ids for syntax highlighting. (issue #35)
  * Added ability to customize default indicator styles. (issue #35)
