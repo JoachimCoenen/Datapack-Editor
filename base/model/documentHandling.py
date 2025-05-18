@@ -14,7 +14,7 @@ from cat.utils.collections_ import Stack
 from cat.utils.profiling import logInfo
 from cat.utils.signals import CatSignal
 from base.model.utils import Span
-from base.model.pathUtils import FilePath, toDisplayPath
+from base.model.pathUtils import FilePath, toDisplayPath, FilePathTpl
 from base.model.documents import Document, loadDocument
 from cat.utils.utils import CrashReportWrapped
 
@@ -308,7 +308,7 @@ class DocumentsManager(SerializableDataclass):
 
 	# utility:
 
-	def _getViewForDocument(self, doc: Document) -> Optional[View]:
+	def getViewForDocument(self, doc: Document) -> Optional[View]:
 		return self.viewsC.getViewForDocument(doc)
 
 	@staticmethod
@@ -326,7 +326,7 @@ class DocumentsManager(SerializableDataclass):
 		return self.currentDocument
 
 	def showDocument(self, doc: Document, cursor: Span = None) -> None:
-		view = self._getViewForDocument(doc)
+		view = self.getViewForDocument(doc)
 		if view is not None:
 			if cursor is not None:
 				doc.locatePosition(*cursor)
@@ -364,7 +364,7 @@ class DocumentsManager(SerializableDataclass):
 			self.emitDocumentChanged(document)
 
 	def emitDocumentChanged(self, document: Document) -> None:
-		view = self._getViewForDocument(document)
+		view = self.getViewForDocument(document)
 		if view is not None:
 			view.onDocumentsChanged.emit()
 
@@ -381,7 +381,7 @@ class DocumentsManager(SerializableDataclass):
 		return False
 
 	def forceCloseDocument(self, doc: Document) -> None:
-		view = self._getViewForDocument(doc)
+		view = self.getViewForDocument(doc)
 		if view is not None:
 			view.removeDocument(doc)
 			doc.close()
@@ -401,7 +401,7 @@ class DocumentsManager(SerializableDataclass):
 				return docName
 
 	def moveDocument(self, document: Document, newView: View, newPosition: Optional[int] = None) -> None:
-		oldView = self._getViewForDocument(document)
+		oldView = self.getViewForDocument(document)
 		if oldView is newView:
 			if newPosition is not None:
 				newView.moveDocument(document, newPosition)
@@ -409,6 +409,32 @@ class DocumentsManager(SerializableDataclass):
 			oldView.removeDocument(document)
 			newView.insertDocument(document, newPosition)
 			newView.selectDocument(document)
+
+	def updatePathOfOpenedFile(self, filePath: FilePathTpl, oldPath: FilePathTpl, newPath: FilePathTpl) -> None:
+		"""
+		Updates the filePath of an opened document if the document exists.
+
+		:param filePath: filePath of the (potentially) opened document.
+		:param oldPath: old path of the document or a directory
+		:param newPath: new path of the document or a directory
+		"""
+		if (doc := self.getDocument(filePath)) is not None:
+			pathLen = len(oldPath[1])
+			if doc.filePath[1].startswith(oldPath[1]):
+				newFilePath = newPath[0], newPath[1] + doc.filePath[1][pathLen:]
+				doc.filePath = newFilePath
+
+			if (view := self.getViewForDocument(doc)) is not None:
+				view.onDocumentsChanged.emit()
+
+	def closeDeletedFile(self, filePath: FilePathTpl) -> None:
+		"""
+		Closes an opened document if the document exists.
+
+		:param filePath: filePath of the (potentially) opened document.
+		"""
+		if (doc := self.getDocument(filePath)) is not None:
+			self.forceCloseDocument(doc)
 
 	# accessors:
 

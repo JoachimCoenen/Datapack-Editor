@@ -8,7 +8,8 @@ from typing import Optional, Callable, ClassVar, Type, final
 
 from PyQt5.QtGui import QIcon
 from base.model.recordclassAdapter import as_dataclass
-from watchdog.events import FileSystemEventHandler, FileClosedEvent, FileModifiedEvent, FileDeletedEvent, FileCreatedEvent, FileMovedEvent
+from watchdog.events import FileSystemEventHandler, FileClosedEvent, FileModifiedEvent, FileDeletedEvent, \
+	FileCreatedEvent, FileMovedEvent, FileSystemEvent, DirMovedEvent
 
 from base.model.searchUtils import FilterStr, filterComputedChoices
 from cat.GUI.pythonGUI import TabOptions, EditorBase, MenuItemData, SizePolicy
@@ -20,7 +21,7 @@ from base.model import filesystemEvents
 from base.model.pathUtils import FilePath, SearchPath, FilePathTpl, normalizeDirSeparators, splitPath, \
 	normalizeDirSeparatorsStr, unitePath, fileNameFromFilePath, getAllFilesFoldersFromFolder, joinFilePath, \
 	getAllFilesFoldersFromArchive, isExcludedDirectory, ZipFilePool, getMTimeForFilePath, \
-	getMTimeForFilePathTplNoArchive, getMTimeForFilePathTpl
+	getMTimeForFilePathTplNoArchive, getMTimeForFilePathTpl, unitePathTpl
 from base.model.aspect import AspectType
 from base.model.project.index import Index
 from base.model.project.project import AnalyzeRootsAspectPart, Project, ProjectRoot, ProjectAspect, Root, IndexBundleAspect, FileEntry, makeFileEntry
@@ -173,13 +174,15 @@ class ProjectFilesEditor(EditorBase[Project]):
 	@DeferredCallOnceMethod(delay=0)  # needed to avoid transferring keyPresses (Return Key) to another widget, if a focusChange happens.
 	def _onDoubleClick(self, data: FilesTreeItem):
 		if data.isFile:
-			self._openFunc(data.filePaths[0].fullPath)
+			self._openFunc(data.filePath)
 			return True
 		return False
 
 	def _renameFileOrFolder(self, data: FilesTreeItem):
 		if data.isFile:
-			path = data.filePaths[0].fullPath
+			path = data.filePath
+			if path is None:
+				return
 		else:
 			path = data.folderPath
 			if path is None:
@@ -193,55 +196,60 @@ class ProjectFilesEditor(EditorBase[Project]):
 				newPath = (path[0], f'{lPath}/{newName}')
 			else:
 				newPath = (path[0], newName)
-			joinedNewPath = os.path.join(*newPath)
+
+			joinedNewPath = unitePathTpl(newPath)
 			if os.path.exists(joinedNewPath):
 				self._gui.showInformationDialog(f"The name \"{newName}\" cannot be used.", "Another file with the same name already exists.")
 			else:
 				try:
-					os.rename(os.path.join(*path), joinedNewPath)
+					os.rename(unitePathTpl(path), joinedNewPath)
 				except OSError as e:
 					getSession().showAndLogError(e)
 				else:
 					data.label = newName
 					# update paths of opened files:
-					for fe2 in data.filePaths:
-						filePath = fe2.fullPath
-						doc = getSession().documents.getDocument(filePath)
-						if doc is not None:
-							pathLen = len(path[1])
-							if doc.filePath[1].startswith(path[1]):
-								newFilePath = newPath[0], newPath[1] + doc.filePath[1][pathLen:]
-								doc.filePath = newFilePath
-						view = getSession().documents._getViewForDocument(doc)
-						if view is not None:
-							view.onDocumentsChanged.emit()
+					filePaths = [fe2.fullPath for fe2 in data.filePaths]
+					_updatePathsOfOpenedFiles(filePaths, path, newPath)
 			self.redraw('ProjectFilesEditor._renameFileOrFolder(...)')
 
-	def _deleteFileFunc(self, path: FilePath):
-		_, __, name = path[1].rstrip('/').rpartition('/')
-		if self._gui.askUser(f"Delete file '{name}'?", 'this cannot be undone!'):
-			try:
-				os.unlink(os.path.join(*path))
-			except OSError as e:
-				getSession().showAndLogError(e)
-			self.redraw('ProjectFilesEditor._deleteFileFunc(...)')
-			# TODO: maybe close opened file?
+	def _deleteFileOrFolder(self, data: FilesTreeItem) -> None:
+		if not self._getUserConsentForDelete(data):
+			return
 
-	def _deleteFolderFunc(self, path: FilePath):
-		name = fileNameFromFilePath(path)
-		unitedPath = unitePath(path)
-		isEmpty = not any(os.scandir(unitedPath))
 		try:
-			if isEmpty:
-				if self._gui.askUser(f"Delete folder '{name}'?", 'This cannot be undone!'):
-					os.rmdir(unitedPath)
-			else:
-				if self._gui.askUser(f"Delete folder '{name}' and all its contents?", 'This cannot be undone!'):
-					shutil.rmtree(unitedPath)
-			# TODO: maybe close opened files?
+			self._deleteFileOrFolderUnsafe(data)
 		except OSError as e:
 			getSession().showAndLogError(e)
-		self.redraw('ProjectFilesEditor._deleteFileFunc(...)')
+		else:
+			filePaths = [fe2.fullPath for fe2 in data.filePaths]
+			_closeDeletedFiles(filePaths)
+		self.redraw('ProjectFilesEditor._deleteFileOrFolder(...)')
+
+	def _getUserConsentForDelete(self, data: FilesTreeItem) -> bool:
+		if data.isFile:
+			path = data.filePath
+			name = fileNameFromFilePath(path)
+			message = f"Delete file '{name}'?"
+		else:
+			path = data.folderPath
+			name = fileNameFromFilePath(path)
+			isEmpty = not any(os.scandir(unitePath(path)))
+			if isEmpty:
+				message = f"Delete folder '{name}'?"
+			else:
+				message = f"Delete folder '{name}' and all its contents?"
+		return self._gui.askUser(message, "This cannot be undone!")
+
+	def _deleteFileOrFolderUnsafe(self, data: FilesTreeItem) -> None:
+		if data.isFile:
+			os.unlink(unitePathTpl(data.filePath))
+		else:
+			unitedPath = unitePathTpl(data.filePath)
+			isEmpty = not any(os.scandir(unitedPath))
+			if isEmpty:
+				os.rmdir(unitedPath)
+			else:
+				shutil.rmtree(unitedPath)
 
 	def _analyzeDependencies(self) -> None:
 		self.model().analyzeAllRoots()
@@ -266,7 +274,7 @@ class ProjectFilesEditor(EditorBase[Project]):
 				return
 			menuItems = [
 				('rename File', lambda: self._renameFileOrFolder(data), isMutableDict),
-				('delete File', lambda: self._deleteFileFunc(filePath), isMutableDict),
+				('delete File', lambda: self._deleteFileOrFolder(data), isMutableDict),
 				('', None),
 				*ContextMenuEntries.fileItems(filePath, openFunc=self._openFunc)
 			]
@@ -280,7 +288,7 @@ class ProjectFilesEditor(EditorBase[Project]):
 				('new File', lambda p=folderPath: createNewFileGUI(p, self._gui, self._openFunc), isMutableDict),
 				('new Folder', lambda p=folderPath: createNewFolderGUI(p, self._gui), isMutableDict),
 				('rename Folder', lambda: self._renameFileOrFolder(data), isMutableDict),
-				('delete Folder', lambda: self._deleteFolderFunc(folderPath), isMutableDict),
+				('delete Folder', lambda: self._deleteFileOrFolder(data), isMutableDict),
 				('', None),
 				*ContextMenuEntries.pathItems(folderPath)
 			]
@@ -457,7 +465,8 @@ def createNewFileGUI(folderPath: FilePath, gui: DatapackEditorGUI, openFunc: Cal
 		openFunc(filePath)
 	except OSError as e:
 		getSession().showAndLogError(e, "Cannot create file")
-	return
+
+	gui.redraw('createNewFileGUI(...)')
 
 
 def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
@@ -470,8 +479,22 @@ def createNewFolderGUI(folderPath: FilePath, gui: DatapackEditorGUI):
 	except OSError as e:
 		getSession().showAndLogError(e, "Cannot create folder")
 
+	gui.redraw('createNewFolderGUI(...)')
+
 
 # Non-GUI stuff:
+
+
+def _updatePathsOfOpenedFiles(filePaths: list[FilePathTpl], oldPath: FilePathTpl, newPath: FilePathTpl) -> None:
+	documents = getSession().documents
+	for filePath in filePaths:
+		documents.updatePathOfOpenedFile(filePath, oldPath, newPath)
+
+
+def _closeDeletedFiles(filePaths: list[FilePathTpl]) -> None:
+	documents = getSession().documents
+	for filePath in filePaths:
+		documents.closeDeletedFile(filePath)
 
 
 class _FileSystemChangeHandler(FileSystemEventHandler):
@@ -499,13 +522,14 @@ class _FileSystemChangeHandler(FileSystemEventHandler):
 				if aspect.analyzeFilesPart is not None:
 					aspect.analyzeFilesPart.analyzeFile(self._root, fileEntry, pool)
 
-	def _addFileEntryAndAnalyzeFile(self, path: FilePathTpl) -> None:
+	def _addFileEntryAndAnalyzeFile(self, path: FilePathTpl) -> FileEntry | None:
 		fileEntry = self._addFileOrFolderEntry(self._root.indexBundles.setdefault(FilesIndex).files, path, True)
 		if fileEntry is not None:
 			self._analyzeFile(fileEntry)
+		return fileEntry
 
-	def _addFolderEntry(self, path: FilePathTpl) -> None:
-		self._addFileOrFolderEntry(self._root.indexBundles.setdefault(FilesIndex).folders, path, False)
+	def _addFolderEntry(self, path: FilePathTpl) -> FileEntry | None:
+		return self._addFileOrFolderEntry(self._root.indexBundles.setdefault(FilesIndex).folders, path, False)
 
 	def _splitPath(self, path: str, isDir: bool) -> Optional[FilePathTpl]:
 		normPath = normalizeDirSeparatorsStr(path)
@@ -513,7 +537,7 @@ class _FileSystemChangeHandler(FileSystemEventHandler):
 			normPath = normPath + '/'
 		return jf if (jf := splitPath(normPath, self._root.normalizedLocation)) is not None else None
 
-	def on_any_event(self, event):
+	def on_any_event(self, event: FileSystemEvent):
 		"""Catch-all event handler.
 
 		:param event:
@@ -523,7 +547,7 @@ class _FileSystemChangeHandler(FileSystemEventHandler):
 		"""
 		event.split_src_path: Optional[FilePathTpl] = self._splitPath(event.src_path, event.is_directory)
 
-	def on_moved(self, event: FileMovedEvent):
+	def on_moved(self, event: DirMovedEvent | FileMovedEvent):
 		"""Called when a file or a directory is moved or renamed.
 
 		:param event:
@@ -723,7 +747,7 @@ def createNewFile(folderPath: FilePath, name: str) -> FilePath:
 		filePath = folderPath[0], os.path.join(folderPath[1], name)
 	else:
 		filePath = (folderPath, name)
-	with openOrCreate(os.path.join(*filePath), 'a'):
+	with openOrCreate(unitePathTpl(filePath), 'a'):
 		pass  # creates the File
 	return normalizeDirSeparators(filePath)
 
